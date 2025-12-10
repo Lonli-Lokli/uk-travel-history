@@ -5,6 +5,19 @@ const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+  serverExternalPackages: ['pdf-parse', '@napi-rs/canvas'],
+
+  // webpack: (config, { isServer }) => {
+  //   if (isServer) {
+  //     // Alias canvas to false to avoid native binding issues
+  //     // pdfjs-dist will work without canvas for text extraction
+  //     config.resolve.alias = {
+  //       ...config.resolve.alias,
+  //       canvas: false,
+  //     };
+  //   }
+  //   return config;
+  // },
 };
 
 const plugins = [
@@ -42,6 +55,4 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   // https://docs.sentry.io/product/crons/
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
-
-  serverExternalPackages: ['pdf-parse', '@napi-rs/*'],
 });

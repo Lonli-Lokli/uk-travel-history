@@ -1,20 +1,58 @@
-import 'pdf-parse/worker'; 
 import { NextRequest, NextResponse } from 'next/server';
-import { PDFParse } from 'pdf-parse';
-import { getPath } from 'pdf-parse/worker';
-
-import { analyzeTravelHistory } from '@uth/parser';
 import { logger } from '@uth/utils';
+import type { ParseResult } from '@uth/parser';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
-PDFParse.setWorker(getPath());
 
+// Lazy load PDF parser to catch initialization errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let PDFParse: any;
+let analyzeTravelHistory: ((text: string) => ParseResult) | undefined =
+  undefined;
+let initError: Error | null = null;
+
+async function initializePdfParser() {
+  if (initError) {
+    throw initError;
+  }
+
+  if (PDFParse && analyzeTravelHistory) {
+    return;
+  }
+
+  try {
+    await import('pdf-parse/worker');
+    const pdfModule = await import('pdf-parse');
+    const { getPath } = await import('pdf-parse/worker');
+    const parserModule = await import('@uth/parser');
+
+    PDFParse = pdfModule.PDFParse;
+    analyzeTravelHistory = parserModule.analyzeTravelHistory;
+    PDFParse.setWorker(getPath());
+  } catch (error) {
+    initError =
+      error instanceof Error
+        ? error
+        : new Error('Failed to initialize PDF parser');
+    throw initError;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize PDF parser if not already done
+    await initializePdfParser();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
+
+    if (!analyzeTravelHistory) {
+      return NextResponse.json(
+        { error: 'Parser not initialized' },
+        { status: 500 }
+      );
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -55,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        trips: result.trips.map((trip) => ({
+        trips: result.trips.map(trip => ({
           ...trip,
           outDate: trip.outDate?.toISOString() || null,
           inDate: trip.inDate?.toISOString() || null,
