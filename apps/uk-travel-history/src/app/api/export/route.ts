@@ -200,7 +200,9 @@ export async function POST(request: NextRequest) {
 
           const statusRow = sheet.addRow([
             'Status:',
-            `✓ Eligible now! (${Math.abs(data.summary.daysUntilEligible)} days ago)`,
+            `✓ Eligible now! (${Math.abs(
+              data.summary.daysUntilEligible
+            )} days ago)`,
           ]);
           statusRow.getCell(1).font = { bold: true };
           statusRow.getCell(2).fill = {
@@ -208,7 +210,10 @@ export async function POST(request: NextRequest) {
             pattern: 'solid',
             fgColor: { argb: 'FFD5E8D4' },
           };
-          statusRow.getCell(2).font = { bold: true, color: { argb: 'FF006100' } };
+          statusRow.getCell(2).font = {
+            bold: true,
+            color: { argb: 'FF006100' },
+          };
         } else {
           const statusRow = sheet.addRow([
             'Days Until Eligible:',
@@ -231,7 +236,10 @@ export async function POST(request: NextRequest) {
       fgColor: { argb: 'FFE7E6E6' },
     };
 
-    const totalRow = sheet.addRow(['Total Full Days Outside UK:', totalFullDays]);
+    const totalRow = sheet.addRow([
+      'Total Full Days Outside UK:',
+      totalFullDays,
+    ]);
     totalRow.getCell(1).font = { bold: true };
     totalRow.getCell(2).font = { bold: true, size: 14 };
     totalRow.getCell(2).fill = {
@@ -241,7 +249,10 @@ export async function POST(request: NextRequest) {
     };
     totalRow.getCell(2).alignment = { horizontal: 'center' };
 
-    if (data.summary?.continuousLeaveDays !== null && data.summary?.continuousLeaveDays !== undefined) {
+    if (
+      data.summary?.continuousLeaveDays !== null &&
+      data.summary?.continuousLeaveDays !== undefined
+    ) {
       const continuousRow = sheet.addRow([
         'Days in UK (Continuous Leave):',
         data.summary.continuousLeaveDays,
@@ -256,7 +267,10 @@ export async function POST(request: NextRequest) {
       continuousRow.getCell(2).alignment = { horizontal: 'center' };
     }
 
-    if (data.summary?.maxAbsenceInAny12Months !== null && data.summary?.maxAbsenceInAny12Months !== undefined) {
+    if (
+      data.summary?.maxAbsenceInAny12Months !== null &&
+      data.summary?.maxAbsenceInAny12Months !== undefined
+    ) {
       const maxAbsenceRow = sheet.addRow([
         'Max Absence in Any 12 Months:',
         data.summary.maxAbsenceInAny12Months,
@@ -270,11 +284,19 @@ export async function POST(request: NextRequest) {
           pattern: 'solid',
           fgColor: { argb: 'FFFFC7CE' },
         };
-        maxAbsenceRow.getCell(2).font = { bold: true, color: { argb: 'FF9C0006' } };
+        maxAbsenceRow.getCell(2).font = {
+          bold: true,
+          color: { argb: 'FF9C0006' },
+        };
 
         sheet.addRow([]);
-        const warningRow = sheet.addRow(['⚠️ WARNING: Exceeded 180-day limit in a 12-month period']);
-        warningRow.getCell(1).font = { bold: true, color: { argb: 'FF9C0006' } };
+        const warningRow = sheet.addRow([
+          '⚠️ WARNING: Exceeded 180-day limit in a 12-month period',
+        ]);
+        warningRow.getCell(1).font = {
+          bold: true,
+          color: { argb: 'FF9C0006' },
+        };
         warningRow.getCell(1).fill = {
           type: 'pattern',
           pattern: 'solid',
