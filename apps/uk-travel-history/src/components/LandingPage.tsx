@@ -1,14 +1,36 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent } from '@uth/ui';
-import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee } from 'lucide-react';
+import { Button, Card, CardContent, travelStore } from '@uth/ui';
+import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee, Loader2 } from 'lucide-react';
 
 export const LandingPage = () => {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleImportClick = () => {
-    router.push('/travel');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      await travelStore.importFromPdf(file);
+      router.push('/travel');
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Failed to import PDF. Please try again or add trips manually.');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleAddManually = () => {
@@ -17,6 +39,15 @@ export const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-3">
@@ -89,21 +120,34 @@ export const LandingPage = () => {
 
             {/* Quick Start Options */}
             <div className="grid sm:grid-cols-2 gap-4 mb-8">
-              <Card className="border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors bg-primary/5 cursor-pointer" onClick={handleImportClick}>
+              <Card className={`border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors bg-primary/5 ${!isImporting ? 'cursor-pointer' : 'opacity-60'}`} onClick={!isImporting ? handleImportClick : undefined}>
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center gap-4">
                     <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                      <Upload className="w-6 h-6 text-white" />
+                      {isImporting ? (
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      ) : (
+                        <Upload className="w-6 h-6 text-white" />
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 mb-1">Import from PDF</h3>
                       <p className="text-xs text-slate-600 mb-4">
-                        Upload your Home Office SAR travel history PDF
+                        {isImporting ? 'Importing your travel history...' : 'Upload your Home Office SAR travel history PDF'}
                       </p>
                     </div>
-                    <Button className="w-full">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import PDF
+                    <Button className="w-full" disabled={isImporting}>
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import PDF
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>

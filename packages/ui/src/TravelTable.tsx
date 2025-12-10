@@ -11,7 +11,7 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
-import { Trash2, Plus, ArrowUpDown, Check, X } from 'lucide-react';
+import { Trash2, Plus, ArrowUpDown, Check, X, GripVertical } from 'lucide-react';
 import { Button } from './button';
 import { Input } from './input';
 import { travelStore, TripWithCalculations } from './stores/travelStore';
@@ -25,6 +25,7 @@ export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const startEditing = (
     rowId: string,
@@ -58,8 +59,38 @@ export const TravelTable = observer(() => {
     }
   };
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      travelStore.reorderTrip(draggedIndex, dropIndex);
+    }
+    setDraggedIndex(null);
+  };
+
   const columns = useMemo<ColumnDef<TripWithCalculations>[]>(
     () => [
+      {
+        id: 'drag-handle',
+        header: () => <span className="sr-only">Reorder</span>,
+        cell: ({ row }) => (
+          <div
+            className="cursor-move hover:bg-muted/50 rounded p-1 -m-1"
+            draggable
+            onDragStart={() => handleDragStart(row.index)}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        ),
+        size: 30,
+      },
       {
         accessorKey: 'outDate',
         header: ({ column }) => (
@@ -338,18 +369,41 @@ export const TravelTable = observer(() => {
 
   return (
     <div className="w-full">
+      {/* Add Row Button */}
+      <div className="mb-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full md:w-auto"
+          onClick={() => travelStore.addTrip()}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Trip
+        </Button>
+      </div>
+
       {/* Mobile Cards View */}
       <div className="block md:hidden space-y-2">
-        {table.getRowModel().rows.map((row) => (
+        {table.getRowModel().rows.map((row, index) => (
           <div
             key={row.id}
             className={`p-3 rounded-lg border ${
               row.original.isIncomplete
                 ? 'bg-red-50 border-red-200'
                 : 'bg-white border-slate-200'
-            }`}
+            } ${draggedIndex === index ? 'opacity-50' : ''}`}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, index)}
           >
             <div className="flex justify-between items-start mb-2">
+              <div
+                className="cursor-move pr-2 flex-shrink-0"
+                onTouchStart={() => handleDragStart(index)}
+              >
+                <GripVertical className="h-5 w-5 text-muted-foreground" />
+              </div>
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">Out</div>
                 <div
@@ -461,14 +515,16 @@ export const TravelTable = observer(() => {
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, index) => (
                 <tr
                   key={row.id}
                   className={`transition-colors ${
                     row.original.isIncomplete
                       ? 'bg-red-50 hover:bg-red-100'
                       : 'bg-white hover:bg-slate-50'
-                  }`}
+                  } ${draggedIndex === index ? 'opacity-50' : ''}`}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2">
@@ -483,19 +539,6 @@ export const TravelTable = observer(() => {
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Add Row Button */}
-      <div className="mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full md:w-auto"
-          onClick={() => travelStore.addTrip()}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Trip
-        </Button>
       </div>
 
       {/* Edit Modal for Mobile */}

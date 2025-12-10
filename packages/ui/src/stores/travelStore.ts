@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, addYears, subDays } from 'date-fns';
 
 export interface TripRecord {
   id: string;
@@ -15,10 +15,13 @@ export interface TripWithCalculations extends TripRecord {
   isIncomplete: boolean;
 }
 
+export type ILRTrack = 2 | 3 | 5 | 10;
+
 class TravelStore {
   trips: TripRecord[] = [];
   vignetteEntryDate = '';
   visaStartDate = '';
+  ilrTrack: ILRTrack | null = null; // 2, 3, or 5 year track
   isLoading = false;
   error: string | null = null;
 
@@ -65,6 +68,8 @@ class TravelStore {
     let continuousLeaveDays: number | null = null;
     let maxAbsenceInAny12Months: number | null = null;
     let hasExceeded180Days = false;
+    let ilrEligibilityDate: string | null = null;
+    let daysUntilEligible: number | null = null;
 
     const startDate = this.vignetteEntryDate || this.visaStartDate;
 
@@ -83,6 +88,17 @@ class TravelStore {
         // Per Home Office guidance: absences are considered on a rolling basis
         maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(start, today);
         hasExceeded180Days = maxAbsenceInAny12Months > 180;
+
+        // Calculate ILR eligibility date if track is selected
+        // Per Home Office guidance (Page 10): "Applicants can submit a settlement application
+        // up to 28 days before they would reach the end of the specified period"
+        if (this.ilrTrack) {
+          const requiredEndDate = addYears(start, this.ilrTrack);
+          const earliestApplicationDate = subDays(requiredEndDate, 28);
+
+          ilrEligibilityDate = earliestApplicationDate.toISOString().split('T')[0];
+          daysUntilEligible = differenceInDays(earliestApplicationDate, today);
+        }
       }
     }
 
@@ -94,6 +110,8 @@ class TravelStore {
       continuousLeaveDays,
       maxAbsenceInAny12Months,
       hasExceeded180Days,
+      ilrEligibilityDate,
+      daysUntilEligible,
     };
   }
 
@@ -191,6 +209,21 @@ class TravelStore {
     this.visaStartDate = date;
   }
 
+  setILRTrack(track: ILRTrack | null) {
+    this.ilrTrack = track;
+  }
+
+  reorderTrip(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= this.trips.length) return;
+    if (toIndex < 0 || toIndex >= this.trips.length) return;
+
+    const newTrips = [...this.trips];
+    const [movedTrip] = newTrips.splice(fromIndex, 1);
+    newTrips.splice(toIndex, 0, movedTrip);
+    this.trips = newTrips;
+  }
+
   async importFromPdf(file: File): Promise<void> {
     this.isLoading = true;
     this.error = null;
@@ -243,6 +276,7 @@ class TravelStore {
       trips: this.tripsWithCalculations,
       vignetteEntryDate: this.vignetteEntryDate,
       visaStartDate: this.visaStartDate,
+      ilrTrack: this.ilrTrack,
       summary: this.summary,
     };
 

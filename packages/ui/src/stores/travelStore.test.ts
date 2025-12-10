@@ -7,6 +7,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     travelStore.clearAll();
     travelStore.setVignetteEntryDate('');
     travelStore.setVisaStartDate('');
+    travelStore.setILRTrack(null);
   });
 
   describe('Full Days Calculation (Section: Calculation Method)', () => {
@@ -402,6 +403,122 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
       const summary = travelStore.summary;
       expect(summary.totalFullDays).toBe(9);
+    });
+  });
+
+  describe('ILR Eligibility Calculation (Section: Calculating the specified continuous period)', () => {
+    it('should calculate ILR eligibility date for 5-year track (28 days before end)', () => {
+      // Guidance Page 10: "Applicants can submit a settlement application up to 28 days
+      // before they would reach the end of the specified period"
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+
+      // 5 years from 2020-01-01 = 2025-01-01
+      // 28 days before = 2024-12-04
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
+    });
+
+    it('should calculate ILR eligibility date for 3-year track', () => {
+      // For Tier 1 Entrepreneur: 3 years
+      travelStore.setVignetteEntryDate('2022-06-01');
+      travelStore.setILRTrack(3);
+
+      const summary = travelStore.summary;
+
+      // 3 years from 2022-06-01 = 2025-06-01
+      // 28 days before = 2025-05-04
+      expect(summary.ilrEligibilityDate).toBe('2025-05-04');
+    });
+
+    it('should calculate ILR eligibility date for 2-year track', () => {
+      // For Tier 1 Investor: 2 years
+      travelStore.setVisaStartDate('2023-03-15');
+      travelStore.setILRTrack(2);
+
+      const summary = travelStore.summary;
+
+      // 2 years from 2023-03-15 = 2025-03-15
+      // 28 days before = 2025-02-15
+      expect(summary.ilrEligibilityDate).toBe('2025-02-15');
+    });
+
+    it('should calculate ILR eligibility date for 10-year track', () => {
+      // For long residence cases
+      travelStore.setVignetteEntryDate('2015-01-01');
+      travelStore.setILRTrack(10);
+
+      const summary = travelStore.summary;
+
+      // 10 years from 2015-01-01 = 2025-01-01
+      // 28 days before = 2024-12-04
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
+    });
+
+    it('should return null when no track is selected', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+
+      const summary = travelStore.summary;
+      expect(summary.ilrEligibilityDate).toBe(null);
+      expect(summary.daysUntilEligible).toBe(null);
+    });
+
+    it('should return null when no start date is set', () => {
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+      expect(summary.ilrEligibilityDate).toBe(null);
+      expect(summary.daysUntilEligible).toBe(null);
+    });
+
+    it('should calculate days until eligible when date is in future', () => {
+      // Set a future eligibility date
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 2);
+
+      travelStore.setVisaStartDate(futureDate.toISOString().split('T')[0]);
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+
+      // Should have positive days until eligible
+      expect(summary.daysUntilEligible).toBeGreaterThan(0);
+    });
+
+    it('should calculate negative days when already eligible', () => {
+      // Set a past eligibility date
+      travelStore.setVisaStartDate('2015-01-01');
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+
+      // Should have negative days (already eligible)
+      expect(summary.daysUntilEligible).toBeLessThan(0);
+    });
+
+    it('should prioritize vignette date over visa date for ILR calculation', () => {
+      travelStore.setVignetteEntryDate('2020-06-01');
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+
+      // Should use vignette date (2020-06-01)
+      // 5 years = 2025-06-01, minus 28 days = 2025-05-04
+      expect(summary.ilrEligibilityDate).toBe('2025-05-04');
+    });
+
+    it('should handle leap year correctly in ILR calculation', () => {
+      // Start on Feb 29 of a leap year
+      travelStore.setVisaStartDate('2020-02-29');
+      travelStore.setILRTrack(5);
+
+      const summary = travelStore.summary;
+
+      // 5 years from 2020-02-29 = 2025-02-28 (not a leap year)
+      // 28 days before = 2025-01-31
+      expect(summary.ilrEligibilityDate).toBe('2025-01-31');
     });
   });
 });

@@ -20,6 +20,7 @@ interface ExportData {
   trips: TripData[];
   vignetteEntryDate?: string;
   visaStartDate?: string;
+  ilrTrack?: number | null;
   summary?: {
     totalTrips: number;
     completeTrips: number;
@@ -28,6 +29,8 @@ interface ExportData {
     continuousLeaveDays: number | null;
     maxAbsenceInAny12Months: number | null;
     hasExceeded180Days: boolean;
+    ilrEligibilityDate: string | null;
+    daysUntilEligible: number | null;
   };
 }
 
@@ -153,6 +156,67 @@ export async function POST(request: NextRequest) {
           new Date(data.visaStartDate).toLocaleDateString('en-GB'),
         ]);
         visaRow.getCell(1).font = { bold: true };
+      }
+
+      if (data.ilrTrack) {
+        const ilrTrackRow = sheet.addRow([
+          'ILR Track:',
+          `${data.ilrTrack} Years`,
+        ]);
+        ilrTrackRow.getCell(1).font = { bold: true };
+      }
+
+      sheet.addRow([]);
+    }
+
+    // ILR Eligibility Information
+    if (data.summary?.ilrEligibilityDate) {
+      const ilrHeaderRow = sheet.addRow(['ILR ELIGIBILITY']);
+      ilrHeaderRow.getCell(1).font = { bold: true, size: 12 };
+      ilrHeaderRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE7E6E6' },
+      };
+
+      const eligibilityDateRow = sheet.addRow([
+        'Earliest Application Date:',
+        new Date(data.summary.ilrEligibilityDate).toLocaleDateString('en-GB'),
+      ]);
+      eligibilityDateRow.getCell(1).font = { bold: true };
+      eligibilityDateRow.getCell(2).font = { bold: true, size: 14 };
+
+      if (data.summary.daysUntilEligible !== null) {
+        if (data.summary.daysUntilEligible < 0) {
+          eligibilityDateRow.getCell(2).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD5E8D4' },
+          };
+          eligibilityDateRow.getCell(2).font = {
+            ...eligibilityDateRow.getCell(2).font,
+            color: { argb: 'FF006100' },
+          };
+
+          const statusRow = sheet.addRow([
+            'Status:',
+            `✓ Eligible now! (${Math.abs(data.summary.daysUntilEligible)} days ago)`,
+          ]);
+          statusRow.getCell(1).font = { bold: true };
+          statusRow.getCell(2).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD5E8D4' },
+          };
+          statusRow.getCell(2).font = { bold: true, color: { argb: 'FF006100' } };
+        } else {
+          const statusRow = sheet.addRow([
+            'Days Until Eligible:',
+            data.summary.daysUntilEligible,
+          ]);
+          statusRow.getCell(1).font = { bold: true };
+          statusRow.getCell(2).font = { bold: true };
+        }
       }
 
       sheet.addRow([]);
