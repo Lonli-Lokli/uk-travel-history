@@ -11,8 +11,10 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
-import { Button, Input, travelStore, TripWithCalculations } from '@uth/ui';
 import { Trash2, Plus, ArrowUpDown, Check, X } from 'lucide-react';
+import { Button } from './button';
+import { Input } from './input';
+import { travelStore, TripWithCalculations } from './stores/travelStore';
 
 interface EditingCell {
   rowId: string;

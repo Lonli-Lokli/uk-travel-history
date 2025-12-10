@@ -1,9 +1,15 @@
+import 'pdf-parse/worker'; 
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFParse } from 'pdf-parse';
+import { getPath } from 'pdf-parse/worker';
+
 import { analyzeTravelHistory } from '@uth/parser';
+import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
+PDFParse.setWorker(getPath());
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error processing PDF:', error);
+    logger.error('Error processing PDF:', error);
     return NextResponse.json(
       { error: 'Failed to process PDF file' },
       { status: 500 }

@@ -1,0 +1,89 @@
+'use client';
+
+import { observer } from 'mobx-react-lite';
+import { travelStore, Button } from '@uth/ui';
+import { Upload, Download, Plane, Loader2 } from 'lucide-react';
+
+interface HeaderProps {
+  onImportClick: () => void;
+  onExportClick: () => void;
+}
+
+export const Header = observer(({ onImportClick, onExportClick }: HeaderProps) => {
+  const isLoading = travelStore.isLoading;
+  const hasTrips = travelStore.trips.length > 0;
+
+  return (
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div className="max-w-6xl mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Plane className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="font-semibold text-slate-900 text-sm sm:text-base">
+                UK Travel Parser
+              </h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
+                Calculate days outside UK
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex"
+              onClick={onImportClick}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-1.5" />
+              )}
+              Import PDF
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="sm:hidden"
+              onClick={onImportClick}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Button
+              size="sm"
+              className="hidden sm:flex"
+              onClick={onExportClick}
+              disabled={!hasTrips}
+            >
+              <Download className="h-4 w-4 mr-1.5" />
+              Export Excel
+            </Button>
+
+            <Button
+              size="icon"
+              className="sm:hidden"
+              onClick={onExportClick}
+              disabled={!hasTrips}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+});
+
+Header.displayName = 'Header';
