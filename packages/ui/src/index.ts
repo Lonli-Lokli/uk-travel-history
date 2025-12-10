@@ -11,5 +11,6 @@ export * from './TravelTable';
 export {
   type TripRecord,
   type TripWithCalculations,
+  type ILRTrack,
   travelStore,
 } from './stores/travelStore';
