@@ -34,16 +34,36 @@ apps/uk-travel-history/
 │   ├── api/
 │   │   ├── parse/route.ts      # PDF parsing endpoint
 │   │   └── export/route.ts     # Excel export endpoint
-│   └── page.tsx
+│   ├── page.tsx                # Home/landing page
+│   ├── travel/
+│   │   └── page.tsx            # Travel tracker page
+│   └── layout.tsx
 ├── components/
 │   ├── ui/                     # shadcn/ui components
-│   └── TravelTable.tsx
+│   ├── LandingPage.tsx         # Home page with instructions
+│   ├── TravelPageClient.tsx    # Main travel tracker
+│   ├── Header.tsx              # Navigation header
+│   ├── SummaryCards.tsx        # Stats cards
+│   ├── VisaDetailsCard.tsx     # Visa/vignette inputs
+│   ├── TravelHistoryCard.tsx   # Table wrapper
+│   └── TravelTable.tsx         # Editable table
 ├── stores/
 │   └── travelStore.ts          # MobX state
 └── lib/
     ├── parser.ts
     └── utils.ts
 ```
+
+### Routing Structure
+- **`/`** (Home): Landing page with instructions and CTAs
+  - Shows empty state with "How to Get PDF" guide
+  - Two action buttons that navigate to `/travel`
+- **`/travel`** (Travel Tracker): Main application
+  - Always shows full UI (cards, table, etc.)
+  - Users interact with Import/Export buttons in header
+  - Header logo links back to home
+
+**Design Philosophy**: Clean navigation without hacky query params or setTimeout. Users are routed to the travel page where they naturally use the UI buttons.
 
 ## Development Guidelines
 
@@ -91,15 +111,22 @@ When adding fields like vignette entry date or visa start date:
 ## Current State
 
 ### Recently Modified Files
-- `stores/travelStore.ts` - Added vignette/visa dates, continuous leave calculation, rolling 12-month checks
-- `components/VisaDetailsCard.tsx` - NEW: Input fields for vignette entry date and visa start date
-- `components/SummaryCards.tsx` - Added continuous leave display with 180-day warning
-- `app/api/export/route.ts` - Enhanced Excel export with visa/vignette info and all calculations
-- `instrumentation-client.ts` - Sentry client setup
-- `next.config.js` - Next.js configuration
-- `app/api/parse/route.ts` - PDF parsing endpoint
+- **Routing & Pages**:
+  - `app/page.tsx` - Home/landing page (NEW routing structure)
+  - `app/travel/page.tsx` - Travel tracker page (NEW route)
+  - `components/LandingPage.tsx` - Landing page component
+  - `components/TravelPageClient.tsx` - Travel tracker component
+  - `components/Header.tsx` - Updated with home link navigation
+- **Features**:
+  - `stores/travelStore.ts` - Vignette/visa dates, continuous leave, rolling 12-month checks
+  - `components/VisaDetailsCard.tsx` - Input fields for vignette/visa dates
+  - `components/SummaryCards.tsx` - Continuous leave display with 180-day warning
+  - `app/api/export/route.ts` - Enhanced Excel export with all calculations
 
 ### Recent Changes
+- ✅ **Routing**: Separated home and travel pages with Next.js App Router
+- ✅ **Landing Page**: Professional onboarding with SAR request instructions
+- ✅ **Navigation**: Query params for deep linking (import/add actions)
 - ✅ Added vignette entry date and visa start date tracking
 - ✅ Implemented continuous leave calculation per Home Office guidance
 - ✅ Added rolling 12-month absence check (180-day limit)

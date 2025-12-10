@@ -83,12 +83,22 @@ uk-travel-parser/
 
 ## Usage
 
-1. **Import from PDF**: Click "Import PDF" to upload a Home Office travel history document
+### Getting Started
+1. Visit the home page for instructions on requesting your travel history from the UK Home Office
+2. Choose to either **Import from PDF** or **Add Travel Dates Manually**
+3. You'll be taken to the travel tracker page where you can manage your data
+
+### On the Travel Tracker Page
+1. **Import from PDF**: Upload a Home Office travel history document
 2. **Manual Entry**: Click "Add Trip" to add entries manually
-3. **Track Important Dates**: Record vignette entry dates and visa start dates alongside travel history
+3. **Track Important Dates**: Record vignette entry dates and visa start dates
 4. **Edit**: Click any cell in the table to edit the value
 5. **Delete**: Click the trash icon to remove a trip
 6. **Export**: Click "Export Excel" to download all data including travel history and visa/vignette information
+
+### Routes
+- `/` - Home page with instructions and onboarding
+- `/travel` - Travel history tracker with full functionality
 
 ## Calculation Method
 

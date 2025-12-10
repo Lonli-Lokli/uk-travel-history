@@ -1,14 +1,14 @@
 'use client';
 
 import {
-  useToast,
   Toast,
   ToastClose,
   ToastDescription,
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from '@uth/ui';
+} from './toast';
+import { useToast } from './use-toast';
 
 export function Toaster() {
   const { toasts } = useToast();
