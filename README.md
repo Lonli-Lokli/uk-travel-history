@@ -1,14 +1,15 @@
 # UK Travel History Parser
 
-A professional Next.js web application for parsing UK Home Office travel history PDFs and calculating days spent outside the UK. Built with TanStack React Table, MobX state management, and shadcn/ui.
+A professional Next.js web application for parsing UK Home Office travel history PDFs and calculating days spent outside the UK. Track travel history, vignette entry dates, and visa start dates in one place. Built with TanStack React Table, MobX state management, and shadcn/ui.
 
 ## Features
 
 - **PDF Import**: Upload Home Office SAR documents to auto-populate travel history
+- **Vignette & Visa Tracking**: Track vignette entry dates and visa start dates alongside travel history
 - **Editable Table**: Click any cell to edit dates and routes inline
 - **Add/Delete Trips**: Manually add trips or remove incorrect entries
 - **Live Calculations**: Full days outside UK calculated automatically
-- **Excel Export**: Download formatted spreadsheet with all data
+- **Excel Export**: Download formatted spreadsheet with all data including vignette/visa dates
 - **Mobile-First**: Responsive design with card view on mobile, table on desktop
 - **Professional UI**: Clean, minimalist design using shadcn/ui components
 
@@ -84,9 +85,10 @@ uk-travel-parser/
 
 1. **Import from PDF**: Click "Import PDF" to upload a Home Office travel history document
 2. **Manual Entry**: Click "Add Trip" to add entries manually
-3. **Edit**: Click any cell in the table to edit the value
-4. **Delete**: Click the trash icon to remove a trip
-5. **Export**: Click "Export Excel" to download the data
+3. **Track Important Dates**: Record vignette entry dates and visa start dates alongside travel history
+4. **Edit**: Click any cell in the table to edit the value
+5. **Delete**: Click the trash icon to remove a trip
+6. **Export**: Click "Export Excel" to download all data including travel history and visa/vignette information
 
 ## Calculation Method
 

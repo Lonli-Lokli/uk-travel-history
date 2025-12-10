@@ -16,6 +16,21 @@ interface TripData {
   isIncomplete: boolean;
 }
 
+interface ExportData {
+  trips: TripData[];
+  vignetteEntryDate?: string;
+  visaStartDate?: string;
+  summary?: {
+    totalTrips: number;
+    completeTrips: number;
+    incompleteTrips: number;
+    totalFullDays: number;
+    continuousLeaveDays: number | null;
+    maxAbsenceInAny12Months: number | null;
+    hasExceeded180Days: boolean;
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -25,7 +40,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No data provided' }, { status: 400 });
     }
 
-    const trips: TripData[] = JSON.parse(tripsDataStr);
+    const data: ExportData = JSON.parse(tripsDataStr);
+    const trips = data.trips || [];
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'UK Travel Parser';
@@ -109,29 +125,106 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Add summary section
     sheet.addRow([]);
-    const totalRow = sheet.addRow({
-      outRoute: '',
-      inRoute: 'TOTAL FULL DAYS OUTSIDE UK:',
-      calendarDays: '',
-      fullDays: totalFullDays,
-    });
+    sheet.addRow([]);
 
-    totalRow.getCell('inRoute').font = { bold: true };
-    totalRow.getCell('inRoute').alignment = { horizontal: 'right' };
-    totalRow.getCell('fullDays').font = { bold: true, size: 14 };
-    totalRow.getCell('fullDays').fill = {
+    // Visa/Vignette Information
+    if (data.vignetteEntryDate || data.visaStartDate) {
+      const infoHeaderRow = sheet.addRow(['VISA & VIGNETTE INFORMATION']);
+      infoHeaderRow.getCell(1).font = { bold: true, size: 12 };
+      infoHeaderRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE7E6E6' },
+      };
+
+      if (data.vignetteEntryDate) {
+        const vignetteRow = sheet.addRow([
+          'Vignette Entry Date:',
+          new Date(data.vignetteEntryDate).toLocaleDateString('en-GB'),
+        ]);
+        vignetteRow.getCell(1).font = { bold: true };
+      }
+
+      if (data.visaStartDate) {
+        const visaRow = sheet.addRow([
+          'Visa Start Date:',
+          new Date(data.visaStartDate).toLocaleDateString('en-GB'),
+        ]);
+        visaRow.getCell(1).font = { bold: true };
+      }
+
+      sheet.addRow([]);
+    }
+
+    // Summary Statistics
+    const summaryHeaderRow = sheet.addRow(['SUMMARY']);
+    summaryHeaderRow.getCell(1).font = { bold: true, size: 12 };
+    summaryHeaderRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE7E6E6' },
+    };
+
+    const totalRow = sheet.addRow(['Total Full Days Outside UK:', totalFullDays]);
+    totalRow.getCell(1).font = { bold: true };
+    totalRow.getCell(2).font = { bold: true, size: 14 };
+    totalRow.getCell(2).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFFFF2CC' },
     };
-    totalRow.getCell('fullDays').alignment = { horizontal: 'center' };
-    totalRow.getCell('fullDays').border = {
-      top: { style: 'medium' },
-      left: { style: 'medium' },
-      bottom: { style: 'medium' },
-      right: { style: 'medium' },
-    };
+    totalRow.getCell(2).alignment = { horizontal: 'center' };
+
+    if (data.summary?.continuousLeaveDays !== null && data.summary?.continuousLeaveDays !== undefined) {
+      const continuousRow = sheet.addRow([
+        'Days in UK (Continuous Leave):',
+        data.summary.continuousLeaveDays,
+      ]);
+      continuousRow.getCell(1).font = { bold: true };
+      continuousRow.getCell(2).font = { bold: true, size: 14 };
+      continuousRow.getCell(2).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD5E8D4' },
+      };
+      continuousRow.getCell(2).alignment = { horizontal: 'center' };
+    }
+
+    if (data.summary?.maxAbsenceInAny12Months !== null && data.summary?.maxAbsenceInAny12Months !== undefined) {
+      const maxAbsenceRow = sheet.addRow([
+        'Max Absence in Any 12 Months:',
+        data.summary.maxAbsenceInAny12Months,
+      ]);
+      maxAbsenceRow.getCell(1).font = { bold: true };
+      maxAbsenceRow.getCell(2).font = { bold: true };
+
+      if (data.summary.hasExceeded180Days) {
+        maxAbsenceRow.getCell(2).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFC7CE' },
+        };
+        maxAbsenceRow.getCell(2).font = { bold: true, color: { argb: 'FF9C0006' } };
+
+        sheet.addRow([]);
+        const warningRow = sheet.addRow(['⚠️ WARNING: Exceeded 180-day limit in a 12-month period']);
+        warningRow.getCell(1).font = { bold: true, color: { argb: 'FF9C0006' } };
+        warningRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFC7CE' },
+        };
+      } else {
+        maxAbsenceRow.getCell(2).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD5E8D4' },
+        };
+      }
+      maxAbsenceRow.getCell(2).alignment = { horizontal: 'center' };
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
 

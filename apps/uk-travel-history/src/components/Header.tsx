@@ -2,7 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { travelStore, Button } from '@uth/ui';
-import { Upload, Download, Plane, Loader2 } from 'lucide-react';
+import { Upload, Download, Plane, Loader2, Coffee } from 'lucide-react';
 
 interface HeaderProps {
   onImportClick: () => void;
@@ -32,6 +32,39 @@ export const Header = observer(({ onImportClick, onExportClick }: HeaderProps) =
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Buy Me a Coffee Button */}
+            <a
+              href="https://buymeacoffee.com/yourhandle"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:block"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
+              >
+                <Coffee className="h-4 w-4 mr-1.5" />
+                Buy Me a Coffee
+              </Button>
+            </a>
+
+            {/* Mobile: Coffee icon only */}
+            <a
+              href="https://www.buymeacoffee.com/LonliLokliV"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sm:hidden"
+            >
+              <Button
+                variant="outline"
+                size="icon"
+                className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
+              >
+                <Coffee className="h-4 w-4" />
+              </Button>
+            </a>
+
             <Button
               variant="outline"
               size="sm"

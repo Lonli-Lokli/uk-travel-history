@@ -17,6 +17,8 @@ export interface TripWithCalculations extends TripRecord {
 
 class TravelStore {
   trips: TripRecord[] = [];
+  vignetteEntryDate: string = '';
+  visaStartDate: string = '';
   isLoading = false;
   error: string | null = null;
 
@@ -59,12 +61,91 @@ class TravelStore {
       0
     );
 
+    // Calculate continuous leave and check rolling 12-month periods
+    let continuousLeaveDays: number | null = null;
+    let maxAbsenceInAny12Months: number | null = null;
+    let hasExceeded180Days = false;
+
+    const startDate = this.vignetteEntryDate || this.visaStartDate;
+
+    if (startDate) {
+      const start = new Date(startDate);
+      const today = new Date();
+
+      if (!isNaN(start.getTime())) {
+        // Total days since start date
+        const totalDaysSinceStart = differenceInDays(today, start);
+
+        // Days in UK = Total days - Days outside UK (full days)
+        continuousLeaveDays = Math.max(0, totalDaysSinceStart - totalFullDays);
+
+        // Check rolling 12-month periods for 180-day limit
+        // Per Home Office guidance: absences are considered on a rolling basis
+        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(start, today);
+        hasExceeded180Days = maxAbsenceInAny12Months > 180;
+      }
+    }
+
     return {
       totalTrips: tripsCalc.length,
       completeTrips: complete.length,
       incompleteTrips: tripsCalc.length - complete.length,
       totalFullDays,
+      continuousLeaveDays,
+      maxAbsenceInAny12Months,
+      hasExceeded180Days,
     };
+  }
+
+  // Calculate maximum absence in any rolling 12-month period
+  // Per Home Office guidance: no more than 180 days' absences in a rolling 12-month period
+  private calculateMaxAbsenceInRolling12Months(startDate: Date, endDate: Date): number {
+    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+
+    if (completeTrips.length === 0) return 0;
+
+    let maxAbsence = 0;
+
+    // Optimize by only checking relevant dates: trip start dates and key milestones
+    const checkDates: Date[] = [new Date(startDate)];
+
+    // Add all trip departure dates as potential 12-month period starts
+    completeTrips.forEach((trip) => {
+      checkDates.push(new Date(trip.outDate));
+    });
+
+    // Check 12-month period from each relevant date
+    checkDates.forEach((checkDate) => {
+      if (checkDate > endDate) return;
+
+      const periodEnd = new Date(checkDate);
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+      // Sum absences within this 12-month period
+      let absenceDays = 0;
+
+      completeTrips.forEach((trip) => {
+        const tripOut = new Date(trip.outDate);
+        const tripIn = new Date(trip.inDate);
+
+        // Check if trip overlaps with this 12-month period
+        if (tripOut <= periodEnd && tripIn >= checkDate) {
+          // Calculate overlap
+          const overlapStart = tripOut > checkDate ? tripOut : checkDate;
+          const overlapEnd = tripIn < periodEnd ? tripIn : periodEnd;
+
+          if (overlapStart <= overlapEnd) {
+            const overlapDays = differenceInDays(overlapEnd, overlapStart);
+            // Per guidance: only count whole days, exclude departure and return
+            absenceDays += Math.max(0, overlapDays - 1);
+          }
+        }
+      });
+
+      maxAbsence = Math.max(maxAbsence, absenceDays);
+    });
+
+    return maxAbsence;
   }
 
   generateId(): string {
@@ -100,6 +181,14 @@ class TravelStore {
 
   setTrips(trips: TripRecord[]) {
     this.trips = trips;
+  }
+
+  setVignetteEntryDate(date: string) {
+    this.vignetteEntryDate = date;
+  }
+
+  setVisaStartDate(date: string) {
+    this.visaStartDate = date;
   }
 
   async importFromPdf(file: File): Promise<void> {
@@ -149,9 +238,15 @@ class TravelStore {
   async exportToExcel(): Promise<Blob> {
     const formData = new FormData();
 
-    // Create a minimal PDF-like payload with our current data
-    const tripsData = JSON.stringify(this.tripsWithCalculations);
-    formData.append('tripsData', tripsData);
+    // Create a payload with trips and metadata
+    const exportData = {
+      trips: this.tripsWithCalculations,
+      vignetteEntryDate: this.vignetteEntryDate,
+      visaStartDate: this.visaStartDate,
+      summary: this.summary,
+    };
+
+    formData.append('tripsData', JSON.stringify(exportData));
     formData.append('responseType', 'excel');
 
     const response = await fetch('/api/export', {
