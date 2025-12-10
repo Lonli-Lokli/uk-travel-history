@@ -5,6 +5,15 @@
   "references": [
     {
       "path": "./apps/uk-travel-history"
+    },
+    {
+      "path": "./packages/parser"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/utils"
     }
   ]
 }

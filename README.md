@@ -1,82 +1,99 @@
-# UkTravelHistory
+# UK Travel History Parser
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A professional Next.js web application for parsing UK Home Office travel history PDFs and calculating days spent outside the UK. Built with TanStack React Table, MobX state management, and shadcn/ui.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+## Features
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/next?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+- **PDF Import**: Upload Home Office SAR documents to auto-populate travel history
+- **Editable Table**: Click any cell to edit dates and routes inline
+- **Add/Delete Trips**: Manually add trips or remove incorrect entries
+- **Live Calculations**: Full days outside UK calculated automatically
+- **Excel Export**: Download formatted spreadsheet with all data
+- **Mobile-First**: Responsive design with card view on mobile, table on desktop
+- **Professional UI**: Clean, minimalist design using shadcn/ui components
 
-## Finish your CI setup
+## Tech Stack
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/ckHRZ9q39F)
+- **Framework**: Next.js 14 (App Router)
+- **State Management**: MobX
+- **Table**: TanStack React Table v8
+- **UI Components**: shadcn/ui + Radix UI
+- **Styling**: Tailwind CSS
+- **PDF Parsing**: pdf-parse
+- **Excel Generation**: ExcelJS
 
+## Getting Started
 
-## Run tasks
+### Prerequisites
 
-To run the dev server for your app, use:
+- Node.js 18+
+- npm, yarn, or pnpm
 
-```sh
-npx nx dev uk-travel-history
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/uk-travel-parser.git
+cd uk-travel-parser
+
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
 ```
 
-To create a production bundle:
+Open [http://localhost:3000](http://localhost:3000).
 
-```sh
-npx nx build uk-travel-history
+## Deploy to Vercel
+
+### Option 1: One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/uk-travel-parser)
+
+### Option 2: Vercel CLI
+
+```bash
+npm i -g vercel
+vercel --prod
 ```
 
-To see all available targets to run for a project, run:
+## Project Structure
 
-```sh
-npx nx show project uk-travel-history
+```
+uk-travel-parser/
+├── app/
+│   ├── api/
+│   │   ├── parse/route.ts      # PDF parsing endpoint
+│   │   └── export/route.ts     # Excel export endpoint
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx                # Main page
+├── components/
+│   ├── ui/                     # shadcn/ui components
+│   └── TravelTable.tsx         # Main table component
+├── stores/
+│   └── travelStore.ts          # MobX store
+├── lib/
+│   ├── parser.ts               # PDF parsing logic
+│   └── utils.ts                # Utility functions
+└── package.json
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Usage
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+1. **Import from PDF**: Click "Import PDF" to upload a Home Office travel history document
+2. **Manual Entry**: Click "Add Trip" to add entries manually
+3. **Edit**: Click any cell in the table to edit the value
+4. **Delete**: Click the trash icon to remove a trip
+5. **Export**: Click "Export Excel" to download the data
 
-## Add new projects
+## Calculation Method
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+**Full Days = (Return Date − Departure Date) − 1**
 
-Use the plugin's generator to create new projects.
+This excludes both the departure day and return day, counting only complete days spent abroad—the standard method for UK residency calculations.
 
-To generate a new application, use:
+## License
 
-```sh
-npx nx g @nx/next:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/react:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/next?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+MIT
