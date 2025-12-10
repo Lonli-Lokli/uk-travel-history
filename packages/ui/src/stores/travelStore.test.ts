@@ -20,7 +20,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       expect(calculated?.calendarDays).toBe(4);
       expect(calculated?.fullDays).toBe(3);
     });
@@ -34,7 +36,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Paris to London',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       // 20 - 10 = 10 days, minus 1 = 9 full days
       expect(calculated?.fullDays).toBe(9);
     });
@@ -48,7 +52,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       expect(calculated?.fullDays).toBe(0);
     });
 
@@ -61,7 +67,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       expect(calculated?.calendarDays).toBe(1);
       expect(calculated?.fullDays).toBe(0);
     });
@@ -74,7 +82,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       expect(calculated?.isIncomplete).toBe(true);
       expect(calculated?.fullDays).toBe(null);
     });
@@ -191,7 +201,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       const summary = travelStore.summary;
       const today = new Date();
       const startDate = new Date('2020-01-01');
-      const totalDaysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const totalDaysSinceStart = Math.floor(
+        (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       expect(summary.continuousLeaveDays).toBe(totalDaysSinceStart - 13);
     });
@@ -207,7 +219,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       // Calculate from vignette date
       const today = new Date();
       const vignetteDate = new Date('2020-06-01');
-      const expectedDays = Math.floor((today.getTime() - vignetteDate.getTime()) / (1000 * 60 * 60 * 24));
+      const expectedDays = Math.floor(
+        (today.getTime() - vignetteDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       expect(summary.continuousLeaveDays).toBe(expectedDays);
     });
@@ -238,7 +252,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       // Should be 0 full days (only 1 calendar day, minus 1 = 0)
       expect(calculated?.fullDays).toBe(0);
     });
@@ -253,7 +269,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       // Feb 28 to Mar 1 = 2 days calendar (including leap day), 1 full day
       expect(calculated?.calendarDays).toBe(2);
       expect(calculated?.fullDays).toBe(1);
@@ -267,7 +285,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       // Dec 20 to Jan 5 = 16 days calendar, 15 full days
       expect(calculated?.calendarDays).toBe(16);
       expect(calculated?.fullDays).toBe(15);
@@ -318,7 +338,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       expect(calculated?.isIncomplete).toBe(true);
       expect(calculated?.fullDays).toBe(null);
     });
@@ -331,7 +353,9 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
         inRoute: 'Test',
       });
 
-      const calculated = travelStore.tripsWithCalculations.find(t => t.id === trip.id);
+      const calculated = travelStore.tripsWithCalculations.find(
+        (t) => t.id === trip.id
+      );
       // Should handle gracefully (negative calendar days)
       expect(calculated?.calendarDays).toBeLessThan(0);
       // Full days should be 0 at minimum

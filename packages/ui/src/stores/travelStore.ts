@@ -17,8 +17,8 @@ export interface TripWithCalculations extends TripRecord {
 
 class TravelStore {
   trips: TripRecord[] = [];
-  vignetteEntryDate: string = '';
-  visaStartDate: string = '';
+  vignetteEntryDate = '';
+  visaStartDate = '';
   isLoading = false;
   error: string | null = null;
 
