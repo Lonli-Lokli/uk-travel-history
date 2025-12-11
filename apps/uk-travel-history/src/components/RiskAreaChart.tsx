@@ -16,8 +16,16 @@ import {
   Bar,
   Brush,
   Cell,
+  TooltipContentProps,
 } from 'recharts';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
+
+  interface TimelinePoint {
+      date: string;
+      daysSinceStart: number;
+      tripCount: number;
+      formattedDate: string;
+    }
 
 interface RollingDataPoint {
   date: string;
@@ -50,9 +58,9 @@ const getRiskLevel = (days: number): 'low' | 'caution' | 'critical' => {
 };
 
 // Define tooltip components outside to prevent hooks violation
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }:  TooltipContentProps<string | number, string>) => {
   if (active && payload && payload.length > 0) {
-    const data = payload[0].payload;
+    const data: RollingDataPoint = payload[0].payload;
     const riskColor = getRiskColor(data.rollingDays);
 
     return (
@@ -75,14 +83,14 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-const TripTooltip = ({ active, payload }: any) => {
+const TripTooltip = ({ active, payload }:TooltipContentProps<string | number, string> ) => {
   if (active && payload && payload.length > 0) {
-    const data = payload[0].payload;
+    const data: TripBar = payload[0].payload;
 
     return (
-      <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
+      <div className="bg-white p-3 border border-slate-300 rounded` shadow-lg">
         <p className="text-xs text-slate-500 mb-1">
-          {format(parseISO(data.outDate), 'dd/MM/yyyy')} → {format(parseISO(data.inDate), 'dd/MM/yyyy')}
+          {format(data.outDate, 'dd/MM/yyyy')} → {format(data.inDate, 'dd/MM/yyyy')}
         </p>
         <p className="text-sm text-slate-700 font-medium">
           {data.tripLabel}
@@ -183,12 +191,7 @@ export const RiskAreaChart = observer(() => {
     }
 
     // Create unified timeline data points (daily) for horizontal trip visualization
-    interface TimelinePoint {
-      date: string;
-      daysSinceStart: number;
-      tripCount: number;
-      formattedDate: string;
-    }
+  
 
     const timelinePoints: TimelinePoint[] = [];
 
@@ -212,7 +215,7 @@ export const RiskAreaChart = observer(() => {
     }
 
     // Create trip bars for horizontal timeline (each trip as a data point with start/end)
-    const bars: TripBar[] = completeTrips.map((trip: any) => {
+    const bars: TripBar[] = completeTrips.map(trip => {
       const tripOutDate = parseISO(trip.outDate);
       const tripInDate = parseISO(trip.inDate);
       const tripStart = differenceInDays(tripOutDate, start);
@@ -334,7 +337,7 @@ export const RiskAreaChart = observer(() => {
               domain={[0, 'auto']}
               label={{ value: 'Days Absent', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
             />
-            <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={CustomTooltip} />
             <ReferenceLine
               y={180}
               stroke="#ef4444"
@@ -389,12 +392,12 @@ export const RiskAreaChart = observer(() => {
                 type="number"
                 stroke="#64748b"
                 style={{ fontSize: '12px' }}
-                domain={[0, Math.max(1, Math.max(...allDataPoints.map((d: any) => d.tripCount)))]}
+                domain={[0, Math.max(1, Math.max(...allDataPoints.map(d => d.tripCount)))]}
                 label={{ value: 'Active Trips', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
               />
-              <Tooltip content={<TripTooltip />} />
+              {/* <Tooltip content={TripTooltip} /> */}
               <Bar dataKey="tripCount" fill="#3b82f6" barSize={15}>
-                {allDataPoints.map((entry: any, index: number) => {
+                {allDataPoints.map((entry, index) => {
                   // Color based on whether there's an active trip
                   const hasTrip = entry.tripCount > 0;
                   return (
