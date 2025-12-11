@@ -262,6 +262,112 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
   });
 
   describe('Edge Cases and Real-World Scenarios', () => {
+    it('should handle same-day trip in rolling period calculation', () => {
+      // Test that same-day trips (where absenceStart > absenceEnd) are handled correctly
+      travelStore.setVisaStartDate('2024-01-01');
+
+      travelStore.addTrip({
+        outDate: '2024-06-15',
+        inDate: '2024-06-15', // Same day return
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+      // Same-day trip should have 0 full days
+      expect(summary.totalFullDays).toBe(0);
+      // Should not affect rolling period calculation
+      expect(summary.maxAbsenceInAny12Months).toBe(0);
+      expect(summary.hasExceeded180Days).toBe(false);
+    });
+
+    it('should handle overnight trip in rolling period calculation', () => {
+      // Test overnight trips (1 day apart, should be 0 full days per guidance)
+      travelStore.setVisaStartDate('2024-01-01');
+
+      travelStore.addTrip({
+        outDate: '2024-06-15',
+        inDate: '2024-06-16', // Next day
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+      // Overnight trip: 1 calendar day, 0 full days
+      expect(summary.totalFullDays).toBe(0);
+      expect(summary.maxAbsenceInAny12Months).toBe(0);
+    });
+
+    it('should exclude trips starting before visa start date from rolling window checks', () => {
+      // Trip starts before visa start, but we should only count days within the visa period
+      travelStore.setVisaStartDate('2024-01-15');
+
+      travelStore.addTrip({
+        outDate: '2024-01-10', // Before visa start
+        inDate: '2024-01-25',  // After visa start
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+      // Total full days: 14 (Jan 25 - Jan 10 - 1)
+      expect(summary.totalFullDays).toBe(14);
+
+      // For rolling window starting Jan 15:
+      // Absence period: Jan 11 - Jan 24
+      // Overlap with window: Jan 15 - Jan 24 = 10 days
+      expect(summary.maxAbsenceInAny12Months).toBe(10);
+    });
+
+    it('should generate rollingAbsenceData points correctly', () => {
+      // Test the rollingAbsenceData getter for chart data
+      travelStore.setVisaStartDate('2024-01-01');
+
+      travelStore.addTrip({
+        outDate: '2024-02-01',
+        inDate: '2024-02-15', // 14 days calendar, 13 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const rollingData = travelStore.rollingAbsenceData;
+
+      // Should have data points
+      expect(rollingData.length).toBeGreaterThan(0);
+
+      // Each point should have required fields
+      rollingData.forEach(point => {
+        expect(point).toHaveProperty('date');
+        expect(point).toHaveProperty('rollingDays');
+        expect(point).toHaveProperty('riskLevel');
+        expect(point).toHaveProperty('formattedDate');
+        expect(['low', 'caution', 'critical']).toContain(point.riskLevel);
+      });
+    });
+
+    it('should return empty rollingAbsenceData when no start date', () => {
+      // Test edge case: no visa/vignette start date
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-10',
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const rollingData = travelStore.rollingAbsenceData;
+      expect(rollingData).toEqual([]);
+    });
+
+    it('should return empty rollingAbsenceData for invalid date range', () => {
+      // Test edge case: future start date (negative total days)
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      travelStore.setVisaStartDate(futureDate.toISOString().split('T')[0]);
+
+      const rollingData = travelStore.rollingAbsenceData;
+      expect(rollingData).toEqual([]);
+    });
+
     it('should handle leap year correctly', () => {
       const trip = travelStore.addTrip({
         outDate: '2024-02-28',
