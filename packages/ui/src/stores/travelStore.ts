@@ -1,5 +1,12 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { differenceInDays, addYears, subDays } from 'date-fns';
+import {
+  differenceInDays,
+  addYears,
+  subDays,
+  addDays,
+  parseISO,
+  format,
+} from 'date-fns';
 
 export interface TripRecord {
   id: string;
@@ -13,6 +20,31 @@ export interface TripWithCalculations extends TripRecord {
   calendarDays: number | null;
   fullDays: number | null;
   isIncomplete: boolean;
+}
+
+export interface RollingDataPoint {
+  date: string;
+  rollingDays: number;
+  riskLevel: 'low' | 'caution' | 'critical';
+  formattedDate: string;
+}
+
+export interface TimelinePoint {
+  date: string;
+  daysSinceStart: number;
+  tripCount: number;
+  formattedDate: string;
+}
+
+export interface TripBar {
+  date: string;
+  tripStart: number;
+  tripEnd: number;
+  tripDuration: number;
+  tripLabel: string;
+  formattedDate: string;
+  outDate: string;
+  inDate: string;
 }
 
 export type ILRTrack = 2 | 3 | 5 | 10;
@@ -86,7 +118,10 @@ class TravelStore {
 
         // Check rolling 12-month periods for 180-day limit
         // Per Home Office guidance: absences are considered on a rolling basis
-        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(start, today);
+        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
+          start,
+          today
+        );
         hasExceeded180Days = maxAbsenceInAny12Months > 180;
 
         // Calculate ILR eligibility date if track is selected
@@ -96,7 +131,9 @@ class TravelStore {
           const requiredEndDate = addYears(start, this.ilrTrack);
           const earliestApplicationDate = subDays(requiredEndDate, 28);
 
-          ilrEligibilityDate = earliestApplicationDate.toISOString().split('T')[0];
+          ilrEligibilityDate = earliestApplicationDate
+            .toISOString()
+            .split('T')[0];
           daysUntilEligible = differenceInDays(earliestApplicationDate, today);
         }
       }
@@ -117,8 +154,13 @@ class TravelStore {
 
   // Calculate maximum absence in any rolling 12-month period
   // Per Home Office guidance: no more than 180 days' absences in a rolling 12-month period
-  private calculateMaxAbsenceInRolling12Months(startDate: Date, endDate: Date): number {
-    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+  private calculateMaxAbsenceInRolling12Months(
+    startDate: Date,
+    endDate: Date
+  ): number {
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
 
     if (completeTrips.length === 0) return 0;
 
@@ -164,6 +206,177 @@ class TravelStore {
     });
 
     return maxAbsence;
+  }
+
+  // Helper to determine risk level based on days
+  private getRiskLevel(days: number): 'low' | 'caution' | 'critical' {
+    if (days >= 180) return 'critical';
+    if (days >= 150) return 'caution';
+    return 'low';
+  }
+
+  // Computed property: Rolling 12-month absence data for charts
+  get rollingAbsenceData(): RollingDataPoint[] {
+    const startDate = this.vignetteEntryDate || this.visaStartDate;
+
+    if (!startDate) {
+      return [];
+    }
+
+    const start = parseISO(startDate);
+    const today = new Date();
+    const totalDays = differenceInDays(today, start);
+
+    // Validate range
+    if (totalDays < 0 || totalDays > 3650) {
+      return [];
+    }
+
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
+    const rollingPoints: RollingDataPoint[] = [];
+
+    // Sample every week for performance (max 200 points)
+    const sampleInterval = Math.max(1, Math.floor(totalDays / 200));
+
+    for (let i = 0; i <= totalDays; i += sampleInterval) {
+      const currentDate = addDays(start, i);
+      const windowStart = addDays(currentDate, -365);
+
+      // Calculate absences in the 12-month window ending on currentDate
+      let absenceDays = 0;
+
+      completeTrips.forEach((trip) => {
+        const tripOut = parseISO(trip.outDate);
+        const tripIn = parseISO(trip.inDate);
+
+        // Check if trip overlaps with the 12-month window
+        if (tripOut <= currentDate && tripIn >= windowStart) {
+          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
+          const overlapEnd = tripIn < currentDate ? tripIn : currentDate;
+
+          if (overlapStart <= overlapEnd) {
+            const overlapDays = differenceInDays(overlapEnd, overlapStart);
+            absenceDays += Math.max(0, overlapDays - 1);
+          }
+        }
+      });
+
+      rollingPoints.push({
+        date: currentDate.toISOString(),
+        rollingDays: absenceDays,
+        riskLevel: this.getRiskLevel(absenceDays),
+        formattedDate: format(currentDate, 'dd/MM/yyyy'),
+      });
+    }
+
+    // Add final point (today) if not already included
+    if (totalDays % sampleInterval !== 0) {
+      const windowStart = addDays(today, -365);
+      let absenceDays = 0;
+
+      completeTrips.forEach((trip) => {
+        const tripOut = parseISO(trip.outDate);
+        const tripIn = parseISO(trip.inDate);
+
+        if (tripOut <= today && tripIn >= windowStart) {
+          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
+          const overlapEnd = tripIn < today ? tripIn : today;
+
+          if (overlapStart <= overlapEnd) {
+            const overlapDays = differenceInDays(overlapEnd, overlapStart);
+            absenceDays += Math.max(0, overlapDays - 1);
+          }
+        }
+      });
+
+      rollingPoints.push({
+        date: today.toISOString(),
+        rollingDays: absenceDays,
+        riskLevel: this.getRiskLevel(absenceDays),
+        formattedDate: format(today, 'dd/MM/yyyy'),
+      });
+    }
+
+    return rollingPoints;
+  }
+
+  // Computed property: Timeline points for trip visualization
+  get timelinePoints(): TimelinePoint[] {
+    const startDate = this.vignetteEntryDate || this.visaStartDate;
+
+    if (!startDate) {
+      return [];
+    }
+
+    const start = parseISO(startDate);
+    const today = new Date();
+    const totalDays = differenceInDays(today, start);
+
+    if (totalDays < 0 || totalDays > 3650) {
+      return [];
+    }
+
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
+    const timelinePoints: TimelinePoint[] = [];
+
+    for (let i = 0; i <= totalDays; i++) {
+      const currentDate = addDays(start, i);
+      const dateStr = currentDate.toISOString().split('T')[0];
+
+      // Check which trips are active on this date
+      const activeTrips = completeTrips.filter((trip) => {
+        const tripOut = parseISO(trip.outDate);
+        const tripIn = parseISO(trip.inDate);
+        return currentDate >= tripOut && currentDate <= tripIn;
+      });
+
+      timelinePoints.push({
+        date: dateStr,
+        daysSinceStart: i,
+        tripCount: activeTrips.length,
+        formattedDate: format(currentDate, 'dd/MM/yyyy'),
+      });
+    }
+
+    return timelinePoints;
+  }
+
+  // Computed property: Trip bars for horizontal timeline visualization
+  get tripBars(): TripBar[] {
+    const startDate = this.vignetteEntryDate || this.visaStartDate;
+
+    if (!startDate) {
+      return [];
+    }
+
+    const start = parseISO(startDate);
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
+
+    return completeTrips.map((trip) => {
+      const tripOutDate = parseISO(trip.outDate);
+      const tripInDate = parseISO(trip.inDate);
+      const tripStart = differenceInDays(tripOutDate, start);
+      const tripEnd = differenceInDays(tripInDate, start);
+
+      return {
+        date: trip.outDate,
+        tripStart,
+        tripEnd,
+        tripDuration: trip.fullDays || 0,
+        tripLabel: `${trip.outRoute || 'Unknown'} → ${
+          trip.inRoute || 'Unknown'
+        }`,
+        formattedDate: format(tripOutDate, 'dd/MM/yyyy'),
+        outDate: trip.outDate,
+        inDate: trip.inDate,
+      };
+    });
   }
 
   generateId(): string {
@@ -246,7 +459,9 @@ class TravelStore {
 
       runInAction(() => {
         const importedTrips: TripRecord[] = data.data.trips.map(
-          (trip: any) => ({
+          (
+            trip: Partial<TripRecord> & { outDate?: string; inDate?: string }
+          ) => ({
             id: this.generateId(),
             outDate: trip.outDate ? trip.outDate.split('T')[0] : '',
             inDate: trip.inDate ? trip.inDate.split('T')[0] : '',

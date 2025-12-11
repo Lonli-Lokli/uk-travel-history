@@ -11,53 +11,15 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
-import { Trash2, Plus, ArrowUpDown, Check, X, GripVertical } from 'lucide-react';
+import { Trash2, Plus, ArrowUpDown, GripVertical } from 'lucide-react';
 import { Button } from './button';
-import { Input } from './input';
+import { EditableCell } from './editable-cell';
 import { travelStore, TripWithCalculations } from './stores/travelStore';
-
-interface EditingCell {
-  rowId: string;
-  columnId: string;
-}
+import { formatDate } from '@uth/utils';
 
 export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
-  const [editValue, setEditValue] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  const startEditing = (
-    rowId: string,
-    columnId: string,
-    currentValue: string
-  ) => {
-    setEditingCell({ rowId, columnId });
-    setEditValue(currentValue || '');
-  };
-
-  const saveEdit = () => {
-    if (editingCell) {
-      travelStore.updateTrip(editingCell.rowId, {
-        [editingCell.columnId]: editValue,
-      });
-      setEditingCell(null);
-      setEditValue('');
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingCell(null);
-    setEditValue('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      saveEdit();
-    } else if (e.key === 'Escape') {
-      cancelEdit();
-    }
-  };
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -104,52 +66,21 @@ export const TravelTable = observer(() => {
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
         ),
-        cell: ({ row }) => {
-          const value = row.original.outDate;
-          const isEditing =
-            editingCell?.rowId === row.original.id &&
-            editingCell?.columnId === 'outDate';
-
-          if (isEditing) {
-            return (
-              <div className="flex items-center gap-1">
-                <Input
-                  type="date"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="h-7 w-32 text-xs"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={saveEdit}
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={cancelEdit}
-                >
-                  <X className="h-3 w-3 text-red-600" />
-                </Button>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1"
-              onClick={() => startEditing(row.original.id, 'outDate', value)}
-            >
-              {value ? new Date(value).toLocaleDateString('en-GB') : '—'}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.outDate}
+            onSave={(value) =>
+              travelStore.updateTrip(row.original.id, { outDate: value })
+            }
+            type="date"
+            displayValue={
+              row.original.outDate
+                ? formatDate(row.original.outDate)
+                : undefined
+            }
+            placeholder="Set date"
+          />
+        ),
       },
       {
         accessorKey: 'inDate',
@@ -164,152 +95,49 @@ export const TravelTable = observer(() => {
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
         ),
-        cell: ({ row }) => {
-          const value = row.original.inDate;
-          const isEditing =
-            editingCell?.rowId === row.original.id &&
-            editingCell?.columnId === 'inDate';
-
-          if (isEditing) {
-            return (
-              <div className="flex items-center gap-1">
-                <Input
-                  type="date"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="h-7 w-32 text-xs"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={saveEdit}
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={cancelEdit}
-                >
-                  <X className="h-3 w-3 text-red-600" />
-                </Button>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1"
-              onClick={() => startEditing(row.original.id, 'inDate', value)}
-            >
-              {value ? new Date(value).toLocaleDateString('en-GB') : '—'}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.inDate}
+            onSave={(value) =>
+              travelStore.updateTrip(row.original.id, { inDate: value })
+            }
+            type="date"
+            displayValue={
+              row.original.inDate ? formatDate(row.original.inDate) : undefined
+            }
+            placeholder="Set date"
+          />
+        ),
       },
       {
         accessorKey: 'outRoute',
         header: () => <span className="text-xs font-semibold">Departure</span>,
-        cell: ({ row }) => {
-          const value = row.original.outRoute;
-          const isEditing =
-            editingCell?.rowId === row.original.id &&
-            editingCell?.columnId === 'outRoute';
-
-          if (isEditing) {
-            return (
-              <div className="flex items-center gap-1">
-                <Input
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="h-7 text-xs"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={saveEdit}
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={cancelEdit}
-                >
-                  <X className="h-3 w-3 text-red-600" />
-                </Button>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 truncate max-w-[200px]"
-              onClick={() => startEditing(row.original.id, 'outRoute', value)}
-              title={value}
-            >
-              {value || '—'}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.outRoute}
+            onSave={(value) =>
+              travelStore.updateTrip(row.original.id, { outRoute: value })
+            }
+            type="text"
+            placeholder="Add route"
+            className="max-w-[200px]"
+          />
+        ),
       },
       {
         accessorKey: 'inRoute',
         header: () => <span className="text-xs font-semibold">Return</span>,
-        cell: ({ row }) => {
-          const value = row.original.inRoute;
-          const isEditing =
-            editingCell?.rowId === row.original.id &&
-            editingCell?.columnId === 'inRoute';
-
-          if (isEditing) {
-            return (
-              <div className="flex items-center gap-1">
-                <Input
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="h-7 text-xs"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={saveEdit}
-                >
-                  <Check className="h-3 w-3 text-green-600" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={cancelEdit}
-                >
-                  <X className="h-3 w-3 text-red-600" />
-                </Button>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 truncate max-w-[200px]"
-              onClick={() => startEditing(row.original.id, 'inRoute', value)}
-              title={value}
-            >
-              {value || '—'}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.inRoute}
+            onSave={(value) =>
+              travelStore.updateTrip(row.original.id, { inRoute: value })
+            }
+            type="text"
+            placeholder="Add route"
+            className="max-w-[200px]"
+          />
+        ),
       },
       {
         accessorKey: 'calendarDays',
@@ -354,7 +182,7 @@ export const TravelTable = observer(() => {
         ),
       },
     ],
-    [editingCell, editValue]
+    []
   );
 
   const table = useReactTable({
@@ -387,7 +215,7 @@ export const TravelTable = observer(() => {
         {table.getRowModel().rows.map((row, index) => (
           <div
             key={row.id}
-            className={`p-3 rounded-lg border ${
+            className={`p-2 rounded-lg border ${
               row.original.isIncomplete
                 ? 'bg-red-50 border-red-200'
                 : 'bg-white border-slate-200'
@@ -397,86 +225,86 @@ export const TravelTable = observer(() => {
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
           >
-            <div className="flex justify-between items-start mb-2">
+            {/* Header with drag handle and full days */}
+            <div className="flex items-center justify-between mb-2">
               <div
-                className="cursor-move pr-2 flex-shrink-0"
+                className="cursor-move flex-shrink-0"
                 onTouchStart={() => handleDragStart(index)}
               >
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Out</div>
-                <div
-                  className="font-medium cursor-pointer hover:text-primary"
-                  onClick={() =>
-                    startEditing(
-                      row.original.id,
-                      'outDate',
-                      row.original.outDate
-                    )
-                  }
-                >
-                  {row.original.outDate
-                    ? new Date(row.original.outDate).toLocaleDateString('en-GB')
-                    : 'Click to set'}
-                </div>
-                <div
-                  className="text-xs text-muted-foreground truncate max-w-[140px] cursor-pointer hover:text-foreground"
-                  onClick={() =>
-                    startEditing(
-                      row.original.id,
-                      'outRoute',
-                      row.original.outRoute
-                    )
-                  }
-                >
-                  {row.original.outRoute || 'Add route'}
-                </div>
-              </div>
-              <div className="text-center px-3">
-                <div className="text-2xl font-bold text-primary">
+              <div className="text-center flex-1">
+                <div className="text-xl font-bold text-primary">
                   {row.original.fullDays ?? '—'}
                 </div>
-                <div className="text-[10px] text-muted-foreground uppercase">
+                <div className="text-[0.625rem] text-muted-foreground uppercase leading-tight">
                   Full Days
                 </div>
               </div>
-              <div className="space-y-1 text-right">
-                <div className="text-xs text-muted-foreground">In</div>
-                <div
-                  className="font-medium cursor-pointer hover:text-primary"
-                  onClick={() =>
-                    startEditing(row.original.id, 'inDate', row.original.inDate)
-                  }
-                >
-                  {row.original.inDate
-                    ? new Date(row.original.inDate).toLocaleDateString('en-GB')
-                    : 'Click to set'}
-                </div>
-                <div
-                  className="text-xs text-muted-foreground truncate max-w-[140px] cursor-pointer hover:text-foreground"
-                  onClick={() =>
-                    startEditing(
-                      row.original.id,
-                      'inRoute',
-                      row.original.inRoute
-                    )
-                  }
-                >
-                  {row.original.inRoute || 'Add route'}
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end pt-2 border-t border-slate-100">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
                 onClick={() => travelStore.deleteTrip(row.original.id)}
               >
-                <Trash2 className="h-3 w-3 mr-1" />
-                Delete
+                <Trash2 className="h-3 w-3" />
               </Button>
+            </div>
+
+            {/* Departure section */}
+            <div className="space-y-1 mb-2">
+              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
+                Departure
+              </div>
+              <EditableCell
+                value={row.original.outDate}
+                onSave={(value) =>
+                  travelStore.updateTrip(row.original.id, { outDate: value })
+                }
+                type="date"
+                displayValue={
+                  row.original.outDate
+                    ? formatDate(row.original.outDate)
+                    : 'Tap to set date'
+                }
+              />
+              <EditableCell
+                value={row.original.outRoute}
+                onSave={(value) =>
+                  travelStore.updateTrip(row.original.id, { outRoute: value })
+                }
+                type="text"
+                placeholder="Add departure location"
+                className="text-xs text-muted-foreground"
+              />
+            </div>
+
+            {/* Return section */}
+            <div className="space-y-1">
+              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
+                Return
+              </div>
+              <EditableCell
+                value={row.original.inDate}
+                onSave={(value) =>
+                  travelStore.updateTrip(row.original.id, { inDate: value })
+                }
+                type="date"
+                displayValue={
+                  row.original.inDate
+                    ? formatDate(row.original.inDate)
+                    : 'Tap to set date'
+                }
+              />
+              <EditableCell
+                value={row.original.inRoute}
+                onSave={(value) =>
+                  travelStore.updateTrip(row.original.id, { inRoute: value })
+                }
+                type="text"
+                placeholder="Add return location"
+                className="text-xs text-muted-foreground"
+              />
             </div>
           </div>
         ))}
@@ -491,7 +319,7 @@ export const TravelTable = observer(() => {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-3 py-2.5 text-left font-medium text-slate-600"
+                    className="px-3 py-2 text-left font-medium text-slate-600"
                   >
                     {header.isPlaceholder
                       ? null
@@ -540,37 +368,6 @@ export const TravelTable = observer(() => {
           </tbody>
         </table>
       </div>
-
-      {/* Edit Modal for Mobile */}
-      {editingCell && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:hidden">
-          <div className="w-full bg-white rounded-t-2xl p-4 animate-in slide-in-from-bottom">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold">
-                Edit {editingCell.columnId.replace(/([A-Z])/g, ' $1').trim()}
-              </h3>
-              <Button variant="ghost" size="icon" onClick={cancelEdit}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <Input
-              type={editingCell.columnId.includes('Date') ? 'date' : 'text'}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="mb-4"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={saveEdit}>
-                Save
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={cancelEdit}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 });
