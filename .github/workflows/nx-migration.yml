@@ -13,23 +13,23 @@ permissions:
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: '22'
-        cache: 'npm'
 
-    - run: npm ci
-    
-    - uses: timonmasberg/nx-migration-gh-action@v1.0.0
-      with:
-        repoToken: ${{ secrets.GITHUB_TOKEN }}
-        # Optional:
-        prTitle: 'feat: Migrates NX to $VERSION'
-        includeMigrationsFile: false
-        base: 'master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - uses: timonmasberg/nx-migration-gh-action@v1.0.0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          # Optional:
+          prTitle: 'feat: Migrates NX to $VERSION'
+          includeMigrationsFile: false
+          base: 'master'

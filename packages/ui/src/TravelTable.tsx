@@ -73,7 +73,11 @@ export const TravelTable = observer(() => {
               travelStore.updateTrip(row.original.id, { outDate: value })
             }
             type="date"
-            displayValue={row.original.outDate ? formatDate(row.original.outDate) : undefined}
+            displayValue={
+              row.original.outDate
+                ? formatDate(row.original.outDate)
+                : undefined
+            }
             placeholder="Set date"
           />
         ),
@@ -98,7 +102,9 @@ export const TravelTable = observer(() => {
               travelStore.updateTrip(row.original.id, { inDate: value })
             }
             type="date"
-            displayValue={row.original.inDate ? formatDate(row.original.inDate) : undefined}
+            displayValue={
+              row.original.inDate ? formatDate(row.original.inDate) : undefined
+            }
             placeholder="Set date"
           />
         ),
@@ -247,7 +253,9 @@ export const TravelTable = observer(() => {
 
             {/* Departure section */}
             <div className="space-y-1 mb-2">
-              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">Departure</div>
+              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
+                Departure
+              </div>
               <EditableCell
                 value={row.original.outDate}
                 onSave={(value) =>
@@ -273,7 +281,9 @@ export const TravelTable = observer(() => {
 
             {/* Return section */}
             <div className="space-y-1">
-              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">Return</div>
+              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
+                Return
+              </div>
               <EditableCell
                 value={row.original.inDate}
                 onSave={(value) =>

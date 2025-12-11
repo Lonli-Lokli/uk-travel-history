@@ -1,5 +1,12 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { differenceInDays, addYears, subDays, addDays, parseISO, format } from 'date-fns';
+import {
+  differenceInDays,
+  addYears,
+  subDays,
+  addDays,
+  parseISO,
+  format,
+} from 'date-fns';
 
 export interface TripRecord {
   id: string;
@@ -111,7 +118,10 @@ class TravelStore {
 
         // Check rolling 12-month periods for 180-day limit
         // Per Home Office guidance: absences are considered on a rolling basis
-        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(start, today);
+        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
+          start,
+          today
+        );
         hasExceeded180Days = maxAbsenceInAny12Months > 180;
 
         // Calculate ILR eligibility date if track is selected
@@ -121,7 +131,9 @@ class TravelStore {
           const requiredEndDate = addYears(start, this.ilrTrack);
           const earliestApplicationDate = subDays(requiredEndDate, 28);
 
-          ilrEligibilityDate = earliestApplicationDate.toISOString().split('T')[0];
+          ilrEligibilityDate = earliestApplicationDate
+            .toISOString()
+            .split('T')[0];
           daysUntilEligible = differenceInDays(earliestApplicationDate, today);
         }
       }
@@ -142,8 +154,13 @@ class TravelStore {
 
   // Calculate maximum absence in any rolling 12-month period
   // Per Home Office guidance: no more than 180 days' absences in a rolling 12-month period
-  private calculateMaxAbsenceInRolling12Months(startDate: Date, endDate: Date): number {
-    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+  private calculateMaxAbsenceInRolling12Months(
+    startDate: Date,
+    endDate: Date
+  ): number {
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
 
     if (completeTrips.length === 0) return 0;
 
@@ -215,7 +232,9 @@ class TravelStore {
       return [];
     }
 
-    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
     const rollingPoints: RollingDataPoint[] = [];
 
     // Sample every week for performance (max 200 points)
@@ -299,7 +318,9 @@ class TravelStore {
       return [];
     }
 
-    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
     const timelinePoints: TimelinePoint[] = [];
 
     for (let i = 0; i <= totalDays; i++) {
@@ -333,7 +354,9 @@ class TravelStore {
     }
 
     const start = parseISO(startDate);
-    const completeTrips = this.tripsWithCalculations.filter((t) => !t.isIncomplete);
+    const completeTrips = this.tripsWithCalculations.filter(
+      (t) => !t.isIncomplete
+    );
 
     return completeTrips.map((trip) => {
       const tripOutDate = parseISO(trip.outDate);
@@ -346,7 +369,9 @@ class TravelStore {
         tripStart,
         tripEnd,
         tripDuration: trip.fullDays || 0,
-        tripLabel: `${trip.outRoute || 'Unknown'} → ${trip.inRoute || 'Unknown'}`,
+        tripLabel: `${trip.outRoute || 'Unknown'} → ${
+          trip.inRoute || 'Unknown'
+        }`,
         formattedDate: format(tripOutDate, 'dd/MM/yyyy'),
         outDate: trip.outDate,
         inDate: trip.inDate,
@@ -434,7 +459,9 @@ class TravelStore {
 
       runInAction(() => {
         const importedTrips: TripRecord[] = data.data.trips.map(
-          (trip: Partial<TripRecord> & { outDate?: string; inDate?: string }) => ({
+          (
+            trip: Partial<TripRecord> & { outDate?: string; inDate?: string }
+          ) => ({
             id: this.generateId(),
             outDate: trip.outDate ? trip.outDate.split('T')[0] : '',
             inDate: trip.inDate ? trip.inDate.split('T')[0] : '',

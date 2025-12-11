@@ -87,7 +87,9 @@ export const SummaryCards = observer(() => {
             summary.daysUntilEligible !== null && (
               <>
                 {summary.daysUntilEligible < 0 ? (
-                  <>Eligible now! ({Math.abs(summary.daysUntilEligible)}d ago)</>
+                  <>
+                    Eligible now! ({Math.abs(summary.daysUntilEligible)}d ago)
+                  </>
                 ) : summary.daysUntilEligible === 0 ? (
                   <>Today!</>
                 ) : (

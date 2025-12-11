@@ -31,7 +31,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  ),
   openGraph: {
     type: 'website',
     locale: 'en_GB',
@@ -77,7 +79,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
 };
-
 
 export default function RootLayout({
   children,

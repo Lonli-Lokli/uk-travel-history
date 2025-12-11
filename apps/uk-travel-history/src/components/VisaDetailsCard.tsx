@@ -1,7 +1,16 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { travelStore, Card, CardContent, CardHeader, CardTitle, Input, Label, ILRTrack } from '@uth/ui';
+import {
+  travelStore,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  ILRTrack,
+  DatePicker,
+} from '@uth/ui';
 import { formatDate } from '@uth/utils';
 import { FileText, Target } from 'lucide-react';
 
@@ -14,7 +23,8 @@ export const VisaDetailsCard = observer(() => {
           Visa & Vignette Details
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
-          Enter your vignette entry date or visa start date to calculate continuous leave and ILR eligibility.
+          Enter your vignette entry date or visa start date to calculate
+          continuous leave and ILR eligibility.
         </p>
       </CardHeader>
 
@@ -24,12 +34,11 @@ export const VisaDetailsCard = observer(() => {
             <Label htmlFor="vignetteDate" className="text-xs font-medium">
               Vignette Entry Date
             </Label>
-            <Input
-              id="vignetteDate"
-              type="date"
+            <DatePicker
               value={travelStore.vignetteEntryDate}
-              onChange={(e) => travelStore.setVignetteEntryDate(e.target.value)}
-              className="w-full h-9 text-sm"
+              onChange={(value) => travelStore.setVignetteEntryDate(value)}
+              placeholder="Select vignette entry date"
+              className="w-full"
             />
             <p className="text-xs text-muted-foreground leading-tight">
               Date you entered the UK with your vignette
@@ -40,12 +49,11 @@ export const VisaDetailsCard = observer(() => {
             <Label htmlFor="visaStartDate" className="text-xs font-medium">
               Visa Start Date
             </Label>
-            <Input
-              id="visaStartDate"
-              type="date"
+            <DatePicker
               value={travelStore.visaStartDate}
-              onChange={(e) => travelStore.setVisaStartDate(e.target.value)}
-              className="w-full h-9 text-sm"
+              onChange={(value) => travelStore.setVisaStartDate(value)}
+              placeholder="Select visa start date"
+              className="w-full"
             />
             <p className="text-xs text-muted-foreground leading-tight">
               Start date of your current visa
@@ -53,7 +61,10 @@ export const VisaDetailsCard = observer(() => {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ilrTrack" className="text-xs font-medium flex items-center gap-1">
+            <Label
+              htmlFor="ilrTrack"
+              className="text-xs font-medium flex items-center gap-1"
+            >
               <Target className="w-3 h-3" />
               ILR Track (Years)
             </Label>
@@ -62,7 +73,9 @@ export const VisaDetailsCard = observer(() => {
               value={travelStore.ilrTrack || ''}
               onChange={(e) => {
                 const value = e.target.value;
-                travelStore.setILRTrack(value ? (Number(value) as ILRTrack) : null);
+                travelStore.setILRTrack(
+                  value ? (Number(value) as ILRTrack) : null
+                );
               }}
               className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -88,10 +101,7 @@ export const VisaDetailsCard = observer(() => {
                   {formatDate(travelStore.vignetteEntryDate)}
                 </>
               ) : (
-                <>
-                  Visa Start Date:{' '}
-                  {formatDate(travelStore.visaStartDate)}
-                </>
+                <>Visa Start Date: {formatDate(travelStore.visaStartDate)}</>
               )}
             </p>
           </div>

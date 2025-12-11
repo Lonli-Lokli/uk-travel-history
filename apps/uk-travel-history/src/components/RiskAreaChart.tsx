@@ -1,21 +1,44 @@
 'use client';
 
+import React, { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { travelStore, RollingDataPoint, TripBar } from '@uth/ui';
-import { useMemo } from 'react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Brush,
-  TooltipContentProps,
-} from 'recharts';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+
+import Highcharts from 'highcharts/highcharts-gantt';
+import HighchartsReact from 'highcharts-react-official';
+
+type TooltipCtx = {
+  x?: number;
+  y?: number;
+  points?: Array<{ y?: number }>;
+  [key: string]: unknown;
+};
+
+type GanttPointOptions = {
+  id: string;
+  name: string;
+  start: number;
+  end: number;
+  y: number;
+  color?: string;
+};
+
+type HCOptions = Highcharts.Options;
+
+type GradientStop = {
+  offset: string;
+  color: string;
+  opacity: number;
+};
+
+type AssignedTrip = {
+  trip: TripBar;
+  start: number;
+  end: number;
+  lane: number;
+  index: number;
+};
 
 const getRiskColor = (days: number): string => {
   if (days >= 180) return '#ef4444'; // red-500
@@ -23,44 +46,35 @@ const getRiskColor = (days: number): string => {
   return '#22c55e'; // green-500
 };
 
-const CustomTooltip = ({
-  active,
-  payload,
-}: TooltipContentProps<string | number, string>) => {
-  if (active && payload && payload.length > 0) {
-    const data: RollingDataPoint = payload[0].payload;
-    const riskColor = getRiskColor(data.rollingDays);
-
-    return (
-      <div className="bg-white p-2 border border-slate-300 rounded shadow-lg">
-        <p className="text-xs font-medium text-slate-700">
-          {data.formattedDate}
-        </p>
-        <p className="text-sm font-semibold" style={{ color: riskColor }}>
-          Rolling 12-month: {data.rollingDays} days
-        </p>
-        {data.rollingDays >= 180 && (
-          <p className="text-xs text-red-600 mt-1">⚠️ Exceeds 180-day limit</p>
-        )}
-        {data.rollingDays >= 150 && data.rollingDays < 180 && (
-          <p className="text-xs text-amber-600 mt-1">⚠️ Approaching limit</p>
-        )}
-      </div>
-    );
-  }
-  return null;
+const hexToRgba = (hex: string, alpha: number): string => {
+  const normalized = hex.replace('#', '');
+  const num = parseInt(normalized, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export const RiskAreaChart = observer(() => {
+export const RiskAreaChart: React.FC = observer(() => {
   const { rollingAbsenceData, tripBars } = travelStore;
 
-  // Calculate gradient colors based on data
-  const gradientStops = useMemo(() => {
+  const { gradientStops, maxRollingValue } = useMemo(() => {
+    if (rollingAbsenceData.length === 0) {
+      return {
+        maxRollingValue: 0,
+        gradientStops: [
+          { offset: '0%', color: '#22c55e', opacity: 0.3 },
+          { offset: '100%', color: '#22c55e', opacity: 0.3 },
+        ] as GradientStop[],
+      };
+    }
+
     const maxValue = Math.max(
       ...rollingAbsenceData.map((d: RollingDataPoint) => d.rollingDays),
       0
     );
-    const stops: Array<{ offset: string; color: string; opacity: number }> = [];
+
+    const stops: GradientStop[] = [];
 
     if (maxValue >= 180) {
       stops.push(
@@ -109,8 +123,277 @@ export const RiskAreaChart = observer(() => {
       );
     }
 
-    return stops;
+    return { gradientStops: stops, maxRollingValue: maxValue };
   }, [rollingAbsenceData]);
+
+  const areaChartOptions = useMemo<HCOptions>(() => {
+    if (rollingAbsenceData.length === 0) {
+      return {};
+    }
+
+    const seriesData: Highcharts.PointOptionsObject[] = rollingAbsenceData.map(
+      (d: RollingDataPoint) => ({
+        x: Date.parse(d.date),
+        y: d.rollingDays,
+      })
+    );
+
+    const fillColor: Highcharts.GradientColorObject = {
+      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+      stops: gradientStops.map((stop) => [
+        parseFloat(stop.offset.replace('%', '')) / 100,
+        hexToRgba(stop.color, stop.opacity),
+      ]),
+    };
+
+    const options: HCOptions = {
+      chart: {
+        type: 'area',
+        height: 280,
+        spacingBottom: 30,
+      },
+      title: { text: '' },
+      credits: { enabled: false },
+      legend: { enabled: false },
+      xAxis: {
+        type: 'datetime',
+        lineColor: '#e2e8f0',
+        tickColor: '#e2e8f0',
+        labels: {
+          style: { color: '#64748b', fontSize: '11px' },
+          formatter: (ctx) => {
+            const value = ctx.value as number;
+            return format(new Date(value), 'MMM yyyy');
+          },
+        },
+      },
+      yAxis: {
+        title: {
+          text: 'Days Absent',
+          style: { fontSize: '11px' },
+        },
+        min: 0,
+        lineColor: '#e2e8f0',
+        gridLineColor: '#e2e8f0',
+        gridLineDashStyle: 'ShortDash',
+        labels: {
+          style: { color: '#64748b', fontSize: '11px' },
+        },
+        plotLines:
+          maxRollingValue >= 180
+            ? [
+                {
+                  value: 180,
+                  color: '#ef4444',
+                  width: 2,
+                  zIndex: 5,
+                  label: {
+                    text: '180-day limit',
+                    align: 'right',
+                    style: {
+                      color: '#ef4444',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                    },
+                  },
+                },
+              ]
+            : [],
+      },
+      tooltip: {
+        shared: true,
+        useHTML: true,
+        formatter: function (): string {
+          const ctx = this as unknown as TooltipCtx;
+          const x = (ctx.x ?? 0) as number;
+          const y = (ctx.y ?? ctx.points?.[0]?.y ?? 0) as number;
+          const riskColor = getRiskColor(y);
+          const dateText = format(new Date(x), 'dd MMM yyyy');
+
+          let warning = '';
+          if (y >= 180) {
+            warning =
+              '<p style="font-size:0.75rem;margin:0.25rem 0 0 0;color:#dc2626;">⚠️ Exceeds 180-day limit</p>';
+          } else if (y >= 150) {
+            warning =
+              '<p style="font-size:0.75rem;margin:0.25rem 0 0 0;color:#d97706;">⚠️ Approaching limit</p>';
+          }
+
+          return `
+            <div style="background:#ffffff;border:1px solid #cbd5f5;border-radius:0.5rem;padding:0.5rem;box-shadow:0 10px 15px -3px rgba(15,23,42,0.1);">
+              <p style="font-size:0.75rem;font-weight:500;color:#334155;margin:0 0 0.125rem 0;">${dateText}</p>
+              <p style="font-size:0.875rem;font-weight:600;color:${riskColor};margin:0;">
+                Rolling 12-month: ${y} days
+              </p>
+              ${warning}
+            </div>
+          `;
+        },
+      },
+      plotOptions: {
+        series: {
+          marker: {
+            enabled: false,
+          },
+        },
+        area: {
+          fillColor,
+          lineColor: '#3b82f6',
+          lineWidth: 2,
+        },
+      },
+      series: [
+        {
+          type: 'area',
+          name: 'Rolling 12-month',
+          data: seriesData,
+        },
+      ],
+    };
+
+    return options;
+  }, [gradientStops, maxRollingValue, rollingAbsenceData]);
+
+  const ganttOptions = useMemo<HCOptions | null>(() => {
+    if (tripBars.length === 0 || rollingAbsenceData.length === 0) {
+      return null;
+    }
+
+    const startRange = parseISO(rollingAbsenceData[0].date).getTime();
+    const endRange = parseISO(
+      rollingAbsenceData[rollingAbsenceData.length - 1].date
+    ).getTime();
+
+    const rawTrips: AssignedTrip[] = tripBars.map(
+      (trip: TripBar, idx: number) => ({
+        trip,
+        index: idx,
+        start: parseISO(trip.outDate).getTime(),
+        end: parseISO(trip.inDate).getTime(),
+        lane: 0,
+      })
+    );
+
+    // sort by start date
+    rawTrips.sort((a, b) => a.start - b.start);
+
+    const lanes: AssignedTrip[][] = [];
+    const assigned: AssignedTrip[] = [];
+
+    // greedy lane allocation: first lane that doesn't overlap
+    for (const t of rawTrips) {
+      let placed = false;
+
+      for (let laneIndex = 0; laneIndex < lanes.length; laneIndex += 1) {
+        const lane = lanes[laneIndex];
+        const last = lane[lane.length - 1];
+
+        if (t.start >= last.end) {
+          t.lane = laneIndex;
+          lane.push(t);
+          assigned.push(t);
+          placed = true;
+          break;
+        }
+      }
+
+      if (!placed) {
+        t.lane = lanes.length;
+        lanes.push([t]);
+        assigned.push(t);
+      }
+    }
+
+    const laneCount = lanes.length;
+
+    const seriesData: GanttPointOptions[] = assigned.map((t) => ({
+      id: `trip-${t.index}`,
+      name: t.trip.tripLabel,
+      start: t.start,
+      end: t.end,
+      y: t.lane,
+    }));
+
+    const categories = Array.from(
+      { length: laneCount },
+      (_, i) => `Lane ${i + 1}`
+    );
+
+    const chartHeight = Math.max(80, 40 + laneCount * 26);
+
+    const options: HCOptions = {
+      chart: {
+        height: chartHeight,
+      },
+      title: { text: '' },
+      credits: { enabled: false },
+      legend: { enabled: false },
+      xAxis: [
+        {
+          type: 'datetime',
+          min: startRange,
+          max: endRange,
+          lineColor: '#e2e8f0',
+          tickColor: '#e2e8f0',
+          labels: {
+            style: { color: '#64748b', fontSize: '10px' },
+            formatter: (ctx) => {
+              const value = ctx.value as number;
+              return format(new Date(value), 'MMM yyyy');
+            },
+          },
+        },
+      ],
+      yAxis: {
+        type: 'category',
+        categories,
+        min: 0,
+        max: laneCount - 1,
+        grid: {
+          borderWidth: 0,
+          columns: [],
+        },
+        labels: {
+          enabled: false,
+        },
+      },
+      tooltip: {
+        useHTML: true,
+        pointFormatter: function (this: Highcharts.Point): string {
+          const start = (this as any).start as number;
+          const end = (this as any).end as number;
+          const label = (this as any).name as string;
+
+          const startText = format(new Date(start), 'dd/MM/yyyy');
+          const endText = format(new Date(end), 'dd/MM/yyyy');
+
+          return `
+            <span style="font-size:11px;"><b>${label}</b></span><br/>
+            <span style="font-size:11px;">${startText} - ${endText}</span>
+          `;
+        },
+      },
+      series: [
+        {
+          type: 'gantt',
+          name: 'Trips',
+          data: seriesData,
+          borderColor: '#2563eb',
+          color: '#bfdbfe',
+          dataLabels: {
+            enabled: true,
+            style: {
+              fontSize: '10px',
+              color: '#1e3a8a',
+              textOutline: 'none',
+            },
+          },
+        },
+      ],
+    };
+
+    return options;
+  }, [tripBars, rollingAbsenceData]);
 
   if (rollingAbsenceData.length === 0) {
     return (
@@ -139,131 +422,43 @@ export const RiskAreaChart = observer(() => {
             <div
               className="w-3 h-3 rounded"
               style={{ backgroundColor: '#22c55e' }}
-            ></div>
+            />
             <span className="text-slate-600">Low Risk (≤149 days)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded"
               style={{ backgroundColor: '#f59e0b' }}
-            ></div>
+            />
             <span className="text-slate-600">Caution (150-179 days)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded"
               style={{ backgroundColor: '#ef4444' }}
-            ></div>
+            />
             <span className="text-slate-600">Critical (≥180 days)</span>
           </div>
         </div>
       </div>
 
-      {/* Rolling Absence Chart */}
+      {/* Rolling Absence Area Chart */}
       <div className="mb-4">
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart
-            data={rollingAbsenceData}
-            margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
-            syncId="timeline"
-          >
-            <defs>
-              <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
-                {gradientStops.map((stop, idx) => (
-                  <stop
-                    key={idx}
-                    offset={stop.offset}
-                    stopColor={stop.color}
-                    stopOpacity={stop.opacity}
-                  />
-                ))}
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(value) => format(parseISO(value), 'MMM yyyy')}
-              stroke="#64748b"
-              style={{ fontSize: '11px' }}
-            />
-            <YAxis
-              stroke="#64748b"
-              style={{ fontSize: '11px' }}
-              domain={[0, 'auto']}
-              label={{
-                value: 'Days Absent',
-                angle: -90,
-                position: 'insideLeft',
-                style: { fontSize: '11px' },
-              }}
-            />
-            <Tooltip content={CustomTooltip} />
-            <ReferenceLine
-              y={180}
-              stroke="#ef4444"
-              strokeWidth={2.5}
-              strokeDasharray="6 3"
-              label={{
-                value: '180-day limit',
-                position: 'right',
-                fill: '#ef4444',
-                fontSize: 12,
-                fontWeight: 'bold',
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="rollingDays"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              fill="url(#riskGradient)"
-            />
-            <Brush
-              dataKey="date"
-              height={25}
-              stroke="#3b82f6"
-              fill="#f1f5f9"
-              tickFormatter={(value) => format(parseISO(value), 'MMM yy')}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <HighchartsReact highcharts={Highcharts} options={areaChartOptions} />
       </div>
 
-      {/* Trip Timeline */}
-      {tripBars.length > 0 && (
+      {/* Trip Timeline (Gantt-style, single row until overlaps) */}
+      {ganttOptions && tripBars.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-slate-700 mb-2">
             Trip Timeline
           </h4>
-          <div className="relative bg-slate-50 rounded border border-slate-200 p-4 overflow-x-auto">
-            {tripBars.map((trip: TripBar, idx: number) => {
-              // Calculate position and width based on dates
-              const startDate = parseISO(rollingAbsenceData[0].date);
-              const endDate = parseISO(rollingAbsenceData[rollingAbsenceData.length - 1].date);
-              const totalDays = differenceInDays(endDate, startDate);
-
-              const tripStartDate = parseISO(trip.outDate);
-              const tripEndDate = parseISO(trip.inDate);
-
-              const leftPercent = (differenceInDays(tripStartDate, startDate) / totalDays) * 100;
-              const widthPercent = (differenceInDays(tripEndDate, tripStartDate) / totalDays) * 100;
-
-              return (
-                <div
-                  key={`trip-${idx}`}
-                  className="relative mb-2 h-8 bg-blue-100 border border-blue-300 rounded"
-                  style={{
-                    marginLeft: `${leftPercent}%`,
-                    width: `${widthPercent}%`,
-                  }}
-                  title={`${trip.tripLabel}\n${format(tripStartDate, 'dd/MM/yyyy')} - ${format(tripEndDate, 'dd/MM/yyyy')}`}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-900 px-1 truncate">
-                    {trip.tripLabel}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="bg-slate-50 rounded border border-slate-200 p-2 overflow-x-auto">
+            <HighchartsReact
+              highcharts={Highcharts}
+              constructorType="ganttChart"
+              options={ganttOptions}
+            />
           </div>
         </div>
       )}

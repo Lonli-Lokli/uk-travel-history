@@ -82,10 +82,7 @@ export function PopoverContent({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-40"
-        onClick={() => onOpenChange(false)}
-      />
+      <div className="fixed inset-0 z-40" onClick={() => onOpenChange(false)} />
       <div
         className={cn(
           'absolute z-50 bg-white rounded-md border border-slate-200 shadow-lg',

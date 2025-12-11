@@ -18,7 +18,7 @@ const lcovFiles = glob.sync('coverage/packages/*/lcov.info');
 
 console.log(`Found ${lcovFiles.length} coverage files to process`);
 
-lcovFiles.forEach(lcovPath => {
+lcovFiles.forEach((lcovPath) => {
   // Extract package name from path: coverage/packages/engine/lcov.info -> engine
   // Normalize path to use forward slashes for consistent parsing
   const normalizedPath = lcovPath.replace(/\\/g, '/');
@@ -37,7 +37,10 @@ lcovFiles.forEach(lcovPath => {
 
   // Also handle the case where the path might already start with the full path
   // (shouldn't happen, but let's be defensive)
-  content = content.replace(/^SF:(.+?)[\\\/](.+?)[\\\/]src[\\\/]/gm, `SF:${packagePrefix}src/`);
+  content = content.replace(
+    /^SF:(.+?)[\\\/](.+?)[\\\/]src[\\\/]/gm,
+    `SF:${packagePrefix}src/`
+  );
 
   // Normalize all backslashes to forward slashes for consistency
   // This ensures all paths use Unix-style separators (which Codecov expects)

@@ -24,10 +24,7 @@ export const TravelPageClient = observer(() => {
         onChange={handleFileSelect}
       />
 
-      <Header
-        onImportClick={triggerFileInput}
-        onExportClick={handleExport}
-      />
+      <Header onImportClick={triggerFileInput} onExportClick={handleExport} />
 
       <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
         <SummaryCards />

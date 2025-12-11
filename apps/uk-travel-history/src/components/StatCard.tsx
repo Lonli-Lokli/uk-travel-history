@@ -73,7 +73,9 @@ export const StatCard = ({
             <Icon className={`w-4 h-4 ${styles.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-lg font-bold ${styles.valueColor} leading-tight`}>
+            <p
+              className={`text-lg font-bold ${styles.valueColor} leading-tight`}
+            >
               {value}
             </p>
             <p className={`text-xs ${styles.labelColor} leading-tight`}>

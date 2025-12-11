@@ -35,7 +35,9 @@ export function DatePicker({
     }
   };
 
-  const displayValue = selectedDate ? format(selectedDate, 'dd/MM/yyyy') : placeholder;
+  const displayValue = selectedDate
+    ? format(selectedDate, 'dd/MM/yyyy')
+    : placeholder;
 
   return (
     <div className="relative">
