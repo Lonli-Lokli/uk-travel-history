@@ -43,6 +43,53 @@ const getRiskLevel = (days: number): 'low' | 'caution' | 'critical' => {
   return 'low';
 };
 
+// Define tooltip components outside to prevent hooks violation
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload;
+    const riskColor = getRiskColor(data.rollingDays);
+
+    return (
+      <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
+        <p className="text-sm font-medium text-slate-700">
+          {data.formattedDate}
+        </p>
+        <p className="text-sm font-semibold" style={{ color: riskColor }}>
+          Rolling 12-month total: {data.rollingDays} days absent
+        </p>
+        {data.rollingDays >= 180 && (
+          <p className="text-xs text-red-600 mt-1">⚠️ Exceeds 180-day limit</p>
+        )}
+        {data.rollingDays >= 150 && data.rollingDays < 180 && (
+          <p className="text-xs text-amber-600 mt-1">⚠️ Approaching limit</p>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+const TripTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload;
+
+    return (
+      <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
+        <p className="text-sm font-medium text-slate-700">
+          {data.formattedDate}
+        </p>
+        <p className="text-sm text-slate-600">
+          {data.tripLabel}
+        </p>
+        <p className="text-sm font-semibold text-slate-800">
+          {data.tripDuration} days
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const RiskAreaChart = observer(() => {
   const { tripsWithCalculations, vignetteEntryDate, visaStartDate } = travelStore;
 
@@ -151,52 +198,6 @@ export const RiskAreaChart = observer(() => {
       </div>
     );
   }
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length > 0) {
-      const data = payload[0].payload;
-      const riskColor = getRiskColor(data.rollingDays);
-
-      return (
-        <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
-          <p className="text-sm font-medium text-slate-700">
-            {data.formattedDate}
-          </p>
-          <p className="text-sm font-semibold" style={{ color: riskColor }}>
-            Rolling 12-month total: {data.rollingDays} days absent
-          </p>
-          {data.rollingDays >= 180 && (
-            <p className="text-xs text-red-600 mt-1">⚠️ Exceeds 180-day limit</p>
-          )}
-          {data.rollingDays >= 150 && data.rollingDays < 180 && (
-            <p className="text-xs text-amber-600 mt-1">⚠️ Approaching limit</p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const TripTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length > 0) {
-      const data = payload[0].payload;
-
-      return (
-        <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
-          <p className="text-sm font-medium text-slate-700">
-            {data.formattedDate}
-          </p>
-          <p className="text-sm text-slate-600">
-            {data.tripLabel}
-          </p>
-          <p className="text-sm font-semibold text-slate-800">
-            {data.tripDuration} days
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Calculate gradient colors based on data
   const gradientStops = useMemo(() => {
