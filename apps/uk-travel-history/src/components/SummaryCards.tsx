@@ -17,8 +17,10 @@ export const SummaryCards = observer(() => {
   const hasContinuousLeave = summary.continuousLeaveDays !== null;
   const hasILRDate = summary.ilrEligibilityDate !== null;
 
+  const gridColsClass = hasContinuousLeave && hasILRDate ? 'sm:grid-cols-6' : hasContinuousLeave ? 'sm:grid-cols-5' : 'sm:grid-cols-4';
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-4 mb-4 sm:mb-6">
+    <div className={`grid grid-cols-2 ${gridColsClass} gap-2 sm:gap-4 mb-4 sm:mb-6`}>
       <Card className="bg-white">
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -91,61 +93,65 @@ export const SummaryCards = observer(() => {
         </CardContent>
       </Card>
 
-      <Card className={`col-span-2 sm:col-span-1 ${summary.hasExceeded180Days ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'} text-white ${!hasContinuousLeave ? 'hidden' : ''}`}>
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-              {summary.hasExceeded180Days ? (
-                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
-              ) : (
-                <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-lg sm:text-2xl font-bold">
-                {summary.continuousLeaveDays}
-              </p>
-              <p className="text-[10px] sm:text-xs opacity-90">
-                Days in UK
-              </p>
-              {summary.maxAbsenceInAny12Months !== null && (
-                <p className="text-[9px] sm:text-[10px] opacity-75 mt-0.5">
-                  Max 12mo: {summary.maxAbsenceInAny12Months}d {summary.hasExceeded180Days && '⚠️'}
+      {hasContinuousLeave && (
+        <Card className={`col-span-2 sm:col-span-1 ${summary.hasExceeded180Days ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'} text-white`}>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                {summary.hasExceeded180Days ? (
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+                ) : (
+                  <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-lg sm:text-2xl font-bold">
+                  {summary.continuousLeaveDays}
                 </p>
-              )}
+                <p className="text-[10px] sm:text-xs opacity-90">
+                  Days in UK
+                </p>
+                {summary.maxAbsenceInAny12Months !== null && (
+                  <p className="text-[9px] sm:text-[10px] opacity-75 mt-0.5">
+                    Max 12mo: {summary.maxAbsenceInAny12Months}d {summary.hasExceeded180Days && '⚠️'}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className={`col-span-2 sm:col-span-1 ${summary.daysUntilEligible !== null && summary.daysUntilEligible < 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-purple-500 to-indigo-600'} text-white ${!hasILRDate || !summary.ilrEligibilityDate ? 'hidden' : ''}`}>
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-              <Target className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-bold">
-                {summary.ilrEligibilityDate && formatDate(summary.ilrEligibilityDate)}
-              </p>
-              <p className="text-[10px] sm:text-xs opacity-90">
-                ILR Eligible
-              </p>
-              {summary.daysUntilEligible !== null && (
-                <p className="text-[9px] sm:text-[10px] opacity-75 mt-0.5">
-                  {summary.daysUntilEligible < 0 ? (
-                    <>Eligible now! ({Math.abs(summary.daysUntilEligible)}d ago)</>
-                  ) : summary.daysUntilEligible === 0 ? (
-                    <>Today!</>
-                  ) : (
-                    <>{summary.daysUntilEligible}d remaining</>
-                  )}
+      {hasILRDate && summary.ilrEligibilityDate && (
+        <Card className={`col-span-2 sm:col-span-1 ${summary.daysUntilEligible !== null && summary.daysUntilEligible < 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-purple-500 to-indigo-600'} text-white`}>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs sm:text-sm font-bold">
+                  {formatDate(summary.ilrEligibilityDate)}
                 </p>
-              )}
+                <p className="text-[10px] sm:text-xs opacity-90">
+                  ILR Eligible
+                </p>
+                {summary.daysUntilEligible !== null && (
+                  <p className="text-[9px] sm:text-[10px] opacity-75 mt-0.5">
+                    {summary.daysUntilEligible < 0 ? (
+                      <>Eligible now! ({Math.abs(summary.daysUntilEligible)}d ago)</>
+                    ) : summary.daysUntilEligible === 0 ? (
+                      <>Today!</>
+                    ) : (
+                      <>{summary.daysUntilEligible}d remaining</>
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 });
