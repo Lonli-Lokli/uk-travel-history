@@ -119,8 +119,8 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       });
 
       const summary = travelStore.summary;
-      // Total: 58 + 60 + 63 = 181 full days (Dec 5 - Oct 1 = 65 days, 64 full days, but actual is 63)
-      expect(summary.totalFullDays).toBe(181);
+      // Total: 58 + 60 + 64 = 182 full days (Dec 5 - Oct 1 = 65 days, 64 full days)
+      expect(summary.totalFullDays).toBe(182);
       expect(summary.hasExceeded180Days).toBe(true);
     });
 
@@ -161,8 +161,8 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       });
 
       const summary = travelStore.summary;
-      // Actual calculation yields 184 full days total
-      expect(summary.totalFullDays).toBe(184);
+      // Actual calculation yields 185 full days total (100 + 85)
+      expect(summary.totalFullDays).toBe(185);
       // These don't overlap in same 12-month window starting from June 1
       // But they might overlap in a window starting Sep 1
       expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(180);
@@ -306,8 +306,8 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       });
 
       const summary = travelStore.summary;
-      // Actual calculation yields 211 full days (Dec 31 - Jun 1 = 213 days, minus 1 = 212, but actual is 211)
-      expect(summary.totalFullDays).toBe(211);
+      // Actual calculation yields 212 full days (Dec 31 - Jun 1 = 213 calendar days, minus 1 = 212 full days)
+      expect(summary.totalFullDays).toBe(212);
       expect(summary.hasExceeded180Days).toBe(true);
       expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(180);
     });

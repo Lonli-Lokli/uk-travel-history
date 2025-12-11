@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { travelStore } from '@uth/ui/stores/travelStore';
+import { travelStore } from '@uth/ui';
 import { useMemo } from 'react';
 import {
   AreaChart,
