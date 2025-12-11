@@ -3,26 +3,36 @@ import { Toaster } from '@uth/ui';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: 'UK Travel History Parser',
+    default: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
     template: '%s | UK Travel History Parser',
   },
   description:
-    'Professional web app for parsing UK Home Office travel history PDFs and calculating days spent outside the UK. Upload SAR documents, edit trips, and export to Excel.',
+    'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence. Upload SAR documents, edit trips, and export to Excel.',
   keywords: [
     'UK travel history',
     'Home Office SAR',
     'travel calculator',
     'days outside UK',
-    'UK residency',
-    'border control',
+    'UK residency calculator',
+    'ILR eligibility',
+    'continuous residence',
+    '180 day rule',
+    'border control data',
     'PDF parser',
     'excel export',
+    'UK visa compliance',
+    'settlement calculator',
   ],
   authors: [{ name: 'UK Travel History Parser' }],
   creator: 'UK Travel History Parser',
   publisher: 'UK Travel History Parser',
+  applicationName: 'UK Travel History Parser',
+  category: 'Tools',
   formatDetection: {
     email: false,
     address: false,
@@ -30,33 +40,34 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.svg',
+    apple: '/favicon.svg',
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  ),
+  manifest: '/site.webmanifest',
   openGraph: {
     type: 'website',
     locale: 'en_GB',
-    url: '/',
-    title: 'UK Travel History Parser',
+    url: siteUrl,
+    title: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
     description:
-      'Professional web app for parsing UK Home Office travel history PDFs and calculating days spent outside the UK.',
+      'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence for UK settlement.',
     siteName: 'UK Travel History Parser',
     images: [
       {
-        url: '/og-image.png',
+        url: `${siteUrl}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: 'UK Travel History Parser - Calculate days outside UK',
+        alt: 'UK Travel History Parser - Calculate days outside UK for visa and ILR compliance',
+        type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'UK Travel History Parser',
+    title: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
     description:
-      'Professional web app for parsing UK Home Office travel history PDFs and calculating days spent outside the UK.',
-    images: ['/og-image.png'],
+      'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence.',
+    images: [`${siteUrl}/og-image.png`],
+    creator: '@uk_travel_history',
   },
   robots: {
     index: true,
@@ -68,6 +79,9 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
+  },
+  alternates: {
+    canonical: siteUrl,
   },
   other: {
     ...Sentry.getTraceData(),
