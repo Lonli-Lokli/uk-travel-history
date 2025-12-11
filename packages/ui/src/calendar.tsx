@@ -28,14 +28,14 @@ export const Calendar = ({
       showOutsideDays={showOutsideDays}
       captionLayout="dropdown"
       startMonth={defaultStartMonth}
-      animate={true}
       endMonth={endMonth}
+      numberOfMonths={1}
       className={cn('p-3', className)}
       classNames={{
-        [UI.Months]: 'relative',
+        [UI.Months]: 'relative overflow-hidden',
         [UI.Month]: 'space-y-4 ml-0',
 
-        [UI.CaptionLabel]: 'text-sm font-medium hidden',
+        [UI.CaptionLabel]: '!hidden',
 
         [UI.Dropdown]: cn(
           'h-8 px-2 py-1 text-sm rounded-md border border-input bg-background ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex-shrink-0 z-10'
