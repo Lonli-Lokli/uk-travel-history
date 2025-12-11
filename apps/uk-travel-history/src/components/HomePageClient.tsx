@@ -7,7 +7,6 @@ import { Header } from './Header';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { TravelHistoryCard } from './TravelHistoryCard';
-import { InfoSection } from './InfoSection';
 import { EmptyState } from './EmptyState';
 import { useFileUpload, useExport, useClearAll } from './hooks';
 
@@ -56,7 +55,6 @@ export const HomePageClient = observer(() => {
             <div ref={travelTableRef}>
               <TravelHistoryCard onClearAll={handleClearAll} />
             </div>
-            <InfoSection />
           </>
         )}
       </main>

@@ -38,7 +38,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <>
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -47,6 +47,8 @@ export const LandingPage = () => {
         className="hidden"
         onChange={handleFileSelect}
       />
+
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
 
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -260,6 +262,7 @@ export const LandingPage = () => {
         </Card>
       </main>
     </div>
+    </>
   );
 };
 

@@ -55,13 +55,11 @@ export async function POST(request: NextRequest) {
     });
 
     sheet.columns = [
-      { header: '#', key: 'num', width: 6 },
-      { header: 'Date Out', key: 'outDate', width: 14 },
-      { header: 'Date In', key: 'inDate', width: 14 },
-      { header: 'Departure Route', key: 'outRoute', width: 28 },
-      { header: 'Return Route', key: 'inRoute', width: 28 },
-      { header: 'Calendar Days', key: 'calendarDays', width: 14 },
-      { header: 'Full Days Outside UK', key: 'fullDays', width: 20 },
+      { header: '#', key: 'num', width: 8 },
+      { header: 'Date Out', key: 'outDate', width: 16 },
+      { header: 'Date In', key: 'inDate', width: 16 },
+      { header: 'Departure', key: 'outRoute', width: 35 },
+      { header: 'Return', key: 'inRoute', width: 35 },
     ];
 
     const headerRow = sheet.getRow(1);
@@ -72,15 +70,13 @@ export async function POST(request: NextRequest) {
       fgColor: { argb: 'FF4472C4' },
     };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-    headerRow.height = 24;
-
-    let totalFullDays = 0;
+    headerRow.height = 26;
 
     trips.forEach((trip, index) => {
       const formatDate = (dateStr: string) => {
-        if (!dateStr) return '—';
+        if (!dateStr) return '';
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return '—';
+        if (isNaN(date.getTime())) return '';
         return date.toLocaleDateString('en-GB');
       };
 
@@ -88,228 +84,41 @@ export async function POST(request: NextRequest) {
         num: index + 1,
         outDate: formatDate(trip.outDate),
         inDate: formatDate(trip.inDate),
-        outRoute: trip.outRoute || '—',
-        inRoute: trip.inRoute || '—',
-        calendarDays: trip.calendarDays ?? '—',
-        fullDays: trip.fullDays ?? '—',
+        outRoute: trip.outRoute || '',
+        inRoute: trip.inRoute || '',
       });
 
-      row.getCell('num').alignment = { horizontal: 'center' };
-      row.getCell('outDate').alignment = { horizontal: 'center' };
-      row.getCell('inDate').alignment = { horizontal: 'center' };
-      row.getCell('calendarDays').alignment = { horizontal: 'center' };
-      row.getCell('fullDays').alignment = { horizontal: 'center' };
+      row.getCell('num').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('outDate').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('inDate').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('outRoute').alignment = { vertical: 'middle' };
+      row.getCell('inRoute').alignment = { vertical: 'middle' };
+      row.height = 20;
 
       if (trip.isIncomplete) {
         row.eachCell((cell) => {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFFFC7CE' },
+            fgColor: { argb: 'FFFFF4C4' },
           };
+          cell.font = { italic: true, color: { argb: 'FF9C6500' } };
         });
-      }
-
-      if (trip.fullDays !== null) {
-        totalFullDays += trip.fullDays;
       }
     });
 
+    // Apply borders to all data cells
     const lastDataRow = trips.length + 1;
     for (let row = 1; row <= lastDataRow; row++) {
-      for (let col = 1; col <= 7; col++) {
+      for (let col = 1; col <= 5; col++) {
         const cell = sheet.getCell(row, col);
         cell.border = {
-          top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-          left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-          bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-          right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          right: { style: 'thin', color: { argb: 'FFB0B0B0' } },
         };
       }
-    }
-
-    // Add summary section
-    sheet.addRow([]);
-    sheet.addRow([]);
-
-    // Visa/Vignette Information
-    if (data.vignetteEntryDate || data.visaStartDate) {
-      const infoHeaderRow = sheet.addRow(['VISA & VIGNETTE INFORMATION']);
-      infoHeaderRow.getCell(1).font = { bold: true, size: 12 };
-      infoHeaderRow.getCell(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE7E6E6' },
-      };
-
-      if (data.vignetteEntryDate) {
-        const vignetteRow = sheet.addRow([
-          'Vignette Entry Date:',
-          new Date(data.vignetteEntryDate).toLocaleDateString('en-GB'),
-        ]);
-        vignetteRow.getCell(1).font = { bold: true };
-      }
-
-      if (data.visaStartDate) {
-        const visaRow = sheet.addRow([
-          'Visa Start Date:',
-          new Date(data.visaStartDate).toLocaleDateString('en-GB'),
-        ]);
-        visaRow.getCell(1).font = { bold: true };
-      }
-
-      if (data.ilrTrack) {
-        const ilrTrackRow = sheet.addRow([
-          'ILR Track:',
-          `${data.ilrTrack} Years`,
-        ]);
-        ilrTrackRow.getCell(1).font = { bold: true };
-      }
-
-      sheet.addRow([]);
-    }
-
-    // ILR Eligibility Information
-    if (data.summary?.ilrEligibilityDate) {
-      const ilrHeaderRow = sheet.addRow(['ILR ELIGIBILITY']);
-      ilrHeaderRow.getCell(1).font = { bold: true, size: 12 };
-      ilrHeaderRow.getCell(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE7E6E6' },
-      };
-
-      const eligibilityDateRow = sheet.addRow([
-        'Earliest Application Date:',
-        new Date(data.summary.ilrEligibilityDate).toLocaleDateString('en-GB'),
-      ]);
-      eligibilityDateRow.getCell(1).font = { bold: true };
-      eligibilityDateRow.getCell(2).font = { bold: true, size: 14 };
-
-      if (data.summary.daysUntilEligible !== null) {
-        if (data.summary.daysUntilEligible < 0) {
-          eligibilityDateRow.getCell(2).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD5E8D4' },
-          };
-          eligibilityDateRow.getCell(2).font = {
-            ...eligibilityDateRow.getCell(2).font,
-            color: { argb: 'FF006100' },
-          };
-
-          const statusRow = sheet.addRow([
-            'Status:',
-            `✓ Eligible now! (${Math.abs(
-              data.summary.daysUntilEligible
-            )} days ago)`,
-          ]);
-          statusRow.getCell(1).font = { bold: true };
-          statusRow.getCell(2).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD5E8D4' },
-          };
-          statusRow.getCell(2).font = {
-            bold: true,
-            color: { argb: 'FF006100' },
-          };
-        } else {
-          const statusRow = sheet.addRow([
-            'Days Until Eligible:',
-            data.summary.daysUntilEligible,
-          ]);
-          statusRow.getCell(1).font = { bold: true };
-          statusRow.getCell(2).font = { bold: true };
-        }
-      }
-
-      sheet.addRow([]);
-    }
-
-    // Summary Statistics
-    const summaryHeaderRow = sheet.addRow(['SUMMARY']);
-    summaryHeaderRow.getCell(1).font = { bold: true, size: 12 };
-    summaryHeaderRow.getCell(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE7E6E6' },
-    };
-
-    const totalRow = sheet.addRow([
-      'Total Full Days Outside UK:',
-      totalFullDays,
-    ]);
-    totalRow.getCell(1).font = { bold: true };
-    totalRow.getCell(2).font = { bold: true, size: 14 };
-    totalRow.getCell(2).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFFFF2CC' },
-    };
-    totalRow.getCell(2).alignment = { horizontal: 'center' };
-
-    if (
-      data.summary?.continuousLeaveDays !== null &&
-      data.summary?.continuousLeaveDays !== undefined
-    ) {
-      const continuousRow = sheet.addRow([
-        'Days in UK (Continuous Leave):',
-        data.summary.continuousLeaveDays,
-      ]);
-      continuousRow.getCell(1).font = { bold: true };
-      continuousRow.getCell(2).font = { bold: true, size: 14 };
-      continuousRow.getCell(2).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFD5E8D4' },
-      };
-      continuousRow.getCell(2).alignment = { horizontal: 'center' };
-    }
-
-    if (
-      data.summary?.maxAbsenceInAny12Months !== null &&
-      data.summary?.maxAbsenceInAny12Months !== undefined
-    ) {
-      const maxAbsenceRow = sheet.addRow([
-        'Max Absence in Any 12 Months:',
-        data.summary.maxAbsenceInAny12Months,
-      ]);
-      maxAbsenceRow.getCell(1).font = { bold: true };
-      maxAbsenceRow.getCell(2).font = { bold: true };
-
-      if (data.summary.hasExceeded180Days) {
-        maxAbsenceRow.getCell(2).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFFFC7CE' },
-        };
-        maxAbsenceRow.getCell(2).font = {
-          bold: true,
-          color: { argb: 'FF9C0006' },
-        };
-
-        sheet.addRow([]);
-        const warningRow = sheet.addRow([
-          '⚠️ WARNING: Exceeded 180-day limit in a 12-month period',
-        ]);
-        warningRow.getCell(1).font = {
-          bold: true,
-          color: { argb: 'FF9C0006' },
-        };
-        warningRow.getCell(1).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFFFC7CE' },
-        };
-      } else {
-        maxAbsenceRow.getCell(2).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFD5E8D4' },
-        };
-      }
-      maxAbsenceRow.getCell(2).alignment = { horizontal: 'center' };
     }
 
     const buffer = await workbook.xlsx.writeBuffer();

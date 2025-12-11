@@ -14,20 +14,22 @@ import { cn } from '@uth/utils';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
+const defaultStartMonth = new Date(2015, 0);
+const defaultEndMonth = new Date(new Date().getFullYear() + 5, 11);
 export const Calendar = ({
   className,
   classNames,
   showOutsideDays = true,
+  endMonth = defaultEndMonth,
   ...props
 }: CalendarProps) => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       captionLayout="dropdown"
-      fromYear={1950}
-      toYear={currentYear + 10}
+      startMonth={defaultStartMonth}
+      animate={true}
+      endMonth={endMonth}
       className={cn('p-3', className)}
       classNames={{
         [UI.Months]: 'relative',
@@ -59,10 +61,10 @@ export const Calendar = ({
           'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
         [UI.Week]: 'flex w-full mt-2',
         [UI.Day]:
-          'h-9 w-9 text-center rounded-md text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+          'h-9 w-9 rounded-md p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
         [UI.DayButton]: cn(
           buttonVariants({ variant: 'ghost' }),
-          'h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground'
+          'h-9 w-9 p-0 font-normal text-center aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground'
         ),
         [SelectionState.range_end]: 'day-range-end',
         [SelectionState.selected]:
