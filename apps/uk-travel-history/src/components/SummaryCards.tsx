@@ -2,6 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { travelStore, Card, CardContent } from '@uth/ui';
+import { formatDate } from '@uth/utils';
 import {
   Plane,
   CalendarDays,
@@ -130,7 +131,7 @@ export const SummaryCards = observer(() => {
               </div>
               <div className="flex-1">
                 <p className="text-xs sm:text-sm font-bold">
-                  {new Date(summary.ilrEligibilityDate).toLocaleDateString('en-GB')}
+                  {formatDate(summary.ilrEligibilityDate)}
                 </p>
                 <p className="text-[10px] sm:text-xs opacity-90">
                   ILR Eligible

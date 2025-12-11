@@ -15,6 +15,7 @@ import { Trash2, Plus, ArrowUpDown, Check, X, GripVertical } from 'lucide-react'
 import { Button } from './button';
 import { Input } from './input';
 import { travelStore, TripWithCalculations } from './stores/travelStore';
+import { formatDate } from '@uth/utils';
 
 interface EditingCell {
   rowId: string;
@@ -146,7 +147,7 @@ export const TravelTable = observer(() => {
               className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1"
               onClick={() => startEditing(row.original.id, 'outDate', value)}
             >
-              {value ? new Date(value).toLocaleDateString('en-GB') : '—'}
+              {value ? formatDate(value) : '—'}
             </div>
           );
         },
@@ -206,7 +207,7 @@ export const TravelTable = observer(() => {
               className="cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1"
               onClick={() => startEditing(row.original.id, 'inDate', value)}
             >
-              {value ? new Date(value).toLocaleDateString('en-GB') : '—'}
+              {value ? formatDate(value) : '—'}
             </div>
           );
         },
@@ -417,7 +418,7 @@ export const TravelTable = observer(() => {
                   }
                 >
                   {row.original.outDate
-                    ? new Date(row.original.outDate).toLocaleDateString('en-GB')
+                    ? formatDate(row.original.outDate)
                     : 'Click to set'}
                 </div>
                 <div
@@ -450,7 +451,7 @@ export const TravelTable = observer(() => {
                   }
                 >
                   {row.original.inDate
-                    ? new Date(row.original.inDate).toLocaleDateString('en-GB')
+                    ? formatDate(row.original.inDate)
                     : 'Click to set'}
                 </div>
                 <div

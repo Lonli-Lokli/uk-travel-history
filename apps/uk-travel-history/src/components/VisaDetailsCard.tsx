@@ -2,6 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { travelStore, Card, CardContent, CardHeader, CardTitle, Input, Label, ILRTrack } from '@uth/ui';
+import { formatDate } from '@uth/utils';
 import { FileText, Target } from 'lucide-react';
 
 export const VisaDetailsCard = observer(() => {
@@ -84,12 +85,12 @@ export const VisaDetailsCard = observer(() => {
               {travelStore.vignetteEntryDate ? (
                 <>
                   Vignette Entry Date:{' '}
-                  {new Date(travelStore.vignetteEntryDate).toLocaleDateString('en-GB')}
+                  {formatDate(travelStore.vignetteEntryDate)}
                 </>
               ) : (
                 <>
                   Visa Start Date:{' '}
-                  {new Date(travelStore.visaStartDate).toLocaleDateString('en-GB')}
+                  {formatDate(travelStore.visaStartDate)}
                 </>
               )}
             </p>
