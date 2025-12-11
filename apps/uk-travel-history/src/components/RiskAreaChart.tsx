@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { travelStore, RollingDataPoint } from '@uth/ui';
+import { travelStore, RollingDataPoint, TripBar } from '@uth/ui';
 import { useMemo } from 'react';
 import {
   AreaChart,
@@ -12,12 +12,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  ReferenceArea,
-  ComposedChart,
   Brush,
   TooltipContentProps,
 } from 'recharts';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 
 const getRiskColor = (days: number): string => {
   if (days >= 180) return '#ef4444'; // red-500
@@ -59,7 +57,7 @@ export const RiskAreaChart = observer(() => {
   // Calculate gradient colors based on data
   const gradientStops = useMemo(() => {
     const maxValue = Math.max(
-      ...rollingAbsenceData.map((d) => d.rollingDays),
+      ...rollingAbsenceData.map((d: RollingDataPoint) => d.rollingDays),
       0
     );
     const stops: Array<{ offset: string; color: string; opacity: number }> = [];
@@ -237,58 +235,36 @@ export const RiskAreaChart = observer(() => {
           <h4 className="text-sm font-semibold text-slate-700 mb-2">
             Trip Timeline
           </h4>
-          <ResponsiveContainer
-            width="100%"
-            height={Math.max(140, Math.min(tripBars.length * 35 + 60, 280))}
-          >
-            <ComposedChart
-              data={rollingAbsenceData}
-              margin={{ top: 10, right: 20, left: 60, bottom: 20 }}
-              syncId="timeline"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => format(parseISO(value), 'MMM yyyy')}
-                stroke="#64748b"
-                style={{ fontSize: '11px' }}
-              />
-              <YAxis
-                stroke="#64748b"
-                style={{ fontSize: '11px' }}
-                domain={[0, tripBars.length + 1]}
-                ticks={[]}
-                label={{
-                  value: 'Trips',
-                  angle: -90,
-                  position: 'insideLeft',
-                  style: { fontSize: '11px' },
-                }}
-              />
-              {tripBars.map((trip, idx) => {
-                const yPosition = idx + 0.5;
-                return (
-                  <ReferenceArea
-                    key={`trip-${idx}`}
-                    x1={trip.outDate}
-                    x2={trip.inDate}
-                    y1={yPosition - 0.4}
-                    y2={yPosition + 0.4}
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                    stroke="#2563eb"
-                    strokeWidth={1}
-                    label={{
-                      value: trip.tripLabel,
-                      position: 'center',
-                      fill: '#1e293b',
-                      fontSize: 10,
-                    }}
-                  />
-                );
-              })}
-            </ComposedChart>
-          </ResponsiveContainer>
+          <div className="relative bg-slate-50 rounded border border-slate-200 p-4 overflow-x-auto">
+            {tripBars.map((trip: TripBar, idx: number) => {
+              // Calculate position and width based on dates
+              const startDate = parseISO(rollingAbsenceData[0].date);
+              const endDate = parseISO(rollingAbsenceData[rollingAbsenceData.length - 1].date);
+              const totalDays = differenceInDays(endDate, startDate);
+
+              const tripStartDate = parseISO(trip.outDate);
+              const tripEndDate = parseISO(trip.inDate);
+
+              const leftPercent = (differenceInDays(tripStartDate, startDate) / totalDays) * 100;
+              const widthPercent = (differenceInDays(tripEndDate, tripStartDate) / totalDays) * 100;
+
+              return (
+                <div
+                  key={`trip-${idx}`}
+                  className="relative mb-2 h-8 bg-blue-100 border border-blue-300 rounded"
+                  style={{
+                    marginLeft: `${leftPercent}%`,
+                    width: `${widthPercent}%`,
+                  }}
+                  title={`${trip.tripLabel}\n${format(tripStartDate, 'dd/MM/yyyy')} - ${format(tripEndDate, 'dd/MM/yyyy')}`}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-900 px-1 truncate">
+                    {trip.tripLabel}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
