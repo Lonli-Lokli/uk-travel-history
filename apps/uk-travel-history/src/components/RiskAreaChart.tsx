@@ -137,8 +137,6 @@ export const RiskAreaChart: React.FC = observer(() => {
       if (typeof e.min !== 'number' || typeof e.max !== 'number') return;
       if ((e ).trigger === 'sync') return;
 
-      const sourceRef =
-        source === 'area' ? areaChartRef.current : ganttChartRef.current;
       const targetRef =
         source === 'area' ? ganttChartRef.current : areaChartRef.current;
 
