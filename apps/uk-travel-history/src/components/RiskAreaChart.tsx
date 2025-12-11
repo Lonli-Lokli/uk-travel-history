@@ -186,19 +186,7 @@ export const RiskAreaChart = observer(() => {
     return { rollingData: rollingPoints, tripBars: bars };
   }, [tripsWithCalculations, vignetteEntryDate, visaStartDate]);
 
-  if (rollingData.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-          Risk-Based Timeline
-        </h3>
-        <div className="text-center py-8 text-slate-500">
-          <p>Set a Vignette Entry Date or Visa Start Date to view the risk timeline.</p>
-        </div>
-      </div>
-    );
-  }
-
+  
   // Calculate gradient colors based on data
   const gradientStops = useMemo(() => {
     const maxValue = Math.max(...rollingData.map(d => d.rollingDays));
@@ -229,6 +217,20 @@ export const RiskAreaChart = observer(() => {
 
     return stops;
   }, [rollingData]);
+
+  
+  if (rollingData.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+          Risk-Based Timeline
+        </h3>
+        <div className="text-center py-8 text-slate-500">
+          <p>Set a Vignette Entry Date or Visa Start Date to view the risk timeline.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6">

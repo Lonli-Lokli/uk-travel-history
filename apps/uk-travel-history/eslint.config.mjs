@@ -5,15 +5,13 @@ import baseConfig from '../../eslint.config.mjs';
 
 export default [
   { plugins: { '@next/next': nextEslintPluginNext } },
-  ...baseConfig,
   ...nx.configs['flat/react-typescript'],
+  reactHooks.configs.flat.recommended,
+  ...baseConfig,
   {
     ignores: ['.next/**/*', '**/out-tsc'],
   },
   {
-    plugins: {
-      'react-hooks': reactHooks,
-    },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
