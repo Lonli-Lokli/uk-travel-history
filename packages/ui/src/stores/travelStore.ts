@@ -170,8 +170,12 @@ class TravelStore {
     const checkDates: Date[] = [new Date(startDate)];
 
     // Add all trip departure dates as potential 12-month period starts
+    // Only add dates on or after the visa/vignette start date
     completeTrips.forEach((trip) => {
-      checkDates.push(new Date(trip.outDate));
+      const tripOutDate = new Date(trip.outDate);
+      if (tripOutDate >= startDate) {
+        checkDates.push(tripOutDate);
+      }
     });
 
     // Check 12-month period from each relevant date
@@ -188,16 +192,24 @@ class TravelStore {
         const tripOut = new Date(trip.outDate);
         const tripIn = new Date(trip.inDate);
 
-        // Check if trip overlaps with this 12-month period
-        if (tripOut <= periodEnd && tripIn >= checkDate) {
-          // Calculate overlap
-          const overlapStart = tripOut > checkDate ? tripOut : checkDate;
-          const overlapEnd = tripIn < periodEnd ? tripIn : periodEnd;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        // Absence period: [departureDate + 1 day, returnDate - 1 day] (inclusive)
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            // Per guidance: only count whole days, exclude departure and return
-            absenceDays += Math.max(0, overlapDays - 1);
+        // Check if absence period overlaps with this 12-month window
+        if (absenceStart <= periodEnd && absenceEnd >= checkDate) {
+          // Calculate intersection of absence period and window
+          const intersectionStart =
+            absenceStart > checkDate ? absenceStart : checkDate;
+          const intersectionEnd =
+            absenceEnd < periodEnd ? absenceEnd : periodEnd;
+
+          if (intersectionStart <= intersectionEnd) {
+            // Count days in intersection (inclusive of both boundaries)
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });
@@ -251,14 +263,21 @@ class TravelStore {
         const tripOut = parseISO(trip.outDate);
         const tripIn = parseISO(trip.inDate);
 
-        // Check if trip overlaps with the 12-month window
-        if (tripOut <= currentDate && tripIn >= windowStart) {
-          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
-          const overlapEnd = tripIn < currentDate ? tripIn : currentDate;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            absenceDays += Math.max(0, overlapDays - 1);
+        // Check if absence period overlaps with the 12-month window
+        if (absenceStart <= currentDate && absenceEnd >= windowStart) {
+          const intersectionStart =
+            absenceStart > windowStart ? absenceStart : windowStart;
+          const intersectionEnd =
+            absenceEnd < currentDate ? absenceEnd : currentDate;
+
+          if (intersectionStart <= intersectionEnd) {
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });
@@ -280,13 +299,19 @@ class TravelStore {
         const tripOut = parseISO(trip.outDate);
         const tripIn = parseISO(trip.inDate);
 
-        if (tripOut <= today && tripIn >= windowStart) {
-          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
-          const overlapEnd = tripIn < today ? tripIn : today;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            absenceDays += Math.max(0, overlapDays - 1);
+        if (absenceStart <= today && absenceEnd >= windowStart) {
+          const intersectionStart =
+            absenceStart > windowStart ? absenceStart : windowStart;
+          const intersectionEnd = absenceEnd < today ? absenceEnd : today;
+
+          if (intersectionStart <= intersectionEnd) {
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });

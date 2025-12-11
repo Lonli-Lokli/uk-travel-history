@@ -312,6 +312,74 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(180);
     });
 
+    it('should correctly calculate partial overlaps at window start', () => {
+      // Critical test: Trip starts before window, ends within window
+      travelStore.setVisaStartDate('2024-01-01');
+
+      // Trip: Dec 20, 2023 - Jan 10, 2024
+      travelStore.addTrip({
+        outDate: '2023-12-20',
+        inDate: '2024-01-10', // 21 days calendar, 20 full days total
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Total full days for trip: 20
+      expect(summary.totalFullDays).toBe(20);
+
+      // In the rolling window starting Jan 1, 2024:
+      // Absence days: Dec 21-Jan 9 (Dec 20 is departure, Jan 10 is return)
+      // Days in 2024: Jan 1-9 = 9 days
+      expect(summary.maxAbsenceInAny12Months).toBe(9);
+    });
+
+    it('should correctly calculate partial overlaps at window end', () => {
+      // Critical test: Trip starts within window, ends after window
+      travelStore.setVisaStartDate('2023-11-01');
+
+      // Trip: Nov 20, 2023 - Jan 10, 2024
+      travelStore.addTrip({
+        outDate: '2023-11-20',
+        inDate: '2024-01-10', // 51 days calendar, 50 full days total
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Total full days: 50
+      expect(summary.totalFullDays).toBe(50);
+
+      // For 12-month window Nov 1, 2023 - Oct 31, 2024:
+      // All 50 days are within this window
+      // For 12-month window Nov 20, 2023 - Nov 19, 2024:
+      // All 50 days are within this window
+      expect(summary.maxAbsenceInAny12Months).toBe(50);
+    });
+
+    it('should correctly calculate when trip spans across window boundaries', () => {
+      // Trip that starts before window and ends after window
+      travelStore.setVisaStartDate('2024-02-01');
+
+      // Trip: Jan 10 - Mar 10, 2024 (60 days calendar, 59 full days)
+      travelStore.addTrip({
+        outDate: '2024-01-10',
+        inDate: '2024-03-10',
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+      expect(summary.totalFullDays).toBe(59);
+
+      // For window Feb 1 - Jan 31, 2025:
+      // Absence period: Jan 11 - Mar 9
+      // Overlap: Feb 1 - Mar 9 = 38 days
+      expect(summary.maxAbsenceInAny12Months).toBe(38);
+    });
+
     it('should correctly sum multiple small trips', () => {
       travelStore.setVisaStartDate('2024-01-01');
 
