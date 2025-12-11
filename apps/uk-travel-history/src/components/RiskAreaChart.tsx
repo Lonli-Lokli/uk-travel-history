@@ -12,10 +12,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
   ComposedChart,
-  Bar,
   Brush,
-  Cell,
   TooltipContentProps,
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
@@ -55,7 +54,7 @@ const CustomTooltip = ({
 };
 
 export const RiskAreaChart = observer(() => {
-  const { rollingAbsenceData, timelinePoints, tripBars } = travelStore;
+  const { rollingAbsenceData, tripBars } = travelStore;
 
   // Calculate gradient colors based on data
   const gradientStops = useMemo(() => {
@@ -240,52 +239,54 @@ export const RiskAreaChart = observer(() => {
           </h4>
           <ResponsiveContainer
             width="100%"
-            height={Math.max(140, Math.min(tripBars.length * 30, 180))}
+            height={Math.max(140, Math.min(tripBars.length * 35 + 60, 280))}
           >
             <ComposedChart
-              layout="horizontal"
-              data={timelinePoints}
-              margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+              data={rollingAbsenceData}
+              margin={{ top: 10, right: 20, left: 60, bottom: 20 }}
               syncId="timeline"
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis
-                type="category"
                 dataKey="date"
                 tickFormatter={(value) => format(parseISO(value), 'MMM yyyy')}
                 stroke="#64748b"
                 style={{ fontSize: '11px' }}
               />
               <YAxis
-                type="number"
                 stroke="#64748b"
                 style={{ fontSize: '11px' }}
-                domain={[
-                  0,
-                  Math.max(
-                    1,
-                    Math.max(...timelinePoints.map((d) => d.tripCount))
-                  ),
-                ]}
+                domain={[0, tripBars.length + 1]}
+                ticks={[]}
                 label={{
-                  value: 'Active Trips',
+                  value: 'Trips',
                   angle: -90,
                   position: 'insideLeft',
                   style: { fontSize: '11px' },
                 }}
               />
-              <Bar dataKey="tripCount" fill="#3b82f6" barSize={12}>
-                {timelinePoints.map((entry, index) => {
-                  const hasTrip = entry.tripCount > 0;
-                  return (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={hasTrip ? '#3b82f6' : '#e2e8f0'}
-                      opacity={hasTrip ? 0.7 : 0.2}
-                    />
-                  );
-                })}
-              </Bar>
+              {tripBars.map((trip, idx) => {
+                const yPosition = idx + 0.5;
+                return (
+                  <ReferenceArea
+                    key={`trip-${idx}`}
+                    x1={trip.outDate}
+                    x2={trip.inDate}
+                    y1={yPosition - 0.4}
+                    y2={yPosition + 0.4}
+                    fill="#3b82f6"
+                    fillOpacity={0.6}
+                    stroke="#2563eb"
+                    strokeWidth={1}
+                    label={{
+                      value: trip.tripLabel,
+                      position: 'center',
+                      fill: '#1e293b',
+                      fontSize: 10,
+                    }}
+                  />
+                );
+              })}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
