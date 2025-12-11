@@ -14,13 +14,13 @@ export const TravelHistoryCard = observer(({ onClearAll }: TravelHistoryCardProp
 
   return (
     <Card className="bg-white">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-muted-foreground" />
             Travel History
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
             Click on any cell to edit. Full days exclude travel days.
           </p>
         </div>
