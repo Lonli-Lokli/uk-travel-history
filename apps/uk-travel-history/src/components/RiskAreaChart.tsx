@@ -14,6 +14,8 @@ import {
   ReferenceLine,
   ComposedChart,
   Bar,
+  Brush,
+  Cell,
 } from 'recharts';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -26,9 +28,13 @@ interface RollingDataPoint {
 
 interface TripBar {
   date: string;
+  tripStart: number; // Days since start date
+  tripEnd: number; // Days since start date
   tripDuration: number;
   tripLabel: string;
   formattedDate: string;
+  outDate: string;
+  inDate: string;
 }
 
 const getRiskColor = (days: number): string => {
@@ -75,10 +81,10 @@ const TripTooltip = ({ active, payload }: any) => {
 
     return (
       <div className="bg-white p-3 border border-slate-300 rounded shadow-lg">
-        <p className="text-sm font-medium text-slate-700">
-          {data.formattedDate}
+        <p className="text-xs text-slate-500 mb-1">
+          {format(parseISO(data.outDate), 'dd/MM/yyyy')} → {format(parseISO(data.inDate), 'dd/MM/yyyy')}
         </p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-700 font-medium">
           {data.tripLabel}
         </p>
         <p className="text-sm font-semibold text-slate-800">
@@ -90,14 +96,15 @@ const TripTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+
 export const RiskAreaChart = observer(() => {
   const { tripsWithCalculations, vignetteEntryDate, visaStartDate } = travelStore;
 
-  const { rollingData, tripBars } = useMemo(() => {
+  const { rollingData, tripBars, allDataPoints } = useMemo(() => {
     const startDate = vignetteEntryDate || visaStartDate;
 
     if (!startDate) {
-      return { rollingData: [], tripBars: [] };
+      return { rollingData: [], tripBars: [], allDataPoints: [] };
     }
 
     const start = parseISO(startDate);
@@ -106,7 +113,7 @@ export const RiskAreaChart = observer(() => {
 
     // Only calculate if there's a reasonable range
     if (totalDays < 0 || totalDays > 3650) { // Max 10 years
-      return { rollingData: [], tripBars: [] };
+      return { rollingData: [], tripBars: [], allDataPoints: [] };
     }
 
     const completeTrips = tripsWithCalculations.filter((t) => !t.isIncomplete);
@@ -175,22 +182,62 @@ export const RiskAreaChart = observer(() => {
       });
     }
 
-    // Create trip bars for timeline
-    const bars: TripBar[] = completeTrips.map((trip) => ({
-      date: trip.outDate,
-      tripDuration: trip.fullDays || 0,
-      tripLabel: `${trip.outRoute || 'Unknown'} → ${trip.inRoute || 'Unknown'}`,
-      formattedDate: format(parseISO(trip.outDate), 'dd/MM/yyyy'),
-    }));
+    // Create unified timeline data points (daily) for horizontal trip visualization
+    interface TimelinePoint {
+      date: string;
+      daysSinceStart: number;
+      tripCount: number;
+      formattedDate: string;
+    }
 
-    return { rollingData: rollingPoints, tripBars: bars };
+    const timelinePoints: TimelinePoint[] = [];
+
+    for (let i = 0; i <= totalDays; i++) {
+      const currentDate = addDays(start, i);
+      const dateStr = currentDate.toISOString().split('T')[0];
+
+      // Check which trips are active on this date
+      const activeTrips = completeTrips.filter((trip: any) => {
+        const tripOut = parseISO(trip.outDate);
+        const tripIn = parseISO(trip.inDate);
+        return currentDate >= tripOut && currentDate <= tripIn;
+      });
+
+      timelinePoints.push({
+        date: dateStr,
+        daysSinceStart: i,
+        tripCount: activeTrips.length,
+        formattedDate: format(currentDate, 'dd/MM/yyyy'),
+      });
+    }
+
+    // Create trip bars for horizontal timeline (each trip as a data point with start/end)
+    const bars: TripBar[] = completeTrips.map((trip: any) => {
+      const tripOutDate = parseISO(trip.outDate);
+      const tripInDate = parseISO(trip.inDate);
+      const tripStart = differenceInDays(tripOutDate, start);
+      const tripEnd = differenceInDays(tripInDate, start);
+
+      return {
+        date: trip.outDate,
+        tripStart,
+        tripEnd,
+        tripDuration: trip.fullDays || 0,
+        tripLabel: `${trip.outRoute || 'Unknown'} → ${trip.inRoute || 'Unknown'}`,
+        formattedDate: format(tripOutDate, 'dd/MM/yyyy'),
+        outDate: trip.outDate,
+        inDate: trip.inDate,
+      };
+    });
+
+    return { rollingData: rollingPoints, tripBars: bars, allDataPoints: timelinePoints };
   }, [tripsWithCalculations, vignetteEntryDate, visaStartDate]);
 
   
   // Calculate gradient colors based on data
   const gradientStops = useMemo(() => {
-    const maxValue = Math.max(...rollingData.map(d => d.rollingDays));
-    const stops = [];
+    const maxValue = Math.max(...rollingData.map((d: RollingDataPoint) => d.rollingDays));
+    const stops: Array<{ offset: string; color: string; opacity: number }> = [];
 
     if (maxValue >= 180) {
       stops.push(
@@ -259,7 +306,8 @@ export const RiskAreaChart = observer(() => {
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart
             data={rollingData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+            syncId="timeline"
           >
             <defs>
               <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
@@ -283,15 +331,22 @@ export const RiskAreaChart = observer(() => {
             <YAxis
               stroke="#64748b"
               style={{ fontSize: '12px' }}
+              domain={[0, 'auto']}
               label={{ value: 'Days Absent', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
             />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine
               y={180}
               stroke="#ef4444"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              label={{ value: '180-day limit', position: 'right', fill: '#ef4444', fontSize: 12 }}
+              strokeWidth={3}
+              strokeDasharray="8 4"
+              label={{
+                value: '180-day limit',
+                position: 'right',
+                fill: '#ef4444',
+                fontSize: 13,
+                fontWeight: 'bold'
+              }}
             />
             <Area
               type="monotone"
@@ -300,33 +355,57 @@ export const RiskAreaChart = observer(() => {
               strokeWidth={2}
               fill="url(#riskGradient)"
             />
+            <Brush
+              dataKey="date"
+              height={30}
+              stroke="#3b82f6"
+              fill="#f1f5f9"
+              tickFormatter={(value) => format(parseISO(value), 'MMM yy')}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Trip Timeline */}
+      {/* Trip Timeline - Horizontal Multi-series */}
       {tripBars.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-slate-700 mb-2">Trip Timeline</h4>
-          <ResponsiveContainer width="100%" height={150}>
+          <ResponsiveContainer width="100%" height={Math.max(150, Math.min(tripBars.length * 35, 200))}>
             <ComposedChart
-              data={tripBars}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              layout="horizontal"
+              data={allDataPoints}
+              margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+              syncId="timeline"
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis
+                type="category"
                 dataKey="date"
                 tickFormatter={(value) => format(parseISO(value), 'MMM yyyy')}
                 stroke="#64748b"
                 style={{ fontSize: '12px' }}
               />
               <YAxis
+                type="number"
                 stroke="#64748b"
                 style={{ fontSize: '12px' }}
-                label={{ value: 'Trip Duration (days)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
+                domain={[0, Math.max(1, Math.max(...allDataPoints.map((d: any) => d.tripCount)))]}
+                label={{ value: 'Active Trips', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
               />
               <Tooltip content={<TripTooltip />} />
-              <Bar dataKey="tripDuration" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="tripCount" fill="#3b82f6" barSize={15}>
+                {allDataPoints.map((entry: any, index: number) => {
+                  // Color based on whether there's an active trip
+                  const hasTrip = entry.tripCount > 0;
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={hasTrip ? '#3b82f6' : '#e2e8f0'}
+                      opacity={hasTrip ? 0.7 : 0.2}
+                    />
+                  );
+                })}
+              </Bar>
             </ComposedChart>
           </ResponsiveContainer>
         </div>
