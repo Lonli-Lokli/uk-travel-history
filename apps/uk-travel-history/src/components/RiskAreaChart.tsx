@@ -31,22 +31,6 @@ export const RiskAreaChart: React.FC = observer(() => {
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
 
-  if (!rollingAbsenceData || rollingAbsenceData.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-        <h3 className="text-base font-semibold text-slate-800 mb-2">
-          Risk-Based Timeline
-        </h3>
-        <div className="text-center py-6 text-slate-500">
-          <p className="text-sm">
-            Set a Vignette Entry Date or Visa Start Date to view the risk
-            timeline.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // -------- Shared x-domain (dates) -----------------------------------------
 
   const chartDomain = useMemo(() => {
@@ -135,7 +119,7 @@ export const RiskAreaChart: React.FC = observer(() => {
   const syncExtremes = useCallback(
     (source: 'area' | 'gantt', e: AxisSetExtremesEventObject) => {
       if (typeof e.min !== 'number' || typeof e.max !== 'number') return;
-      if ((e ).trigger === 'sync') return;
+      if (e.trigger === 'sync') return;
 
       const targetRef =
         source === 'area' ? ganttChartRef.current : areaChartRef.current;
@@ -232,7 +216,7 @@ export const RiskAreaChart: React.FC = observer(() => {
 
           html += '</div>';
           return html;
-        } ,
+        },
       },
       plotOptions: {
         series: {
@@ -255,13 +239,13 @@ export const RiskAreaChart: React.FC = observer(() => {
               [0, 'rgba(34,197,94,0.35)'],
               [1, 'rgba(34,197,94,0.05)'],
             ],
-          } ,
+          },
           zones: [
             { value: 150, color: '#22c55e' }, // green
             { value: 180, color: '#f59e0b' }, // amber
             { color: '#ef4444' }, // red
           ],
-        } ,
+        },
       ],
     }),
     [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes]
@@ -270,114 +254,115 @@ export const RiskAreaChart: React.FC = observer(() => {
   // -------- Highcharts options: trip Gantt timeline -------------------------
 
   const ganttOptions = useMemo(
-    () => ({
-      chart: {
-        height:
-          timeline.rowCount > 0
-            ? Math.max(80, 24 * timeline.rowCount + 40)
-            : 80,
-        zooming: { type: 'x' },
-        spacingTop: 4,
-        spacingBottom: 4,
-        spacingLeft: 0,
-        spacingRight: 8,
-      },
-      title: { text: '' },
-      credits: { enabled: false },
-      legend: { enabled: false },
-
-      // Minimal x-axis: no header grid, no labels (area chart already shows them)
-      xAxis: {
-        type: 'datetime',
-        min: chartDomain.min,
-        max: chartDomain.max,
-        labels: { enabled: false },
-        gridLineWidth: 0,
-        minorGridLineWidth: 0,
-        events: {
-          setExtremes: function (e) {
-            syncExtremes('gantt', e as AxisSetExtremesEventObject);
-          },
+    () =>
+      ({
+        chart: {
+          height:
+            timeline.rowCount > 0
+              ? Math.max(80, 24 * timeline.rowCount + 40)
+              : 80,
+          zooming: { type: 'x' },
+          spacingTop: 4,
+          spacingBottom: 4,
+          spacingLeft: 0,
+          spacingRight: 8,
         },
-        // Disable Gantt's default "big boxes" header
-        grid: {
-          enabled: false,
-          borderWidth: 0,
-          columns: [],
-        } ,
-      },
-
-      // Hide Y-axis labels entirely; we just want rows as lanes.
-      yAxis: {
-        type: 'category',
-        categories:
-          timeline.rowCount > 0
-            ? Array.from({ length: timeline.rowCount }, () => '')
-            : [],
-        min: 0,
-        max: Math.max(timeline.rowCount - 1, 0),
-        grid: { enabled: false } ,
-        labels: { enabled: false },
         title: { text: '' },
-      },
+        credits: { enabled: false },
+        legend: { enabled: false },
 
-      // Navigator + scrollbar for explicit zoom & pan.
-      navigator: {
-        enabled: true,
-        height: 18,
-        outlineWidth: 0,
-        handles: { enabled: true },
+        // Minimal x-axis: no header grid, no labels (area chart already shows them)
         xAxis: {
-          labels: { enabled: false }, // avoid duplicate labels
-        },
-      } ,
-      scrollbar: {
-        enabled: true,
-      } ,
-
-      tooltip: {
-        useHTML: true,
-        formatter: function (this: any) {
-          const point = this.point || {};
-          const start = typeof point.start === 'number' ? point.start : 0;
-          const end = typeof point.end === 'number' ? point.end : 0;
-          const name: string = point.name || '';
-
-          if (!start || !end) return '';
-
-          const startStr = Highcharts.dateFormat('%e %b %Y', start);
-          const endStr = Highcharts.dateFormat('%e %b %Y', end);
-
-          return (
-            '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;box-shadow:0 2px 4px rgba(15,23,42,0.08);">' +
-            `<div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:2px;">${name}</div>` +
-            `<div style="font-size:11px;color:#475569;">${startStr} – ${endStr}</div>` +
-            '</div>'
-          );
-        } ,
-      },
-
-      series: [
-        {
-          type: 'gantt',
-          name: 'Trips',
-          data: timeline.points,
-          borderColor: '#2563eb',
-          borderWidth: 0,
-          color: '#3b82f6',
-          dataLabels: {
-            enabled: false, // keep strip clean
-          },
-          states: {
-            hover: {
-              borderWidth: 0,
-              brightness: 0.15,
+          type: 'datetime',
+          min: chartDomain.min,
+          max: chartDomain.max,
+          labels: { enabled: false },
+          gridLineWidth: 0,
+          minorGridLineWidth: 0,
+          events: {
+            setExtremes: function (e) {
+              syncExtremes('gantt', e as AxisSetExtremesEventObject);
             },
           },
-          pointPadding: 0.25, // makes bars visually thicker
-        } ,
-      ],
-    } satisfies Highcharts.Options),
+          // Disable Gantt's default "big boxes" header
+          grid: {
+            enabled: false,
+            borderWidth: 0,
+            columns: [],
+          },
+        },
+
+        // Hide Y-axis labels entirely; we just want rows as lanes.
+        yAxis: {
+          type: 'category',
+          categories:
+            timeline.rowCount > 0
+              ? Array.from({ length: timeline.rowCount }, () => '')
+              : [],
+          min: 0,
+          max: Math.max(timeline.rowCount - 1, 0),
+          grid: { enabled: false },
+          labels: { enabled: false },
+          title: { text: '' },
+        },
+
+        // Navigator + scrollbar for explicit zoom & pan.
+        navigator: {
+          enabled: true,
+          height: 18,
+          outlineWidth: 0,
+          handles: { enabled: true },
+          xAxis: {
+            labels: { enabled: false }, // avoid duplicate labels
+          },
+        },
+        scrollbar: {
+          enabled: true,
+        },
+
+        tooltip: {
+          useHTML: true,
+          formatter: function (this: any) {
+            const point = this.point || {};
+            const start = typeof point.start === 'number' ? point.start : 0;
+            const end = typeof point.end === 'number' ? point.end : 0;
+            const name: string = point.name || '';
+
+            if (!start || !end) return '';
+
+            const startStr = Highcharts.dateFormat('%e %b %Y', start);
+            const endStr = Highcharts.dateFormat('%e %b %Y', end);
+
+            return (
+              '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;box-shadow:0 2px 4px rgba(15,23,42,0.08);">' +
+              `<div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:2px;">${name}</div>` +
+              `<div style="font-size:11px;color:#475569;">${startStr} – ${endStr}</div>` +
+              '</div>'
+            );
+          },
+        },
+
+        series: [
+          {
+            type: 'gantt',
+            name: 'Trips',
+            data: timeline.points,
+            borderColor: '#2563eb',
+            borderWidth: 0,
+            color: '#3b82f6',
+            dataLabels: {
+              enabled: false, // keep strip clean
+            },
+            states: {
+              hover: {
+                borderWidth: 0,
+                brightness: 0.15,
+              },
+            },
+            pointPadding: 0.25, // makes bars visually thicker
+          },
+        ],
+      } satisfies Highcharts.Options),
     [
       chartDomain.min,
       chartDomain.max,
@@ -388,6 +373,22 @@ export const RiskAreaChart: React.FC = observer(() => {
   );
 
   // -------- Render ----------------------------------------------------------
+
+  if (!rollingAbsenceData || rollingAbsenceData.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <h3 className="text-base font-semibold text-slate-800 mb-2">
+          Risk-Based Timeline
+        </h3>
+        <div className="text-center py-6 text-slate-500">
+          <p className="text-sm">
+            Set a Vignette Entry Date or Visa Start Date to view the risk
+            timeline.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
