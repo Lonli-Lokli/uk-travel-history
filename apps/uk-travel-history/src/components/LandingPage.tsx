@@ -175,6 +175,7 @@ export const LandingPage = () => {
               <h3 className="font-semibold text-slate-900 mb-3 text-sm">Get Started</h3>
               <div className="space-y-2">
                 <Button
+                  variant="outline"
                   className="w-full justify-start"
                   onClick={handlePdfImportClick}
                   disabled={isImporting}
