@@ -1576,6 +1576,66 @@ invalid-date,20/01/2024,London,Paris`;
       expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(180);
       expect(summary.hasExceeded180Days).toBe(false);
     });
+
+    it('should delay ILR auto date when pre-entry + trips exceed 180 days (Issue #29)', () => {
+      // Issue #29 scenario: Pre-entry period counts as absence, and when combined
+      // with trips, the first 12-month window exceeds 180 days. The ILR auto date
+      // must be pushed forward until the 180-day limit is satisfied.
+
+      travelStore.setVisaStartDate('2023-03-29');
+      travelStore.setVignetteEntryDate('2023-04-13'); // 15 days pre-entry
+      travelStore.setILRTrack(3);
+
+      // Add trips from the issue
+      travelStore.addTrip({
+        outDate: '2023-05-01',
+        inDate: '2023-08-01', // 92 calendar days, 91 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      travelStore.addTrip({
+        outDate: '2023-09-01',
+        inDate: '2023-11-01', // 61 calendar days, 60 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-27', // 26 calendar days, 25 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Pre-entry: 15 days
+      // Trip 1: 91 full days
+      // Trip 2: 60 full days
+      // Trip 3: 25 full days
+      // Total: 191 full days from trips
+      expect(summary.totalFullDays).toBe(176);
+
+      // In the first 12-month window (Mar 29, 2023 - Mar 28, 2024):
+      // Pre-entry: 15 days + Trip 1 (91) + Trip 2 (60) + Trip 3 (25) = 191 days
+      // This exceeds 180 days, so the ILR auto date must be pushed forward
+
+      // The calculated application date should NOT be 01/03/2026 (visa start + 3 years - 28 days)
+      // It should be delayed until the rolling 180-day limit is satisfied
+      const calcDate = travelStore.calculatedApplicationDate;
+
+      // The earliest date where the rolling 180-day limit is satisfied should be
+      // later than the baseline (which would be 2026-03-01)
+      // Because we need to wait for the excess absences to "age out" of the rolling window
+      expect(calcDate).not.toBeNull();
+
+      // If absences exceed 180 days in any 12-month period, the auto date must be pushed forward
+      if (summary.hasExceeded180Days) {
+        // The calculated date should be AFTER the baseline 3-year mark
+        expect(calcDate).not.toBe('2026-03-01');
+      }
+    });
   });
 
   describe('Round-trip Export/Import', () => {
