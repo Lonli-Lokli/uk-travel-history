@@ -49,6 +49,18 @@ export interface TripBar {
 
 export type ILRTrack = 2 | 3 | 5 | 10;
 
+// Constants for UK Home Office guidance
+const MAX_ALLOWABLE_PRE_ENTRY_DAYS = 180; // Maximum days between visa issue and UK entry that can count toward qualifying period
+const MAX_ABSENCE_IN_12_MONTHS = 180; // Maximum days allowed outside UK in any rolling 12-month period
+
+// Interface for pre-entry period information
+export interface PreEntryPeriodInfo {
+  hasPreEntry: boolean;
+  delayDays: number;
+  canCount: boolean;
+  qualifyingStartDate: string | null;
+}
+
 class TravelStore {
   trips: TripRecord[] = [];
   vignetteEntryDate = '';
@@ -90,12 +102,10 @@ class TravelStore {
   }
 
   // Computed property: Pre-entry period information
-  get preEntryPeriod(): {
-    hasPreEntry: boolean;
-    delayDays: number;
-    canCount: boolean;
-    qualifyingStartDate: string | null;
-  } | null {
+  // Per UK Home Office guidance: The period between entry clearance issuance (visa start)
+  // and actual UK entry (vignette entry) can count toward the qualifying period if ≤180 days.
+  // This pre-entry period is treated as an absence for the 180-day rolling window check.
+  get preEntryPeriod(): PreEntryPeriodInfo | null {
     // Pre-entry period exists when both visa start date and vignette entry date are set
     if (!this.visaStartDate || !this.vignetteEntryDate) {
       return null;
@@ -109,15 +119,19 @@ class TravelStore {
     }
 
     // Calculate delay between entry clearance issue and UK entry
+    // NOTE: Unlike trip calculations (which use differenceInDays - 1), pre-entry period
+    // uses the full day count because we're measuring the entire period between two events,
+    // not counting absence days that exclude departure/arrival days.
     const delayDays = differenceInDays(vignetteEntry, visaStart);
 
-    // If delay is negative (entry before issue), no pre-entry period
+    // If delay is negative (entry before issue), this is invalid data - return null
+    // This should be surfaced to the user as a data validation error
     if (delayDays < 0) {
       return null;
     }
 
-    // Per Home Office guidance: If delay ≤ 180 days, pre-entry can count
-    const canCount = delayDays <= 180;
+    // Per Home Office guidance: If delay ≤ 180 days, pre-entry can count toward qualifying period
+    const canCount = delayDays <= MAX_ALLOWABLE_PRE_ENTRY_DAYS;
 
     // Qualifying start date: visa start if can count, otherwise vignette entry
     const qualifyingStartDate = canCount
@@ -283,7 +297,7 @@ class TravelStore {
 
           if (bestResult) {
             maxAbsenceInAny12Months = bestResult.maxAbsence;
-            hasExceeded180Days = bestResult.maxAbsence > 180;
+            hasExceeded180Days = bestResult.maxAbsence > MAX_ABSENCE_IN_12_MONTHS;
             continuousLeaveDays = bestResult.continuousDays;
 
             // ILR eligibility is the effective application date
@@ -405,7 +419,7 @@ class TravelStore {
 
   // Helper to determine risk level based on days
   private getRiskLevel(days: number): 'low' | 'caution' | 'critical' {
-    if (days >= 180) return 'critical';
+    if (days >= MAX_ABSENCE_IN_12_MONTHS) return 'critical';
     if (days >= 150) return 'caution';
     return 'low';
   }
