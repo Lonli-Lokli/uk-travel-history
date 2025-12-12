@@ -23,13 +23,12 @@ export function DatePicker({
   className,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
-
-  // Memoize the parsed date to avoid re-parsing on every render
-  const selectedDate = React.useMemo<Date | undefined>(() => {
-    return value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined;
-  }, [value]);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
+    value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined
+  );
 
   const handleSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
     if (date) {
       onChange(format(date, 'yyyy-MM-dd'));
       setIsOpen(false);
@@ -67,7 +66,6 @@ export function DatePicker({
               mode="single"
               selected={selectedDate}
               onSelect={handleSelect}
-              defaultMonth={selectedDate}
               autoFocus
             />
           </div>

@@ -69,7 +69,6 @@ class TravelStore {
   applicationDate = ''; // Date of ILR application for backward counting
   isLoading = false;
   error: string | null = null;
-  selectedTripDetails: { name: string; start: string; end: string } | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -651,20 +650,6 @@ class TravelStore {
 
   setApplicationDate(date: string) {
     this.applicationDate = date;
-  }
-
-  setSelectedTripDetails(details: { name: string; start: string; end: string } | null) {
-    this.selectedTripDetails = details;
-  }
-
-  selectTrip(name: string, startTimestamp: number, endTimestamp: number) {
-    const startStr = format(new Date(startTimestamp), 'dd/MM/yyyy');
-    const endStr = format(new Date(endTimestamp), 'dd/MM/yyyy');
-    this.setSelectedTripDetails({ name, start: startStr, end: endStr });
-  }
-
-  clearSelectedTrip() {
-    this.setSelectedTripDetails(null);
   }
 
   reorderTrip(fromIndex: number, toIndex: number) {

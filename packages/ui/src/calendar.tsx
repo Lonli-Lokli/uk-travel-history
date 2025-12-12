@@ -42,11 +42,11 @@ export const Calendar = ({
         ),
 
         [UI.MonthCaption]:
-          'relative flex flex-row flex-nowrap justify-center items-center h-10 gap-1.5 px-2',
+          'relative flex flex-row flex-nowrap justify-center items-center h-10 gap-2 px-4',
         [UI.DropdownRoot]:
-          'inline-flex flex-row flex-nowrap items-center gap-1.5',
-        [UI.MonthsDropdown]: 'w-[100px] flex-shrink-0',
-        [UI.YearsDropdown]: 'w-[75px] flex-shrink-0',
+          'inline-flex flex-row flex-nowrap items-center gap-2',
+        [UI.MonthsDropdown]: 'w-[110px] flex-shrink-0',
+        [UI.YearsDropdown]: 'w-[80px] flex-shrink-0',
         [UI.PreviousMonthButton]: cn(
           buttonVariants({ variant: 'outline' }),
           'absolute left-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'

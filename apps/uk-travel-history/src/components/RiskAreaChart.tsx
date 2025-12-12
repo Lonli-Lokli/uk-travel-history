@@ -9,16 +9,13 @@ import HighchartsReact, {
 import type { AxisSetExtremesEventObject } from 'highcharts';
 import { parseISO } from 'date-fns';
 
-import {
-  travelStore,
-  RollingDataPoint,
-  TripBar,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@uth/ui';
+import { travelStore, RollingDataPoint, TripBar } from '@uth/ui';
+
+const getRiskColor = (days: number): string => {
+  if (days >= 180) return '#ef4444'; // red-500
+  if (days >= 150) return '#f59e0b'; // amber-500
+  return '#22c55e'; // green-500
+};
 
 type TimelinePoint = {
   id: string;
@@ -29,7 +26,7 @@ type TimelinePoint = {
 };
 
 export const RiskAreaChart: React.FC = observer(() => {
-  const { rollingAbsenceData, tripBars, selectedTripDetails } = travelStore;
+  const { rollingAbsenceData, tripBars } = travelStore;
 
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
@@ -135,7 +132,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         trigger: 'sync',
       });
     },
-    [],
+    []
   );
 
   // -------- Highcharts options: risk area chart -----------------------------
@@ -202,16 +199,19 @@ export const RiskAreaChart: React.FC = observer(() => {
           const y: number = typeof this.y === 'number' ? this.y : 0;
 
           const dateLabel = x > 0 ? Highcharts.dateFormat('%e %b %Y', x) : '';
-          const displayColor = y >= 180 ? '#ef4444' : '#3b82f6';
+          const riskColor = getRiskColor(y);
 
           let html =
             '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;box-shadow:0 2px 4px rgba(15,23,42,0.08);">' +
             `<div style="font-size:11px;color:#475569;margin-bottom:2px;">${dateLabel}</div>` +
-            `<div style="font-size:13px;font-weight:600;color:${displayColor};">Rolling 12-month: ${y} days</div>`;
+            `<div style="font-size:13px;font-weight:600;color:${riskColor};">Rolling 12-month: ${y} days</div>`;
 
           if (y >= 180) {
             html +=
               '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; Exceeds 180-day limit</div>';
+          } else if (y >= 150) {
+            html +=
+              '<div style="font-size:11px;color:#d97706;margin-top:4px;">&#9888; Approaching limit</div>';
           }
 
           html += '</div>';
@@ -232,22 +232,23 @@ export const RiskAreaChart: React.FC = observer(() => {
           type: 'area',
           name: 'Rolling days absent',
           data: riskSeriesData,
-          color: '#3b82f6', // base color: blue
+          color: '#22c55e', // base color; zones override
           fillColor: {
             linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
             stops: [
-              [0, 'rgba(59,130,246,0.35)'],
-              [1, 'rgba(59,130,246,0.05)'],
+              [0, 'rgba(34,197,94,0.35)'],
+              [1, 'rgba(34,197,94,0.05)'],
             ],
           },
           zones: [
-            { value: 180, color: '#3b82f6' }, // blue
-            { color: '#ef4444' }, // red for exceeding 180 days
+            { value: 150, color: '#22c55e' }, // green
+            { value: 180, color: '#f59e0b' }, // amber
+            { color: '#ef4444' }, // red
           ],
         },
       ],
     }),
-    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes],
+    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes]
   );
 
   // -------- Highcharts options: trip Gantt timeline -------------------------
@@ -258,53 +259,38 @@ export const RiskAreaChart: React.FC = observer(() => {
         chart: {
           height:
             timeline.rowCount > 0
-              ? Math.max(120, 50 * timeline.rowCount + 70)
-              : 120,
+              ? Math.max(80, 24 * timeline.rowCount + 40)
+              : 80,
           zooming: { type: 'x' },
-          spacingTop: 30,
+          spacingTop: 4,
           spacingBottom: 4,
           spacingLeft: 0,
           spacingRight: 8,
-          marginTop: 0,
         },
         title: { text: '' },
         credits: { enabled: false },
         legend: { enabled: false },
 
         // Minimal x-axis: no header grid, no labels (area chart already shows them)
-        xAxis: [
-          {
-            type: 'datetime',
-            min: chartDomain.min,
-            max: chartDomain.max,
-            labels: { enabled: false },
-            gridLineWidth: 0,
-            minorGridLineWidth: 0,
-            // Completely disable date time label formatting to remove year headers
-            dateTimeLabelFormats: {
-              millisecond: '',
-              second: '',
-              minute: '',
-              hour: '',
-              day: '',
-              week: '',
-              month: '',
-              year: '',
-            },
-            events: {
-              setExtremes: function (e) {
-                syncExtremes('gantt', e as AxisSetExtremesEventObject);
-              },
-            },
-            // Disable Gantt's default "big boxes" header
-            grid: {
-              enabled: false,
-              borderWidth: 0,
-              columns: [],
+        xAxis: {
+          type: 'datetime',
+          min: chartDomain.min,
+          max: chartDomain.max,
+          labels: { enabled: false },
+          gridLineWidth: 0,
+          minorGridLineWidth: 0,
+          events: {
+            setExtremes: function (e) {
+              syncExtremes('gantt', e as AxisSetExtremesEventObject);
             },
           },
-          { visible: false },
-        ],
+          // Disable Gantt's default "big boxes" header
+          grid: {
+            enabled: false,
+            borderWidth: 0,
+            columns: [],
+          },
+        },
 
         // Hide Y-axis labels entirely; we just want rows as lanes.
         yAxis: {
@@ -320,29 +306,18 @@ export const RiskAreaChart: React.FC = observer(() => {
           title: { text: '' },
         },
 
-        // Navigator + scrollbar for explicit zoom & pan (positioned at top).
+        // Navigator + scrollbar for explicit zoom & pan.
         navigator: {
           enabled: true,
-          height: 20,
-          outlineWidth: 1,
-          outlineColor: '#cbd5e1',
-          handles: {
-            enabled: true,
-            backgroundColor: '#f1f5f9',
-            borderColor: '#64748b',
-          },
-          maskFill: 'rgba(100, 116, 139, 0.1)',
-          series: {
-            color: '#64748b',
-            lineWidth: 1,
-          },
-          opposite: true, // Position at top
+          height: 18,
+          outlineWidth: 0,
+          handles: { enabled: true },
           xAxis: {
-            labels: { enabled: false },
+            labels: { enabled: false }, // avoid duplicate labels
           },
         },
         scrollbar: {
-          enabled: false, // Disable scrollbar when navigator is at top for cleaner look
+          enabled: true,
         },
 
         tooltip: {
@@ -384,27 +359,17 @@ export const RiskAreaChart: React.FC = observer(() => {
                 brightness: 0.15,
               },
             },
-            cursor: 'pointer',
-            pointPadding: 0.05, // minimal padding = thicker bars for mobile
-            point: {
-              events: {
-                click: function () {
-                  // Show trip details on click - delegate to MobX store
-                  const point = this as any;
-                  travelStore.selectTrip(point.name, point.start, point.end);
-                },
-              },
-            },
+            pointPadding: 0.25, // makes bars visually thicker
           },
         ],
-      }) satisfies Highcharts.Options,
+      } satisfies Highcharts.Options),
     [
       chartDomain.min,
       chartDomain.max,
       timeline.points,
       timeline.rowCount,
       syncExtremes,
-    ],
+    ]
   );
 
   // -------- Render ----------------------------------------------------------
@@ -435,16 +400,23 @@ export const RiskAreaChart: React.FC = observer(() => {
           <div className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded"
-              style={{ backgroundColor: '#3b82f6' }}
+              style={{ backgroundColor: '#22c55e' }}
             />
-            <span className="text-slate-600">Days Absent (&lt;180)</span>
+            <span className="text-slate-600">Low Risk (≤149 days)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: '#f59e0b' }}
+            />
+            <span className="text-slate-600">Caution (150–179 days)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded"
               style={{ backgroundColor: '#ef4444' }}
             />
-            <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
+            <span className="text-slate-600">Critical (≥180 days)</span>
           </div>
         </div>
       </div>
@@ -474,38 +446,6 @@ export const RiskAreaChart: React.FC = observer(() => {
           </div>
         </div>
       )}
-
-      {/* Trip Details Dialog */}
-      <Dialog
-        open={!!selectedTripDetails}
-        onOpenChange={(open) => {
-          if (!open) {
-            travelStore.clearSelectedTrip();
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {selectedTripDetails?.name || 'Trip Details'}
-            </DialogTitle>
-            <DialogDescription asChild>
-              {selectedTripDetails ? (
-                <div className="mt-2 text-sm">
-                  <p>
-                    <strong>Departure:</strong> {selectedTripDetails.start}
-                  </p>
-                  <p>
-                    <strong>Return:</strong> {selectedTripDetails.end}
-                  </p>
-                </div>
-              ) : (
-                <span />
-              )}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 });
