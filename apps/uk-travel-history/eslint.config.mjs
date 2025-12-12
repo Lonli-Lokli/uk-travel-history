@@ -4,14 +4,24 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import baseConfig from '../../eslint.config.mjs';
 
 export default [
-  { plugins: { '@next/next': nextEslintPluginNext } },
-  ...nx.configs['flat/react-typescript'],
-  reactHooks.configs.flat.recommended,
   ...baseConfig,
+  ...nx.configs['flat/react-typescript'],
   {
     ignores: ['.next/**/*', '**/out-tsc'],
   },
   {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: {
+      '@next/next': nextEslintPluginNext,
+      'react-hooks': reactHooks,
+    },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
