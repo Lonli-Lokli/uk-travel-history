@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, travelStore } from '@uth/ui';
-import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee, Clipboard } from 'lucide-react';
+import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee, Clipboard, Loader2 } from 'lucide-react';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
@@ -12,6 +12,7 @@ export const LandingPage = () => {
   const router = useRouter();
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [activeAction, setActiveAction] = useState<'pdf' | 'csv' | 'clipboard' | null>(null);
 
   // CSV Import Hook
   const csvImport = useCsvImport();
@@ -28,6 +29,7 @@ export const LandingPage = () => {
     if (!file) return;
 
     setIsImporting(true);
+    setActiveAction('pdf');
     try {
       await travelStore.importFromPdf(file);
       router.push('/travel');
@@ -36,6 +38,7 @@ export const LandingPage = () => {
       alert('Failed to import PDF. Please try again or add trips manually.');
     } finally {
       setIsImporting(false);
+      setActiveAction(null);
       if (pdfFileInputRef.current) {
         pdfFileInputRef.current.value = '';
       }
@@ -46,8 +49,25 @@ export const LandingPage = () => {
     router.push('/travel');
   };
 
+  const handleCsvImportClick = () => {
+    setActiveAction('csv');
+    csvImport.triggerFileInput();
+  };
+
+  const handleClipboardImportClick = async () => {
+    setActiveAction('clipboard');
+    try {
+      await clipboardImport.handleClipboardPaste();
+    } finally {
+      if (!clipboardImport.isDialogOpen) {
+        setActiveAction(null);
+      }
+    }
+  };
+
   const handleCsvImportConfirm = async (mode: 'replace' | 'append') => {
     await csvImport.confirmImport(mode);
+    setActiveAction(null);
     // Navigate to travel page after successful import
     if (!csvImport.isDialogOpen) {
       router.push('/travel');
@@ -56,10 +76,15 @@ export const LandingPage = () => {
 
   const handleClipboardImportConfirm = async (mode: 'replace' | 'append') => {
     await clipboardImport.confirmImport(mode);
+    setActiveAction(null);
     // Navigate to travel page after successful import
     if (!clipboardImport.isDialogOpen) {
       router.push('/travel');
     }
+  };
+
+  const handleCancelImport = () => {
+    setActiveAction(null);
   };
 
   return (
@@ -86,7 +111,10 @@ export const LandingPage = () => {
           isOpen={csvImport.isDialogOpen}
           tripCount={csvImport.previewData.tripCount}
           onConfirm={handleCsvImportConfirm}
-          onCancel={csvImport.cancelImport}
+          onCancel={() => {
+            csvImport.cancelImport();
+            handleCancelImport();
+          }}
         />
       )}
       {clipboardImport.isDialogOpen && clipboardImport.previewData && (
@@ -94,7 +122,10 @@ export const LandingPage = () => {
           isOpen={clipboardImport.isDialogOpen}
           tripCount={clipboardImport.previewData.tripCount}
           onConfirm={handleClipboardImportConfirm}
-          onCancel={clipboardImport.cancelImport}
+          onCancel={() => {
+            clipboardImport.cancelImport();
+            handleCancelImport();
+          }}
         />
       )}
 
@@ -178,32 +209,50 @@ export const LandingPage = () => {
                   variant="outline"
                   className="w-full justify-start"
                   onClick={handlePdfImportClick}
-                  disabled={isImporting}
+                  disabled={isImporting || activeAction !== null}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  {activeAction === 'pdf' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
                   Import from PDF
+                  {activeAction === 'pdf' && <span className="ml-auto text-xs text-muted-foreground">Processing...</span>}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={csvImport.triggerFileInput}
+                  onClick={handleCsvImportClick}
+                  disabled={isImporting || activeAction !== null}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  {activeAction === 'csv' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
                   Import from CSV
+                  {activeAction === 'csv' && <span className="ml-auto text-xs text-muted-foreground">Processing...</span>}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={clipboardImport.handleClipboardPaste}
+                  onClick={handleClipboardImportClick}
+                  disabled={isImporting || activeAction !== null}
                 >
-                  <Clipboard className="h-4 w-4 mr-2" />
+                  {activeAction === 'clipboard' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Clipboard className="h-4 w-4 mr-2" />
+                  )}
                   Import from Clipboard
+                  {activeAction === 'clipboard' && <span className="ml-auto text-xs text-muted-foreground">Processing...</span>}
                 </Button>
                 <div className="border-t border-slate-200 my-2 pt-2">
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-slate-600"
                     onClick={handleAddManually}
+                    disabled={isImporting || activeAction !== null}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Travel Dates Manually
