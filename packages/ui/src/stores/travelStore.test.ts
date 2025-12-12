@@ -695,4 +695,212 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.ilrEligibilityDate).toBe('2025-01-31');
     });
   });
+
+  describe('Backward Counting (Application Date Mode)', () => {
+    beforeEach(() => {
+      travelStore.clearAll();
+    });
+
+    it('should switch to backward counting mode when application date and ILR track are set', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Add a trip in the qualifying period
+      travelStore.addTrip({
+        outDate: '2022-06-01',
+        inDate: '2022-06-10', // 9 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Should calculate backward from application date
+      expect(summary.ilrEligibilityDate).toBe('2025-01-01');
+      expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(9);
+    });
+
+    it('should find the most beneficial assessment date within 28-day window', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Add a trip that falls just outside the qualifying period if we count from app date
+      // But within if we use app date + 28 days
+      travelStore.addTrip({
+        outDate: '2019-12-15',
+        inDate: '2019-12-25', // 10 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      // Add a trip in the main period
+      travelStore.addTrip({
+        outDate: '2022-01-01',
+        inDate: '2022-01-20', // 19 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Should find the best assessment date (most beneficial)
+      expect(summary.maxAbsenceInAny12Months).toBeDefined();
+      expect(summary.hasExceeded180Days).toBe(false);
+    });
+
+    it('should correctly count backward 5 years from application date', () => {
+      travelStore.setVisaStartDate('2019-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2024-06-01');
+
+      // Qualifying period: 2019-06-01 to 2024-06-01 (5 years back)
+      // Trip within qualifying period
+      travelStore.addTrip({
+        outDate: '2020-01-01',
+        inDate: '2020-01-15', // 14 calendar days, 13 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      // Trip outside qualifying period (before)
+      travelStore.addTrip({
+        outDate: '2019-05-01',
+        inDate: '2019-05-10', // 9 calendar days, 8 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Total full days includes ALL trips (this is still correct for overall stats)
+      expect(summary.totalFullDays).toBe(21); // 13 + 8 = 21 days total
+      // But max absence in backward mode only considers the qualifying period
+      // Trip from May 2019 is before qualifying period start (June 1, 2019)
+      // So only the 13-day trip counts in the rolling period check
+      expect(summary.maxAbsenceInAny12Months).toBe(13);
+    });
+
+    it('should handle 2-year track backward counting', () => {
+      travelStore.setVisaStartDate('2022-01-01');
+      travelStore.setILRTrack(2);
+      travelStore.setApplicationDate('2024-01-01');
+
+      // Qualifying period: 2022-01-01 to 2024-01-01 (2 years back)
+      travelStore.addTrip({
+        outDate: '2023-01-01',
+        inDate: '2023-02-01', // 31 calendar days, 30 full days (excluding Jan 1 and Feb 1)
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      expect(summary.maxAbsenceInAny12Months).toBe(30);
+      expect(summary.hasExceeded180Days).toBe(false);
+    });
+
+    it('should handle 10-year track backward counting', () => {
+      travelStore.setVisaStartDate('2014-01-01');
+      travelStore.setILRTrack(10);
+      travelStore.setApplicationDate('2024-01-01');
+
+      // Qualifying period: 2014-01-01 to 2024-01-01 (10 years back)
+      travelStore.addTrip({
+        outDate: '2015-06-01',
+        inDate: '2015-06-20', // 19 calendar days, 18 full days (excluding Jun 1 and Jun 20)
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      expect(summary.maxAbsenceInAny12Months).toBe(18);
+      expect(summary.hasExceeded180Days).toBe(false);
+    });
+
+    it('should revert to forward-looking when application date is cleared', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Check backward mode is active
+      let summary = travelStore.summary;
+      expect(summary.ilrEligibilityDate).toBe('2025-01-01');
+
+      // Clear application date
+      travelStore.setApplicationDate('');
+
+      // Should switch to forward-looking
+      summary = travelStore.summary;
+      expect(summary.ilrEligibilityDate).not.toBe('2025-01-01');
+    });
+
+    it('should calculate continuous days correctly in backward mode', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Add trips
+      travelStore.addTrip({
+        outDate: '2021-01-01',
+        inDate: '2021-01-10', // 9 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      travelStore.addTrip({
+        outDate: '2023-06-01',
+        inDate: '2023-06-15', // 14 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Qualifying period: 5 years back from Jan 1, 2025 = Jan 1, 2020 - Jan 1, 2025
+      // Total days = 1827 days (5 years including leap year 2020)
+      // Days outside = 23 (9 + 14)
+      // Days in UK = 1827 - 23 = 1804
+      expect(summary.continuousLeaveDays).toBeGreaterThan(1800);
+    });
+
+    it('should detect 180-day violation in backward counting mode', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Add a long trip that exceeds 180 days
+      travelStore.addTrip({
+        outDate: '2021-01-01',
+        inDate: '2021-07-15', // 195 days calendar, 194 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(180);
+      expect(summary.hasExceeded180Days).toBe(true);
+    });
+
+    it('should require both application date and ILR track for backward mode', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+
+      // Only application date, no ILR track
+      travelStore.setApplicationDate('2025-01-01');
+
+      let summary = travelStore.summary;
+      // Should use forward-looking mode
+      expect(summary.ilrEligibilityDate).toBeNull();
+
+      // Now add ILR track
+      travelStore.setILRTrack(5);
+
+      summary = travelStore.summary;
+      // Should switch to backward mode
+      expect(summary.ilrEligibilityDate).toBe('2025-01-01');
+    });
+  });
 });

@@ -29,7 +29,7 @@ export const VisaDetailsCard = observer(() => {
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="vignetteDate" className="text-xs font-medium">
               Vignette Entry Date
@@ -89,12 +89,27 @@ export const VisaDetailsCard = observer(() => {
               Required continuous period for ILR
             </p>
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="applicationDate" className="text-xs font-medium">
+              Application Date (Optional)
+            </Label>
+            <DatePicker
+              value={travelStore.applicationDate}
+              onChange={(value) => travelStore.setApplicationDate(value)}
+              placeholder="Select application date"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground leading-tight">
+              Your ILR application/decision date
+            </p>
+          </div>
         </div>
 
         {(travelStore.vignetteEntryDate || travelStore.visaStartDate) && (
           <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
             <p className="text-xs text-blue-800 leading-tight">
-              <strong>Using:</strong>{' '}
+              <strong>Start Date:</strong>{' '}
               {travelStore.vignetteEntryDate ? (
                 <>
                   Vignette Entry Date:{' '}
@@ -104,6 +119,19 @@ export const VisaDetailsCard = observer(() => {
                 <>Visa Start Date: {formatDate(travelStore.visaStartDate)}</>
               )}
             </p>
+            {travelStore.applicationDate && travelStore.ilrTrack && (
+              <p className="text-xs text-blue-800 leading-tight mt-1">
+                <strong>Assessment Mode:</strong> Counting backward from{' '}
+                {formatDate(travelStore.applicationDate)} (
+                {travelStore.ilrTrack}-year track)
+              </p>
+            )}
+            {(!travelStore.applicationDate || !travelStore.ilrTrack) && (
+              <p className="text-xs text-blue-800 leading-tight mt-1">
+                <strong>Assessment Mode:</strong> Forward-looking (monitoring from
+                start date to today)
+              </p>
+            )}
           </div>
         )}
       </CardContent>

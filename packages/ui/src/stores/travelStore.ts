@@ -54,6 +54,7 @@ class TravelStore {
   vignetteEntryDate = '';
   visaStartDate = '';
   ilrTrack: ILRTrack | null = null; // 2, 3, or 5 year track
+  applicationDate = ''; // Date of ILR application for backward counting
   isLoading = false;
   error: string | null = null;
 
@@ -103,38 +104,128 @@ class TravelStore {
     let ilrEligibilityDate: string | null = null;
     let daysUntilEligible: number | null = null;
 
-    const startDate = this.vignetteEntryDate || this.visaStartDate;
+    const visaStart = this.vignetteEntryDate || this.visaStartDate;
 
-    if (startDate) {
-      const start = new Date(startDate);
-      const today = new Date();
+    if (visaStart) {
+      const start = new Date(visaStart);
 
       if (!isNaN(start.getTime())) {
-        // Total days since start date
-        const totalDaysSinceStart = differenceInDays(today, start);
+        // Per Home Office guidance: Count backward from most beneficial date
+        // (application date, decision date, or up to 28 days after application)
 
-        // Days in UK = Total days - Days outside UK (full days)
-        continuousLeaveDays = Math.max(0, totalDaysSinceStart - totalFullDays);
+        if (this.applicationDate && this.ilrTrack) {
+          // BACKWARD COUNTING MODE (when application date is set)
+          const appDate = new Date(this.applicationDate);
 
-        // Check rolling 12-month periods for 180-day limit
-        // Per Home Office guidance: absences are considered on a rolling basis
-        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
-          start,
-          today
-        );
-        hasExceeded180Days = maxAbsenceInAny12Months > 180;
+          if (!isNaN(appDate.getTime())) {
+            // Find the most beneficial assessment date within the allowed range
+            // Try: application date, and up to 28 days after
+            const assessmentDates = [appDate];
+            for (let i = 1; i <= 28; i++) {
+              assessmentDates.push(addDays(appDate, i));
+            }
 
-        // Calculate ILR eligibility date if track is selected
-        // Per Home Office guidance (Page 10): "Applicants can submit a settlement application
-        // up to 28 days before they would reach the end of the specified period"
-        if (this.ilrTrack) {
-          const requiredEndDate = addYears(start, this.ilrTrack);
-          const earliestApplicationDate = subDays(requiredEndDate, 28);
+            // For each potential assessment date, count backward and check compliance
+            let bestResult: {
+              assessmentDate: Date;
+              qualifyingPeriodStart: Date;
+              maxAbsence: number;
+              continuousDays: number;
+            } | null = null;
 
-          ilrEligibilityDate = earliestApplicationDate
-            .toISOString()
-            .split('T')[0];
-          daysUntilEligible = differenceInDays(earliestApplicationDate, today);
+            for (const assessDate of assessmentDates) {
+              // Count backward by the required number of years
+              const qualifyingStart = subDays(
+                addYears(assessDate, -this.ilrTrack),
+                0
+              );
+
+              // Skip if qualifying period starts before visa start
+              if (qualifyingStart < start) continue;
+
+              // Calculate absences in this qualifying period
+              const maxAbsence = this.calculateMaxAbsenceInRolling12Months(
+                qualifyingStart,
+                assessDate
+              );
+
+              // Calculate continuous days in UK during this period
+              const totalDaysInPeriod = differenceInDays(assessDate, qualifyingStart);
+
+              // Calculate total full days outside UK in this period
+              const absenceInPeriod = complete
+                .filter((trip) => {
+                  const tripOut = new Date(trip.outDate);
+                  const tripIn = new Date(trip.inDate);
+                  return tripIn >= qualifyingStart && tripOut <= assessDate;
+                })
+                .reduce((sum, trip) => {
+                  const tripOut = new Date(trip.outDate);
+                  const tripIn = new Date(trip.inDate);
+
+                  // Calculate intersection with qualifying period
+                  const effectiveStart = tripOut > qualifyingStart ? tripOut : qualifyingStart;
+                  const effectiveEnd = tripIn < assessDate ? tripIn : assessDate;
+
+                  if (effectiveStart <= effectiveEnd) {
+                    const absenceStart = addDays(effectiveStart, effectiveStart === tripOut ? 1 : 0);
+                    const absenceEnd = subDays(effectiveEnd, effectiveEnd === tripIn ? 1 : 0);
+
+                    if (absenceStart <= absenceEnd) {
+                      return sum + differenceInDays(absenceEnd, absenceStart) + 1;
+                    }
+                  }
+                  return sum;
+                }, 0);
+
+              const continuousDays = totalDaysInPeriod - absenceInPeriod;
+
+              // Keep the result with lowest max absence (most beneficial)
+              if (!bestResult || maxAbsence < bestResult.maxAbsence) {
+                bestResult = {
+                  assessmentDate: assessDate,
+                  qualifyingPeriodStart: qualifyingStart,
+                  maxAbsence,
+                  continuousDays,
+                };
+              }
+            }
+
+            if (bestResult) {
+              maxAbsenceInAny12Months = bestResult.maxAbsence;
+              hasExceeded180Days = bestResult.maxAbsence > 180;
+              continuousLeaveDays = bestResult.continuousDays;
+
+              // ILR eligibility is the application date itself (already set)
+              ilrEligibilityDate = this.applicationDate;
+              daysUntilEligible = differenceInDays(appDate, new Date());
+            }
+          }
+        } else {
+          // FORWARD-LOOKING MODE (original behavior, when no application date)
+          const today = new Date();
+          const totalDaysSinceStart = differenceInDays(today, start);
+
+          // Days in UK = Total days - Days outside UK (full days)
+          continuousLeaveDays = Math.max(0, totalDaysSinceStart - totalFullDays);
+
+          // Check rolling 12-month periods for 180-day limit
+          maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
+            start,
+            today
+          );
+          hasExceeded180Days = maxAbsenceInAny12Months > 180;
+
+          // Calculate ILR eligibility date if track is selected
+          if (this.ilrTrack) {
+            const requiredEndDate = addYears(start, this.ilrTrack);
+            const earliestApplicationDate = subDays(requiredEndDate, 28);
+
+            ilrEligibilityDate = earliestApplicationDate
+              .toISOString()
+              .split('T')[0];
+            daysUntilEligible = differenceInDays(earliestApplicationDate, today);
+          }
         }
       }
     }
@@ -449,6 +540,10 @@ class TravelStore {
 
   setILRTrack(track: ILRTrack | null) {
     this.ilrTrack = track;
+  }
+
+  setApplicationDate(date: string) {
+    this.applicationDate = date;
   }
 
   reorderTrip(fromIndex: number, toIndex: number) {
