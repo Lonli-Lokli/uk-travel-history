@@ -67,6 +67,7 @@ export function DatePicker({
               mode="single"
               selected={selectedDate}
               onSelect={handleSelect}
+              defaultMonth={selectedDate}
               autoFocus
             />
           </div>
