@@ -168,11 +168,53 @@ class TravelStore {
     const start = new Date(qualifyingStart);
     if (isNaN(start.getTime())) return null;
 
-    // Calculate: qualifying start + required years - 28 days
+    // Calculate the baseline earliest date: qualifying start + required years - 28 days
     const requiredEndDate = addYears(start, this.ilrTrack);
-    const earliestApplicationDate = subDays(requiredEndDate, 28);
+    const baselineDate = subDays(requiredEndDate, 28);
+    let candidateDate = new Date(baselineDate);
 
-    return earliestApplicationDate.toISOString().split('T')[0];
+    // Per UK Home Office guidance: The applicant cannot apply for ILR if ANY rolling 12-month
+    // period contains >180 days of absence. This includes pre-entry period absences.
+    // We need to find the earliest date where:
+    // 1. The qualifying period is complete (e.g., 3 years from start)
+    // 2. ALL rolling 12-month periods have ≤180 days absence
+
+    // Check if the candidate date satisfies the rolling 180-day limit
+    // If not, we need to push the date forward until it does
+    const maxIterations = 365; // Prevent infinite loops (check up to 1 year forward)
+    let iterations = 0;
+
+    while (iterations < maxIterations) {
+      // Calculate the qualifying period for this candidate date
+      const qualifyingPeriodStart = subDays(addYears(candidateDate, -this.ilrTrack), 0);
+
+      // Check if this qualifying period starts before our actual start date
+      if (qualifyingPeriodStart < start) {
+        // This means we haven't reached the minimum qualifying period yet
+        // Move forward to the earliest valid date
+        candidateDate = subDays(addYears(start, this.ilrTrack), 28);
+        qualifyingPeriodStart.setTime(start.getTime());
+      }
+
+      // Check the rolling 12-month absence limit for this qualifying period
+      const maxAbsence = this.calculateMaxAbsenceInRolling12Months(
+        qualifyingPeriodStart >= start ? qualifyingPeriodStart : start,
+        candidateDate
+      );
+
+      // If this candidate satisfies the 180-day limit, we've found our answer
+      if (maxAbsence <= MAX_ABSENCE_IN_12_MONTHS) {
+        return candidateDate.toISOString().split('T')[0];
+      }
+
+      // Otherwise, move forward by 1 day and try again
+      candidateDate = addDays(candidateDate, 1);
+      iterations++;
+    }
+
+    // If we've exceeded max iterations, return the baseline date
+    // The summary will flag hasExceeded180Days = true to indicate the issue
+    return baselineDate.toISOString().split('T')[0];
   }
 
   // Get the effective application date (manual override or calculated)
