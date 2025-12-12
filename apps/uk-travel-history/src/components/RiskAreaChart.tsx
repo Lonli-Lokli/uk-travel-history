@@ -9,7 +9,16 @@ import HighchartsReact, {
 import type { AxisSetExtremesEventObject } from 'highcharts';
 import { parseISO } from 'date-fns';
 
-import { travelStore, RollingDataPoint, TripBar } from '@uth/ui';
+import {
+  travelStore,
+  RollingDataPoint,
+  TripBar,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@uth/ui';
 
 const getRiskColor = (days: number): string => {
   if (days >= 180) return '#ef4444'; // red-500
@@ -26,7 +35,7 @@ type TimelinePoint = {
 };
 
 export const RiskAreaChart: React.FC = observer(() => {
-  const { rollingAbsenceData, tripBars } = travelStore;
+  const { rollingAbsenceData, tripBars, selectedTripDetails } = travelStore;
 
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
@@ -363,12 +372,10 @@ export const RiskAreaChart: React.FC = observer(() => {
             pointPadding: 0.15, // makes bars visually thicker
             point: {
               events: {
-                click: function (this: any) {
-                  // Show trip details on click
-                  const point = this;
-                  const startStr = Highcharts.dateFormat('%e %b %Y', point.start);
-                  const endStr = Highcharts.dateFormat('%e %b %Y', point.end);
-                  alert(`${point.name}\n${startStr} – ${endStr}`);
+                click: function () {
+                  // Show trip details on click - delegate to MobX store
+                  const point = this as any;
+                  travelStore.selectTrip(point.name, point.start, point.end);
                 },
               },
             },
@@ -458,6 +465,34 @@ export const RiskAreaChart: React.FC = observer(() => {
           </div>
         </div>
       )}
+
+      {/* Trip Details Dialog */}
+      <Dialog
+        open={!!selectedTripDetails}
+        onOpenChange={(open) => {
+          if (!open) {
+            travelStore.clearSelectedTrip();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedTripDetails?.name || 'Trip Details'}</DialogTitle>
+            <DialogDescription>
+              {selectedTripDetails && (
+                <div className="mt-2 text-sm">
+                  <p>
+                    <strong>Departure:</strong> {selectedTripDetails.start}
+                  </p>
+                  <p>
+                    <strong>Return:</strong> {selectedTripDetails.end}
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
