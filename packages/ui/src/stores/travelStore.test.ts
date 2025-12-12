@@ -1632,8 +1632,13 @@ invalid-date,20/01/2024,London,Paris`;
 
       // If absences exceed 180 days in any 12-month period, the auto date must be pushed forward
       if (summary.hasExceeded180Days) {
+        const baselineDate = '2026-03-01';
+
         // The calculated date should be AFTER the baseline 3-year mark
-        expect(calcDate).not.toBe('2026-03-01');
+        expect(calcDate).not.toBe(baselineDate);
+
+        // Verify the calculated date is actually LATER than baseline
+        expect(new Date(calcDate!)).toBeGreaterThan(new Date(baselineDate));
       }
     });
   });
