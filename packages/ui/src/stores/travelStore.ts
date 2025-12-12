@@ -52,6 +52,7 @@ export type ILRTrack = 2 | 3 | 5 | 10;
 // Constants for UK Home Office guidance
 const MAX_ALLOWABLE_PRE_ENTRY_DAYS = 180; // Maximum days between visa issue and UK entry that can count toward qualifying period
 const MAX_ABSENCE_IN_12_MONTHS = 180; // Maximum days allowed outside UK in any rolling 12-month period
+const MAX_ILR_DATE_SEARCH_DAYS = 365; // Maximum days to search forward for valid ILR application date
 
 // Interface for pre-entry period information
 export interface PreEntryPeriodInfo {
@@ -147,7 +148,17 @@ class TravelStore {
     };
   }
 
-  // Computed property: Auto-calculated earliest application date based on ILR track
+  /**
+   * Calculates the earliest valid ILR application date based on the qualifying period
+   * and rolling 180-day absence limit.
+   *
+   * Algorithm:
+   * 1. Calculate baseline date: qualifying start + track years - 28 days
+   * 2. Verify ALL rolling 12-month periods have ≤180 days absence
+   * 3. If not, push forward day-by-day until a valid date is found
+   *
+   * @returns ISO date string (YYYY-MM-DD) or null if insufficient data or max iterations exceeded
+   */
   get calculatedApplicationDate(): string | null {
     if (!this.ilrTrack) return null;
 
@@ -181,24 +192,23 @@ class TravelStore {
 
     // Check if the candidate date satisfies the rolling 180-day limit
     // If not, we need to push the date forward until it does
-    const maxIterations = 365; // Prevent infinite loops (check up to 1 year forward)
     let iterations = 0;
 
-    while (iterations < maxIterations) {
+    while (iterations < MAX_ILR_DATE_SEARCH_DAYS) {
       // Calculate the qualifying period for this candidate date
-      const qualifyingPeriodStart = subDays(addYears(candidateDate, -this.ilrTrack), 0);
+      const qualifyingPeriodStart = addYears(candidateDate, -this.ilrTrack);
 
       // Check if this qualifying period starts before our actual start date
       if (qualifyingPeriodStart < start) {
         // This means we haven't reached the minimum qualifying period yet
         // Move forward to the earliest valid date
         candidateDate = subDays(addYears(start, this.ilrTrack), 28);
-        qualifyingPeriodStart.setTime(start.getTime());
+        continue; // Skip this iteration and recalculate on next loop
       }
 
       // Check the rolling 12-month absence limit for this qualifying period
       const maxAbsence = this.calculateMaxAbsenceInRolling12Months(
-        qualifyingPeriodStart >= start ? qualifyingPeriodStart : start,
+        qualifyingPeriodStart,
         candidateDate
       );
 
@@ -212,9 +222,13 @@ class TravelStore {
       iterations++;
     }
 
-    // If we've exceeded max iterations, return the baseline date
-    // The summary will flag hasExceeded180Days = true to indicate the issue
-    return baselineDate.toISOString().split('T')[0];
+    // If we've exceeded max iterations, return null to indicate we couldn't find a valid date
+    // This prevents suggesting an ILR date that would violate the 180-day rule
+    console.warn(
+      'ILR auto date calculation exceeded max iterations. ' +
+      'Unable to find a valid date within 365 days of baseline.'
+    );
+    return null;
   }
 
   // Get the effective application date (manual override or calculated)
