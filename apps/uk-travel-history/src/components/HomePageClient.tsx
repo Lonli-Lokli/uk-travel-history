@@ -8,13 +8,38 @@ import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { EmptyState } from './EmptyState';
-import { useFileUpload, useExport, useClearAll } from './hooks';
+import { ImportPreviewDialog } from './ImportPreviewDialog';
+import {
+  useFileUpload,
+  useExport,
+  useClearAll,
+  useCsvImport,
+  useClipboardImport,
+} from './hooks';
 
 export const HomePageClient = observer(() => {
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
   const { handleExport } = useExport();
   const { handleClearAll } = useClearAll();
   const travelTableRef = useRef<HTMLDivElement>(null);
+
+  const {
+    fileInputRef: csvFileInputRef,
+    handleFileSelect: handleCsvFileSelect,
+    triggerFileInput: triggerCsvFileInput,
+    isDialogOpen: isCsvDialogOpen,
+    previewData: csvPreviewData,
+    confirmImport: confirmCsvImport,
+    cancelImport: cancelCsvImport,
+  } = useCsvImport();
+
+  const {
+    handleClipboardPaste,
+    isDialogOpen: isClipboardDialogOpen,
+    previewData: clipboardPreviewData,
+    confirmImport: confirmClipboardImport,
+    cancelImport: cancelClipboardImport,
+  } = useClipboardImport();
 
   const hasTrips = travelStore.trips.length > 0;
 
@@ -37,8 +62,18 @@ export const HomePageClient = observer(() => {
         onChange={handleFileSelect}
       />
 
+      <input
+        ref={csvFileInputRef}
+        type="file"
+        accept=".csv,.txt"
+        className="hidden"
+        onChange={handleCsvFileSelect}
+      />
+
       <Header
-        onImportClick={triggerFileInput}
+        onImportPdfClick={triggerFileInput}
+        onImportCsvClick={triggerCsvFileInput}
+        onImportClipboardClick={handleClipboardPaste}
         onExportClick={handleExport}
       />
 
@@ -58,6 +93,26 @@ export const HomePageClient = observer(() => {
           </>
         )}
       </main>
+
+      {/* CSV Import Preview Dialog */}
+      {csvPreviewData && (
+        <ImportPreviewDialog
+          isOpen={isCsvDialogOpen}
+          tripCount={csvPreviewData.tripCount}
+          onConfirm={confirmCsvImport}
+          onCancel={cancelCsvImport}
+        />
+      )}
+
+      {/* Clipboard Import Preview Dialog */}
+      {clipboardPreviewData && (
+        <ImportPreviewDialog
+          isOpen={isClipboardDialogOpen}
+          tripCount={clipboardPreviewData.tripCount}
+          onConfirm={confirmClipboardImport}
+          onCancel={cancelClipboardImport}
+        />
+      )}
     </div>
   );
 });

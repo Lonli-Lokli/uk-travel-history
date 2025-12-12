@@ -2,16 +2,40 @@
 
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
-import { travelStore, Button } from '@uth/ui';
-import { Upload, Download, Plane, Loader2, Coffee } from 'lucide-react';
+import {
+  travelStore,
+  Button,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@uth/ui';
+import {
+  Upload,
+  Download,
+  Plane,
+  Loader2,
+  Coffee,
+  FileText,
+  Clipboard,
+  ChevronDown,
+} from 'lucide-react';
 
 interface HeaderProps {
-  onImportClick: () => void;
+  onImportPdfClick: () => void;
+  onImportCsvClick: () => void;
+  onImportClipboardClick: () => void;
   onExportClick: () => void;
 }
 
 export const Header = observer(
-  ({ onImportClick, onExportClick }: HeaderProps) => {
+  ({
+    onImportPdfClick,
+    onImportCsvClick,
+    onImportClipboardClick,
+    onExportClick,
+  }: HeaderProps) => {
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
 
@@ -70,34 +94,73 @@ export const Header = observer(
                 </Button>
               </a>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden sm:flex"
-                onClick={onImportClick}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-1.5" />
-                )}
-                Import PDF
-              </Button>
+              {/* Desktop: Import Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-1.5" />
+                    )}
+                    Import
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onImportPdfClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    From PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onImportCsvClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    From CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onImportClipboardClick}>
+                    <Clipboard className="h-4 w-4 mr-2" />
+                    From Clipboard
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="sm:hidden"
-                onClick={onImportClick}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
+              {/* Mobile: Import Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="sm:hidden"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onImportPdfClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    From PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onImportCsvClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    From CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onImportClipboardClick}>
+                    <Clipboard className="h-4 w-4 mr-2" />
+                    From Clipboard
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 size="sm"
