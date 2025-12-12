@@ -258,7 +258,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         chart: {
           height:
             timeline.rowCount > 0
-              ? Math.max(120, 60 * timeline.rowCount + 70)
+              ? Math.max(120, 50 * timeline.rowCount + 70)
               : 120,
           zooming: { type: 'x' },
           spacingTop: 4,
@@ -278,6 +278,17 @@ export const RiskAreaChart: React.FC = observer(() => {
           labels: { enabled: false },
           gridLineWidth: 0,
           minorGridLineWidth: 0,
+          // Completely disable date time label formatting to remove year headers
+          dateTimeLabelFormats: {
+            millisecond: '',
+            second: '',
+            minute: '',
+            hour: '',
+            day: '',
+            week: '',
+            month: '',
+            year: '',
+          },
           events: {
             setExtremes: function (e) {
               syncExtremes('gantt', e as AxisSetExtremesEventObject);
