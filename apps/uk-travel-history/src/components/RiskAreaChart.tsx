@@ -135,7 +135,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         trigger: 'sync',
       });
     },
-    []
+    [],
   );
 
   // -------- Highcharts options: risk area chart -----------------------------
@@ -247,7 +247,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         },
       ],
     }),
-    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes]
+    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes],
   );
 
   // -------- Highcharts options: trip Gantt timeline -------------------------
@@ -271,36 +271,39 @@ export const RiskAreaChart: React.FC = observer(() => {
         legend: { enabled: false },
 
         // Minimal x-axis: no header grid, no labels (area chart already shows them)
-        xAxis: {
-          type: 'datetime',
-          min: chartDomain.min,
-          max: chartDomain.max,
-          labels: { enabled: false },
-          gridLineWidth: 0,
-          minorGridLineWidth: 0,
-          // Completely disable date time label formatting to remove year headers
-          dateTimeLabelFormats: {
-            millisecond: '',
-            second: '',
-            minute: '',
-            hour: '',
-            day: '',
-            week: '',
-            month: '',
-            year: '',
-          },
-          events: {
-            setExtremes: function (e) {
-              syncExtremes('gantt', e as AxisSetExtremesEventObject);
+        xAxis: [
+          {
+            type: 'datetime',
+            min: chartDomain.min,
+            max: chartDomain.max,
+            labels: { enabled: false },
+            gridLineWidth: 0,
+            minorGridLineWidth: 0,
+            // Completely disable date time label formatting to remove year headers
+            dateTimeLabelFormats: {
+              millisecond: '',
+              second: '',
+              minute: '',
+              hour: '',
+              day: '',
+              week: '',
+              month: '',
+              year: '',
+            },
+            events: {
+              setExtremes: function (e) {
+                syncExtremes('gantt', e as AxisSetExtremesEventObject);
+              },
+            },
+            // Disable Gantt's default "big boxes" header
+            grid: {
+              enabled: false,
+              borderWidth: 0,
+              columns: [],
             },
           },
-          // Disable Gantt's default "big boxes" header
-          grid: {
-            enabled: false,
-            borderWidth: 0,
-            columns: [],
-          },
-        },
+          { visible: false },
+        ],
 
         // Hide Y-axis labels entirely; we just want rows as lanes.
         yAxis: {
@@ -382,14 +385,14 @@ export const RiskAreaChart: React.FC = observer(() => {
             },
           },
         ],
-      } satisfies Highcharts.Options),
+      }) satisfies Highcharts.Options,
     [
       chartDomain.min,
       chartDomain.max,
       timeline.points,
       timeline.rowCount,
       syncExtremes,
-    ]
+    ],
   );
 
   // -------- Render ----------------------------------------------------------
@@ -471,7 +474,9 @@ export const RiskAreaChart: React.FC = observer(() => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedTripDetails?.name || 'Trip Details'}</DialogTitle>
+            <DialogTitle>
+              {selectedTripDetails?.name || 'Trip Details'}
+            </DialogTitle>
             <DialogDescription>
               {selectedTripDetails && (
                 <div className="mt-2 text-sm">
