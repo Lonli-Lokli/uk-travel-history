@@ -1,5 +1,11 @@
 # UK Travel History Parser
 
+[![CI](https://github.com/Lonli-Lokli/uk-travel-history/actions/workflows/ci.yml/badge.svg)](https://github.com/Lonli-Lokli/uk-travel-history/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Lonli-Lokli/uk-travel-history/branch/master/graph/badge.svg)](https://codecov.io/gh/Lonli-Lokli/uk-travel-history)
+[![Vercel](https://img.shields.io/badge/deployed-vercel-black?logo=vercel)](https://uk-travel-history.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
+
 A professional Next.js web application for tracking UK travel history and calculating ILR (Indefinite Leave to Remain) eligibility using the official UK Home Office backward counting algorithm. Designed for individuals needing to calculate their time spent outside the UK for immigration/residency purposes.
 
 ## Features
