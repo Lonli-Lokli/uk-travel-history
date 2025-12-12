@@ -18,15 +18,24 @@ export const useCsvImport = () => {
       if (!file) return;
 
       try {
-        const text = await file.text();
+        const isXlsx = file.name.toLowerCase().endsWith('.xlsx');
+        let result;
 
-        // Quick validation
-        const { parseCsvText } = await import('@uth/parser');
-        const result = parseCsvText(text);
+        if (isXlsx) {
+          // Parse XLSX file
+          const arrayBuffer = await file.arrayBuffer();
+          const { parseXlsxFile } = await import('@uth/parser');
+          result = await parseXlsxFile(arrayBuffer);
+        } else {
+          // Parse CSV file
+          const text = await file.text();
+          const { parseCsvText } = await import('@uth/parser');
+          result = parseCsvText(text);
+        }
 
         if (!result.success) {
           toast({
-            title: 'Invalid CSV',
+            title: `Invalid ${isXlsx ? 'Excel' : 'CSV'} file`,
             description: result.errors.join('\n'),
             variant: 'destructive',
           });
@@ -34,8 +43,9 @@ export const useCsvImport = () => {
         }
 
         // Show preview dialog
+        // For XLSX, we'll store a special marker in text field
         setPreviewData({
-          text,
+          text: isXlsx ? `__XLSX__${JSON.stringify(result.trips)}` : await file.text(),
           tripCount: result.trips.length,
         });
         setIsDialogOpen(true);
@@ -43,7 +53,7 @@ export const useCsvImport = () => {
         toast({
           title: 'Import failed',
           description:
-            err instanceof Error ? err.message : 'Failed to read CSV file',
+            err instanceof Error ? err.message : 'Failed to read file',
           variant: 'destructive',
         });
       } finally {

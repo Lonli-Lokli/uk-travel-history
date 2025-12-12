@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import ExcelJS from 'exceljs';
 import { parseDate } from './parser';
 
 export interface CSVTripRow {
@@ -157,6 +158,112 @@ export function parseCsvText(csvText: string): CSVParseResult {
     errors,
     warnings,
   };
+}
+
+/**
+ * Parse XLSX file content
+ * Handles Excel files (.xlsx) with the same structure as exported files
+ */
+export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const trips: ParsedTrip[] = [];
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+
+    const sheet = workbook.getWorksheet('Travel History') || workbook.worksheets[0];
+    if (!sheet) {
+      errors.push('No worksheet found in Excel file');
+      return { success: false, trips: [], errors, warnings };
+    }
+
+    // Find header row (should be row 1)
+    const headerRow = sheet.getRow(1);
+    const headers: { [key: string]: number } = {};
+
+    headerRow.eachCell((cell, colNumber) => {
+      const value = cell.value?.toString().trim().toLowerCase() || '';
+      if (value === '#' || value === 'num' || value === 'number') {
+        headers.num = colNumber;
+      } else if (value === 'date out' || value === 'dateout' || value === 'departure date' || value === 'out date') {
+        headers.outDate = colNumber;
+      } else if (value === 'date in' || value === 'datein' || value === 'return date' || value === 'in date') {
+        headers.inDate = colNumber;
+      } else if (value === 'departure' || value === 'departure route' || value === 'out route') {
+        headers.outRoute = colNumber;
+      } else if (value === 'return' || value === 'return route' || value === 'in route') {
+        headers.inRoute = colNumber;
+      }
+    });
+
+    if (!headers.outDate || !headers.inDate) {
+      errors.push('Excel file must contain "Date Out" and "Date In" columns');
+      return { success: false, trips: [], errors, warnings };
+    }
+
+    // Parse data rows (skip header row)
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header
+
+      const outDateCell = row.getCell(headers.outDate).value;
+      const inDateCell = row.getCell(headers.inDate).value;
+      const outRouteCell = row.getCell(headers.outRoute || 999).value;
+      const inRouteCell = row.getCell(headers.inRoute || 999).value;
+
+      const outDateStr = outDateCell?.toString().trim() || '';
+      const inDateStr = inDateCell?.toString().trim() || '';
+
+      if (!outDateStr && !inDateStr) {
+        warnings.push(`Row ${rowNumber}: Both dates are empty, skipping`);
+        return;
+      }
+
+      // Parse dates
+      let outDate: Date | null = null;
+      let inDate: Date | null = null;
+
+      if (outDateStr) {
+        outDate = parseDate(outDateStr);
+        if (!outDate) {
+          errors.push(`Row ${rowNumber}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+          return;
+        }
+      }
+
+      if (inDateStr) {
+        inDate = parseDate(inDateStr);
+        if (!inDate) {
+          errors.push(`Row ${rowNumber}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+          return;
+        }
+      }
+
+      // Validate date logic
+      if (outDate && inDate && outDate > inDate) {
+        errors.push(`Row ${rowNumber}: Departure date is after return date`);
+        return;
+      }
+
+      trips.push({
+        outDate: outDate ? outDate.toISOString().split('T')[0] : '',
+        inDate: inDate ? inDate.toISOString().split('T')[0] : '',
+        outRoute: sanitizeField(outRouteCell?.toString() || ''),
+        inRoute: sanitizeField(inRouteCell?.toString() || ''),
+      });
+    });
+
+    return {
+      success: errors.length === 0,
+      trips,
+      errors,
+      warnings,
+    };
+  } catch (error) {
+    errors.push(`Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return { success: false, trips: [], errors, warnings };
+  }
 }
 
 /**

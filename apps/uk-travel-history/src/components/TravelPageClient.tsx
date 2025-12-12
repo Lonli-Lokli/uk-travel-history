@@ -51,7 +51,7 @@ export const TravelPageClient = observer(() => {
       <input
         ref={csvFileInputRef}
         type="file"
-        accept=".csv,.txt"
+        accept=".csv,.txt,.xlsx"
         className="hidden"
         onChange={handleCsvFileSelect}
       />

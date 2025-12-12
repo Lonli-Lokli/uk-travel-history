@@ -642,15 +642,30 @@ class TravelStore {
     this.error = null;
 
     try {
-      const { parseCsvText } = await import('@uth/parser');
-      const result = parseCsvText(csvText);
+      let result;
+
+      // Check if this is XLSX data (marked with special prefix from useCsvImport)
+      if (csvText.startsWith('__XLSX__')) {
+        const tripsJson = csvText.substring(8); // Remove __XLSX__ prefix
+        const trips = JSON.parse(tripsJson);
+        result = {
+          success: true,
+          trips,
+          errors: [],
+          warnings: [],
+        };
+      } else {
+        // Parse as CSV
+        const { parseCsvText } = await import('@uth/parser');
+        result = parseCsvText(csvText);
+      }
 
       if (!result.success) {
         throw new Error(result.errors.join('\n'));
       }
 
       if (result.trips.length === 0) {
-        throw new Error('No valid trips found in CSV');
+        throw new Error('No valid trips found');
       }
 
       runInAction(() => {
@@ -681,7 +696,7 @@ class TravelStore {
     } catch (err) {
       runInAction(() => {
         this.error =
-          err instanceof Error ? err.message : 'Failed to import CSV';
+          err instanceof Error ? err.message : 'Failed to import';
         this.isLoading = false;
       });
       throw err;

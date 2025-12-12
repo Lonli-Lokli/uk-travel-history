@@ -65,7 +65,7 @@ export const HomePageClient = observer(() => {
       <input
         ref={csvFileInputRef}
         type="file"
-        accept=".csv,.txt"
+        accept=".csv,.txt,.xlsx"
         className="hidden"
         onChange={handleCsvFileSelect}
       />

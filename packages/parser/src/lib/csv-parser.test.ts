@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseCsvText, parseClipboardText } from './csv-parser';
+import { parseCsvText, parseClipboardText, parseXlsxFile } from './csv-parser';
+import ExcelJS from 'exceljs';
 
 describe('CSV Parser', () => {
   describe('parseCsvText', () => {
@@ -332,6 +333,190 @@ Heathrow",Paris`;
 
       expect(result.success).toBe(true);
       expect(result.trips[0].outRoute).toContain('London');
+    });
+  });
+
+  describe('parseXlsxFile', () => {
+    async function createTestWorkbook(data: any[]): Promise<ArrayBuffer> {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Travel History');
+
+      // Add headers
+      sheet.columns = [
+        { header: '#', key: 'num', width: 8 },
+        { header: 'Date Out', key: 'outDate', width: 16 },
+        { header: 'Date In', key: 'inDate', width: 16 },
+        { header: 'Departure', key: 'outRoute', width: 35 },
+        { header: 'Return', key: 'inRoute', width: 35 },
+      ];
+
+      // Add data rows
+      data.forEach((row, index) => {
+        sheet.addRow({
+          num: index + 1,
+          outDate: row.outDate,
+          inDate: row.inDate,
+          outRoute: row.outRoute || '',
+          inRoute: row.inRoute || '',
+        });
+      });
+
+      return await workbook.xlsx.writeBuffer();
+    }
+
+    it('should parse valid XLSX file with DD/MM/YYYY dates', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: 'London', inRoute: 'Paris' },
+        { outDate: '01/02/2024', inDate: '10/02/2024', outRoute: 'Berlin', inRoute: 'London' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips).toHaveLength(2);
+      expect(result.trips[0]).toEqual({
+        outDate: '2024-01-15',
+        inDate: '2024-01-20',
+        outRoute: 'London',
+        inRoute: 'Paris',
+      });
+    });
+
+    it('should parse valid XLSX file with YYYY-MM-DD dates', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '2024-01-15', inDate: '2024-01-20', outRoute: 'London', inRoute: 'Paris' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips[0].outDate).toBe('2024-01-15');
+      expect(result.trips[0].inDate).toBe('2024-01-20');
+    });
+
+    it('should handle empty route fields', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: '', inRoute: '' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips[0].outRoute).toBe('');
+      expect(result.trips[0].inRoute).toBe('');
+    });
+
+    it('should handle incomplete trips (missing return date)', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '', outRoute: 'London', inRoute: '' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips[0].outDate).toBe('2024-01-15');
+      expect(result.trips[0].inDate).toBe('');
+    });
+
+    it('should handle special characters in routes', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: 'London, UK', inRoute: 'Paris, France' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips[0].outRoute).toBe('London, UK');
+      expect(result.trips[0].inRoute).toBe('Paris, France');
+    });
+
+    it('should skip rows with empty dates', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: 'London', inRoute: 'Paris' },
+        { outDate: '', inDate: '', outRoute: '', inRoute: '' },
+        { outDate: '01/02/2024', inDate: '10/02/2024', outRoute: 'Berlin', inRoute: 'London' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips).toHaveLength(2);
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0]).toContain('Both dates are empty');
+    });
+
+    it('should handle invalid date formats', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: 'invalid-date', inDate: '20/01/2024', outRoute: 'London', inRoute: 'Paris' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(false);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('Invalid departure date');
+    });
+
+    it('should validate departure date is not after return date', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '20/01/2024', inDate: '15/01/2024', outRoute: 'London', inRoute: 'Paris' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Departure date is after return date');
+    });
+
+    it('should handle workbook without Travel History sheet', async () => {
+      const workbook = new ExcelJS.Workbook();
+      workbook.addWorksheet('Other Sheet');
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      const result = await parseXlsxFile(buffer);
+
+      // Should use first available worksheet
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Excel file must contain');
+    });
+
+    it('should sanitize CSV injection attempts', async () => {
+      const buffer = await createTestWorkbook([
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: '=cmd|/c calc', inRoute: '+HYPERLINK("evil")' },
+      ]);
+
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      // Should remove leading = and +
+      expect(result.trips[0].outRoute).toBe('cmd|/c calc');
+      expect(result.trips[0].inRoute).toBe('HYPERLINK("evil")');
+    });
+
+    it('should round-trip with exported data', async () => {
+      // Simulate data that would be exported
+      const exportedData = [
+        { outDate: '15/01/2024', inDate: '20/01/2024', outRoute: 'London Heathrow', inRoute: 'Paris CDG' },
+        { outDate: '10/03/2024', inDate: '15/03/2024', outRoute: 'Manchester', inRoute: 'Dublin' },
+      ];
+
+      const buffer = await createTestWorkbook(exportedData);
+      const result = await parseXlsxFile(buffer);
+
+      expect(result.success).toBe(true);
+      expect(result.trips.length).toBe(2);
+
+      // Verify dates are correctly parsed
+      expect(result.trips[0].outDate).toBe('2024-01-15');
+      expect(result.trips[0].inDate).toBe('2024-01-20');
+      expect(result.trips[1].outDate).toBe('2024-03-10');
+      expect(result.trips[1].inDate).toBe('2024-03-15');
+
+      // Verify routes are preserved
+      expect(result.trips[0].outRoute).toBe('London Heathrow');
+      expect(result.trips[0].inRoute).toBe('Paris CDG');
+      expect(result.trips[1].outRoute).toBe('Manchester');
+      expect(result.trips[1].inRoute).toBe('Dublin');
     });
   });
 });

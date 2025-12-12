@@ -1056,7 +1056,7 @@ invalid-date,20/01/2024,London,Paris`;
 ,,Empty,Row`;
 
       await expect(travelStore.importFromCsv(csvData, 'append')).rejects.toThrow(
-        'No valid trips found in CSV'
+        'No valid trips found'
       );
     });
 
@@ -1143,6 +1143,168 @@ invalid-date,20/01/2024,London,Paris`;
       }
 
       expect(travelStore.error).not.toBe(null);
+    });
+  });
+
+  describe('Round-trip Export/Import', () => {
+    beforeEach(() => {
+      travelStore.trips = [];
+      travelStore.vignetteEntryDate = '';
+      travelStore.visaStartDate = '';
+      travelStore.error = null;
+      travelStore.isLoading = false;
+    });
+
+    it('should successfully import data after export (CSV)', async () => {
+      // Setup initial data
+      travelStore.addTrip();
+      travelStore.updateTrip(travelStore.trips[0].id, {
+        outDate: '2024-01-15',
+        inDate: '2024-01-20',
+        outRoute: 'London Heathrow',
+        inRoute: 'Paris CDG',
+      });
+
+      travelStore.addTrip();
+      travelStore.updateTrip(travelStore.trips[1].id, {
+        outDate: '2024-03-10',
+        inDate: '2024-03-15',
+        outRoute: 'Manchester',
+        inRoute: 'Dublin',
+      });
+
+      // Store original data
+      const originalTrips = travelStore.trips.map(t => ({
+        outDate: t.outDate,
+        inDate: t.inDate,
+        outRoute: t.outRoute,
+        inRoute: t.inRoute,
+      }));
+
+      // Export to CSV (simulated)
+      const csvData = `#,Date Out,Date In,Departure,Return
+1,15/01/2024,20/01/2024,London Heathrow,Paris CDG
+2,10/03/2024,15/03/2024,Manchester,Dublin`;
+
+      // Clear data
+      travelStore.trips = [];
+
+      // Import from CSV
+      await travelStore.importFromCsv(csvData, 'replace');
+
+      // Verify imported data matches original
+      expect(travelStore.trips.length).toBe(2);
+      expect(travelStore.trips[0].outDate).toBe(originalTrips[0].outDate);
+      expect(travelStore.trips[0].inDate).toBe(originalTrips[0].inDate);
+      expect(travelStore.trips[0].outRoute).toBe(originalTrips[0].outRoute);
+      expect(travelStore.trips[0].inRoute).toBe(originalTrips[0].inRoute);
+
+      expect(travelStore.trips[1].outDate).toBe(originalTrips[1].outDate);
+      expect(travelStore.trips[1].inDate).toBe(originalTrips[1].inDate);
+      expect(travelStore.trips[1].outRoute).toBe(originalTrips[1].outRoute);
+      expect(travelStore.trips[1].inRoute).toBe(originalTrips[1].inRoute);
+    });
+
+    it('should successfully import data after export (XLSX)', async () => {
+      // Setup initial data
+      travelStore.addTrip();
+      travelStore.updateTrip(travelStore.trips[0].id, {
+        outDate: '2024-01-15',
+        inDate: '2024-01-20',
+        outRoute: 'London Heathrow',
+        inRoute: 'Paris CDG',
+      });
+
+      // Store original data
+      const originalTrips = travelStore.trips.map(t => ({
+        outDate: t.outDate,
+        inDate: t.inDate,
+        outRoute: t.outRoute,
+        inRoute: t.inRoute,
+      }));
+
+      // Simulate XLSX data (using the special __XLSX__ prefix that useCsvImport creates)
+      const xlsxData = `__XLSX__${JSON.stringify([
+        {
+          outDate: '2024-01-15',
+          inDate: '2024-01-20',
+          outRoute: 'London Heathrow',
+          inRoute: 'Paris CDG',
+        }
+      ])}`;
+
+      // Clear data
+      travelStore.trips = [];
+
+      // Import from XLSX
+      await travelStore.importFromCsv(xlsxData, 'replace');
+
+      // Verify imported data matches original
+      expect(travelStore.trips.length).toBe(1);
+      expect(travelStore.trips[0].outDate).toBe(originalTrips[0].outDate);
+      expect(travelStore.trips[0].inDate).toBe(originalTrips[0].inDate);
+      expect(travelStore.trips[0].outRoute).toBe(originalTrips[0].outRoute);
+      expect(travelStore.trips[0].inRoute).toBe(originalTrips[0].inRoute);
+    });
+
+    it('should preserve date formats in round-trip (DD/MM/YYYY)', async () => {
+      // Import with DD/MM/YYYY format
+      const csvData = `Date Out,Date In
+31/12/2023,05/01/2024`;
+
+      await travelStore.importFromCsv(csvData, 'replace');
+
+      // Verify dates are stored in ISO format
+      expect(travelStore.trips[0].outDate).toBe('2023-12-31');
+      expect(travelStore.trips[0].inDate).toBe('2024-01-05');
+
+      // Export would convert to DD/MM/YYYY (simulated)
+      const exportedCsv = `Date Out,Date In
+31/12/2023,05/01/2024`;
+
+      // Re-import
+      travelStore.trips = [];
+      await travelStore.importFromCsv(exportedCsv, 'replace');
+
+      // Dates should match
+      expect(travelStore.trips[0].outDate).toBe('2023-12-31');
+      expect(travelStore.trips[0].inDate).toBe('2024-01-05');
+    });
+
+    it('should preserve special characters and routes in round-trip', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,"London Heathrow, Terminal 5","Paris CDG, Terminal 2E"`;
+
+      await travelStore.importFromCsv(csvData, 'replace');
+
+      const originalRoute = travelStore.trips[0].outRoute;
+      const originalReturn = travelStore.trips[0].inRoute;
+
+      // Verify routes are preserved
+      expect(originalRoute).toBe('London Heathrow, Terminal 5');
+      expect(originalReturn).toBe('Paris CDG, Terminal 2E');
+    });
+
+    it('should handle empty routes in round-trip', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,,`;
+
+      await travelStore.importFromCsv(csvData, 'replace');
+
+      expect(travelStore.trips[0].outRoute).toBe('');
+      expect(travelStore.trips[0].inRoute).toBe('');
+    });
+
+    it('should handle incomplete trips in round-trip', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,,London,`;
+
+      await travelStore.importFromCsv(csvData, 'replace');
+
+      expect(travelStore.trips[0].outDate).toBe('2024-01-15');
+      expect(travelStore.trips[0].inDate).toBe('');
+      expect(travelStore.trips[0].outRoute).toBe('London');
+      expect(travelStore.trips[0].inRoute).toBe('');
     });
   });
 });

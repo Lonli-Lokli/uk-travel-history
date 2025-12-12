@@ -75,7 +75,7 @@ export const LandingPage = () => {
       <input
         ref={csvImport.fileInputRef}
         type="file"
-        accept=".csv,.txt"
+        accept=".csv,.txt,.xlsx"
         className="hidden"
         onChange={csvImport.handleFileSelect}
       />

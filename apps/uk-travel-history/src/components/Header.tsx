@@ -119,7 +119,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV
+                    From CSV/Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
@@ -152,7 +152,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV
+                    From CSV/Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
