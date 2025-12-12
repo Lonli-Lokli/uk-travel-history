@@ -669,7 +669,7 @@ class TravelStore {
       }
 
       runInAction(() => {
-        const importedTrips: TripRecord[] = result.trips.map((trip) => ({
+        const importedTrips: TripRecord[] = result.trips.map((trip: { outDate: string; inDate: string; outRoute?: string; inRoute?: string }) => ({
           id: this.generateId(),
           outDate: trip.outDate,
           inDate: trip.inDate,
