@@ -10,6 +10,11 @@ import {
   Label,
   ILRTrack,
   DatePicker,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
 import { FileText, Target } from 'lucide-react';
@@ -68,23 +73,24 @@ export const VisaDetailsCard = observer(() => {
               <Target className="w-3 h-3" />
               ILR Track (Years)
             </Label>
-            <select
-              id="ilrTrack"
-              value={travelStore.ilrTrack || ''}
-              onChange={(e) => {
-                const value = e.target.value;
+            <Select
+              value={travelStore.ilrTrack?.toString() || ''}
+              onValueChange={(value) => {
                 travelStore.setILRTrack(
                   value ? (Number(value) as ILRTrack) : null
                 );
               }}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">Select track...</option>
-              <option value="2">2 Years</option>
-              <option value="3">3 Years</option>
-              <option value="5">5 Years</option>
-              <option value="10">10 Years</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select track..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2">2 Years</SelectItem>
+                <SelectItem value="3">3 Years</SelectItem>
+                <SelectItem value="5">5 Years</SelectItem>
+                <SelectItem value="10">10 Years</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground leading-tight">
               Required continuous period for ILR
             </p>
