@@ -259,8 +259,8 @@ export const RiskAreaChart: React.FC = observer(() => {
         chart: {
           height:
             timeline.rowCount > 0
-              ? Math.max(80, 24 * timeline.rowCount + 40)
-              : 80,
+              ? Math.max(100, 40 * timeline.rowCount + 60)
+              : 100,
           zooming: { type: 'x' },
           spacingTop: 4,
           spacingBottom: 4,
@@ -359,7 +359,19 @@ export const RiskAreaChart: React.FC = observer(() => {
                 brightness: 0.15,
               },
             },
-            pointPadding: 0.25, // makes bars visually thicker
+            cursor: 'pointer',
+            pointPadding: 0.15, // makes bars visually thicker
+            point: {
+              events: {
+                click: function (this: any) {
+                  // Show trip details on click
+                  const point = this;
+                  const startStr = Highcharts.dateFormat('%e %b %Y', point.start);
+                  const endStr = Highcharts.dateFormat('%e %b %Y', point.end);
+                  alert(`${point.name}\n${startStr} – ${endStr}`);
+                },
+              },
+            },
           },
         ],
       } satisfies Highcharts.Options),

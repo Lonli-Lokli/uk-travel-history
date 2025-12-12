@@ -27,6 +27,11 @@ export function DatePicker({
     value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined
   );
 
+  // Sync selectedDate with value prop changes
+  React.useEffect(() => {
+    setSelectedDate(value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined);
+  }, [value]);
+
   const handleSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     if (date) {
