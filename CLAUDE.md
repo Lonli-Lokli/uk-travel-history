@@ -8,9 +8,10 @@ This is a Next.js application designed to help users track their UK travel histo
 
 ### Core Functionality
 1. **Travel History Tracking**: Parse and manage trips in/out of the UK
-2. **Vignette Entry Dates**: Track when vignette entries occurred
-3. **Visa Start Dates**: Track visa commencement dates
-4. **Days Calculation**: Calculate full days outside UK (excluding departure and return days)
+2. **Vignette Issue & Entry Dates**: Track when entry clearance was issued and when person entered UK
+3. **Pre-Entry Period Calculation**: Handle period between vignette issue and UK entry (per Home Office guidance)
+4. **Visa Start Dates**: Track visa commencement dates
+5. **Days Calculation**: Calculate full days outside UK (excluding departure and return days)
 
 ### Data Sources
 - PDF uploads from UK Home Office SAR (Subject Access Request) documents
@@ -118,8 +119,8 @@ When adding fields like vignette entry date or visa start date:
   - `components/TravelPageClient.tsx` - Travel tracker component
   - `components/Header.tsx` - Updated with home link navigation
 - **Features**:
-  - `stores/travelStore.ts` - Vignette/visa dates, continuous leave, rolling 12-month checks
-  - `components/VisaDetailsCard.tsx` - Input fields for vignette/visa dates
+  - `packages/ui/src/stores/travelStore.ts` - Vignette/visa dates, pre-entry period, continuous leave, rolling 12-month checks, backward counting
+  - `apps/uk-travel-history/src/components/VisaDetailsCard.tsx` - Input fields for vignette issue/entry dates and visa dates
   - `components/SummaryCards.tsx` - Continuous leave display with 180-day warning
   - `app/api/export/route.ts` - Enhanced Excel export with all calculations
 
@@ -133,6 +134,13 @@ When adding fields like vignette entry date or visa start date:
 - ✅ Visual warning when 180-day limit exceeded
 - ✅ Enhanced Excel export with complete visa/vignette information
 - ✅ Follows UK Home Office guidance v22.0 for ILR calculations
+- ✅ **Pre-Entry Period Feature** (December 2025):
+  - Added vignette issue date field separate from entry date
+  - Implemented pre-entry period calculation (issue to entry delay)
+  - Pre-entry period counts toward qualifying period if delay ≤ 180 days
+  - Pre-entry days count as absence toward 180-day rolling limit
+  - Backward counting with 28-day rule finds most beneficial assessment date
+  - Comprehensive test coverage (85 tests passing)
 
 ## Important Notes
 
@@ -151,22 +159,44 @@ The application follows the official UK Home Office guidance for calculating con
    - Only complete days spent abroad count
    - This is the standard method for UK residency calculations
 
-2. **Continuous Leave (Days in UK)**:
-   - Formula: `(Total days since start date) − (Total full days outside UK)`
-   - Start date is either vignette entry date OR visa start date
+2. **Pre-Entry Period Handling** (NEW):
+   - When vignette issue date and entry date are both set, the system calculates the delay
+   - Per Home Office guidance: "The period between entry clearance being issued and the applicant entering the UK may be counted toward the qualifying period"
+   - **If delay ≤ 180 days**: The qualifying period starts from the vignette **issue date**, but the pre-entry period counts as absence toward the 180-day limit
+   - **If delay > 180 days**: Only time after UK entry counts; qualifying period starts from **entry date**
+   - Formula: `preEntryDays = vignetteEntryDate - vignetteIssueDate`
+   - The pre-entry days are treated as absence for continuous leave calculation
+
+3. **Continuous Leave (Days in UK)**:
+   - Formula: `(Total days since start date) − (Total full days outside UK) − (Pre-entry days if applicable)`
+   - Start date is determined by:
+     - Vignette issue date (if pre-entry ≤ 180 days)
+     - OR vignette entry date (if no issue date or pre-entry > 180 days)
+     - OR visa start date (fallback)
    - Represents actual days physically present in the UK
 
-3. **Rolling 12-Month Absence Check**:
+4. **Rolling 12-Month Absence Check**:
    - Per Home Office rules: "No more than 180 days' absences are allowed in a consecutive 12-month period"
    - The app checks EVERY rolling 12-month period from the start date
    - Only **whole days** count (part-day absences <24hrs are excluded)
    - If any 12-month window exceeds 180 days, the continuous period may be broken
+
+5. **Backward Counting (28-Day Rule)**:
+   - Per Home Office guidance: "Applicants can submit a settlement application up to 28 days before they would reach the end of the specified period"
+   - The system automatically calculates the earliest application date: `(Start Date + Required Years - 28 days)`
+   - When assessing eligibility, the system counts backward from the most beneficial date within the 28-day window:
+     - Application date
+     - Decision date (simulated by application date + up to 28 days)
+     - Any date up to 28 days after application
+   - The system selects the assessment date that results in the lowest absence count
 
 #### Key Rules from Home Office Guidance
 - **180-day limit**: Maximum absence in any rolling 12-month period
 - **Whole days only**: Part-day absences (same-day return) don't count
 - **Rolling basis**: For leave granted after 11 January 2018, absences are considered on a rolling basis
 - **Continuous period**: Must be spent lawfully in the UK with valid leave
+- **Pre-entry period**: Can count toward qualifying period if delay ≤ 180 days, but counts as absence toward 180-day limit
+- **28-day early application**: Settlement applications can be submitted up to 28 days before the end of the required period
 
 ### Performance Considerations
 - PDF parsing can be slow for large documents

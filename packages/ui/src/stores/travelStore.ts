@@ -51,7 +51,8 @@ export type ILRTrack = 2 | 3 | 5 | 10;
 
 class TravelStore {
   trips: TripRecord[] = [];
-  vignetteEntryDate = '';
+  vignetteIssueDate = ''; // Date when entry clearance/vignette was issued
+  vignetteEntryDate = ''; // Date when person actually entered the UK
   visaStartDate = '';
   ilrTrack: ILRTrack | null = null; // 2, 3, or 5 year track
   applicationDate = ''; // Date of ILR application for backward counting
@@ -93,13 +94,39 @@ class TravelStore {
   get calculatedApplicationDate(): string | null {
     if (!this.ilrTrack) return null;
 
-    const visaStart = this.vignetteEntryDate || this.visaStartDate;
-    if (!visaStart) return null;
+    // Determine the effective start date for the qualifying period
+    // Per Home Office guidance: If vignette issue date is set and delay to entry <= 180 days,
+    // start from issue date; otherwise start from entry date or visa start date
+    let effectiveStartDate: string | null = null;
 
-    const start = new Date(visaStart);
+    if (this.vignetteIssueDate && this.vignetteEntryDate) {
+      const issueDate = new Date(this.vignetteIssueDate);
+      const entryDate = new Date(this.vignetteEntryDate);
+
+      if (!isNaN(issueDate.getTime()) && !isNaN(entryDate.getTime())) {
+        const preEntryDays = differenceInDays(entryDate, issueDate);
+
+        // If delay is 180 days or less, use issue date as start
+        if (preEntryDays >= 0 && preEntryDays <= 180) {
+          effectiveStartDate = this.vignetteIssueDate;
+        } else {
+          // If delay exceeds 180 days, use entry date
+          effectiveStartDate = this.vignetteEntryDate;
+        }
+      }
+    }
+
+    // Fallback to entry date or visa start date if issue date logic doesn't apply
+    if (!effectiveStartDate) {
+      effectiveStartDate = this.vignetteEntryDate || this.visaStartDate;
+    }
+
+    if (!effectiveStartDate) return null;
+
+    const start = new Date(effectiveStartDate);
     if (isNaN(start.getTime())) return null;
 
-    // Calculate: visa start + required years - 28 days
+    // Calculate: start date + required years - 28 days
     const requiredEndDate = addYears(start, this.ilrTrack);
     const earliestApplicationDate = subDays(requiredEndDate, 28);
 
@@ -123,6 +150,24 @@ class TravelStore {
       0
     );
 
+    // Calculate pre-entry period (vignette issue to entry)
+    let preEntryDays: number | null = null;
+    let canCountPreEntry = false;
+
+    if (this.vignetteIssueDate && this.vignetteEntryDate) {
+      const issueDate = new Date(this.vignetteIssueDate);
+      const entryDate = new Date(this.vignetteEntryDate);
+
+      if (!isNaN(issueDate.getTime()) && !isNaN(entryDate.getTime())) {
+        preEntryDays = differenceInDays(entryDate, issueDate);
+
+        // Per Home Office guidance: Can count pre-entry period if delay <= 180 days
+        // "Any absences between the date of issue and entry to the UK count towards
+        // the 180 days allowable absence in the continuous 12-month period"
+        canCountPreEntry = preEntryDays >= 0 && preEntryDays <= 180;
+      }
+    }
+
     // Calculate continuous leave and check rolling 12-month periods
     let continuousLeaveDays: number | null = null;
     let maxAbsenceInAny12Months: number | null = null;
@@ -130,7 +175,15 @@ class TravelStore {
     let ilrEligibilityDate: string | null = null;
     let daysUntilEligible: number | null = null;
 
-    const visaStart = this.vignetteEntryDate || this.visaStartDate;
+    // Determine effective start date based on pre-entry logic
+    let visaStart: string | null = null;
+    if (canCountPreEntry && this.vignetteIssueDate) {
+      // Use issue date if pre-entry can be counted
+      visaStart = this.vignetteIssueDate;
+    } else {
+      // Otherwise use entry date or visa start date
+      visaStart = this.vignetteEntryDate || this.visaStartDate;
+    }
 
     if (visaStart) {
       const start = new Date(visaStart);
@@ -181,7 +234,7 @@ class TravelStore {
               const totalDaysInPeriod = differenceInDays(assessDate, qualifyingStart);
 
               // Calculate total full days outside UK in this period
-              const absenceInPeriod = complete
+              let absenceInPeriod = complete
                 .filter((trip) => {
                   const tripOut = new Date(trip.outDate);
                   const tripIn = new Date(trip.inDate);
@@ -205,6 +258,28 @@ class TravelStore {
                   }
                   return sum;
                 }, 0);
+
+              // Add pre-entry period as absence if applicable
+              // Per Home Office guidance: "Any absences between the date of issue and entry to the UK
+              // count towards the 180 days allowable absence in the continuous 12-month period"
+              if (canCountPreEntry && preEntryDays && this.vignetteEntryDate) {
+                const entryDate = new Date(this.vignetteEntryDate);
+
+                // Check if pre-entry period overlaps with qualifying period
+                if (entryDate >= qualifyingStart && entryDate <= assessDate) {
+                  // Pre-entry period is entirely absence (person not in UK yet)
+                  const preEntryStart = new Date(this.vignetteIssueDate);
+
+                  // Calculate intersection of pre-entry with qualifying period
+                  const intersectionStart = preEntryStart > qualifyingStart ? preEntryStart : qualifyingStart;
+                  const intersectionEnd = entryDate < assessDate ? entryDate : assessDate;
+
+                  if (intersectionStart < intersectionEnd) {
+                    const preEntryAbsence = differenceInDays(intersectionEnd, intersectionStart);
+                    absenceInPeriod += preEntryAbsence;
+                  }
+                }
+              }
 
               const continuousDays = totalDaysInPeriod - absenceInPeriod;
 
@@ -243,6 +318,8 @@ class TravelStore {
       hasExceeded180Days,
       ilrEligibilityDate,
       daysUntilEligible,
+      preEntryDays,
+      canCountPreEntry,
     };
   }
 
@@ -256,12 +333,38 @@ class TravelStore {
       (t) => !t.isIncomplete
     );
 
-    if (completeTrips.length === 0) return 0;
+    // Calculate pre-entry info for use in rolling window checks
+    let preEntryDays: number | null = null;
+    let canCountPreEntry = false;
+    let preEntryIssueDate: Date | null = null;
+    let preEntryEntryDate: Date | null = null;
+
+    if (this.vignetteIssueDate && this.vignetteEntryDate) {
+      const issueDate = new Date(this.vignetteIssueDate);
+      const entryDate = new Date(this.vignetteEntryDate);
+
+      if (!isNaN(issueDate.getTime()) && !isNaN(entryDate.getTime())) {
+        preEntryDays = differenceInDays(entryDate, issueDate);
+        canCountPreEntry = preEntryDays >= 0 && preEntryDays <= 180;
+
+        if (canCountPreEntry) {
+          preEntryIssueDate = issueDate;
+          preEntryEntryDate = entryDate;
+        }
+      }
+    }
+
+    if (completeTrips.length === 0 && !canCountPreEntry) return 0;
 
     let maxAbsence = 0;
 
     // Optimize by only checking relevant dates: trip start dates and key milestones
     const checkDates: Date[] = [new Date(startDate)];
+
+    // Add pre-entry issue date if applicable
+    if (canCountPreEntry && preEntryIssueDate && preEntryIssueDate >= startDate) {
+      checkDates.push(preEntryIssueDate);
+    }
 
     // Add all trip departure dates as potential 12-month period starts
     // Only add dates on or after the visa/vignette start date
@@ -281,6 +384,20 @@ class TravelStore {
 
       // Sum absences within this 12-month period
       let absenceDays = 0;
+
+      // Add pre-entry period as absence if applicable
+      if (canCountPreEntry && preEntryIssueDate && preEntryEntryDate) {
+        // Pre-entry period is from issue date to entry date (entire period is absence)
+        if (preEntryEntryDate >= checkDate && preEntryIssueDate <= periodEnd) {
+          const intersectionStart = preEntryIssueDate > checkDate ? preEntryIssueDate : checkDate;
+          const intersectionEnd = preEntryEntryDate < periodEnd ? preEntryEntryDate : periodEnd;
+
+          if (intersectionStart < intersectionEnd) {
+            const preEntryAbsence = differenceInDays(intersectionEnd, intersectionStart);
+            absenceDays += preEntryAbsence;
+          }
+        }
+      }
 
       completeTrips.forEach((trip) => {
         const tripOut = new Date(trip.outDate);
@@ -531,6 +648,10 @@ class TravelStore {
 
   setTrips(trips: TripRecord[]) {
     this.trips = trips;
+  }
+
+  setVignetteIssueDate(date: string) {
+    this.vignetteIssueDate = date;
   }
 
   setVignetteEntryDate(date: string) {

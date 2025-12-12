@@ -29,7 +29,22 @@ export const VisaDetailsCard = observer(() => {
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="vignetteIssueDate" className="text-xs font-medium">
+              Vignette Issue Date
+            </Label>
+            <DatePicker
+              value={travelStore.vignetteIssueDate}
+              onChange={(value) => travelStore.setVignetteIssueDate(value)}
+              placeholder="Select vignette issue date"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground leading-tight">
+              Date your entry clearance was issued
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="vignetteDate" className="text-xs font-medium">
               Vignette Entry Date
@@ -118,11 +133,29 @@ export const VisaDetailsCard = observer(() => {
           </div>
         </div>
 
-        {(travelStore.vignetteEntryDate || travelStore.visaStartDate) && (
+        {(travelStore.vignetteEntryDate || travelStore.visaStartDate || travelStore.vignetteIssueDate) && (
           <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+            {travelStore.summary.preEntryDays !== null && (
+              <p className="text-xs text-blue-800 leading-tight">
+                <strong>Pre-Entry Period:</strong>{' '}
+                {travelStore.summary.preEntryDays} days between vignette issue (
+                {formatDate(travelStore.vignetteIssueDate)}) and UK entry (
+                {formatDate(travelStore.vignetteEntryDate)})
+                {travelStore.summary.canCountPreEntry ? (
+                  <span className="text-green-700 font-semibold"> ✓ Counts toward qualifying period</span>
+                ) : (
+                  <span className="text-orange-700 font-semibold"> ⚠ Exceeds 180 days - cannot count</span>
+                )}
+              </p>
+            )}
             <p className="text-xs text-blue-800 leading-tight">
               <strong>Start Date:</strong>{' '}
-              {travelStore.vignetteEntryDate ? (
+              {travelStore.summary.canCountPreEntry && travelStore.vignetteIssueDate ? (
+                <>
+                  Vignette Issue Date:{' '}
+                  {formatDate(travelStore.vignetteIssueDate)}
+                </>
+              ) : travelStore.vignetteEntryDate ? (
                 <>
                   Vignette Entry Date:{' '}
                   {formatDate(travelStore.vignetteEntryDate)}
