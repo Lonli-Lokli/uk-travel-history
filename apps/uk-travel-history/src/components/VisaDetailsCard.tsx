@@ -131,6 +131,19 @@ export const VisaDetailsCard = observer(() => {
                 <>Visa Start Date: {formatDate(travelStore.visaStartDate)}</>
               )}
             </p>
+            {travelStore.preEntryPeriod && (
+              <p className="text-xs text-blue-800 leading-tight mt-1">
+                <strong>Pre-Entry Period:</strong>{' '}
+                {travelStore.preEntryPeriod.delayDays} days between entry clearance (
+                {formatDate(travelStore.visaStartDate)}) and UK entry (
+                {formatDate(travelStore.vignetteEntryDate)})
+                {travelStore.preEntryPeriod.canCount ? (
+                  <span className="text-green-700"> ✓ Counts toward qualifying period</span>
+                ) : (
+                  <span className="text-orange-700"> ⚠ Exceeds 180 days, only time after entry counts</span>
+                )}
+              </p>
+            )}
             {travelStore.ilrTrack && travelStore.effectiveApplicationDate && (
               <p className="text-xs text-blue-800 leading-tight mt-1">
                 <strong>Assessment:</strong> UK Home Office backward counting from{' '}

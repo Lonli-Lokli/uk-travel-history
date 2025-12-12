@@ -732,9 +732,10 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
       const summary = travelStore.summary;
 
-      // Should use vignette date (2020-06-01)
-      // 5 years = 2025-06-01, minus 28 days = 2025-05-04
-      expect(summary.ilrEligibilityDate).toBe('2025-05-04');
+      // Pre-entry period: Jan 1 - Jun 1 = 151 days (< 180, so it counts)
+      // Should use visa start date (2020-01-01) because pre-entry is valid
+      // 5 years from Jan 1, 2020 = Jan 1, 2025, minus 28 days = Dec 4, 2024
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
 
     it('should handle dates near month boundaries in ILR calculation', () => {
@@ -1143,6 +1144,275 @@ invalid-date,20/01/2024,London,Paris`;
       }
 
       expect(travelStore.error).not.toBe(null);
+    });
+  });
+
+  describe('Pre-Entry Period Calculation (Issue #25)', () => {
+    beforeEach(() => {
+      travelStore.clearAll();
+      travelStore.setVignetteEntryDate('');
+      travelStore.setVisaStartDate('');
+      travelStore.setILRTrack(null);
+    });
+
+    it('should calculate pre-entry period when both dates are set', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days later
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).not.toBeNull();
+      expect(preEntry?.delayDays).toBe(150);
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+    });
+
+    it('should allow pre-entry period when delay is exactly 180 days', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-06-30'); // 180 days later
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry?.delayDays).toBe(180);
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+    });
+
+    it('should not allow pre-entry period when delay exceeds 180 days', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-07-01'); // 181 days later
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry?.delayDays).toBe(181);
+      expect(preEntry?.canCount).toBe(false);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-07-01');
+    });
+
+    it('should return null when only visa start date is set', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).toBeNull();
+    });
+
+    it('should return null when only vignette entry date is set', () => {
+      travelStore.setVignetteEntryDate('2023-05-31');
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).toBeNull();
+    });
+
+    it('should handle the example scenario from issue #25', () => {
+      // Vignette issued: Jan 1, 2023
+      // First entry: 150 days later (May 31, 2023)
+      // Never left UK until Dec 1-30, 2025
+      // ILR Track: 3 years
+
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days later
+      travelStore.setILRTrack(3);
+
+      // Add trip: Dec 1-30, 2025
+      travelStore.addTrip({
+        outDate: '2025-12-01',
+        inDate: '2025-12-30',
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+
+      // Auto-calculated application date should be based on visa start date
+      // 3 years from Jan 1, 2023 = Jan 1, 2026, minus 28 days = Dec 4, 2025
+      expect(travelStore.calculatedApplicationDate).toBe('2025-12-04');
+    });
+
+    it('should include pre-entry days in rolling 12-month absence check', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days
+      travelStore.setILRTrack(3);
+
+      // Add a trip that brings total absence close to 180 days
+      travelStore.addTrip({
+        outDate: '2023-07-01',
+        inDate: '2023-07-31', // 30 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Pre-entry: 150 days
+      // Trip: 29 full days (Jul 31 - Jul 1 - 1)
+      // Total in rolling window: should include pre-entry period
+      expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(150);
+    });
+
+    it('should not include pre-entry days when delay exceeds 180 days', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-07-15'); // 195 days (exceeds 180)
+      travelStore.setILRTrack(3);
+
+      // Add a trip after UK entry
+      travelStore.addTrip({
+        outDate: '2023-08-01',
+        inDate: '2023-08-31', // 30 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Pre-entry period should NOT count toward absence
+      // Only the trip should count
+      expect(summary.maxAbsenceInAny12Months).toBeLessThan(50);
+    });
+
+    it('should use vignette entry date as start when no pre-entry or delay exceeds 180 days', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-08-01'); // 212 days (exceeds 180)
+      travelStore.setILRTrack(3);
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry?.canCount).toBe(false);
+
+      // Qualifying period should start from vignette entry, not visa start
+      expect(preEntry?.qualifyingStartDate).toBe('2023-08-01');
+
+      // Auto-calculated date should be based on vignette entry
+      // 3 years from Aug 1, 2023 = Aug 1, 2026, minus 28 days = Jul 4, 2026
+      expect(travelStore.calculatedApplicationDate).toBe('2026-07-04');
+    });
+
+    it('should handle backward counting with pre-entry period correctly', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days
+      travelStore.setILRTrack(3);
+      travelStore.setApplicationDate('2026-01-01');
+
+      // Add trip in qualifying period
+      travelStore.addTrip({
+        outDate: '2024-06-01',
+        inDate: '2024-06-10', // 9 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Qualifying period: 3 years back from Jan 1, 2026 = Jan 1, 2023
+      // Pre-entry period: 150 days between visa issue and UK entry
+      // Trip: 8 full days (June 10 - June 1 - 1)
+      // In backward counting mode starting Jan 1, 2023, the 12-month windows
+      // will include various combinations of pre-entry and trip days
+      expect(summary.maxAbsenceInAny12Months).toBeDefined();
+      expect(summary.hasExceeded180Days).toBe(false);
+    });
+
+    it('should find most beneficial assessment date with pre-entry period', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-03-01'); // 59 days
+      travelStore.setILRTrack(3);
+
+      // Check pre-entry period
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).not.toBeNull();
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+
+      // Check that calculatedApplicationDate uses the correct start date
+      const calcDate = travelStore.calculatedApplicationDate;
+      expect(calcDate).toBeDefined();
+      expect(calcDate).not.toBeNull();
+    });
+
+    it('should handle same day entry (0 day delay)', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-01-01'); // Same day
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry?.delayDays).toBe(0);
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+    });
+
+    it('should return null when entry is before issue date', () => {
+      travelStore.setVisaStartDate('2023-05-01');
+      travelStore.setVignetteEntryDate('2023-01-01'); // Entry before issue
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).toBeNull();
+    });
+
+    it('should handle invalid dates gracefully', () => {
+      travelStore.setVisaStartDate('invalid-date');
+      travelStore.setVignetteEntryDate('2023-05-31');
+
+      const preEntry = travelStore.preEntryPeriod;
+      expect(preEntry).toBeNull();
+    });
+
+    it('should calculate continuous leave correctly with pre-entry period', () => {
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days pre-entry
+      travelStore.setILRTrack(3);
+      travelStore.setApplicationDate('2026-01-01');
+
+      // Add trip
+      travelStore.addTrip({
+        outDate: '2024-06-01',
+        inDate: '2024-06-15', // 14 calendar days, 13 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Continuous leave should be calculated for the backward counting period
+      // The exact number depends on how pre-entry and trips overlap in the
+      // qualifying period windows
+      expect(summary.continuousLeaveDays).toBeDefined();
+      expect(summary.continuousLeaveDays).toBeGreaterThan(900);
+    });
+
+    it('should validate the complete scenario from issue description', () => {
+      // Exact scenario from issue:
+      // - Vignette issued: Jan 1, 2023
+      // - First entry: 150 days later (May 31, 2023)
+      // - Never left UK until Dec 1-30, 2025
+      // - ILR Track: 3 years
+      // Expected: Pre-entry counts, start date is Jan 1, 2023
+
+      travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setVignetteEntryDate('2023-05-31');
+      travelStore.setILRTrack(3);
+
+      // Only one trip: Dec 1-30, 2025
+      travelStore.addTrip({
+        outDate: '2025-12-01',
+        inDate: '2025-12-30',
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const preEntry = travelStore.preEntryPeriod;
+      const summary = travelStore.summary;
+
+      // Verify pre-entry calculation
+      expect(preEntry?.delayDays).toBe(150);
+      expect(preEntry?.canCount).toBe(true);
+      expect(preEntry?.qualifyingStartDate).toBe('2023-01-01');
+
+      // Verify auto-calculated application date
+      // 3 years from Jan 1, 2023 = Jan 1, 2026, minus 28 days = Dec 4, 2025
+      expect(travelStore.calculatedApplicationDate).toBe('2025-12-04');
+
+      // Verify absence calculation
+      // Pre-entry: 150 days
+      // Trip: 28 full days (Dec 30 - Dec 1 - 1)
+      // Total: 178 days (should not exceed 180)
+      expect(summary.hasExceeded180Days).toBe(false);
+      expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(180);
     });
   });
 
