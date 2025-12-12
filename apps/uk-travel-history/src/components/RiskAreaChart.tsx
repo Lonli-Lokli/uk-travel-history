@@ -261,10 +261,11 @@ export const RiskAreaChart: React.FC = observer(() => {
               ? Math.max(120, 50 * timeline.rowCount + 70)
               : 120,
           zooming: { type: 'x' },
-          spacingTop: 4,
+          spacingTop: 30,
           spacingBottom: 4,
           spacingLeft: 0,
           spacingRight: 8,
+          marginTop: 0,
         },
         title: { text: '' },
         credits: { enabled: false },
@@ -319,18 +320,29 @@ export const RiskAreaChart: React.FC = observer(() => {
           title: { text: '' },
         },
 
-        // Navigator + scrollbar for explicit zoom & pan.
+        // Navigator + scrollbar for explicit zoom & pan (positioned at top).
         navigator: {
           enabled: true,
-          height: 18,
-          outlineWidth: 0,
-          handles: { enabled: true },
+          height: 20,
+          outlineWidth: 1,
+          outlineColor: '#cbd5e1',
+          handles: {
+            enabled: true,
+            backgroundColor: '#f1f5f9',
+            borderColor: '#64748b',
+          },
+          maskFill: 'rgba(100, 116, 139, 0.1)',
+          series: {
+            color: '#64748b',
+            lineWidth: 1,
+          },
+          opposite: true, // Position at top
           xAxis: {
-            labels: { enabled: false }, // avoid duplicate labels
+            labels: { enabled: false },
           },
         },
         scrollbar: {
-          enabled: true,
+          enabled: false, // Disable scrollbar when navigator is at top for cleaner look
         },
 
         tooltip: {
@@ -477,8 +489,8 @@ export const RiskAreaChart: React.FC = observer(() => {
             <DialogTitle>
               {selectedTripDetails?.name || 'Trip Details'}
             </DialogTitle>
-            <DialogDescription>
-              {selectedTripDetails && (
+            <DialogDescription asChild>
+              {selectedTripDetails ? (
                 <div className="mt-2 text-sm">
                   <p>
                     <strong>Departure:</strong> {selectedTripDetails.start}
@@ -487,6 +499,8 @@ export const RiskAreaChart: React.FC = observer(() => {
                     <strong>Return:</strong> {selectedTripDetails.end}
                   </p>
                 </div>
+              ) : (
+                <span />
               )}
             </DialogDescription>
           </DialogHeader>
