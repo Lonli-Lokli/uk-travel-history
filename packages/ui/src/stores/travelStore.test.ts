@@ -1150,12 +1150,65 @@ invalid-date,20/01/2024,London,Paris`;
     });
   });
 
-  describe('Pre-Entry Period Calculation (Issue #25)', () => {
+  describe('Pre-Entry Period Calculation (Issues #25 and #29)', () => {
     beforeEach(() => {
       travelStore.clearAll();
       travelStore.setVignetteEntryDate('');
       travelStore.setVisaStartDate('');
       travelStore.setILRTrack(null);
+    });
+
+    it('should correctly treat pre-entry period as absence (Issue #29)', () => {
+      // Exact scenario from Issue #29:
+      // Vignette Entry Date: 13/04/2023
+      // Visa Start Date: 29/03/2023 (15 days before)
+      // ILR Track: 3 Years
+      // Trips: 01/05/2023-01/08/2023, 01/09/2023-01/11/2023, 01/01/2024-27/01/2024
+
+      travelStore.setVisaStartDate('2023-03-29');
+      travelStore.setVignetteEntryDate('2023-04-13'); // 15 calendar days later
+      travelStore.setILRTrack(3);
+
+      travelStore.addTrip({
+        outDate: '2023-05-01',
+        inDate: '2023-08-01', // 92 calendar days, 91 full days (excluding 01/05 and 01/08)
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      travelStore.addTrip({
+        outDate: '2023-09-01',
+        inDate: '2023-11-01', // 61 calendar days, 60 full days (excluding 01/09 and 01/11)
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-27', // 26 calendar days, 25 full days (excluding 01/01 and 27/01)
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const preEntry = travelStore.preEntryPeriod;
+      const summary = travelStore.summary;
+
+      // Verify pre-entry period
+      expect(preEntry?.delayDays).toBe(15); // 15 calendar days
+      expect(preEntry?.canCount).toBe(true); // ≤ 180 days
+      expect(preEntry?.qualifyingStartDate).toBe('2023-03-29');
+
+      // Pre-entry: 15 calendar days = 13 full days (excluding 29/03 and 13/04)
+      // Trip 1: 91 full days
+      // Trip 2: 60 full days
+      // Trip 3: 25 full days
+      // Total full days: 91 + 60 + 25 = 176
+      expect(summary.totalFullDays).toBe(176);
+
+      // In rolling window: pre-entry (13) + trips could be distributed
+      // The max should account for pre-entry being treated as absence
+      expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(13);
+      expect(summary.hasExceeded180Days).toBe(true); // 13 + 176 = 189 days total
     });
 
     it('should calculate pre-entry period when both dates are set', () => {
@@ -1232,7 +1285,7 @@ invalid-date,20/01/2024,London,Paris`;
 
     it('should include pre-entry days in rolling 12-month absence check', () => {
       travelStore.setVisaStartDate('2023-01-01');
-      travelStore.setVignetteEntryDate('2023-05-31'); // 150 days
+      travelStore.setVignetteEntryDate('2023-05-31'); // 150 calendar days
       travelStore.setILRTrack(3);
 
       // Add a trip that brings total absence close to 180 days
@@ -1245,10 +1298,10 @@ invalid-date,20/01/2024,London,Paris`;
 
       const summary = travelStore.summary;
 
-      // Pre-entry: 150 days
-      // Trip: 29 full days (Jul 31 - Jul 1 - 1)
+      // Pre-entry: 150 calendar days = 148 full days (excluding Jan 1 and May 31)
+      // Trip: 29 full days (excluding Jul 1 and Jul 31)
       // Total in rolling window: should include pre-entry period
-      expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(150);
+      expect(summary.maxAbsenceInAny12Months).toBeGreaterThan(148);
     });
 
     it('should not include pre-entry days when delay exceeds 180 days', () => {
@@ -1411,9 +1464,9 @@ invalid-date,20/01/2024,London,Paris`;
       expect(travelStore.calculatedApplicationDate).toBe('2025-12-04');
 
       // Verify absence calculation
-      // Pre-entry: 150 days
-      // Trip: 28 full days (Dec 30 - Dec 1 - 1)
-      // Total: 178 days (should not exceed 180)
+      // Pre-entry: 150 calendar days = 148 full days (excluding Jan 1 and May 31)
+      // Trip: 28 full days (excluding Dec 1 and Dec 30)
+      // Total: 176 days (should not exceed 180)
       expect(summary.hasExceeded180Days).toBe(false);
       expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(180);
     });

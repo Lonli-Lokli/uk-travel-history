@@ -120,9 +120,10 @@ class TravelStore {
     }
 
     // Calculate delay between entry clearance issue and UK entry
-    // NOTE: Unlike trip calculations (which use differenceInDays - 1), pre-entry period
-    // uses the full day count because we're measuring the entire period between two events,
-    // not counting absence days that exclude departure/arrival days.
+    // This is the calendar days between visa issue and UK entry, used to determine
+    // if the pre-entry period can count toward qualifying time (must be ≤180 days).
+    // Note: For counting absences, we use (delayDays - 1) to exclude issue and entry days,
+    // consistent with trip absence calculations.
     const delayDays = differenceInDays(vignetteEntry, visaStart);
 
     // If delay is negative (entry before issue), this is invalid data - return null
@@ -372,14 +373,20 @@ class TravelStore {
         const visaStart = new Date(this.visaStartDate);
         const vignetteEntry = new Date(this.vignetteEntryDate);
 
-        // Pre-entry period is treated as absence
-        // Check if pre-entry period overlaps with this 12-month window
-        if (visaStart <= periodEnd && vignetteEntry >= checkDate) {
-          const intersectionStart = visaStart > checkDate ? visaStart : checkDate;
-          const intersectionEnd = vignetteEntry < periodEnd ? vignetteEntry : periodEnd;
+        // Per Home Office guidance: Pre-entry period is treated as absence
+        // and follows the same calculation method as trips:
+        // Person is absent on days BETWEEN visa issue and UK entry
+        // Absence period: [visaStartDate + 1 day, vignetteEntryDate - 1 day] (inclusive)
+        const absenceStart = addDays(visaStart, 1);
+        const absenceEnd = subDays(vignetteEntry, 1);
+
+        // Check if pre-entry absence period overlaps with this 12-month window
+        if (absenceStart <= periodEnd && absenceEnd >= checkDate) {
+          const intersectionStart = absenceStart > checkDate ? absenceStart : checkDate;
+          const intersectionEnd = absenceEnd < periodEnd ? absenceEnd : periodEnd;
 
           if (intersectionStart <= intersectionEnd) {
-            const daysInIntersection = differenceInDays(intersectionEnd, intersectionStart);
+            const daysInIntersection = differenceInDays(intersectionEnd, intersectionStart) + 1;
             absenceDays += daysInIntersection;
           }
         }
