@@ -66,6 +66,30 @@ Full Days Outside UK = (Return Date - Departure Date) - 1
 - Calculation: (20 Jan - 15 Jan) - 1 = 4 full days outside UK
 - Days excluded: 15 Jan (departure day) and 20 Jan (return day)
 
+### Calculating Rolling Period Overlaps
+
+When checking if trips fall within rolling 12-month windows, the application uses the following approach:
+
+1. **Define Absence Period**: For each trip, the absence period is the days BETWEEN departure and return (exclusive of both)
+   - Absence Start = Departure Date + 1 day
+   - Absence End = Return Date - 1 day
+
+2. **Calculate Intersection**: For each 12-month window, calculate the intersection of the absence period with the window
+   - Intersection Start = MAX(Absence Start, Window Start)
+   - Intersection End = MIN(Absence End, Window End)
+
+3. **Count Days**: If intersection is valid (Start ≤ End), count days inclusively
+   - Days in Window = (Intersection End - Intersection Start) + 1
+
+**Example:**
+- Trip: 10 January - 20 January (9 full days total)
+- Window: 15 January 2024 - 14 January 2025
+- Absence Period: 11 Jan - 19 Jan
+- Intersection: 15 Jan - 19 Jan
+- Days counted in this window: (19 - 15) + 1 = 5 days
+
+This ensures that partial trip overlaps are correctly calculated and that departure/return days are properly excluded.
+
 ### Transitional Arrangements
 
 **For leave granted BEFORE 11 January 2018:**
@@ -99,10 +123,35 @@ This represents actual days physically present in the UK.
 
 Applicants can submit settlement applications **up to 28 days before** they reach the end of the specified period.
 
-Calculate the qualifying period by counting backward from whichever is most beneficial:
+#### Counting Backward from Application/Decision Date
+
+Per Home Office guidance, when assessing an ILR application, the qualifying period should be calculated by **counting backward** from whichever of the following is **most beneficial to the applicant**:
 - Date of application
 - Date of decision
-- Any date up to 28 days after application date
+- Any date up to 28 days after the date of application
+
+**Implementation**: The application uses the UK Home Office backward counting algorithm:
+
+The app **automatically calculates** the earliest application date (28 days before the required period ends) and uses the official Home Office assessment method by:
+- Counting backward from the application date by the required number of years (e.g., 5 years)
+- Testing multiple assessment dates (application date + 0 to 28 days)
+- Selecting the most beneficial assessment date (with lowest maximum rolling absence)
+- Checking that no rolling 12-month period within that continuous period exceeded 180 days
+
+**Auto-Calculation Example:**
+- Visa start: 1 January 2020
+- ILR track selected: 5 years
+- Auto-calculated earliest application date: 4 December 2024 (5 years - 28 days)
+
+The app will automatically:
+- Test assessment dates from 4 Dec 2024 to 1 Jan 2025 (28-day window)
+- For each date, count backward 5 years to establish the qualifying period
+- Calculate the maximum rolling 12-month absence for each qualifying period
+- Display results for the most beneficial assessment date
+
+**Manual Override:** You can override the auto-calculated date by entering your own application date in the "Application Date (Override)" field. This is useful if you plan to apply earlier or later than the auto-calculated earliest date.
+
+This matches exactly how the Home Office will assess your application, choosing whichever period shows the least absences, as long as it covers the required continuous period.
 
 ## Allowable Absences
 
@@ -205,6 +254,40 @@ If absences exceed 180 days in a 12-month period, ILR normally **refused**.
 - Time overseas for pregnancy, maternity, paternity, parental leave, adoption, illness: treated same as other absences (within 180-day limit)
 - Exempt status periods can count toward continuous period
 - Deemed leave (90 days under Section 8A(b) Immigration Act 1971) counts toward continuous period
+
+## Application Scope: UK Home Office Backward Counting Algorithm
+
+### How the Application Works
+
+The application uses **the official UK Home Office backward counting algorithm** to assess ILR eligibility. This matches exactly how the Home Office will evaluate your application.
+
+#### Assessment Method
+
+When you enter your visa details and select an ILR track, the app:
+
+1. **Auto-calculates earliest application date:** Visa start + Required years - 28 days
+2. **Tests multiple assessment dates:** Application date through +28 days
+3. **Counts backward:** For each assessment date, counts back by required years (e.g., 5 years)
+4. **Finds most beneficial period:** Selects the assessment date with lowest maximum rolling absence
+5. **Verifies compliance:** Checks that no rolling 12-month window exceeded 180 days
+
+#### Using the Application
+
+**Quick Start:**
+1. Enter your vignette entry date or visa start date
+2. Select your ILR track (2, 3, 5, or 10 years)
+3. The app immediately shows your eligibility using the Home Office algorithm
+
+**Manual Override:**
+If you plan to apply on a specific date (different from the auto-calculated earliest date), you can enter it in the "Application Date (Override)" field. The app will then assess your compliance using that date.
+
+**Why Backward Counting:**
+The Home Office doesn't just check from your visa start to application date. They count backward from the most beneficial date (application, decision, or up to 28 days after) to ensure you get the fairest assessment possible.
+
+**Current Implementation Status:**
+- ✅ Auto-calculation of earliest application date: **Fully implemented**
+- ✅ Backward counting algorithm: **Fully implemented**
+- ✅ Manual application date override: **Fully implemented**
 
 ## Summary of Key Numbers
 

@@ -29,7 +29,7 @@ export const VisaDetailsCard = observer(() => {
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="vignetteDate" className="text-xs font-medium">
               Vignette Entry Date
@@ -89,12 +89,39 @@ export const VisaDetailsCard = observer(() => {
               Required continuous period for ILR
             </p>
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="applicationDate" className="text-xs font-medium">
+              Application Date (Override)
+            </Label>
+            <DatePicker
+              value={travelStore.applicationDate}
+              onChange={(value) => travelStore.setApplicationDate(value)}
+              placeholder={
+                travelStore.calculatedApplicationDate
+                  ? `Auto: ${formatDate(travelStore.calculatedApplicationDate)}`
+                  : 'Will auto-calculate with ILR track'
+              }
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground leading-tight">
+              {travelStore.calculatedApplicationDate ? (
+                <>
+                  Auto-calculated:{' '}
+                  <strong>{formatDate(travelStore.calculatedApplicationDate)}</strong>
+                  {travelStore.applicationDate && ' (Overridden)'}
+                </>
+              ) : (
+                'Set ILR track to auto-calculate'
+              )}
+            </p>
+          </div>
         </div>
 
         {(travelStore.vignetteEntryDate || travelStore.visaStartDate) && (
           <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
             <p className="text-xs text-blue-800 leading-tight">
-              <strong>Using:</strong>{' '}
+              <strong>Start Date:</strong>{' '}
               {travelStore.vignetteEntryDate ? (
                 <>
                   Vignette Entry Date:{' '}
@@ -104,6 +131,19 @@ export const VisaDetailsCard = observer(() => {
                 <>Visa Start Date: {formatDate(travelStore.visaStartDate)}</>
               )}
             </p>
+            {travelStore.ilrTrack && travelStore.effectiveApplicationDate && (
+              <p className="text-xs text-blue-800 leading-tight mt-1">
+                <strong>Assessment:</strong> UK Home Office backward counting from{' '}
+                {formatDate(travelStore.effectiveApplicationDate)} (
+                {travelStore.ilrTrack}-year track)
+                {travelStore.applicationDate && ' - Manual override active'}
+              </p>
+            )}
+            {travelStore.ilrTrack && !travelStore.effectiveApplicationDate && (
+              <p className="text-xs text-blue-800 leading-tight mt-1">
+                <strong>Info:</strong> Set ILR track to calculate eligibility
+              </p>
+            )}
           </div>
         )}
       </CardContent>

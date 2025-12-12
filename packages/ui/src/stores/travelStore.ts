@@ -54,6 +54,7 @@ class TravelStore {
   vignetteEntryDate = '';
   visaStartDate = '';
   ilrTrack: ILRTrack | null = null; // 2, 3, or 5 year track
+  applicationDate = ''; // Date of ILR application for backward counting
   isLoading = false;
   error: string | null = null;
 
@@ -88,6 +89,32 @@ class TravelStore {
     });
   }
 
+  // Computed property: Auto-calculated earliest application date based on ILR track
+  get calculatedApplicationDate(): string | null {
+    if (!this.ilrTrack) return null;
+
+    const visaStart = this.vignetteEntryDate || this.visaStartDate;
+    if (!visaStart) return null;
+
+    const start = new Date(visaStart);
+    if (isNaN(start.getTime())) return null;
+
+    // Calculate: visa start + required years - 28 days
+    const requiredEndDate = addYears(start, this.ilrTrack);
+    const earliestApplicationDate = subDays(requiredEndDate, 28);
+
+    return earliestApplicationDate.toISOString().split('T')[0];
+  }
+
+  // Get the effective application date (manual override or calculated)
+  get effectiveApplicationDate(): string | null {
+    // If user has manually set an application date, use that
+    if (this.applicationDate) return this.applicationDate;
+
+    // Otherwise, use the calculated date
+    return this.calculatedApplicationDate;
+  }
+
   get summary() {
     const tripsCalc = this.tripsWithCalculations;
     const complete = tripsCalc.filter((t) => !t.isIncomplete);
@@ -103,38 +130,105 @@ class TravelStore {
     let ilrEligibilityDate: string | null = null;
     let daysUntilEligible: number | null = null;
 
-    const startDate = this.vignetteEntryDate || this.visaStartDate;
+    const visaStart = this.vignetteEntryDate || this.visaStartDate;
 
-    if (startDate) {
-      const start = new Date(startDate);
-      const today = new Date();
+    if (visaStart) {
+      const start = new Date(visaStart);
 
       if (!isNaN(start.getTime())) {
-        // Total days since start date
-        const totalDaysSinceStart = differenceInDays(today, start);
+        // Per Home Office guidance: Always count backward from most beneficial date
+        // (application date, decision date, or up to 28 days after application)
 
-        // Days in UK = Total days - Days outside UK (full days)
-        continuousLeaveDays = Math.max(0, totalDaysSinceStart - totalFullDays);
+        const appDateStr = this.effectiveApplicationDate;
 
-        // Check rolling 12-month periods for 180-day limit
-        // Per Home Office guidance: absences are considered on a rolling basis
-        maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
-          start,
-          today
-        );
-        hasExceeded180Days = maxAbsenceInAny12Months > 180;
+        if (appDateStr && this.ilrTrack) {
+          // BACKWARD COUNTING MODE (Home Office algorithm)
+          const appDate = new Date(appDateStr);
 
-        // Calculate ILR eligibility date if track is selected
-        // Per Home Office guidance (Page 10): "Applicants can submit a settlement application
-        // up to 28 days before they would reach the end of the specified period"
-        if (this.ilrTrack) {
-          const requiredEndDate = addYears(start, this.ilrTrack);
-          const earliestApplicationDate = subDays(requiredEndDate, 28);
+          if (!isNaN(appDate.getTime())) {
+            // Find the most beneficial assessment date within the allowed range
+            // Try: application date, and up to 28 days after
+            const assessmentDates = [appDate];
+            for (let i = 1; i <= 28; i++) {
+              assessmentDates.push(addDays(appDate, i));
+            }
 
-          ilrEligibilityDate = earliestApplicationDate
-            .toISOString()
-            .split('T')[0];
-          daysUntilEligible = differenceInDays(earliestApplicationDate, today);
+            // For each potential assessment date, count backward and check compliance
+            let bestResult: {
+              assessmentDate: Date;
+              qualifyingPeriodStart: Date;
+              maxAbsence: number;
+              continuousDays: number;
+            } | null = null;
+
+            for (const assessDate of assessmentDates) {
+              // Count backward by the required number of years
+              const qualifyingStart = subDays(
+                addYears(assessDate, -this.ilrTrack),
+                0
+              );
+
+              // Skip if qualifying period starts before visa start
+              if (qualifyingStart < start) continue;
+
+              // Calculate absences in this qualifying period
+              const maxAbsence = this.calculateMaxAbsenceInRolling12Months(
+                qualifyingStart,
+                assessDate
+              );
+
+              // Calculate continuous days in UK during this period
+              const totalDaysInPeriod = differenceInDays(assessDate, qualifyingStart);
+
+              // Calculate total full days outside UK in this period
+              const absenceInPeriod = complete
+                .filter((trip) => {
+                  const tripOut = new Date(trip.outDate);
+                  const tripIn = new Date(trip.inDate);
+                  return tripIn >= qualifyingStart && tripOut <= assessDate;
+                })
+                .reduce((sum, trip) => {
+                  const tripOut = new Date(trip.outDate);
+                  const tripIn = new Date(trip.inDate);
+
+                  // Calculate intersection with qualifying period
+                  const effectiveStart = tripOut > qualifyingStart ? tripOut : qualifyingStart;
+                  const effectiveEnd = tripIn < assessDate ? tripIn : assessDate;
+
+                  if (effectiveStart <= effectiveEnd) {
+                    const absenceStart = addDays(effectiveStart, effectiveStart === tripOut ? 1 : 0);
+                    const absenceEnd = subDays(effectiveEnd, effectiveEnd === tripIn ? 1 : 0);
+
+                    if (absenceStart <= absenceEnd) {
+                      return sum + differenceInDays(absenceEnd, absenceStart) + 1;
+                    }
+                  }
+                  return sum;
+                }, 0);
+
+              const continuousDays = totalDaysInPeriod - absenceInPeriod;
+
+              // Keep the result with lowest max absence (most beneficial)
+              if (!bestResult || maxAbsence < bestResult.maxAbsence) {
+                bestResult = {
+                  assessmentDate: assessDate,
+                  qualifyingPeriodStart: qualifyingStart,
+                  maxAbsence,
+                  continuousDays,
+                };
+              }
+            }
+
+            if (bestResult) {
+              maxAbsenceInAny12Months = bestResult.maxAbsence;
+              hasExceeded180Days = bestResult.maxAbsence > 180;
+              continuousLeaveDays = bestResult.continuousDays;
+
+              // ILR eligibility is the effective application date
+              ilrEligibilityDate = appDateStr;
+              daysUntilEligible = differenceInDays(appDate, new Date());
+            }
+          }
         }
       }
     }
@@ -170,8 +264,12 @@ class TravelStore {
     const checkDates: Date[] = [new Date(startDate)];
 
     // Add all trip departure dates as potential 12-month period starts
+    // Only add dates on or after the visa/vignette start date
     completeTrips.forEach((trip) => {
-      checkDates.push(new Date(trip.outDate));
+      const tripOutDate = new Date(trip.outDate);
+      if (tripOutDate >= startDate) {
+        checkDates.push(tripOutDate);
+      }
     });
 
     // Check 12-month period from each relevant date
@@ -188,16 +286,24 @@ class TravelStore {
         const tripOut = new Date(trip.outDate);
         const tripIn = new Date(trip.inDate);
 
-        // Check if trip overlaps with this 12-month period
-        if (tripOut <= periodEnd && tripIn >= checkDate) {
-          // Calculate overlap
-          const overlapStart = tripOut > checkDate ? tripOut : checkDate;
-          const overlapEnd = tripIn < periodEnd ? tripIn : periodEnd;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        // Absence period: [departureDate + 1 day, returnDate - 1 day] (inclusive)
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            // Per guidance: only count whole days, exclude departure and return
-            absenceDays += Math.max(0, overlapDays - 1);
+        // Check if absence period overlaps with this 12-month window
+        if (absenceStart <= periodEnd && absenceEnd >= checkDate) {
+          // Calculate intersection of absence period and window
+          const intersectionStart =
+            absenceStart > checkDate ? absenceStart : checkDate;
+          const intersectionEnd =
+            absenceEnd < periodEnd ? absenceEnd : periodEnd;
+
+          if (intersectionStart <= intersectionEnd) {
+            // Count days in intersection (inclusive of both boundaries)
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });
@@ -251,14 +357,21 @@ class TravelStore {
         const tripOut = parseISO(trip.outDate);
         const tripIn = parseISO(trip.inDate);
 
-        // Check if trip overlaps with the 12-month window
-        if (tripOut <= currentDate && tripIn >= windowStart) {
-          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
-          const overlapEnd = tripIn < currentDate ? tripIn : currentDate;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            absenceDays += Math.max(0, overlapDays - 1);
+        // Check if absence period overlaps with the 12-month window
+        if (absenceStart <= currentDate && absenceEnd >= windowStart) {
+          const intersectionStart =
+            absenceStart > windowStart ? absenceStart : windowStart;
+          const intersectionEnd =
+            absenceEnd < currentDate ? absenceEnd : currentDate;
+
+          if (intersectionStart <= intersectionEnd) {
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });
@@ -280,13 +393,19 @@ class TravelStore {
         const tripOut = parseISO(trip.outDate);
         const tripIn = parseISO(trip.inDate);
 
-        if (tripOut <= today && tripIn >= windowStart) {
-          const overlapStart = tripOut > windowStart ? tripOut : windowStart;
-          const overlapEnd = tripIn < today ? tripIn : today;
+        // Per Home Office guidance: Person is absent on days BETWEEN departure and return
+        const absenceStart = addDays(tripOut, 1);
+        const absenceEnd = subDays(tripIn, 1);
 
-          if (overlapStart <= overlapEnd) {
-            const overlapDays = differenceInDays(overlapEnd, overlapStart);
-            absenceDays += Math.max(0, overlapDays - 1);
+        if (absenceStart <= today && absenceEnd >= windowStart) {
+          const intersectionStart =
+            absenceStart > windowStart ? absenceStart : windowStart;
+          const intersectionEnd = absenceEnd < today ? absenceEnd : today;
+
+          if (intersectionStart <= intersectionEnd) {
+            const daysInIntersection =
+              differenceInDays(intersectionEnd, intersectionStart) + 1;
+            absenceDays += daysInIntersection;
           }
         }
       });
@@ -424,6 +543,10 @@ class TravelStore {
 
   setILRTrack(track: ILRTrack | null) {
     this.ilrTrack = track;
+  }
+
+  setApplicationDate(date: string) {
+    this.applicationDate = date;
   }
 
   reorderTrip(fromIndex: number, toIndex: number) {
