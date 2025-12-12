@@ -1,14 +1,21 @@
 'use client';
 
 import { Button, Card, CardContent } from '@uth/ui';
-import { FileText, Plus, Upload, ArrowRight, CheckCircle } from 'lucide-react';
+import { FileText, Plus, Upload, ArrowRight, CheckCircle, Clipboard } from 'lucide-react';
 
 interface EmptyStateProps {
   onImportClick: () => void;
+  onImportCsvClick: () => void;
+  onImportClipboardClick: () => void;
   onAddManuallyClick: () => void;
 }
 
-export const EmptyState = ({ onImportClick, onAddManuallyClick }: EmptyStateProps) => {
+export const EmptyState = ({
+  onImportClick,
+  onImportCsvClick,
+  onImportClipboardClick,
+  onAddManuallyClick
+}: EmptyStateProps) => {
   return (
     <div className="max-w-4xl mx-auto py-8 sm:py-12">
       <Card className="bg-white">
@@ -27,53 +34,43 @@ export const EmptyState = ({ onImportClick, onAddManuallyClick }: EmptyStateProp
           </div>
 
           {/* Quick Start Options */}
-          <div className="grid sm:grid-cols-2 gap-4 mb-8">
-            <Card className="border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors bg-primary/5">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">Import from PDF</h3>
-                    <p className="text-xs text-slate-600 mb-4">
-                      Upload your Home Office SAR travel history PDF
-                    </p>
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={onImportClick}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import PDF
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center">
-                    <Plus className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">Add Manually</h3>
-                    <p className="text-xs text-slate-600 mb-4">
-                      Enter your travel dates manually
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={onAddManuallyClick}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Travel Dates
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="bg-slate-50 rounded-lg p-5 mb-8">
+            <h3 className="font-semibold text-slate-900 mb-3 text-sm">Get Started</h3>
+            <div className="space-y-2">
+              <Button
+                className="w-full justify-start"
+                onClick={onImportClick}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import from PDF
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={onImportCsvClick}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Import from CSV
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={onImportClipboardClick}
+              >
+                <Clipboard className="h-4 w-4 mr-2" />
+                Import from Clipboard
+              </Button>
+              <div className="border-t border-slate-200 my-2 pt-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-slate-600"
+                  onClick={onAddManuallyClick}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Travel Dates Manually
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* How to Get Your PDF */}

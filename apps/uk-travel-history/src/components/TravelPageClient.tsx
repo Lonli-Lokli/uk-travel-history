@@ -6,12 +6,37 @@ import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
-import { useFileUpload, useExport, useClearAll } from './hooks';
+import { ImportPreviewDialog } from './ImportPreviewDialog';
+import {
+  useFileUpload,
+  useExport,
+  useClearAll,
+  useCsvImport,
+  useClipboardImport,
+} from './hooks';
 
 export const TravelPageClient = observer(() => {
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
   const { handleExport } = useExport();
   const { handleClearAll } = useClearAll();
+
+  const {
+    fileInputRef: csvFileInputRef,
+    handleFileSelect: handleCsvFileSelect,
+    triggerFileInput: triggerCsvFileInput,
+    isDialogOpen: isCsvDialogOpen,
+    previewData: csvPreviewData,
+    confirmImport: confirmCsvImport,
+    cancelImport: cancelCsvImport,
+  } = useCsvImport();
+
+  const {
+    handleClipboardPaste,
+    isDialogOpen: isClipboardDialogOpen,
+    previewData: clipboardPreviewData,
+    confirmImport: confirmClipboardImport,
+    cancelImport: cancelClipboardImport,
+  } = useClipboardImport();
 
   return (
     <>
@@ -23,7 +48,20 @@ export const TravelPageClient = observer(() => {
         onChange={handleFileSelect}
       />
 
-      <Header onImportClick={triggerFileInput} onExportClick={handleExport} />
+      <input
+        ref={csvFileInputRef}
+        type="file"
+        accept=".csv,.txt,.xlsx"
+        className="hidden"
+        onChange={handleCsvFileSelect}
+      />
+
+      <Header
+        onImportPdfClick={triggerFileInput}
+        onImportCsvClick={triggerCsvFileInput}
+        onImportClipboardClick={handleClipboardPaste}
+        onExportClick={handleExport}
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 min-h-[calc(100vh-60px)]">
         <SummaryCards />
@@ -31,6 +69,26 @@ export const TravelPageClient = observer(() => {
         <RiskAreaChart />
         <TravelHistoryCard onClearAll={handleClearAll} />
       </main>
+
+      {/* CSV Import Preview Dialog */}
+      {csvPreviewData && (
+        <ImportPreviewDialog
+          isOpen={isCsvDialogOpen}
+          tripCount={csvPreviewData.tripCount}
+          onConfirm={confirmCsvImport}
+          onCancel={cancelCsvImport}
+        />
+      )}
+
+      {/* Clipboard Import Preview Dialog */}
+      {clipboardPreviewData && (
+        <ImportPreviewDialog
+          isOpen={isClipboardDialogOpen}
+          tripCount={clipboardPreviewData.tripCount}
+          onConfirm={confirmClipboardImport}
+          onCancel={cancelClipboardImport}
+        />
+      )}
     </>
   );
 });

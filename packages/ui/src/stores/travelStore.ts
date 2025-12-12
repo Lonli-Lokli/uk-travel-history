@@ -633,6 +633,103 @@ class TravelStore {
 
     return response.blob();
   }
+
+  async importFromCsv(
+    csvText: string,
+    mode: 'replace' | 'append' = 'append'
+  ): Promise<{ success: boolean; message: string; tripCount: number }> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      let result;
+
+      // Check if this is XLSX data (marked with special prefix from useCsvImport)
+      if (csvText.startsWith('__XLSX__')) {
+        const tripsJson = csvText.substring(8); // Remove __XLSX__ prefix
+        const trips = JSON.parse(tripsJson);
+        result = {
+          success: true,
+          trips,
+          errors: [],
+          warnings: [],
+        };
+      } else {
+        // Parse as CSV
+        const { parseCsvText } = await import('@uth/parser');
+        result = parseCsvText(csvText);
+      }
+
+      if (!result.success) {
+        throw new Error(result.errors.join('\n'));
+      }
+
+      if (result.trips.length === 0) {
+        throw new Error('No valid trips found');
+      }
+
+      runInAction(() => {
+        const importedTrips: TripRecord[] = result.trips.map((trip: { outDate: string; inDate: string; outRoute?: string; inRoute?: string }) => ({
+          id: this.generateId(),
+          outDate: trip.outDate,
+          inDate: trip.inDate,
+          outRoute: trip.outRoute || '',
+          inRoute: trip.inRoute || '',
+        }));
+
+        if (mode === 'replace') {
+          this.trips = importedTrips;
+        } else {
+          this.trips = [...this.trips, ...importedTrips];
+        }
+
+        this.isLoading = false;
+      });
+
+      return {
+        success: true,
+        message: result.warnings.length > 0
+          ? `Imported ${result.trips.length} trips with warnings: ${result.warnings.join('; ')}`
+          : `Successfully imported ${result.trips.length} trips`,
+        tripCount: result.trips.length,
+      };
+    } catch (err) {
+      runInAction(() => {
+        this.error =
+          err instanceof Error ? err.message : 'Failed to import';
+        this.isLoading = false;
+      });
+      throw err;
+    }
+  }
+
+  // Note: This method is deprecated. Use importFromCsv directly with clipboard text.
+  // Kept for backward compatibility but not recommended.
+  async importFromClipboard(
+    mode: 'replace' | 'append' = 'append'
+  ): Promise<{ success: boolean; message: string; tripCount: number }> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      // Read from clipboard
+      const text = await navigator.clipboard.readText();
+
+      if (!text || text.trim().length === 0) {
+        throw new Error('Clipboard is empty');
+      }
+
+      // Use the same CSV parser
+      return await this.importFromCsv(text, mode);
+    } catch (err) {
+      runInAction(() => {
+        this.error =
+          err instanceof Error ? err.message : 'Failed to import from clipboard';
+        this.isLoading = false;
+      });
+      throw err;
+    }
+  }
 }
 
 export const travelStore = new TravelStore();

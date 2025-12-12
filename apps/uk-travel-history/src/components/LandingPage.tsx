@@ -1,20 +1,29 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, travelStore } from '@uth/ui';
-import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee, Loader2 } from 'lucide-react';
+import { FileText, Plus, Upload, ArrowRight, CheckCircle, Plane, Coffee, Clipboard } from 'lucide-react';
+import { useCsvImport } from './hooks/useCsvImport';
+import { useClipboardImport } from './hooks/useClipboardImport';
+import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { useRef, useState } from 'react';
 
 export const LandingPage = () => {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  // CSV Import Hook
+  const csvImport = useCsvImport();
+
+  // Clipboard Import Hook
+  const clipboardImport = useClipboardImport();
+
+  const handlePdfImportClick = () => {
+    pdfFileInputRef.current?.click();
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -27,8 +36,8 @@ export const LandingPage = () => {
       alert('Failed to import PDF. Please try again or add trips manually.');
     } finally {
       setIsImporting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (pdfFileInputRef.current) {
+        pdfFileInputRef.current.value = '';
       }
     }
   };
@@ -37,16 +46,57 @@ export const LandingPage = () => {
     router.push('/travel');
   };
 
+  const handleCsvImportConfirm = async (mode: 'replace' | 'append') => {
+    await csvImport.confirmImport(mode);
+    // Navigate to travel page after successful import
+    if (!csvImport.isDialogOpen) {
+      router.push('/travel');
+    }
+  };
+
+  const handleClipboardImportConfirm = async (mode: 'replace' | 'append') => {
+    await clipboardImport.confirmImport(mode);
+    // Navigate to travel page after successful import
+    if (!clipboardImport.isDialogOpen) {
+      router.push('/travel');
+    }
+  };
+
   return (
     <>
-      {/* Hidden File Input */}
+      {/* Hidden File Inputs */}
       <input
-        ref={fileInputRef}
+        ref={pdfFileInputRef}
         type="file"
         accept=".pdf"
         className="hidden"
-        onChange={handleFileSelect}
+        onChange={handlePdfFileSelect}
       />
+      <input
+        ref={csvImport.fileInputRef}
+        type="file"
+        accept=".csv,.txt,.xlsx"
+        className="hidden"
+        onChange={csvImport.handleFileSelect}
+      />
+
+      {/* Import Preview Dialogs */}
+      {csvImport.isDialogOpen && csvImport.previewData && (
+        <ImportPreviewDialog
+          isOpen={csvImport.isDialogOpen}
+          tripCount={csvImport.previewData.tripCount}
+          onConfirm={handleCsvImportConfirm}
+          onCancel={csvImport.cancelImport}
+        />
+      )}
+      {clipboardImport.isDialogOpen && clipboardImport.previewData && (
+        <ImportPreviewDialog
+          isOpen={clipboardImport.isDialogOpen}
+          tripCount={clipboardImport.previewData.tripCount}
+          onConfirm={handleClipboardImportConfirm}
+          onCancel={clipboardImport.cancelImport}
+        />
+      )}
 
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
 
@@ -121,59 +171,44 @@ export const LandingPage = () => {
             </div>
 
             {/* Quick Start Options */}
-            <div className="grid sm:grid-cols-2 gap-4 mb-8">
-              <Card className={`border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors bg-primary/5 ${!isImporting ? 'cursor-pointer' : 'opacity-60'}`} onClick={!isImporting ? handleImportClick : undefined}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                      {isImporting ? (
-                        <Loader2 className="w-6 h-6 text-white animate-spin" />
-                      ) : (
-                        <Upload className="w-6 h-6 text-white" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 mb-1">Import from PDF</h3>
-                      <p className="text-xs text-slate-600 mb-4">
-                        {isImporting ? 'Importing your travel history...' : 'Upload your Home Office SAR travel history PDF'}
-                      </p>
-                    </div>
-                    <Button className="w-full" disabled={isImporting}>
-                      {isImporting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Importing...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Import PDF
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors cursor-pointer" onClick={handleAddManually}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center">
-                      <Plus className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 mb-1">Add Manually</h3>
-                      <p className="text-xs text-slate-600 mb-4">
-                        Enter your travel dates manually
-                      </p>
-                    </div>
-                    <Button variant="outline" className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Travel Dates
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="bg-slate-50 rounded-lg p-5 mb-8">
+              <h3 className="font-semibold text-slate-900 mb-3 text-sm">Get Started</h3>
+              <div className="space-y-2">
+                <Button
+                  className="w-full justify-start"
+                  onClick={handlePdfImportClick}
+                  disabled={isImporting}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={csvImport.triggerFileInput}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Import from CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={clipboardImport.handleClipboardPaste}
+                >
+                  <Clipboard className="h-4 w-4 mr-2" />
+                  Import from Clipboard
+                </Button>
+                <div className="border-t border-slate-200 my-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-slate-600"
+                    onClick={handleAddManually}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Travel Dates Manually
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* How to Get Your PDF */}
