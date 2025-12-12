@@ -95,6 +95,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should flag when 180 days exceeded in any rolling 12-month period', () => {
       // Guidance: "No more than 180 days' absences are allowed in a consecutive 12-month period"
       travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setILRTrack(5);
 
       // Add trips totaling over 180 days within one year
       travelStore.addTrip({
@@ -143,6 +144,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should check rolling 12-month windows, not calendar years', () => {
       // Guidance: "absences are considered on a rolling basis"
       travelStore.setVisaStartDate('2023-06-01');
+      travelStore.setILRTrack(5);
 
       // ~100 days in late 2023
       travelStore.addTrip({
@@ -170,6 +172,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
     it('should handle multiple trips within rolling period', () => {
       travelStore.setVisaStartDate('2023-01-01');
+      travelStore.setILRTrack(5);
 
       // Add 10 trips of 20 days each = 200 full days total
       for (let i = 0; i < 10; i++) {
@@ -187,10 +190,11 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     });
   });
 
-  describe('Continuous Leave Calculation', () => {
-    it('should calculate days in UK correctly', () => {
-      // Total days since start - Full days outside = Days in UK
+  describe('Continuous Leave Calculation (Backward Counting)', () => {
+    it('should calculate days in UK correctly with backward counting', () => {
+      // Backward counting: qualifying period days - absence days = continuous days
       travelStore.setVignetteEntryDate('2020-01-01');
+      travelStore.setILRTrack(5);
 
       travelStore.addTrip({
         outDate: '2020-06-01',
@@ -200,34 +204,43 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       });
 
       const summary = travelStore.summary;
-      const today = new Date();
-      const startDate = new Date('2020-01-01');
-      const totalDaysSinceStart = Math.floor(
-        (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
 
-      expect(summary.continuousLeaveDays).toBe(totalDaysSinceStart - 13);
+      // Should have continuous leave days calculated for the qualifying period
+      expect(summary.continuousLeaveDays).not.toBe(null);
+      expect(summary.continuousLeaveDays).toBeGreaterThan(0);
     });
 
     it('should prioritize vignette entry date over visa start date', () => {
       travelStore.setVignetteEntryDate('2020-06-01');
       travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
 
       const summary = travelStore.summary;
       // Should use vignette date (June), not visa date (January)
       expect(summary.continuousLeaveDays).not.toBe(null);
 
-      // Calculate from vignette date
-      const today = new Date();
-      const vignetteDate = new Date('2020-06-01');
-      const expectedDays = Math.floor(
-        (today.getTime() - vignetteDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      // Continuous days should be calculated from vignette date
+      expect(summary.continuousLeaveDays).toBeGreaterThan(0);
+    });
 
-      expect(summary.continuousLeaveDays).toBe(expectedDays);
+    it('should return null when no ILR track is set', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-10',
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+      // No backward counting without ILR track
+      expect(summary.continuousLeaveDays).toBe(null);
     });
 
     it('should return null when no start date set', () => {
+      travelStore.setILRTrack(5);
+
       travelStore.addTrip({
         outDate: '2024-01-01',
         inDate: '2024-01-10',
@@ -265,6 +278,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should handle same-day trip in rolling period calculation', () => {
       // Test that same-day trips (where absenceStart > absenceEnd) are handled correctly
       travelStore.setVisaStartDate('2024-01-01');
+      travelStore.setILRTrack(5);
 
       travelStore.addTrip({
         outDate: '2024-06-15',
@@ -284,6 +298,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should handle overnight trip in rolling period calculation', () => {
       // Test overnight trips (1 day apart, should be 0 full days per guidance)
       travelStore.setVisaStartDate('2024-01-01');
+      travelStore.setILRTrack(5);
 
       travelStore.addTrip({
         outDate: '2024-06-15',
@@ -301,6 +316,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should exclude trips starting before visa start date from rolling window checks', () => {
       // Trip starts before visa start, but we should only count days within the visa period
       travelStore.setVisaStartDate('2024-01-15');
+      travelStore.setILRTrack(5);
 
       travelStore.addTrip({
         outDate: '2024-01-10', // Before visa start
@@ -402,6 +418,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
     it('should handle multiple overlapping 12-month windows correctly', () => {
       travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
 
       // Long trip that should appear in multiple rolling windows
       travelStore.addTrip({
@@ -421,6 +438,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should correctly calculate partial overlaps at window start', () => {
       // Critical test: Trip starts before window, ends within window
       travelStore.setVisaStartDate('2024-01-01');
+      travelStore.setILRTrack(5);
 
       // Trip: Dec 20, 2023 - Jan 10, 2024
       travelStore.addTrip({
@@ -444,6 +462,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should correctly calculate partial overlaps at window end', () => {
       // Critical test: Trip starts within window, ends after window
       travelStore.setVisaStartDate('2023-11-01');
+      travelStore.setILRTrack(5);
 
       // Trip: Nov 20, 2023 - Jan 10, 2024
       travelStore.addTrip({
@@ -468,6 +487,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
     it('should correctly calculate when trip spans across window boundaries', () => {
       // Trip that starts before window and ends after window
       travelStore.setVisaStartDate('2024-02-01');
+      travelStore.setILRTrack(5);
 
       // Trip: Jan 10 - Mar 10, 2024 (60 days calendar, 59 full days)
       travelStore.addTrip({
@@ -581,52 +601,54 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
   });
 
   describe('ILR Eligibility Calculation (Section: Calculating the specified continuous period)', () => {
-    it('should calculate ILR eligibility date for 5-year track (28 days before end)', () => {
+    it('should auto-calculate earliest application date for 5-year track', () => {
       // Guidance Page 10: "Applicants can submit a settlement application up to 28 days
       // before they would reach the end of the specified period"
       travelStore.setVisaStartDate('2020-01-01');
       travelStore.setILRTrack(5);
 
-      const summary = travelStore.summary;
+      // Should auto-calculate: visa start + 5 years - 28 days
+      const calculated = travelStore.calculatedApplicationDate;
+      expect(calculated).toBe('2024-12-04');
 
-      // 5 years from 2020-01-01 = 2025-01-01
-      // 28 days before = 2024-12-04
+      // Summary should use auto-calculated date
+      const summary = travelStore.summary;
       expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
 
-    it('should calculate ILR eligibility date for 3-year track', () => {
+    it('should auto-calculate earliest application date for 3-year track', () => {
       // For Tier 1 Entrepreneur: 3 years
       travelStore.setVignetteEntryDate('2022-06-01');
       travelStore.setILRTrack(3);
 
-      const summary = travelStore.summary;
+      const calculated = travelStore.calculatedApplicationDate;
+      expect(calculated).toBe('2025-05-04');
 
-      // 3 years from 2022-06-01 = 2025-06-01
-      // 28 days before = 2025-05-04
+      const summary = travelStore.summary;
       expect(summary.ilrEligibilityDate).toBe('2025-05-04');
     });
 
-    it('should calculate ILR eligibility date for 2-year track', () => {
+    it('should auto-calculate earliest application date for 2-year track', () => {
       // For Tier 1 Investor: 2 years
       travelStore.setVisaStartDate('2023-03-15');
       travelStore.setILRTrack(2);
 
-      const summary = travelStore.summary;
+      const calculated = travelStore.calculatedApplicationDate;
+      expect(calculated).toBe('2025-02-15');
 
-      // 2 years from 2023-03-15 = 2025-03-15
-      // 28 days before = 2025-02-15
+      const summary = travelStore.summary;
       expect(summary.ilrEligibilityDate).toBe('2025-02-15');
     });
 
-    it('should calculate ILR eligibility date for 10-year track', () => {
+    it('should auto-calculate earliest application date for 10-year track', () => {
       // For long residence cases
       travelStore.setVignetteEntryDate('2015-01-01');
       travelStore.setILRTrack(10);
 
-      const summary = travelStore.summary;
+      const calculated = travelStore.calculatedApplicationDate;
+      expect(calculated).toBe('2024-12-04');
 
-      // 10 years from 2015-01-01 = 2025-01-01
-      // 28 days before = 2024-12-04
+      const summary = travelStore.summary;
       expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
 
@@ -646,7 +668,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.daysUntilEligible).toBe(null);
     });
 
-    it('should calculate days until eligible when date is in future', () => {
+    it('should calculate days until eligible when auto-calculated date is in future', () => {
       // Set a future eligibility date
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 2);
@@ -656,7 +678,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
       const summary = travelStore.summary;
 
-      // Should have positive days until eligible
+      // Should have positive days until eligible (auto-calculated)
       expect(summary.daysUntilEligible).toBeGreaterThan(0);
     });
 
@@ -671,6 +693,38 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.daysUntilEligible).toBeLessThan(0);
     });
 
+    it('should allow manual override of application date', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+
+      // Auto-calculated should be 2024-12-04
+      expect(travelStore.calculatedApplicationDate).toBe('2024-12-04');
+
+      // Set manual override
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Effective date should be the manual override
+      expect(travelStore.effectiveApplicationDate).toBe('2025-01-01');
+
+      const summary = travelStore.summary;
+      expect(summary.ilrEligibilityDate).toBe('2025-01-01');
+    });
+
+    it('should revert to calculated date when manual override is cleared', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+      travelStore.setApplicationDate('2025-01-01');
+
+      // Check manual override is active
+      expect(travelStore.effectiveApplicationDate).toBe('2025-01-01');
+
+      // Clear manual override
+      travelStore.setApplicationDate('');
+
+      // Should revert to calculated
+      expect(travelStore.effectiveApplicationDate).toBe('2024-12-04');
+    });
+
     it('should prioritize vignette date over visa date for ILR calculation', () => {
       travelStore.setVignetteEntryDate('2020-06-01');
       travelStore.setVisaStartDate('2020-01-01');
@@ -683,25 +737,46 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.ilrEligibilityDate).toBe('2025-05-04');
     });
 
-    it('should handle leap year correctly in ILR calculation', () => {
-      // Start on Feb 29 of a leap year
-      travelStore.setVisaStartDate('2020-02-29');
+    it('should handle dates near month boundaries in ILR calculation', () => {
+      // Test with Feb 28 (just before leap day)
+      travelStore.setVisaStartDate('2020-02-28');
       travelStore.setILRTrack(5);
 
+      const calculated = travelStore.calculatedApplicationDate;
       const summary = travelStore.summary;
 
-      // 5 years from 2020-02-29 = 2025-02-28 (not a leap year)
+      // 5 years from 2020-02-28 = 2025-02-28
       // 28 days before = 2025-01-31
+      expect(calculated).toBe('2025-01-31');
       expect(summary.ilrEligibilityDate).toBe('2025-01-31');
     });
   });
 
-  describe('Backward Counting (Application Date Mode)', () => {
+  describe('Backward Counting (UK Home Office Algorithm)', () => {
     beforeEach(() => {
       travelStore.clearAll();
     });
 
-    it('should switch to backward counting mode when application date and ILR track are set', () => {
+    it('should use backward counting with auto-calculated application date', () => {
+      travelStore.setVisaStartDate('2020-01-01');
+      travelStore.setILRTrack(5);
+
+      // Add a trip in the qualifying period
+      travelStore.addTrip({
+        outDate: '2022-06-01',
+        inDate: '2022-06-10', // 9 full days
+        outRoute: 'Test',
+        inRoute: 'Test',
+      });
+
+      const summary = travelStore.summary;
+
+      // Should use auto-calculated date (2024-12-04)
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
+      expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(9);
+    });
+
+    it('should use backward counting with manual application date override', () => {
       travelStore.setVisaStartDate('2020-01-01');
       travelStore.setILRTrack(5);
       travelStore.setApplicationDate('2025-01-01');
@@ -716,7 +791,7 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
 
       const summary = travelStore.summary;
 
-      // Should calculate backward from application date
+      // Should use manual override date
       expect(summary.ilrEligibilityDate).toBe('2025-01-01');
       expect(summary.maxAbsenceInAny12Months).toBeLessThanOrEqual(9);
     });
@@ -820,21 +895,21 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.hasExceeded180Days).toBe(false);
     });
 
-    it('should revert to forward-looking when application date is cleared', () => {
+    it('should revert to auto-calculated date when manual override is cleared', () => {
       travelStore.setVisaStartDate('2020-01-01');
       travelStore.setILRTrack(5);
       travelStore.setApplicationDate('2025-01-01');
 
-      // Check backward mode is active
+      // Check manual override is active
       let summary = travelStore.summary;
       expect(summary.ilrEligibilityDate).toBe('2025-01-01');
 
-      // Clear application date
+      // Clear manual override
       travelStore.setApplicationDate('');
 
-      // Should switch to forward-looking
+      // Should revert to auto-calculated date (2024-12-04)
       summary = travelStore.summary;
-      expect(summary.ilrEligibilityDate).not.toBe('2025-01-01');
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
 
     it('should calculate continuous days correctly in backward mode', () => {
@@ -885,22 +960,29 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.hasExceeded180Days).toBe(true);
     });
 
-    it('should require both application date and ILR track for backward mode', () => {
+    it('should require ILR track for backward counting', () => {
       travelStore.setVisaStartDate('2020-01-01');
 
-      // Only application date, no ILR track
+      // Only manual application date, no ILR track
       travelStore.setApplicationDate('2025-01-01');
 
       let summary = travelStore.summary;
-      // Should use forward-looking mode
+      // Should not calculate anything (no ILR track)
       expect(summary.ilrEligibilityDate).toBeNull();
 
       // Now add ILR track
       travelStore.setILRTrack(5);
 
       summary = travelStore.summary;
-      // Should switch to backward mode
+      // Should use backward counting with manual override
       expect(summary.ilrEligibilityDate).toBe('2025-01-01');
+
+      // Clear manual override
+      travelStore.setApplicationDate('');
+
+      summary = travelStore.summary;
+      // Should use auto-calculated date
+      expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
   });
 });

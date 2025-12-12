@@ -130,28 +130,28 @@ Per Home Office guidance, when assessing an ILR application, the qualifying peri
 - Date of decision
 - Any date up to 28 days after the date of application
 
-**Implementation**: The application now supports both modes:
+**Implementation**: The application uses the UK Home Office backward counting algorithm:
 
-1. **Prospective mode (default)**: Calculates the earliest application date (28 days before the required period ends) and monitors rolling 12-month periods prospectively from the visa start date to today.
+The app **automatically calculates** the earliest application date (28 days before the required period ends) and uses the official Home Office assessment method by:
+- Counting backward from the application date by the required number of years (e.g., 5 years)
+- Testing multiple assessment dates (application date + 0 to 28 days)
+- Selecting the most beneficial assessment date (with lowest maximum rolling absence)
+- Checking that no rolling 12-month period within that continuous period exceeded 180 days
 
-2. **Retrospective mode (backward counting)**: When you enter an application date, the app simulates the actual Home Office assessment by:
-   - Counting backward from the application date by the required number of years (e.g., 5 years)
-   - Testing multiple assessment dates (application date + 0 to 28 days)
-   - Selecting the most beneficial assessment date (with lowest maximum rolling absence)
-   - Checking that no rolling 12-month period within that continuous period exceeded 180 days
-
-**Example:**
+**Auto-Calculation Example:**
 - Visa start: 1 January 2020
-- Required period: 5 years
-- Application submitted: 10 December 2024 (within the 28-day early window)
+- ILR track selected: 5 years
+- Auto-calculated earliest application date: 4 December 2024 (5 years - 28 days)
 
-When you enter "10 December 2024" as the application date, the app will:
-- Test assessment dates from 10 Dec 2024 to 7 Jan 2025 (28-day window)
+The app will automatically:
+- Test assessment dates from 4 Dec 2024 to 1 Jan 2025 (28-day window)
 - For each date, count backward 5 years to establish the qualifying period
 - Calculate the maximum rolling 12-month absence for each qualifying period
 - Display results for the most beneficial assessment date
 
-This matches how the Home Office will assess your application, choosing whichever period shows the least absences, as long as it covers the required continuous period.
+**Manual Override:** You can override the auto-calculated date by entering your own application date in the "Application Date (Override)" field. This is useful if you plan to apply earlier or later than the auto-calculated earliest date.
+
+This matches exactly how the Home Office will assess your application, choosing whichever period shows the least absences, as long as it covers the required continuous period.
 
 ## Allowable Absences
 
@@ -255,48 +255,39 @@ If absences exceed 180 days in a 12-month period, ILR normally **refused**.
 - Exempt status periods can count toward continuous period
 - Deemed leave (90 days under Section 8A(b) Immigration Act 1971) counts toward continuous period
 
-## Application Scope: Prospective vs Retrospective Assessment
+## Application Scope: UK Home Office Backward Counting Algorithm
 
-### Two Assessment Modes
+### How the Application Works
 
-The application supports **both prospective and retrospective assessment modes**:
+The application uses **the official UK Home Office backward counting algorithm** to assess ILR eligibility. This matches exactly how the Home Office will evaluate your application.
 
-#### 1. Prospective Monitoring (Default Mode)
+#### Assessment Method
 
-**When to use:** Daily monitoring and tracking ongoing compliance
+When you enter your visa details and select an ILR track, the app:
 
-This mode helps users track their ongoing compliance with ILR requirements in real-time. It:
+1. **Auto-calculates earliest application date:** Visa start + Required years - 28 days
+2. **Tests multiple assessment dates:** Application date through +28 days
+3. **Counts backward:** For each assessment date, counts back by required years (e.g., 5 years)
+4. **Finds most beneficial period:** Selects the assessment date with lowest maximum rolling absence
+5. **Verifies compliance:** Checks that no rolling 12-month window exceeded 180 days
 
-1. Monitors rolling 12-month periods from the visa start date **forward to today**
-2. Alerts users if any rolling period exceeds 180 days
-3. Calculates when they become eligible to apply (28 days before required period ends)
+#### Using the Application
 
-This approach is **conservative and safe** - if the app shows you're compliant now, you'll likely pass the Home Office assessment.
+**Quick Start:**
+1. Enter your vignette entry date or visa start date
+2. Select your ILR track (2, 3, 5, or 10 years)
+3. The app immediately shows your eligibility using the Home Office algorithm
 
-**How to activate:** Simply enter your vignette entry date or visa start date and select your ILR track. Leave the "Application Date" field empty.
+**Manual Override:**
+If you plan to apply on a specific date (different from the auto-calculated earliest date), you can enter it in the "Application Date (Override)" field. The app will then assess your compliance using that date.
 
-#### 2. Retrospective Assessment (Backward Counting Mode)
-
-**When to use:** Simulating the actual Home Office assessment when planning or preparing your ILR application
-
-This mode replicates how the Home Office actually assesses your application by:
-
-1. Counting backward from your specified application/decision date
-2. Checking the exact qualifying period (e.g., 5 years backward from that date)
-3. Finding the most beneficial assessment date within the allowed window (application date, or up to 28 days after)
-4. Verifying no rolling 12-month window in that period exceeded 180 days
-
-**Why the difference matters:**
-- Prospective: Checks from visa start to today (what you can monitor)
-- Retrospective: Checks from chosen end date backward (what Home Office assesses)
-
-For most users, these produce the same result. However, if you have trips planned near your application date, the retrospective assessment might be slightly more favorable since the Home Office can choose the most beneficial assessment date.
-
-**How to activate:** Enter your vignette entry date/visa start date, select your ILR track, AND enter your planned "Application Date". The app will automatically switch to backward counting mode.
+**Why Backward Counting:**
+The Home Office doesn't just check from your visa start to application date. They count backward from the most beneficial date (application, decision, or up to 28 days after) to ensure you get the fairest assessment possible.
 
 **Current Implementation Status:**
-- ✅ Prospective monitoring (visa start → today): **Fully implemented**
-- ✅ Retrospective simulation (counting backward from custom date): **Fully implemented** (as of this PR)
+- ✅ Auto-calculation of earliest application date: **Fully implemented**
+- ✅ Backward counting algorithm: **Fully implemented**
+- ✅ Manual application date override: **Fully implemented**
 
 ## Summary of Key Numbers
 

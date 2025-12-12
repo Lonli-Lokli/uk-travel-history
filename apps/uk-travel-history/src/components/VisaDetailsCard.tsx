@@ -92,16 +92,28 @@ export const VisaDetailsCard = observer(() => {
 
           <div className="space-y-1.5">
             <Label htmlFor="applicationDate" className="text-xs font-medium">
-              Application Date (Optional)
+              Application Date (Override)
             </Label>
             <DatePicker
               value={travelStore.applicationDate}
               onChange={(value) => travelStore.setApplicationDate(value)}
-              placeholder="Select application date"
+              placeholder={
+                travelStore.calculatedApplicationDate
+                  ? `Auto: ${formatDate(travelStore.calculatedApplicationDate)}`
+                  : 'Will auto-calculate with ILR track'
+              }
               className="w-full"
             />
             <p className="text-xs text-muted-foreground leading-tight">
-              Your ILR application/decision date
+              {travelStore.calculatedApplicationDate ? (
+                <>
+                  Auto-calculated:{' '}
+                  <strong>{formatDate(travelStore.calculatedApplicationDate)}</strong>
+                  {travelStore.applicationDate && ' (Overridden)'}
+                </>
+              ) : (
+                'Set ILR track to auto-calculate'
+              )}
             </p>
           </div>
         </div>
@@ -119,17 +131,17 @@ export const VisaDetailsCard = observer(() => {
                 <>Visa Start Date: {formatDate(travelStore.visaStartDate)}</>
               )}
             </p>
-            {travelStore.applicationDate && travelStore.ilrTrack && (
+            {travelStore.ilrTrack && travelStore.effectiveApplicationDate && (
               <p className="text-xs text-blue-800 leading-tight mt-1">
-                <strong>Assessment Mode:</strong> Counting backward from{' '}
-                {formatDate(travelStore.applicationDate)} (
+                <strong>Assessment:</strong> UK Home Office backward counting from{' '}
+                {formatDate(travelStore.effectiveApplicationDate)} (
                 {travelStore.ilrTrack}-year track)
+                {travelStore.applicationDate && ' - Manual override active'}
               </p>
             )}
-            {(!travelStore.applicationDate || !travelStore.ilrTrack) && (
+            {travelStore.ilrTrack && !travelStore.effectiveApplicationDate && (
               <p className="text-xs text-blue-800 leading-tight mt-1">
-                <strong>Assessment Mode:</strong> Forward-looking (monitoring from
-                start date to today)
+                <strong>Info:</strong> Set ILR track to calculate eligibility
               </p>
             )}
           </div>

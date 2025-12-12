@@ -89,6 +89,32 @@ class TravelStore {
     });
   }
 
+  // Computed property: Auto-calculated earliest application date based on ILR track
+  get calculatedApplicationDate(): string | null {
+    if (!this.ilrTrack) return null;
+
+    const visaStart = this.vignetteEntryDate || this.visaStartDate;
+    if (!visaStart) return null;
+
+    const start = new Date(visaStart);
+    if (isNaN(start.getTime())) return null;
+
+    // Calculate: visa start + required years - 28 days
+    const requiredEndDate = addYears(start, this.ilrTrack);
+    const earliestApplicationDate = subDays(requiredEndDate, 28);
+
+    return earliestApplicationDate.toISOString().split('T')[0];
+  }
+
+  // Get the effective application date (manual override or calculated)
+  get effectiveApplicationDate(): string | null {
+    // If user has manually set an application date, use that
+    if (this.applicationDate) return this.applicationDate;
+
+    // Otherwise, use the calculated date
+    return this.calculatedApplicationDate;
+  }
+
   get summary() {
     const tripsCalc = this.tripsWithCalculations;
     const complete = tripsCalc.filter((t) => !t.isIncomplete);
@@ -110,12 +136,14 @@ class TravelStore {
       const start = new Date(visaStart);
 
       if (!isNaN(start.getTime())) {
-        // Per Home Office guidance: Count backward from most beneficial date
+        // Per Home Office guidance: Always count backward from most beneficial date
         // (application date, decision date, or up to 28 days after application)
 
-        if (this.applicationDate && this.ilrTrack) {
-          // BACKWARD COUNTING MODE (when application date is set)
-          const appDate = new Date(this.applicationDate);
+        const appDateStr = this.effectiveApplicationDate;
+
+        if (appDateStr && this.ilrTrack) {
+          // BACKWARD COUNTING MODE (Home Office algorithm)
+          const appDate = new Date(appDateStr);
 
           if (!isNaN(appDate.getTime())) {
             // Find the most beneficial assessment date within the allowed range
@@ -196,35 +224,10 @@ class TravelStore {
               hasExceeded180Days = bestResult.maxAbsence > 180;
               continuousLeaveDays = bestResult.continuousDays;
 
-              // ILR eligibility is the application date itself (already set)
-              ilrEligibilityDate = this.applicationDate;
+              // ILR eligibility is the effective application date
+              ilrEligibilityDate = appDateStr;
               daysUntilEligible = differenceInDays(appDate, new Date());
             }
-          }
-        } else {
-          // FORWARD-LOOKING MODE (original behavior, when no application date)
-          const today = new Date();
-          const totalDaysSinceStart = differenceInDays(today, start);
-
-          // Days in UK = Total days - Days outside UK (full days)
-          continuousLeaveDays = Math.max(0, totalDaysSinceStart - totalFullDays);
-
-          // Check rolling 12-month periods for 180-day limit
-          maxAbsenceInAny12Months = this.calculateMaxAbsenceInRolling12Months(
-            start,
-            today
-          );
-          hasExceeded180Days = maxAbsenceInAny12Months > 180;
-
-          // Calculate ILR eligibility date if track is selected
-          if (this.ilrTrack) {
-            const requiredEndDate = addYears(start, this.ilrTrack);
-            const earliestApplicationDate = subDays(requiredEndDate, 28);
-
-            ilrEligibilityDate = earliestApplicationDate
-              .toISOString()
-              .split('T')[0];
-            daysUntilEligible = differenceInDays(earliestApplicationDate, today);
           }
         }
       }
