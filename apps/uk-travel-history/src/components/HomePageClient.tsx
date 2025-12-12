@@ -81,6 +81,8 @@ export const HomePageClient = observer(() => {
         {!hasTrips ? (
           <EmptyState
             onImportClick={triggerFileInput}
+            onImportCsvClick={triggerCsvFileInput}
+            onImportClipboardClick={handleClipboardPaste}
             onAddManuallyClick={handleAddManually}
           />
         ) : (

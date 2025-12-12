@@ -688,6 +688,8 @@ class TravelStore {
     }
   }
 
+  // Note: This method is deprecated. Use importFromCsv directly with clipboard text.
+  // Kept for backward compatibility but not recommended.
   async importFromClipboard(
     mode: 'replace' | 'append' = 'append'
   ): Promise<{ success: boolean; message: string; tripCount: number }> {

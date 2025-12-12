@@ -66,21 +66,23 @@ const portNames: Record<string, string> = {
 
 export function parseDate(dateStr: string): Date | null {
   const patterns = [
-    /(\d{2})\/(\d{2})\/(\d{4})/,
-    /(\d{4})-(\d{2})-(\d{2})/,
-    /(\d{2})-(\d{2})-(\d{4})/,
+    /(\d{2})\/(\d{2})\/(\d{4})/, // DD/MM/YYYY
+    /(\d{4})-(\d{2})-(\d{2})/, // YYYY-MM-DD
+    /(\d{2})-(\d{2})-(\d{4})/, // DD-MM-YYYY
   ];
 
   for (const pattern of patterns) {
     const match = dateStr.match(pattern);
     if (match) {
       if (pattern === patterns[1]) {
+        // YYYY-MM-DD: match[1] = year, match[2] = month, match[3] = day
         return new Date(
           parseInt(match[1]),
           parseInt(match[2]) - 1,
           parseInt(match[3])
         );
       } else {
+        // DD/MM/YYYY or DD-MM-YYYY: match[1] = day, match[2] = month, match[3] = year
         return new Date(
           parseInt(match[3]),
           parseInt(match[2]) - 1,

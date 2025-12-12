@@ -46,10 +46,11 @@ export const useCsvImport = () => {
             err instanceof Error ? err.message : 'Failed to read CSV file',
           variant: 'destructive',
         });
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      } finally {
+        // Reset file input so the same file can be selected again
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     },
     [toast]

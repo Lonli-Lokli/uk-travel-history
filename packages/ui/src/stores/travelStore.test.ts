@@ -985,4 +985,164 @@ describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
       expect(summary.ilrEligibilityDate).toBe('2024-12-04');
     });
   });
+
+  describe('CSV Import Functionality', () => {
+    beforeEach(() => {
+      travelStore.clearAll();
+    });
+
+    it('should import trips from CSV in append mode', async () => {
+      // Add an existing trip
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-05',
+        outRoute: 'Existing',
+        inRoute: 'Trip',
+      });
+
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London,Paris
+01/02/2024,10/02/2024,Berlin,London`;
+
+      const result = await travelStore.importFromCsv(csvData, 'append');
+
+      expect(result.success).toBe(true);
+      expect(result.tripCount).toBe(2);
+      expect(travelStore.trips).toHaveLength(3); // 1 existing + 2 imported
+    });
+
+    it('should import trips from CSV in replace mode', async () => {
+      // Add existing trips
+      travelStore.addTrip({
+        outDate: '2024-01-01',
+        inDate: '2024-01-05',
+        outRoute: 'Old',
+        inRoute: 'Trip',
+      });
+
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London,Paris`;
+
+      const result = await travelStore.importFromCsv(csvData, 'replace');
+
+      expect(result.success).toBe(true);
+      expect(result.tripCount).toBe(1);
+      expect(travelStore.trips).toHaveLength(1); // All replaced
+      expect(travelStore.trips[0].outRoute).toBe('London');
+    });
+
+    it('should handle CSV with warnings', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+,,Empty,Row
+15/01/2024,20/01/2024,London,Paris`;
+
+      const result = await travelStore.importFromCsv(csvData, 'append');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('with warnings');
+      expect(travelStore.trips).toHaveLength(1);
+    });
+
+    it('should reject invalid CSV data', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+invalid-date,20/01/2024,London,Paris`;
+
+      await expect(travelStore.importFromCsv(csvData, 'append')).rejects.toThrow();
+      expect(travelStore.trips).toHaveLength(0);
+    });
+
+    it('should reject CSV with no valid trips', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+,,Empty,Row`;
+
+      await expect(travelStore.importFromCsv(csvData, 'append')).rejects.toThrow(
+        'No valid trips found in CSV'
+      );
+    });
+
+    it('should import trips with YYYY-MM-DD format', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+2024-01-15,2024-01-20,London,Paris`;
+
+      const result = await travelStore.importFromCsv(csvData, 'append');
+
+      expect(result.success).toBe(true);
+      expect(travelStore.trips).toHaveLength(1);
+      expect(travelStore.trips[0].outDate).toBe('2024-01-15');
+    });
+
+    it('should generate unique IDs for imported trips', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London,Paris
+01/02/2024,10/02/2024,Berlin,London`;
+
+      await travelStore.importFromCsv(csvData, 'append');
+
+      const ids = travelStore.trips.map((t) => t.id);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(2); // All IDs should be unique
+    });
+
+    it('should handle incomplete trips in CSV', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,,London,`;
+
+      const result = await travelStore.importFromCsv(csvData, 'append');
+
+      expect(result.success).toBe(true);
+      expect(travelStore.trips[0].outDate).toBe('2024-01-15');
+      expect(travelStore.trips[0].inDate).toBe('');
+    });
+
+    it('should preserve route information from CSV', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London Heathrow,Paris CDG`;
+
+      await travelStore.importFromCsv(csvData, 'append');
+
+      expect(travelStore.trips[0].outRoute).toBe('London Heathrow');
+      expect(travelStore.trips[0].inRoute).toBe('Paris CDG');
+    });
+
+    it('should set isLoading state during import', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London,Paris`;
+
+      let loadingState = false;
+      const importPromise = travelStore.importFromCsv(csvData, 'append');
+
+      // Check loading state right after starting
+      loadingState = travelStore.isLoading;
+
+      await importPromise;
+
+      // Loading should have been true during import
+      // and false after completion
+      expect(travelStore.isLoading).toBe(false);
+    });
+
+    it('should clear error state on successful import', async () => {
+      travelStore.error = 'Previous error';
+
+      const csvData = `Date Out,Date In,Departure,Return
+15/01/2024,20/01/2024,London,Paris`;
+
+      await travelStore.importFromCsv(csvData, 'append');
+
+      expect(travelStore.error).toBe(null);
+    });
+
+    it('should set error state on failed import', async () => {
+      const csvData = `Date Out,Date In,Departure,Return
+invalid-date,20/01/2024,London,Paris`;
+
+      try {
+        await travelStore.importFromCsv(csvData, 'append');
+      } catch (err) {
+        // Expected to throw
+      }
+
+      expect(travelStore.error).not.toBe(null);
+    });
+  });
 });

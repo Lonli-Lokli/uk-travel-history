@@ -15,6 +15,26 @@ export interface ParsedTrip {
   inRoute: string;
 }
 
+/**
+ * Sanitize CSV field to prevent formula injection
+ * Remove leading characters that could trigger formula execution: =, +, -, @
+ */
+function sanitizeField(field: string): string {
+  if (!field) return field;
+
+  const trimmed = field.trim();
+  if (trimmed.length === 0) return trimmed;
+
+  // Check if field starts with potential formula trigger
+  const firstChar = trimmed[0];
+  if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@') {
+    // Remove the leading character to prevent formula injection
+    return trimmed.substring(1);
+  }
+
+  return trimmed;
+}
+
 export interface CSVParseResult {
   success: boolean;
   trips: ParsedTrip[];
@@ -126,8 +146,8 @@ export function parseCsvText(csvText: string): CSVParseResult {
     trips.push({
       outDate: outDate ? outDate.toISOString().split('T')[0] : '',
       inDate: inDate ? inDate.toISOString().split('T')[0] : '',
-      outRoute: row.outRoute?.trim() || '',
-      inRoute: row.inRoute?.trim() || '',
+      outRoute: sanitizeField(row.outRoute || ''),
+      inRoute: sanitizeField(row.inRoute || ''),
     });
   });
 
