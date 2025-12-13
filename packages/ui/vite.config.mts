@@ -18,12 +18,14 @@ export default defineConfig(() => ({
     name: 'ui',
     watch: false,
     globals: true,
-    environment: 'jsdom',
+    environment: 'happy-dom',
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
       reportsDirectory: './test-output/vitest/coverage',
       provider: 'v8' as const,
     },
+    testTimeout: 30000, // 30 seconds per test
+    hookTimeout: 30000, // 30 seconds for setup/teardown
   },
 }));
