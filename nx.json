@@ -26,7 +26,11 @@
           "watchDepsName": "watch-deps"
         }
       },
-      "exclude": ["packages/parser/*", "packages/utils/*"]
+      "exclude": [
+        "packages/parser/*",
+        "packages/utils/*",
+        "packages/calculators/*"
+      ]
     },
     {
       "plugin": "@nx/next/plugin",
@@ -47,7 +51,11 @@
     },
     {
       "plugin": "@nx/js/typescript",
-      "include": ["packages/parser/*", "packages/utils/*"],
+      "include": [
+        "packages/parser/*",
+        "packages/utils/*",
+        "packages/calculators/*"
+      ],
       "options": {
         "typecheck": {
           "targetName": "typecheck"

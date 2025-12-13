@@ -13,12 +13,4 @@ export * from './date-picker';
 export * from './editable-cell';
 export * from './TravelTable';
 
-export {
-  type TripRecord,
-  type TripWithCalculations,
-  type ILRTrack,
-  type RollingDataPoint,
-  type TimelinePoint,
-  type TripBar,
-  travelStore,
-} from './stores/travelStore';
+export { travelStore } from './stores/travelStore';

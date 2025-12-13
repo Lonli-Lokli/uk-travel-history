@@ -11,14 +11,13 @@ import { parseISO } from 'date-fns';
 
 import {
   travelStore,
-  RollingDataPoint,
-  TripBar,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@uth/ui';
+import { RollingDataPoint, TripBar } from '@uth/calculators';
 
 type TimelinePoint = {
   id: string;
