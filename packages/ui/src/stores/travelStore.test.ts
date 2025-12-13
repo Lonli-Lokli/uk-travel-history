@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { travelStore, TripRecord } from './travelStore';
+import { travelStore } from './travelStore';
 
 describe('TravelStore - UK Home Office Guidance v22.0 Compliance', () => {
   beforeEach(() => {
