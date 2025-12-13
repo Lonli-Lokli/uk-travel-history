@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
   Label,
-  ILRTrack,
   DatePicker,
   Select,
   SelectContent,
@@ -18,6 +17,7 @@ import {
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
 import { FileText, Target } from 'lucide-react';
+import { ILRTrack } from '@uth/calculators';
 
 export const VisaDetailsCard = observer(() => {
   return (
@@ -77,7 +77,7 @@ export const VisaDetailsCard = observer(() => {
               value={travelStore.ilrTrack?.toString() || ''}
               onValueChange={(value) => {
                 travelStore.setILRTrack(
-                  value ? (Number(value) as ILRTrack) : null
+                  value ? (Number(value) as ILRTrack) : null,
                 );
               }}
             >
@@ -114,7 +114,9 @@ export const VisaDetailsCard = observer(() => {
               {travelStore.calculatedApplicationDate ? (
                 <>
                   Auto-calculated:{' '}
-                  <strong>{formatDate(travelStore.calculatedApplicationDate)}</strong>
+                  <strong>
+                    {formatDate(travelStore.calculatedApplicationDate)}
+                  </strong>
                   {travelStore.applicationDate && ' (Overridden)'}
                 </>
               ) : (
@@ -140,20 +142,26 @@ export const VisaDetailsCard = observer(() => {
             {travelStore.preEntryPeriod && (
               <p className="text-xs text-blue-800 leading-tight mt-1">
                 <strong>Pre-Entry Period:</strong>{' '}
-                {travelStore.preEntryPeriod.delayDays} days between entry clearance (
-                {formatDate(travelStore.visaStartDate)}) and UK entry (
-                {formatDate(travelStore.vignetteEntryDate)})
+                {travelStore.preEntryPeriod.delayDays} days between entry
+                clearance ({formatDate(travelStore.visaStartDate)}) and UK entry
+                ({formatDate(travelStore.vignetteEntryDate)})
                 {travelStore.preEntryPeriod.canCount ? (
-                  <span className="text-green-700"> ✓ Counts toward qualifying period</span>
+                  <span className="text-green-700">
+                    {' '}
+                    ✓ Counts toward qualifying period
+                  </span>
                 ) : (
-                  <span className="text-orange-700"> ⚠ Exceeds 180 days, only time after entry counts</span>
+                  <span className="text-orange-700">
+                    {' '}
+                    ⚠ Exceeds 180 days, only time after entry counts
+                  </span>
                 )}
               </p>
             )}
             {travelStore.ilrTrack && travelStore.effectiveApplicationDate && (
               <p className="text-xs text-blue-800 leading-tight mt-1">
-                <strong>Assessment:</strong> UK Home Office backward counting from{' '}
-                {formatDate(travelStore.effectiveApplicationDate)} (
+                <strong>Assessment:</strong> UK Home Office backward counting
+                from {formatDate(travelStore.effectiveApplicationDate)} (
                 {travelStore.ilrTrack}-year track)
                 {travelStore.applicationDate && ' - Manual override active'}
               </p>

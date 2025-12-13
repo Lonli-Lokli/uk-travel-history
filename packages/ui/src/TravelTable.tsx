@@ -14,8 +14,9 @@ import {
 import { Trash2, Plus, ArrowUpDown, GripVertical } from 'lucide-react';
 import { Button } from './button';
 import { EditableCell } from './editable-cell';
-import { travelStore, TripWithCalculations } from './stores/travelStore';
+import { travelStore } from './stores/travelStore';
 import { formatDate } from '@uth/utils';
+import { TripWithCalculations } from '@uth/calculators';
 
 export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
