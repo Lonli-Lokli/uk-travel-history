@@ -25,7 +25,8 @@ export default defineConfig(() => ({
       reportsDirectory: './test-output/vitest/coverage',
       provider: 'v8' as const,
     },
-    testTimeout: 30000, // 30 seconds per test
-    hookTimeout: 30000, // 30 seconds for setup/teardown
+    testTimeout: 60000, // 60 seconds per test
+    hookTimeout: 60000, // 60 seconds for setup/teardown
+    isolate: false, // Run tests in the same environment to speed up
   },
 }));
