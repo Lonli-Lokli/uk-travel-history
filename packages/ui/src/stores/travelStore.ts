@@ -154,10 +154,13 @@ class TravelStore {
    *
    * Algorithm:
    * 1. Calculate baseline date: qualifying start + track years - 28 days
-   * 2. Verify ALL rolling 12-month periods have ≤180 days absence
-   * 3. If not, push forward day-by-day until a valid date is found
+   * 2. Use binary search to find the earliest date where ALL rolling 12-month periods have ≤180 days absence
+   * 3. Binary search is efficient because the validity property is monotonic:
+   *    if a date satisfies the 180-day limit, all later dates also satisfy it
    *
-   * @returns ISO date string (YYYY-MM-DD) or null if insufficient data or max iterations exceeded
+   * Performance: O(log₂ 365) ≈ 9 iterations vs O(365) for linear search (~40x faster)
+   *
+   * @returns ISO date string (YYYY-MM-DD) or null if insufficient data
    */
   get calculatedApplicationDate(): string | null {
     if (!this.ilrTrack) return null;
@@ -182,7 +185,6 @@ class TravelStore {
     // Calculate the baseline earliest date: qualifying start + required years - 28 days
     const requiredEndDate = addYears(start, this.ilrTrack);
     const baselineDate = subDays(requiredEndDate, 28);
-    let candidateDate = new Date(baselineDate);
 
     // Per UK Home Office guidance: The applicant cannot apply for ILR if ANY rolling 12-month
     // period contains >180 days of absence. This includes pre-entry period absences.
@@ -190,20 +192,15 @@ class TravelStore {
     // 1. The qualifying period is complete (e.g., 3 years from start)
     // 2. ALL rolling 12-month periods have ≤180 days absence
 
-    // Check if the candidate date satisfies the rolling 180-day limit
-    // If not, we need to push the date forward until it does
-    let iterations = 0;
-
-    while (iterations < MAX_ILR_DATE_SEARCH_DAYS) {
+    // Helper function to check if a date satisfies the 180-day limit
+    const isValidILRDate = (candidateDate: Date): boolean => {
       // Calculate the qualifying period for this candidate date
-      const qualifyingPeriodStart = addYears(candidateDate, -this.ilrTrack);
+      let qualifyingPeriodStart = addYears(candidateDate, -this.ilrTrack!);
 
-      // Check if this qualifying period starts before our actual start date
+      // If the qualifying period starts before our actual start date,
+      // use the actual start date instead (this happens for longer tracks like 5-10 years)
       if (qualifyingPeriodStart < start) {
-        // This means we haven't reached the minimum qualifying period yet
-        // Move forward to the earliest valid date
-        candidateDate = subDays(addYears(start, this.ilrTrack), 28);
-        continue; // Skip this iteration and recalculate on next loop
+        qualifyingPeriodStart = start;
       }
 
       // Check the rolling 12-month absence limit for this qualifying period
@@ -212,21 +209,45 @@ class TravelStore {
         candidateDate
       );
 
-      // If this candidate satisfies the 180-day limit, we've found our answer
-      if (maxAbsence <= MAX_ABSENCE_IN_12_MONTHS) {
-        return candidateDate.toISOString().split('T')[0];
-      }
+      // Return true if this candidate satisfies the 180-day limit
+      return maxAbsence <= MAX_ABSENCE_IN_12_MONTHS;
+    };
 
-      // Otherwise, move forward by 1 day and try again
-      candidateDate = addDays(candidateDate, 1);
-      iterations++;
+    // Binary search to find the earliest valid ILR date
+    // Search range: [baselineDate, baselineDate + MAX_ILR_DATE_SEARCH_DAYS]
+    let left = 0; // Days offset from baseline
+    let right = MAX_ILR_DATE_SEARCH_DAYS;
+    let result: Date | null = null;
+
+    // First, check if baseline date itself is valid
+    if (isValidILRDate(baselineDate)) {
+      return baselineDate.toISOString().split('T')[0];
     }
 
-    // If we've exceeded max iterations, return null to indicate we couldn't find a valid date
-    // This prevents suggesting an ILR date that would violate the 180-day rule
+    // Binary search for the earliest valid date
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const candidateDate = addDays(baselineDate, mid);
+
+      if (isValidILRDate(candidateDate)) {
+        // This date works, but there might be an earlier valid date
+        result = candidateDate;
+        right = mid - 1; // Search left half
+      } else {
+        // This date doesn't work, search right half (later dates)
+        left = mid + 1;
+      }
+    }
+
+    // If we found a valid date, return it
+    if (result) {
+      return result.toISOString().split('T')[0];
+    }
+
+    // If no valid date found within MAX_ILR_DATE_SEARCH_DAYS, return null
     console.warn(
-      'ILR auto date calculation exceeded max iterations. ' +
-      'Unable to find a valid date within 365 days of baseline.'
+      'ILR auto date calculation: Unable to find a valid date within 365 days of baseline. ' +
+      'This may indicate excessive absences that prevent ILR eligibility.'
     );
     return null;
   }
