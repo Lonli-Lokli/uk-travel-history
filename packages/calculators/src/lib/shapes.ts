@@ -58,7 +58,7 @@ export type ILRSummary = {
   totalFullDays: number;
   continuousLeaveDays: number | null;
   maxAbsenceInAny12Months: number | null;
-  hasExceeded180Days: boolean;
+  hasExceededAllowedAbsense: boolean;
   ilrEligibilityDate: string | null;
   daysUntilEligible: number | null;
   autoDateUsed: boolean;

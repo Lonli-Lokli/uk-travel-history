@@ -57,15 +57,15 @@ export const SummaryCards = observer(() => {
 
       {hasContinuousLeave && (
         <StatCard
-          icon={summary.hasExceeded180Days ? AlertTriangle : CalendarDays}
+          icon={summary.hasExceededAllowedAbsense ? AlertTriangle : CalendarDays}
           value={summary.continuousLeaveDays!}
           label="Days in UK"
-          variant={summary.hasExceeded180Days ? 'warning' : 'success'}
+          variant={summary.hasExceededAllowedAbsense ? 'warning' : 'success'}
           subtitle={
             summary.maxAbsenceInAny12Months !== null && (
               <>
                 Max 12mo: {summary.maxAbsenceInAny12Months}d{' '}
-                {summary.hasExceeded180Days && '⚠️'}
+                {summary.hasExceededAllowedAbsense && '⚠️'}
               </>
             )
           }

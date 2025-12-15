@@ -4,8 +4,12 @@ import {
   differenceInDays,
   format,
   isBefore,
+  isAfter,
   parseISO,
   subDays,
+  isWithinInterval,
+  areIntervalsOverlapping,
+  startOfDay
 } from 'date-fns';
 import {
   ILRCalculationInput,
@@ -16,109 +20,112 @@ import {
   RollingDataPoint,
   TimelinePoint,
   TripBar,
-  TripRecord,
   TripWithCalculations,
   ILRSummary,
   TravelCalculationResult,
   ILRValidationResult,
   OffendingWindow,
+  IneligibilityReason,
 } from './shapes';
-import { isValidDate } from './helpers';
+import { calculateTripDurations, hasOverlappingTrips, isValidDate } from './helpers';
+
+// --- CONSTANTS FROM GUIDANCE V8 ---
+const TRANSITIONAL_DATE_STR = '2024-04-11';
+const MAX_SINGLE_ABSENCE_PRE_APRIL = 184; // For Long Residence pre-2024
+const MAX_TOTAL_ABSENCE_PRE_APRIL = 548; // For Long Residence pre-2024 total cap
 
 /**
  * Pure calculator for all ILR-related travel metrics.
- * Implements the required workflow: Pre-checks -> Calculation -> Validation.
+ * Strictly adheres to Home Office Guidance v8.0 (July 2025).
  */
 export function calculateTravelData(
   input: ILRCalculationInput,
 ): TravelCalculationResult {
-  // Core Data
+  // 1. Normalize and Calculate Basic Trip Data
   const tripsWithCalculations = calculateTripDurations(input.trips);
   const ilrTrack = input.ilrTrack;
 
-  // 2. Incomplete Trips Validation (Workflow Step 2)
+  // 2. Data Integrity Check
   if (tripsWithCalculations.some((t) => t.isIncomplete)) {
-    return {
+    return createErrorResult(
       tripsWithCalculations,
-      preEntryPeriod: null,
-      validation: {
-        status: 'INELIGIBLE',
-        reason: {
-          type: 'INCOMPLETED_TRIPS',
-          message: `There are incomplete trips in the travel history. All trips must have both Out and In dates filled.`,
-        },
-      },
-      summary: {} as ILRSummary,
-      rollingAbsenceData: [],
-      timelinePoints: [],
-      tripBars: [],
-    } as TravelCalculationResult;
+      'INCOMPLETED_TRIPS',
+      'There are incomplete trips in the travel history. All trips must have both Out and In dates filled.',
+    );
   }
 
-  // Continue with other pre-calculations
+  if (hasOverlappingTrips(tripsWithCalculations)) {
+    return createErrorResult(
+      tripsWithCalculations,
+      'INCORRECT_INPUT',
+      'There are overlapping trips in the travel history. All trips must be non-overlapping.',
+    );
+  }
+
+  // 3. Pre-Entry Period Calculation
+  // Guidance: Time between entry clearance (visa start) and arrival counts as lawful residence BUT is an absence.
   const preEntryPeriod = calculatePreEntryPeriod(
     input.visaStartDate,
     input.vignetteEntryDate,
   );
 
-  // 3. Date Calculation
-  // Legal Earliest Date (Track Year - 28 days) - Workflow Step 3
-  // This is calculated regardless of applicationDateOverride and acts as a lower bound.
+  // 4. Validate Input Dates Logic
+  // Visa Start cannot be after Vignette Entry (logical impossibility)
+  if (
+    input.visaStartDate &&
+    input.vignetteEntryDate &&
+    isAfter(parseISO(input.visaStartDate), parseISO(input.vignetteEntryDate))
+  ) {
+    return createErrorResult(
+      tripsWithCalculations,
+      'INCORRECT_INPUT',
+      'Visa Start Date cannot be after Vignette Entry Date.',
+    );
+  }
+
+  // 5. Establish Legal Earliest Date (Base Calculation)
+  // ILR eligibility is strictly based on the Qualifying Period.
+  // Earliest application is 28 days before the completion of the Qualifying Period.
   const legalEarliestDateStr = calculateLegalEarliestDate({
-    ...input,
     ilrTrack,
     preEntryPeriod,
+    vignetteEntryDate: input.vignetteEntryDate,
+    visaStartDate: input.visaStartDate,
   });
-  const legalEarliestDate = parseISO(legalEarliestDateStr);
 
-  // 4. Calculate Earliest Compliant Date or Validate Override (Workflow Step 4)
-  let effectiveApplicationDate: string | null;
-  let earliestCompliantDate: string | null = null;
+  // 6. Determine Effective Assessment Date
+  // If override provided, we validate THAT date. If not, we search for the earliest valid date.
+  let effectiveApplicationDate: string | null = null;
   let validation: ILRValidationResult;
 
   if (input.applicationDateOverride) {
-    // If override is provided, validate it against all rules
     effectiveApplicationDate = input.applicationDateOverride;
     validation = validateEligibility({
       ...input,
       trips: tripsWithCalculations,
       preEntryPeriod,
-      ilrTrack,
-      legalEarliestDate: legalEarliestDateStr,
-      assessmentDateStr: effectiveApplicationDate, // Use the override date for assessment
+      assessmentDateStr: effectiveApplicationDate,
+      legalEarliestDateStr,
     });
   } else {
-    // If no override, calculate the earliest compliant date.
-    earliestCompliantDate = calculateEarliestCompliantDate({
+    // Search logic: Find the first date starting from legalEarliestDate that satisfies all absence rules.
+    effectiveApplicationDate = calculateEarliestCompliantDate({
       ...input,
-      ilrTrack,
-      legalEarliestDate,
       trips: tripsWithCalculations,
       preEntryPeriod,
+      startSearchDateStr: legalEarliestDateStr,
     });
-
-    effectiveApplicationDate = earliestCompliantDate;
 
     validation = validateEligibility({
       ...input,
       trips: tripsWithCalculations,
       preEntryPeriod,
-      ilrTrack,
-      legalEarliestDate: legalEarliestDateStr,
       assessmentDateStr: effectiveApplicationDate,
+      legalEarliestDateStr,
     });
   }
 
-  // 5. Auxiliary/UI Data Generation
-  const rollingAbsenceData = buildRollingAbsenceData({
-    tripsWithCalculations,
-    ...input,
-  });
-  const timelinePoints = buildTimelinePoints({
-    tripsWithCalculations,
-    ...input,
-  });
-  const tripBars = buildTripBars({ tripsWithCalculations, ...input });
+  // 7. Generate Auxiliary Data (UI Visuals)
   const summary = buildSummary({
     tripsWithCalculations,
     preEntryPeriod,
@@ -130,7 +137,25 @@ export function calculateTravelData(
     autoDateUsed: !input.applicationDateOverride,
   });
 
-  // 6. Consolidate and Return
+  const rollingAbsenceData = buildRollingAbsenceData({
+    tripsWithCalculations,
+    preEntryPeriod,
+    vignetteEntryDate: input.vignetteEntryDate,
+    visaStartDate: input.visaStartDate,
+  });
+
+  const timelinePoints = buildTimelinePoints({
+    tripsWithCalculations,
+    vignetteEntryDate: input.vignetteEntryDate,
+    visaStartDate: input.visaStartDate,
+  });
+
+  const tripBars = buildTripBars({
+    tripsWithCalculations,
+    vignetteEntryDate: input.vignetteEntryDate,
+    visaStartDate: input.visaStartDate,
+  });
+
   return {
     tripsWithCalculations,
     preEntryPeriod,
@@ -142,277 +167,38 @@ export function calculateTravelData(
   };
 }
 
-// --- CORE CALCULATION FUNCTIONS ---
+// --- CORE VALIDATION LOGIC ---
 
 /**
- * Checks for excessive absences within the qualifying period defined by the assessment date.
- * If excessive absence is found, returns the first set of OffendingWindow(s).
- * This is the implementation for the 'identify if this date can be used' part of workflow step 4.
- */
-function checkExcessiveAbsence(params: {
-  trips: TripWithCalculations[];
-  preEntryPeriod: PreEntryPeriodInfo | null;
-  ilrTrack: ILRTrack;
-  assessmentDate: Date;
-  visaStartDate: string;
-  vignetteEntryDate: string;
-}): OffendingWindow[] {
-  const {
-    trips,
-    ilrTrack,
-    assessmentDate,
-    preEntryPeriod,
-    visaStartDate,
-    vignetteEntryDate,
-  } = params;
-
-  const qualifyingStartDate = getQualifyingStartDate(
-    preEntryPeriod,
-    vignetteEntryDate,
-    visaStartDate,
-  );
-  if (!qualifyingStartDate) return [];
-
-  // The required start date for the ILR period is ilrTrack years before the application date.
-  // However, the qualifying period cannot start before the actual qualifying start date (visa start/vignette entry).
-  const ilrPeriodStartBaseline = subDays(
-    addYears(assessmentDate, -ilrTrack),
-    0,
-  ); // No 28 days for period start
-  const ilrPeriodStart =
-    ilrPeriodStartBaseline > qualifyingStartDate
-      ? ilrPeriodStartBaseline
-      : qualifyingStartDate;
-
-  const checkDates: Date[] = [ilrPeriodStart];
-  // Collect all trip departure dates that fall within the ILR period to check rolling 12-month windows
-  trips
-    .forEach((trip) => {
-      const tripOutDate = parseISO(trip.outDate);
-      if (tripOutDate >= ilrPeriodStart && tripOutDate <= assessmentDate) {
-        checkDates.push(tripOutDate);
-      }
-    });
-
-  const offendingWindows: OffendingWindow[] = [];
-
-  // Ensure unique dates and sort them
-  const uniqueCheckDates = Array.from(
-    new Set(checkDates.map((d) => d.toISOString())),
-  )
-    .map((s) => parseISO(s))
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  for (const checkDate of uniqueCheckDates) {
-    // The rolling window is from [checkDate] to [checkDate + 1 year]
-    const windowEnd = addYears(checkDate, 1);
-
-    // We only care about windows that *overlap* the ILR qualifying period [ilrPeriodStart, assessmentDate]
-    if (windowEnd < ilrPeriodStart || checkDate > assessmentDate) continue;
-
-    // The rolling window check should be within the full period of the ILR application [ilrPeriodStart, assessmentDate]
-    // The calculation for absence in a 12-month period must be done from the start of the absence (Day 2 out) to the end of the absence (Day 1 in).
-    // The actual rolling window is [windowEnd - 1 year, windowEnd]
-    // We only care about the absence within the ILR period: [ilrPeriodStart, assessmentDate]
-
-    // For rolling 12-month check: we need to assess the 12 months *ending* on a given day.
-    // Let's iterate through the ILR period and check the window [day-1 year, day].
-    const windowCheckEnd = checkDate;
-
-    // The maximum period we are interested in is [ilrPeriodStart, assessmentDate]
-    // If the window [windowCheckStart, windowCheckEnd] is fully or partially outside of this, we can skip/adjust.
-
-    // Let's simplify: check the rolling 12-month window *ending* on the trip return date, the trip departure date, and the application date.
-    // The provided `calculateMaxAbsenceInRolling12Months` function is more suited for this.
-
-    // Let's assume the spirit of the rule is "check every 12-month window that has a day *before* the application date".
-
-    // We need the *actual* 12-month window that contains the maximum absence.
-
-    const rollingAbsence = calculateMaxAbsenceInRolling12Months({
-      trips,
-      startDate: subDays(windowCheckEnd, 365), // Check 12 months back
-      endDate: windowCheckEnd,
-      preEntryPeriod,
-      visaStartDate,
-      vignetteEntryDate,
-    });
-
-    if (rollingAbsence > MAX_ABSENCE_IN_12_MONTHS) {
-      offendingWindows.push({
-        start: format(subDays(windowCheckEnd, 365), 'yyyy-MM-dd'),
-        end: format(windowCheckEnd, 'yyyy-MM-dd'),
-        days: rollingAbsence,
-      });
-      // We should stop at the first offense for a simpler check,
-      // but collecting all is better for user feedback.
-      // However, for application date validation, we can stop at the first.
-      // break;
-    }
-  }
-
-  // Re-run the full check on the application date itself (the window [ApplicationDate-1 year, ApplicationDate])
-  const appDateWindowStart = subDays(assessmentDate, 365);
-  const appDateAbsence = calculateAbsenceInPeriod({
-    trips,
-    startDate: appDateWindowStart,
-    endDate: assessmentDate,
-    preEntryPeriod,
-    visaStartDate,
-    vignetteEntryDate,
-  });
-
-  if (appDateAbsence > MAX_ABSENCE_IN_12_MONTHS) {
-    offendingWindows.push({
-      start: format(appDateWindowStart, 'yyyy-MM-dd'),
-      end: format(assessmentDate, 'yyyy-MM-dd'),
-      days: appDateAbsence,
-    });
-  }
-
-  // This is a simplified rolling check. The full rolling check should ideally iterate day-by-day or event-by-event.
-  // For now, let's use the simplification from the original code which checks the max across the whole period.
-  const maxAbsence = calculateMaxAbsenceInRolling12Months({
-    trips,
-    startDate: ilrPeriodStart,
-    endDate: assessmentDate,
-    preEntryPeriod,
-    visaStartDate,
-    vignetteEntryDate,
-  });
-
-  // If the full max check exceeds the limit, we must identify the offending window.
-  // For now, let's assume the max is found near one of the trip dates, and the `calculateMaxAbsenceInRolling12Months` handles it.
-
-  if (maxAbsence > MAX_ABSENCE_IN_12_MONTHS) {
-    // Since the underlying function only returns the max number, not the window,
-    // we'll need a better implementation of max absence calculation that returns the offending window.
-    // For the purpose of *fixing* the provided code, I will use a placeholder window to show the validation flow.
-    if (offendingWindows.length === 0) {
-      // Placeholder: assume the maximum is near the application date
-      offendingWindows.push({
-        start: format(subDays(assessmentDate, 365), 'yyyy-MM-dd'),
-        end: format(assessmentDate, 'yyyy-MM-dd'),
-        days: maxAbsence,
-      });
-    }
-  }
-
-  return offendingWindows;
-}
-
-/**
- * Calculates the earliest application date that is compliant with all rules:
- * 1. Not before the Legal Earliest Date.
- * 2. Has no excessive rolling 12-month absences in the preceding ILR period.
- * This is the implementation for the 'calculate auto-date based on visa info, current trips, ilr track' part of workflow step 4.
- */
-function calculateEarliestCompliantDate(params: {
-  ilrTrack: ILRTrack;
-  legalEarliestDate: Date;
-  trips: TripWithCalculations[];
-  preEntryPeriod: PreEntryPeriodInfo | null;
-  vignetteEntryDate: string;
-  visaStartDate: string;
-}): string {
-  const {
-    ilrTrack,
-    legalEarliestDate,
-    trips,
-    preEntryPeriod,
-    vignetteEntryDate,
-    visaStartDate,
-  } = params;
-
-  // Start the search from the legal earliest date
-  let candidateDate = legalEarliestDate;
-  const lastTrip = trips
-    .filter((t) => !t.isIncomplete)
-    .reduce((latest, trip) => {
-      const tripInDate = parseISO(trip.inDate);
-      return tripInDate > latest ? tripInDate : latest;
-    }, new Date(0));
-
-  const maxSearchDate = addYears(lastTrip, ilrTrack);
-  const daysToCheck = differenceInDays(maxSearchDate, candidateDate);
-  for (let i = 0; i <= daysToCheck; i++) {
-    const isCompliant =
-      checkExcessiveAbsence({
-        trips,
-        preEntryPeriod,
-        ilrTrack,
-        assessmentDate: candidateDate,
-        visaStartDate,
-        vignetteEntryDate,
-      }).length === 0;
-
-    if (isCompliant) {
-      return format(candidateDate, 'yyyy-MM-dd');
-    }
-
-    // Move to the next day
-    candidateDate = addDays(candidateDate, 1);
-  }
-
-  throw new Error('No compliant date found within the search range.');
-}
-
-/**
- * Calculates the actual legal earliest application date (Track Year anniversary - 28 days).
- */
-function calculateLegalEarliestDate(params: {
-  ilrTrack: ILRTrack;
-  preEntryPeriod: PreEntryPeriodInfo | null;
-  vignetteEntryDate: string;
-  visaStartDate: string;
-}): string {
-  const { ilrTrack, preEntryPeriod, vignetteEntryDate, visaStartDate } = params;
-
-  const qualifyingStartStr = getQualifyingStartDate(
-    preEntryPeriod,
-    vignetteEntryDate,
-    visaStartDate,
-  )
-    ?.toISOString()
-    .split('T')[0];
-
-  if (!qualifyingStartStr) return format(new Date(), 'yyyy-MM-dd');
-
-  const start = parseISO(qualifyingStartStr);
-  const requiredEndDate = addYears(start, ilrTrack);
-  const legalEarliestDate = subDays(requiredEndDate, 28); // The 28-day rule
-
-  return format(legalEarliestDate, 'yyyy-MM-dd');
-}
-
-/**
- * Final validation function, used for both auto-calculated and override dates.
+ * Validates eligibility for a specific assessment date.
+ * Enforces:
+ * 1. 28-day rule (TOO_EARLY).
+ * 2. Track-specific absence rules (Standard vs Long Residence Transitional).
  */
 function validateEligibility(params: {
   trips: TripWithCalculations[];
   preEntryPeriod: PreEntryPeriodInfo | null;
   ilrTrack: ILRTrack;
-  legalEarliestDate: string;
   assessmentDateStr: string;
-  vignetteEntryDate: string;
+  legalEarliestDateStr: string;
   visaStartDate: string;
+  vignetteEntryDate: string;
+  applicationDateOverride: string | null;
 }): ILRValidationResult {
   const {
     trips,
-    ilrTrack,
-    legalEarliestDate,
-    assessmentDateStr,
     preEntryPeriod,
-    vignetteEntryDate,
+    ilrTrack,
+    assessmentDateStr,
+    legalEarliestDateStr,
     visaStartDate,
+    vignetteEntryDate,
   } = params;
 
   const assessmentDate = parseISO(assessmentDateStr);
-  const legalDate = parseISO(legalEarliestDate);
+  const legalDate = parseISO(legalEarliestDateStr);
 
-  // Workflow Step 2 is checked in the main function now.
-
-  // Workflow Step 3/4 - Check TOO_EARLY
+  // Check 1: Is it too early?
   if (isBefore(assessmentDate, legalDate)) {
     return {
       status: 'INELIGIBLE',
@@ -424,23 +210,32 @@ function validateEligibility(params: {
     };
   }
 
-  // Workflow Step 4 - Check EXCESSIVE_ABSENCE
-  const offendingWindows = checkExcessiveAbsence({
+  // Determine Qualifying Period [End - Track Years, End]
+  // Guidance: We count backwards from the assessment date.
+  const qualifyingEndDate = assessmentDate;
+  // Use startOfDay to avoid timezone shifts when subtracting years
+  const qualifyingStartDate = startOfDay(
+    addYears(qualifyingEndDate, -ilrTrack),
+  );
+
+  // Check 2: Absence Rules
+  const absenceCheck = checkAbsences({
     trips,
     preEntryPeriod,
     ilrTrack,
-    assessmentDate,
+    qualifyingStartDate,
+    qualifyingEndDate,
     visaStartDate,
     vignetteEntryDate,
   });
 
-  if (offendingWindows.length > 0) {
+  if (!absenceCheck.passed) {
     return {
       status: 'INELIGIBLE',
       reason: {
         type: 'EXCESSIVE_ABSENCE',
-        message: `The period contains rolling 12-month periods where total absences exceed the 180-day limit.`,
-        offendingWindows: offendingWindows,
+        message: absenceCheck.reason || 'Absence limit exceeded.',
+        offendingWindows: absenceCheck.offendingWindows,
       },
     };
   }
@@ -451,211 +246,446 @@ function validateEligibility(params: {
   };
 }
 
-// --- UTILITY/HELPER FUNCTIONS (Revised/Kept) ---
-
 /**
- * Helper to determine the true qualifying start date.
+ * Searches for the first compliant date starting from the legal minimum.
+ * Optimizes by checking daily steps (robustness over complex jump logic).
  */
-function getQualifyingStartDate(
-  preEntryPeriod: PreEntryPeriodInfo | null,
-  vignetteEntryDate: string,
-  visaStartDate: string,
-): Date | null {
-  let qualifyingStartStr: string | null = null;
-  if (preEntryPeriod && preEntryPeriod.qualifyingStartDate) {
-    qualifyingStartStr = preEntryPeriod.qualifyingStartDate;
-  } else {
-    qualifyingStartStr = vignetteEntryDate || visaStartDate;
+function calculateEarliestCompliantDate(params: {
+  trips: TripWithCalculations[];
+  preEntryPeriod: PreEntryPeriodInfo | null;
+  ilrTrack: ILRTrack;
+  startSearchDateStr: string;
+  visaStartDate: string;
+  vignetteEntryDate: string;
+  applicationDateOverride: string | null;
+}): string {
+  const { startSearchDateStr, ilrTrack } = params;
+  let candidateDate = parseISO(startSearchDateStr);
+
+  // Define a reasonable search horizon (e.g., 2 years into the future) to prevent infinite loops
+  // If a user has massive absences, they might strictly qualify in 10 years, not 5.
+  const maxSearchDays = 365 * 2;
+
+  for (let i = 0; i < maxSearchDays; i++) {
+    const qualifyingEndDate = candidateDate;
+    const qualifyingStartDate = startOfDay(
+      addYears(qualifyingEndDate, -ilrTrack),
+    );
+
+    const check = checkAbsences({
+      ...params,
+      qualifyingStartDate,
+      qualifyingEndDate,
+    });
+
+    if (check.passed) {
+      return format(candidateDate, 'yyyy-MM-dd');
+    }
+
+    candidateDate = addDays(candidateDate, 1);
   }
 
-  if (!qualifyingStartStr) return null;
+  // Fallback if no date found within horizon (highly unlikely unless huge continuous absences)
+  return format(candidateDate, 'yyyy-MM-dd');
+}
 
-  const start = parseISO(qualifyingStartStr);
-  return isNaN(start.getTime()) ? null : start;
+// --- ABSENCE CALCULATION ENGINE ---
+
+interface AbsenceCheckResult {
+  passed: boolean;
+  reason?: string;
+  offendingWindows: OffendingWindow[];
 }
 
 /**
- * Calculates the total absence within a specific date range [startDate, endDate].
- * Used by rolling checks.
+ * The core engine that routes logic between Standard Rules (3/5y) and Transitional Rules (10y).
+ * Strictly follows v8.0 Guidance.
  */
-function calculateAbsenceInPeriod(params: {
+function checkAbsences(params: {
   trips: TripWithCalculations[];
-  startDate: Date;
-  endDate: Date;
   preEntryPeriod: PreEntryPeriodInfo | null;
+  ilrTrack: ILRTrack;
+  qualifyingStartDate: Date;
+  qualifyingEndDate: Date;
   visaStartDate: string;
   vignetteEntryDate: string;
-}): number {
+}): AbsenceCheckResult {
   const {
     trips,
-    startDate,
-    endDate,
     preEntryPeriod,
+    ilrTrack,
+    qualifyingStartDate,
+    qualifyingEndDate,
     visaStartDate,
     vignetteEntryDate,
   } = params;
-  let absenceDays = 0;
-  const completeTrips = trips.filter((t) => !t.isIncomplete);
 
-  // 1. Calculate absence from pre-entry period (if applicable)
-  if (preEntryPeriod?.canCount && visaStartDate && vignetteEntryDate) {
-    const visaStart = parseISO(visaStartDate);
-    const vignetteEntry = parseISO(vignetteEntryDate);
+  // 1. Build a unified list of "Absence Intervals"
+  // Each interval has { start, end, days }.
+  // This abstracts away "Trips" vs "Pre-Entry Gap".
+  const absenceIntervals = buildAbsenceIntervals(
+    trips,
+    preEntryPeriod,
+    visaStartDate,
+    vignetteEntryDate,
+  );
 
-    // Calculate intersection of [startDate, endDate] and [visaStart, vignetteEntry]
-    const intersectionStart = visaStart > startDate ? visaStart : startDate;
-    const intersectionEnd = vignetteEntry < endDate ? vignetteEntry : endDate;
+  // 2. Filter intervals to those overlapping the Qualifying Period
+  const relevantAbsences = absenceIntervals.filter((abs) =>
+    areIntervalsOverlapping(
+      { start: abs.start, end: abs.end },
+      { start: qualifyingStartDate, end: qualifyingEndDate },
+    ),
+  );
 
-    if (intersectionStart <= intersectionEnd) {
-      // The pre-entry period *is* absence (not physically in the UK)
-      const daysInIntersection = differenceInDays(
-        intersectionEnd,
-        intersectionStart,
-      );
-      absenceDays += daysInIntersection;
-    }
+  // --- LOGIC BRANCH: LONG RESIDENCE (10 YEAR) ---
+  if (ilrTrack === 10) {
+    return checkLongResidenceAbsences(
+      relevantAbsences,
+      qualifyingStartDate,
+      qualifyingEndDate,
+    );
   }
 
-  // 2. Calculate absence from recorded trips (out-date + 1 day to in-date - 1 day)
-  completeTrips.forEach((trip) => {
-    const tripOut = parseISO(trip.outDate);
-    const tripIn = parseISO(trip.inDate);
-
-    // The actual absence period (full days outside the UK) is [tripOut + 1 day, tripIn - 1 day]
-    const absenceStart = addDays(tripOut, 1);
-    const absenceEnd = subDays(tripIn, 1);
-
-    // Calculate intersection of [startDate, endDate] and [absenceStart, absenceEnd]
-    const intersectionStart =
-      absenceStart > startDate ? absenceStart : startDate;
-    const intersectionEnd = absenceEnd < endDate ? absenceEnd : endDate;
-
-    if (intersectionStart <= intersectionEnd) {
-      const daysInIntersection =
-        differenceInDays(intersectionEnd, intersectionStart) + 1;
-      absenceDays += daysInIntersection;
-    }
-  });
-
-  return absenceDays;
+  // --- LOGIC BRANCH: STANDARD (3/5 YEAR) ---
+  return checkStandardRollingAbsences(
+    relevantAbsences,
+    qualifyingStartDate,
+    qualifyingEndDate,
+  );
 }
 
 /**
- * Finds the maximum rolling 12-month absence within a larger period [startDate, endDate].
- * This is an expensive operation that checks relevant dates.
+ * Handles Long Residence Transitional Rules (Guidance v8).
+ * - Pre-11 April 2024: Max 184 days single trip, Max 548 days total.
+ * - Post-11 April 2024: Max 180 days rolling 12-month.
  */
-function calculateMaxAbsenceInRolling12Months(params: {
-  trips: TripWithCalculations[];
-  startDate: Date;
-  endDate: Date;
-  preEntryPeriod: PreEntryPeriodInfo | null;
-  visaStartDate: string;
-  vignetteEntryDate: string;
-}): number {
-  const { trips, startDate, endDate } = params;
-  const completeTrips = trips.filter((t) => !t.isIncomplete);
+function checkLongResidenceAbsences(
+  absences: { start: Date; end: Date; days: number }[],
+  qualifyingStartDate: Date,
+  qualifyingEndDate: Date,
+): AbsenceCheckResult {
+  const transitionalDate = parseISO(TRANSITIONAL_DATE_STR);
+  let preAprilTotalDays = 0;
+  const offendingWindows: OffendingWindow[] = [];
 
-  let maxAbsence = 0;
-  const checkDates: Date[] = [startDate, endDate]; // Always check the start and end of the ILR period
+  for (const abs of absences) {
+    // Determine if absence started before 11 April 2024
+    // Guidance: "where the absence started before 11 April 2024"
+    if (isBefore(abs.start, transitionalDate)) {
+      // RULE 1: Single limit 184 days
+      if (abs.days > MAX_SINGLE_ABSENCE_PRE_APRIL) {
+        offendingWindows.push({
+          start: format(abs.start, 'yyyy-MM-dd'),
+          end: format(abs.end, 'yyyy-MM-dd'),
+          days: abs.days,
+        });
+        return {
+          passed: false,
+          reason: `A single absence starting before 11 April 2024 exceeds ${MAX_SINGLE_ABSENCE_PRE_APRIL} days.`,
+          offendingWindows,
+        };
+      }
 
-  // Add all trip departure and return dates that fall within the ILR period [startDate, endDate]
-  completeTrips.forEach((trip) => {
-    const tripOutDate = parseISO(trip.outDate);
-    const tripInDate = parseISO(trip.inDate);
+      // RULE 2: Accumulate Pre-April Total
+      // Guidance: "total of 548 days... in any part of their qualifying period before 11 April 2024"
+      // We count the days of this absence that strictly fall BEFORE transitional date AND inside qualifying period.
+      const overlapStart =
+        abs.start < qualifyingStartDate ? qualifyingStartDate : abs.start;
+      const overlapEnd =
+        abs.end > transitionalDate ? subDays(transitionalDate, 1) : abs.end; // Up to April 10
 
-    // Check days around the departure (absence starts the next day)
-    if (tripOutDate >= startDate && tripOutDate <= endDate) {
-      checkDates.push(addDays(tripOutDate, 1));
+      if (overlapStart <= overlapEnd) {
+        preAprilTotalDays += differenceInDays(overlapEnd, overlapStart) + 1;
+      }
+    } else {
+      // Started ON or AFTER 11 April 2024 -> falls into Rolling check later.
+      // We don't check single limit here, we check rolling below.
     }
-    // Check days around the return (absence ends the day before)
-    if (tripInDate >= startDate && tripInDate <= endDate) {
-      checkDates.push(subDays(tripInDate, 1));
-    }
-  });
-
-  // Use a Set for unique dates and sort them
-  const uniqueCheckDates = Array.from(
-    new Set(checkDates.map((d) => d.toISOString())),
-  )
-    .map((s) => parseISO(s))
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  for (const checkDate of uniqueCheckDates) {
-    // Only check dates that are within the ILR period.
-    if (checkDate < startDate || checkDate > endDate) continue;
-
-    // We are checking the 12-month window *ending* on `checkDate`
-    const windowStart = subDays(checkDate, 365);
-
-    // Calculate the absence in the period [windowStart, checkDate]
-    const absenceDays = calculateAbsenceInPeriod({
-      ...params,
-      startDate: windowStart,
-      endDate: checkDate,
-    });
-
-    maxAbsence = Math.max(maxAbsence, absenceDays);
   }
 
-  return maxAbsence;
-}
-
-function calculateTripDurations(trips: TripRecord[]): TripWithCalculations[] {
-  return trips.map((trip) => {
-    const isIncomplete =
-      !trip.outDate ||
-      !trip.inDate ||
-      !isValidDate(trip.outDate) ||
-      !isValidDate(trip.inDate);
-
-    let calendarDays: number | null = null;
-    let fullDays: number | null = null;
-
-    if (trip.outDate && trip.inDate && !isIncomplete) {
-      calendarDays = differenceInDays(trip.inDate, trip.outDate);
-      fullDays = Math.max(0, calendarDays - 1);
-    }
-
+  // Check Total Limit (Pre-April)
+  if (preAprilTotalDays > MAX_TOTAL_ABSENCE_PRE_APRIL) {
     return {
-      ...trip,
-      calendarDays,
-      fullDays,
-      isIncomplete,
+      passed: false,
+      reason: `Total absences in the qualifying period before 11 April 2024 exceed ${MAX_TOTAL_ABSENCE_PRE_APRIL} days.`,
+      offendingWindows: [
+        {
+          start: format(qualifyingStartDate, 'yyyy-MM-dd'),
+          end: TRANSITIONAL_DATE_STR,
+          days: preAprilTotalDays,
+        },
+      ],
     };
-  });
+  }
+
+  // RULE 3: Rolling 180 days (Only for absences starting ON/AFTER 11 April 2024)
+  // Guidance: "from 11 April 2024... not outside UK for more than 180 days in any 12-month period"
+  // Implementation: We run the rolling checker, but we only flag windows where the absence contributing to the excess
+  // actually falls into the post-April period.
+  // Actually, simpler interpretation: The rule applies to the PERIOD starting 11 April.
+  // We run the rolling check bounded by [Transitional Date, Qualifying End].
+
+  // Check rolling absences only for the window [11 April 2024 -> End]
+  // Note: An absence starting after April 11 counts. An absence straddling April 11 (started before)
+  // counts towards Pre-April rules (single limit), NOT rolling limit?
+  // Guidance p.29 Ex 2: "The absence from 1 August 2024... did not exceed... 180 days in any 12-month rolling... earliest rolling period is from 1 August 2024".
+  // This implies rolling windows only start checking from the first absence starting after the date.
+
+  // We filter absences to those starting >= 11 April 2024
+  const postAprilAbsences = absences.filter(
+    (a) => !isBefore(a.start, transitionalDate),
+  );
+
+  if (postAprilAbsences.length > 0) {
+    const rollingCheck = checkRollingAbsences(
+      postAprilAbsences,
+      transitionalDate, // Start checking rolling windows from here
+      qualifyingEndDate,
+    );
+    if (!rollingCheck.passed) return rollingCheck;
+  }
+
+  return { passed: true, offendingWindows: [] };
 }
+
+/**
+ * Handles Standard 3/5 Year Routes.
+ * - Simple Rolling 180-day limit across the ENTIRE qualifying period.
+ */
+function checkStandardRollingAbsences(
+  absences: { start: Date; end: Date; days: number }[],
+  qualifyingStartDate: Date,
+  qualifyingEndDate: Date,
+): AbsenceCheckResult {
+  return checkRollingAbsences(absences, qualifyingStartDate, qualifyingEndDate);
+}
+
+/**
+ * Generic Rolling 12-month Checker.
+ * Checks if any 12-month window within [periodStart, periodEnd] exceeds 180 days.
+ * Efficient algorithm: Identify critical points (trip ends) and check windows ending there.
+ */
+function checkRollingAbsences(
+  absences: { start: Date; end: Date; days: number }[],
+  periodStart: Date,
+  periodEnd: Date,
+): AbsenceCheckResult {
+  const offendingWindows: OffendingWindow[] = [];
+
+  // Optimization: Only check windows ending on:
+  // 1. An absence end date (most likely point to breach limit)
+  // 2. The period end date
+  // 3. Every day? (Safe but slow).
+  // Given the complexity of "rolling", checking every day is safest and acceptable for client-side (365*5 = ~1800 checks).
+  // Optimization: Check only days where an absence exists in the preceding 12 months.
+
+  // We scan daily from periodStart to periodEnd.
+  // To verify strict compliance, we should check *every* day in the qualifying period.
+  const totalDays = differenceInDays(periodEnd, periodStart);
+
+  // Heuristic: If total absences are small, skip.
+  const totalAbs = absences.reduce((sum, a) => sum + a.days, 0);
+  if (totalAbs <= 180) return { passed: true, offendingWindows: [] };
+
+  // Helper to count days in [winStart, winEnd]
+  const countDaysInWindow = (winStart: Date, winEnd: Date) => {
+    let sum = 0;
+    for (const abs of absences) {
+      // Intersect (abs.start, abs.end) with (winStart, winEnd)
+      const interStart = abs.start < winStart ? winStart : abs.start;
+      const interEnd = abs.end > winEnd ? winEnd : abs.end;
+      if (interStart <= interEnd) {
+        sum += differenceInDays(interEnd, interStart) + 1;
+      }
+    }
+    return sum;
+  };
+
+  // Iterate daily
+  for (let i = 0; i <= totalDays; i++) {
+    const checkDate = addDays(periodStart, i);
+    const windowStart = subDays(checkDate, 365); // The 12-month window ending on checkDate
+
+    // Window must effectively overlap with the period we are interested in checking?
+    // Actually, guidance says "in any 12-month period".
+    // We check the 365 days leading up to checkDate.
+    // However, we only care if the breach occurs *within* the Qualifying Period.
+    // If checkDate is the first day of QP, windowStart is 1 year prior.
+    // Absences *prior* to QP usually don't count unless standard rules say "continuous residence".
+    // Standard rule: "not been absent... for more than 180 days...".
+    // Usually means within the 5 year period. Windows entirely inside.
+    // But a window could straddle the start?
+    // Standard interpretation: The rolling window calculation applies to the period of residence being relied upon.
+    // So we check windows ending at [Start + 365] up to [End].
+    // If i < 365, the window starts before periodStart.
+    // We usually cap the window at periodStart for calculation if strict,
+    // OR we assume we only check full 12-month windows contained in the period?
+    // Actually, standard is "any rolling 12-month period".
+    // We will check windows ending on any day from (PeriodStart) to (PeriodEnd).
+    // Note: If checking a window ending on PeriodStart, it looks at the year BEFORE the period.
+    // We should start checking windows that *start* at PeriodStart.
+    // So checkDate starts at PeriodStart + 365.
+
+    if (i < 365) continue; // Skip partial first year windows?
+    // Actually, simplest safe approach: Check every window ending on a day in the period,
+    // but only count absences that fall strictly within the qualifying period?
+    // NO. If you are absent for 180 days in Year 1, you fail.
+    // So we check from day 365 to end.
+
+    // Correction: Rolling means any period of length 365 days.
+    // The first valid full rolling period starts at Day 0 and ends at Day 365.
+    // So we start checking at checkDate = Day 365.
+
+    const daysCount = countDaysInWindow(windowStart, checkDate);
+    if (daysCount > MAX_ABSENCE_IN_12_MONTHS) {
+      offendingWindows.push({
+        start: format(windowStart, 'yyyy-MM-dd'),
+        end: format(checkDate, 'yyyy-MM-dd'),
+        days: daysCount,
+      });
+      // Return immediately on first failure for performance/clarity, or collect all?
+      // Collecting all can be spammy. Return first.
+      return {
+        passed: false,
+        reason: 'Rolling 12-month absence limit exceeded.',
+        offendingWindows,
+      };
+    }
+  }
+
+  return { passed: true, offendingWindows: [] };
+}
+
+/**
+ * Converts Trips and Pre-Entry info into a normalized list of {start, end, days} objects.
+ */
+function buildAbsenceIntervals(
+  trips: TripWithCalculations[],
+  preEntry: PreEntryPeriodInfo | null,
+  visaStartDate: string,
+  vignetteEntryDate: string,
+): { start: Date; end: Date; days: number }[] {
+  const intervals: { start: Date; end: Date; days: number }[] = [];
+
+  // 1. Pre-Entry Gap (if strictly valid and exists)
+  // Logic: Time between Visa Start and Entry is an absence.
+  if (
+    preEntry &&
+    preEntry.delayDays > 0 &&
+    visaStartDate &&
+    vignetteEntryDate
+  ) {
+    // Gap starts on Visa Start. Ends on Entry Date - 1 day?
+    // Actually, if I enter on Jan 5, and Visa started Jan 1.
+    // Jan 1, 2, 3, 4 are absences.
+    // Entry date is day of arrival (present).
+    const start = parseISO(visaStartDate);
+    const end = subDays(parseISO(vignetteEntryDate), 1);
+    if (start <= end) {
+      intervals.push({
+        start,
+        end,
+        days: differenceInDays(end, start) + 1,
+      });
+    }
+  }
+
+  // 2. Trips
+  // Logic: Departure and Return are PRESENT. Absence is days BETWEEN.
+  trips
+    .filter((t) => !t.isIncomplete)
+    .forEach((t) => {
+      const outDate = parseISO(t.outDate);
+      const inDate = parseISO(t.inDate);
+      const absStart = addDays(outDate, 1);
+      const absEnd = subDays(inDate, 1);
+
+      if (absStart <= absEnd) {
+        intervals.push({
+          start: absStart,
+          end: absEnd,
+          days: differenceInDays(absEnd, absStart) + 1,
+        });
+      }
+    });
+
+  return intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+// --- HELPER FUNCTIONS ---
 
 function calculatePreEntryPeriod(
   visaStartDate: string,
   vignetteEntryDate: string,
 ): PreEntryPeriodInfo | null {
-  // ... (unchanged from original code)
-  if (!visaStartDate || !vignetteEntryDate) {
+  if (!visaStartDate || !vignetteEntryDate) return null;
+  if (!isValidDate(visaStartDate) || !isValidDate(vignetteEntryDate))
     return null;
-  }
 
-  const visaStart = new Date(visaStartDate);
-  const vignetteEntry = new Date(vignetteEntryDate);
+  const start = parseISO(visaStartDate);
+  const entry = parseISO(vignetteEntryDate);
 
-  if (isNaN(visaStart.getTime()) || isNaN(vignetteEntry.getTime())) {
-    return null;
-  }
+  const delayDays = differenceInDays(entry, start);
+  if (delayDays < 0) return null; // Error case handled elsewhere or ignored
 
-  const delayDays = differenceInDays(vignetteEntry, visaStart);
-  if (delayDays < 0) {
-    return null;
-  }
-
-  const canCount = delayDays <= MAX_ALLOWABLE_PRE_ENTRY_DAYS;
-  const qualifyingStartDate = canCount ? visaStartDate : vignetteEntryDate;
+  // Guidance: Pre-entry period counts towards qualifying period (lawful residence)
+  // BUT counts as an absence.
+  // Generally, if delay > 180 (or 90 for old rules), it might break continuity,
+  // but here we just flag if it CAN count.
+  const canCount = delayDays <= MAX_ALLOWABLE_PRE_ENTRY_DAYS; // 180 days usually
+  const qualifyingStartDate = visaStartDate; // Always starts on Visa Start if lawful
 
   return {
-    hasPreEntry: true,
+    hasPreEntry: delayDays > 0,
     delayDays,
     canCount,
-    qualifyingStartDate,
+    qualifyingStartDate: format(start, 'yyyy-MM-dd'),
   };
 }
+
+function calculateLegalEarliestDate(params: {
+  ilrTrack: ILRTrack;
+  preEntryPeriod: PreEntryPeriodInfo | null;
+  vignetteEntryDate: string;
+  visaStartDate: string;
+}): string {
+  const { ilrTrack, vignetteEntryDate, visaStartDate } = params;
+
+  // Determining the "Start of Qualifying Period"
+  // Usually Visa Start Date (if pre-entry gap is allowed/lawful).
+  let startStr = visaStartDate;
+
+  // If pre-entry gap is too huge (e.g. > 180 days), continuity might be broken at start,
+  // forcing the clock to start at Entry. But typically, the app assumes valid visa.
+  // We stick to Visa Start as the legal start of the period.
+  if (!startStr && vignetteEntryDate) startStr = vignetteEntryDate;
+  if (!startStr) return format(new Date(), 'yyyy-MM-dd');
+
+  const start = parseISO(startStr);
+  const completionDate = addYears(start, ilrTrack);
+  const earliestDate = subDays(completionDate, 28);
+
+  return format(earliestDate, 'yyyy-MM-dd');
+}
+
+function createErrorResult(
+  trips: TripWithCalculations[],
+  type: IneligibilityReason['type'],
+  message: string,
+): TravelCalculationResult {
+  return {
+    tripsWithCalculations: trips,
+    preEntryPeriod: null,
+    validation: { status: 'INELIGIBLE', reason: { type, message } },
+    summary: {} as ILRSummary,
+    rollingAbsenceData: [],
+    timelinePoints: [],
+    tripBars: [],
+  } as TravelCalculationResult;
+}
+
+// --- UI DATA BUILDERS (Summary, Rolling Data, Bars) ---
 
 function buildSummary(params: {
   tripsWithCalculations: TripWithCalculations[];
@@ -666,94 +696,86 @@ function buildSummary(params: {
   effectiveApplicationDate: string | null;
   validation: ILRValidationResult;
   autoDateUsed: boolean;
-}): TravelCalculationResult['summary'] {
+}): ILRSummary {
   const {
     tripsWithCalculations,
-    preEntryPeriod,
-    vignetteEntryDate,
-    visaStartDate,
-    ilrTrack,
     effectiveApplicationDate,
     validation,
+    preEntryPeriod,
+    visaStartDate,
+    vignetteEntryDate,
+    ilrTrack,
   } = params;
-
   const complete = tripsWithCalculations.filter((t) => !t.isIncomplete);
-  const totalFullDays = complete.reduce((sum, t) => sum + (t.fullDays || 0), 0);
 
-  let maxAbsenceInAny12Months: number | null = null;
-  let hasExceeded180Days = false;
-  let ilrEligibilityDate: string | null = null;
-  let daysUntilEligible: number | null = null;
+  // Total Days logic
+  const tripDays = complete.reduce((sum, t) => sum + (t.fullDays || 0), 0);
+  const preEntryDays = preEntryPeriod?.delayDays || 0;
+  const totalFullDays = tripDays + preEntryDays; // Rough total, not strict windowed
+
+  // Calculate Max Rolling Absence (just for display/risk context)
+  // We use the same rolling checker but over the entire possible history for visualization
+  // This helps user see "danger zones" even if they passed validation
+  let maxAbsenceInAny12Months = 0;
+
+  if (effectiveApplicationDate && visaStartDate) {
+    const end = parseISO(effectiveApplicationDate);
+    const start = parseISO(visaStartDate);
+    const intervals = buildAbsenceIntervals(
+      tripsWithCalculations,
+      preEntryPeriod,
+      visaStartDate,
+      vignetteEntryDate,
+    );
+
+    // Quick scan of max rolling
+    const days = differenceInDays(end, start);
+    if (days > 0 && days < 5000) {
+      for (let i = 365; i <= days; i += 30) {
+        // Sampling for speed in summary
+        const d = addDays(start, i);
+        const winStart = subDays(d, 365);
+        // simple count
+        let sum = 0;
+        intervals.forEach((abc) => {
+          const is = abc.start < winStart ? winStart : abc.start;
+          const ie = abc.end > d ? d : abc.end;
+          if (is <= ie) sum += differenceInDays(ie, is) + 1;
+        });
+        if (sum > maxAbsenceInAny12Months) maxAbsenceInAny12Months = sum;
+      }
+    }
+  }
+
+  const maxAllowedAbsense = ilrTrack === 10 ? MAX_SINGLE_ABSENCE_PRE_APRIL : MAX_ABSENCE_IN_12_MONTHS;
+  const hasExceededAllowedAbsense = maxAbsenceInAny12Months > maxAllowedAbsense;
+
+  // Continuous Leave Days
+  // (Total Period Days) - (Total Absences in Period)
   let continuousLeaveDays: number | null = null;
+  let daysUntilEligible: number | null = null;
 
   if (validation.status === 'ELIGIBLE' && effectiveApplicationDate) {
-    ilrEligibilityDate = effectiveApplicationDate;
-    daysUntilEligible = differenceInDays(
-      parseISO(effectiveApplicationDate),
-      new Date(),
-    );
-
-    // Re-run max absence calculation for the specific period used for the application date.
     const appDate = parseISO(effectiveApplicationDate);
-    const qualifyingStart = getQualifyingStartDate(
+    const start = startOfDay(addYears(appDate, -ilrTrack));
+    const totalPeriod = differenceInDays(appDate, start) + 1;
+
+    // Count exact absences in this window
+    const intervals = buildAbsenceIntervals(
+      tripsWithCalculations,
       preEntryPeriod,
-      vignetteEntryDate,
       visaStartDate,
-    );
-
-    if (qualifyingStart) {
-      const ilrPeriodStartBaseline = subDays(addYears(appDate, -ilrTrack), 0);
-      const ilrPeriodStart =
-        ilrPeriodStartBaseline > qualifyingStart
-          ? ilrPeriodStartBaseline
-          : qualifyingStart;
-
-      maxAbsenceInAny12Months = calculateMaxAbsenceInRolling12Months({
-        trips: tripsWithCalculations,
-        startDate: ilrPeriodStart,
-        endDate: appDate,
-        preEntryPeriod,
-        visaStartDate,
-        vignetteEntryDate,
-      });
-      hasExceeded180Days = maxAbsenceInAny12Months > MAX_ABSENCE_IN_12_MONTHS;
-
-      // Calculate continuous leave days (Total days in ILR period - Total Absence in ILR period)
-      const totalDaysInPeriod = differenceInDays(appDate, ilrPeriodStart) + 1; // +1 to include start/end days
-      const totalAbsenceInPeriod = calculateAbsenceInPeriod({
-        trips: tripsWithCalculations,
-        startDate: ilrPeriodStart,
-        endDate: appDate,
-        preEntryPeriod,
-        visaStartDate,
-        vignetteEntryDate,
-      });
-      continuousLeaveDays = totalDaysInPeriod - totalAbsenceInPeriod;
-    }
-  } else if (
-    validation.status === 'INELIGIBLE' &&
-    validation.reason.type === 'EXCESSIVE_ABSENCE'
-  ) {
-    // If ineligible due to excessive absence, we can try to find the absolute max absence
-    // up to today's date for a general risk summary.
-    const today = new Date();
-    const qualifyingStart = getQualifyingStartDate(
-      preEntryPeriod,
       vignetteEntryDate,
-      visaStartDate,
     );
+    let absInPeriod = 0;
+    intervals.forEach((abc) => {
+      const is = abc.start < start ? start : abc.start;
+      const ie = abc.end > appDate ? appDate : abc.end;
+      if (is <= ie) absInPeriod += differenceInDays(ie, is) + 1;
+    });
 
-    if (qualifyingStart) {
-      maxAbsenceInAny12Months = calculateMaxAbsenceInRolling12Months({
-        trips: tripsWithCalculations,
-        startDate: qualifyingStart,
-        endDate: today,
-        preEntryPeriod,
-        visaStartDate,
-        vignetteEntryDate,
-      });
-      hasExceeded180Days = maxAbsenceInAny12Months > MAX_ABSENCE_IN_12_MONTHS;
-    }
+    continuousLeaveDays = totalPeriod - absInPeriod;
+    daysUntilEligible = differenceInDays(appDate, new Date());
   }
 
   return {
@@ -763,85 +785,63 @@ function buildSummary(params: {
     totalFullDays,
     continuousLeaveDays,
     maxAbsenceInAny12Months,
-    hasExceeded180Days,
-    ilrEligibilityDate,
+    hasExceededAllowedAbsense,
+    ilrEligibilityDate: effectiveApplicationDate,
     daysUntilEligible,
     autoDateUsed: params.autoDateUsed,
   };
 }
 
-function getRiskLevel(days: number): 'low' | 'caution' | 'critical' {
-  // ... (unchanged from original code)
-  if (days >= MAX_ABSENCE_IN_12_MONTHS) return 'critical';
-  if (days >= 150) return 'caution';
-  return 'low';
-}
-
 function buildRollingAbsenceData(params: {
   tripsWithCalculations: TripWithCalculations[];
+  preEntryPeriod: PreEntryPeriodInfo | null;
   vignetteEntryDate: string;
   visaStartDate: string;
 }): RollingDataPoint[] {
-  // ... (unchanged from original code)
-  const { tripsWithCalculations, vignetteEntryDate, visaStartDate } = params;
-  const startDate = vignetteEntryDate || visaStartDate;
+  const {
+    tripsWithCalculations,
+    preEntryPeriod,
+    visaStartDate,
+    vignetteEntryDate,
+  } = params;
+  const startStr = visaStartDate || vignetteEntryDate;
+  if (!startStr) return [];
 
-  if (!startDate) return [];
+  const start = parseISO(startStr);
+  const end = new Date(); // Show up to today
+  const totalDays = differenceInDays(end, start);
 
-  const start = parseISO(startDate);
-  const today = new Date();
-  const totalDays = differenceInDays(today, start);
+  if (totalDays < 0 || totalDays > 4000) return []; // Safety
 
-  if (totalDays < 0 || totalDays > 3650) {
-    return [];
-  }
+  const intervals = buildAbsenceIntervals(
+    tripsWithCalculations,
+    preEntryPeriod,
+    visaStartDate,
+    vignetteEntryDate,
+  );
+  const points: RollingDataPoint[] = [];
+  const step = Math.max(1, Math.floor(totalDays / 100)); // ~100 points
 
-  const completeTrips = tripsWithCalculations.filter((t) => !t.isIncomplete);
-  const rollingPoints: RollingDataPoint[] = [];
-  const sampleInterval = Math.max(1, Math.floor(totalDays / 200));
+  for (let i = 0; i <= totalDays; i += step) {
+    const current = addDays(start, i);
+    const windowStart = subDays(current, 365);
 
-  for (let i = 0; i <= totalDays; i += sampleInterval) {
-    const currentDate = addDays(start, i);
-    const windowStart = addDays(currentDate, -365);
-
-    const absenceDays = calculateAbsenceInPeriod({
-      trips: completeTrips,
-      startDate: windowStart,
-      endDate: currentDate,
-      preEntryPeriod: calculatePreEntryPeriod(visaStartDate, vignetteEntryDate),
-      visaStartDate,
-      vignetteEntryDate,
+    // Calculate rolling absence ending on `current`
+    let sum = 0;
+    intervals.forEach((abc) => {
+      const is = abc.start < windowStart ? windowStart : abc.start;
+      const ie = abc.end > current ? current : abc.end;
+      if (is <= ie) sum += differenceInDays(ie, is) + 1;
     });
 
-    rollingPoints.push({
-      date: currentDate.toISOString(),
-      rollingDays: absenceDays,
-      riskLevel: getRiskLevel(absenceDays),
-      formattedDate: format(currentDate, 'dd/MM/yyyy'),
-    });
-  }
-
-  // Ensure the current date is always included
-  if (totalDays % sampleInterval !== 0 || totalDays === 0) {
-    const windowStart = addDays(today, -365);
-    const absenceDays = calculateAbsenceInPeriod({
-      trips: completeTrips,
-      startDate: windowStart,
-      endDate: today,
-      preEntryPeriod: calculatePreEntryPeriod(visaStartDate, vignetteEntryDate),
-      visaStartDate,
-      vignetteEntryDate,
-    });
-
-    rollingPoints.push({
-      date: today.toISOString(),
-      rollingDays: absenceDays,
-      riskLevel: getRiskLevel(absenceDays),
-      formattedDate: format(today, 'dd/MM/yyyy'),
+    points.push({
+      date: current.toISOString(),
+      rollingDays: sum,
+      riskLevel: sum > 180 ? 'critical' : sum >= 150 ? 'caution' : 'low',
+      formattedDate: format(current, 'dd/MM/yyyy'),
     });
   }
-
-  return rollingPoints;
+  return points;
 }
 
 function buildTimelinePoints(params: {
@@ -849,44 +849,38 @@ function buildTimelinePoints(params: {
   vignetteEntryDate: string;
   visaStartDate: string;
 }): TimelinePoint[] {
-  // ... (unchanged from original code)
-  const { tripsWithCalculations, vignetteEntryDate, visaStartDate } = params;
-  const startDate = vignetteEntryDate || visaStartDate;
+  const { tripsWithCalculations, visaStartDate } = params;
+  if (!visaStartDate) return [];
+  const start = parseISO(visaStartDate);
+  const end = new Date();
+  const totalDays = differenceInDays(end, start);
+  if (totalDays < 0 || totalDays > 4000) return [];
 
-  if (!startDate) {
-    return [];
-  }
+  // Map trips to simple check
+  const activeTrips = tripsWithCalculations
+    .filter((t) => !t.isIncomplete)
+    .map((t) => ({ start: parseISO(t.outDate), end: parseISO(t.inDate) }));
 
-  const start = parseISO(startDate);
-  const today = new Date();
-  const totalDays = differenceInDays(today, start);
-
-  if (totalDays < 0 || totalDays > 3650) {
-    return [];
-  }
-
-  const completeTrips = tripsWithCalculations.filter((t) => !t.isIncomplete);
-  const timelinePoints: TimelinePoint[] = [];
+  const points: TimelinePoint[] = [];
+  // For timeline, we might not need every single day if it's too heavy,
+  // but originally it loops every day. Let's keep it but optimize loop.
+  // Actually, UI usually needs sparse data or simplified.
+  // We'll return empty if too large or just limits.
+  // Let's stick to original logic but ensure efficiency.
 
   for (let i = 0; i <= totalDays; i++) {
-    const currentDate = addDays(start, i);
-    const dateStr = currentDate.toISOString().split('T')[0];
-
-    const activeTrips = completeTrips.filter((trip) => {
-      const tripOut = parseISO(trip.outDate);
-      const tripIn = parseISO(trip.inDate);
-      return currentDate >= tripOut && currentDate <= tripIn;
-    });
-
-    timelinePoints.push({
-      date: dateStr,
+    const d = addDays(start, i);
+    const count = activeTrips.filter((t) =>
+      isWithinInterval(d, { start: t.start, end: t.end }),
+    ).length;
+    points.push({
+      date: format(d, 'yyyy-MM-dd'),
       daysSinceStart: i,
-      tripCount: activeTrips.length,
-      formattedDate: format(currentDate, 'dd/MM/yyyy'),
+      tripCount: count,
+      formattedDate: format(d, 'dd/MM/yyyy'),
     });
   }
-
-  return timelinePoints;
+  return points;
 }
 
 function buildTripBars(params: {
@@ -894,32 +888,24 @@ function buildTripBars(params: {
   vignetteEntryDate: string;
   visaStartDate: string;
 }): TripBar[] {
-  // ... (unchanged from original code)
-  const { tripsWithCalculations, vignetteEntryDate, visaStartDate } = params;
-  const startDate = vignetteEntryDate || visaStartDate;
+  const { tripsWithCalculations, visaStartDate } = params;
+  if (!visaStartDate) return [];
+  const start = parseISO(visaStartDate);
 
-  if (!startDate) {
-    return [];
-  }
-
-  const start = parseISO(startDate);
-  const completeTrips = tripsWithCalculations.filter((t) => !t.isIncomplete);
-
-  return completeTrips.map((trip) => {
-    const tripOutDate = parseISO(trip.outDate);
-    const tripInDate = parseISO(trip.inDate);
-    const tripStart = differenceInDays(tripOutDate, start);
-    const tripEnd = differenceInDays(tripInDate, start);
-
-    return {
-      date: trip.outDate,
-      tripStart,
-      tripEnd,
-      tripDuration: trip.fullDays || 0,
-      tripLabel: `${trip.outRoute || 'Unknown'} -> ${trip.inRoute || 'Unknown'}`,
-      formattedDate: format(tripOutDate, 'dd/MM/yyyy'),
-      outDate: trip.outDate,
-      inDate: trip.inDate,
-    };
-  });
+  return tripsWithCalculations
+    .filter((t) => !t.isIncomplete)
+    .map((t) => {
+      const out = parseISO(t.outDate);
+      const ind = parseISO(t.inDate);
+      return {
+        date: t.outDate,
+        tripStart: differenceInDays(out, start),
+        tripEnd: differenceInDays(ind, start),
+        tripDuration: t.fullDays || 0,
+        tripLabel: t.outRoute || 'Trip',
+        formattedDate: format(out, 'dd/MM/yyyy'),
+        outDate: t.outDate,
+        inDate: t.inDate,
+      };
+    });
 }
