@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { calculateTravelData } from './calculators';
-import { TripRecord } from './shapes';
+import { IneligibilityReason, TripRecord } from './shapes';
 
-describe('calculateTravelData', () => {
+describe('Valid scenarios', () => {
   it('calculates full days per trip', () => {
     const trips: TripRecord[] = [
       {
@@ -150,5 +150,96 @@ describe('calculateTravelData', () => {
         ? result.validation.applicationDate
         : null,
     ).toBeDefined();
+  });
+});
+
+describe('Not allowed scenarios', () => {
+  it('returns error when visa start date is after vignette entry date', () => {
+    const result = calculateTravelData({
+      visaStartDate: '2023-06-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+      trips: [],
+    });
+    expect(result.validation.status).toBe('INELIGIBLE');
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('INCORRECT_INPUT' satisfies IneligibilityReason['type']);
+  });
+
+  it('returns error when trips have incomplete data', () => {
+    const trips: TripRecord[] = [
+      {
+        id: 't1',
+        outDate: '2023-03-01',
+        inDate: '',
+        outRoute: '',
+        inRoute: '',
+      },
+    ];
+    const result = calculateTravelData({
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+      trips,
+    });
+    expect(result.validation.status).toBe('INELIGIBLE');
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('INCOMPLETED_TRIPS' satisfies IneligibilityReason['type']);
+  });
+
+  it('returns error when application date is before eligibility date', () => {
+    const result = calculateTravelData({
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 5,
+      applicationDateOverride: '2026-01-01', // Too early for 5-year track
+      trips: [],
+    });
+    expect(result.validation.status).toBe('INELIGIBLE');
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('TOO_EARLY' satisfies IneligibilityReason['type']);
+  });
+
+  it('returns error when trips are overlapping', () => {
+    const trips: TripRecord[] = [
+      {
+        id: 't1',
+        outDate: '2023-03-01',
+        inDate: '2023-06-01',
+        outRoute: '',
+        inRoute: '',
+      },
+      {
+        id: 't2',
+        outDate: '2023-04-01',
+        inDate: '2023-07-01',
+        outRoute: '',
+        inRoute: '',
+      },
+    ];
+    const result = calculateTravelData({
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 5,
+      applicationDateOverride: null,
+      trips,
+    });
+    expect(result.validation.status).toBe('INELIGIBLE');
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('INCOMPLETED_TRIPS' satisfies IneligibilityReason['type']);
   });
 });

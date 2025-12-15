@@ -89,7 +89,7 @@ type IneligibleILRValidationResult = {
 };
 export type IneligibilityReason =
   | { type: 'TOO_EARLY'; message: string; earliestAllowedDate: string }
-  | {type: 'MISSING_INPUT', message: string }
+  | { type: 'INCORRECT_INPUT'; message: string }
   | { type: 'INCOMPLETED_TRIPS'; message: string }
   | {
       type: 'EXCESSIVE_ABSENCE';
