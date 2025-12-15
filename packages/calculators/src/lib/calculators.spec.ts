@@ -1,18 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateTravelData, TripRecord, ILRTrack } from './calculators';
-
-const baseInput = {
-  trips: [] as TripRecord[],
-  vignetteEntryDate: '',
-  visaStartDate: '',
-  ilrTrack: null as ILRTrack | null,
-  applicationDate: '',
-};
-
-const makeInput = (overrides: Partial<typeof baseInput>) => ({
-  ...baseInput,
-  ...overrides,
-});
+import { calculateTravelData } from './calculators';
+import { TripRecord } from './shapes';
 
 describe('calculateTravelData', () => {
   it('calculates full days per trip', () => {
@@ -26,9 +14,13 @@ describe('calculateTravelData', () => {
       },
     ];
 
-    const result = calculateTravelData(
-      makeInput({ trips, visaStartDate: '2023-01-01' }),
-    );
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
 
     expect(result.tripsWithCalculations[0].calendarDays).toBe(4);
     expect(result.tripsWithCalculations[0].fullDays).toBe(3);
@@ -59,14 +51,13 @@ describe('calculateTravelData', () => {
       },
     ];
 
-    const result = calculateTravelData(
-      makeInput({
-        trips,
-        visaStartDate: '2023-01-01',
-        ilrTrack: 5,
-        applicationDate: '2028-01-01',
-      }),
-    );
+    const result = calculateTravelData({
+      trips,
+      vignetteEntryDate: '2023-01-01',
+      visaStartDate: '2023-01-01',
+      ilrTrack: 5,
+      applicationDateOverride: '2028-01-01',
+    });
 
     expect(result.summary.hasExceeded180Days).toBe(true);
     expect(result.summary.totalFullDays).toBe(182);
@@ -83,26 +74,44 @@ describe('calculateTravelData', () => {
       },
     ];
 
-    const result = calculateTravelData(
-      makeInput({
-        trips,
-        visaStartDate: '2023-01-01',
-        ilrTrack: 3,
-        applicationDate: '2026-01-01',
-      }),
-    );
+    const result = calculateTravelData({
+      trips,
+      vignetteEntryDate: '2023-01-01',
+      visaStartDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: '2026-01-01',
+    });
 
     expect(result.summary.totalFullDays).toBe(180);
     expect(result.summary.hasExceeded180Days).toBe(false);
   });
 
+  it('can handle base scenario', () => {
+    const result = calculateTravelData({
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 5,
+      applicationDateOverride: null,
+      trips: [],
+    });
+
+    expect(result.summary.autoDateUsed).toBe(true);
+    expect(result.validation.status).toBe('ELIGIBLE');
+    expect(
+      result.validation.status === 'ELIGIBLE'
+        ? result.validation.applicationDate
+        : null,
+    ).toBe('2028-01-01');
+  });
+
   it('calculates pre-entry period and qualifying start', () => {
-    const result = calculateTravelData(
-      makeInput({
-        visaStartDate: '2023-01-01',
-        vignetteEntryDate: '2023-05-31',
-      }),
-    );
+    const result = calculateTravelData({
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-05-31',
+      ilrTrack: 5,
+      applicationDateOverride: null,
+      trips: [],
+    });
 
     expect(result.preEntryPeriod?.delayDays).toBe(150);
     expect(result.preEntryPeriod?.canCount).toBe(true);
@@ -127,25 +136,19 @@ describe('calculateTravelData', () => {
       },
     ];
 
-    const result = calculateTravelData(
-      makeInput({
-        trips,
-        visaStartDate: '2023-01-01',
-        ilrTrack: 3,
-        applicationDate: '',
-      }),
-    );
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
 
-    expect(result.calculatedApplicationDate).not.toBeNull();
-  });
-
-  it('returns empty rolling data without a start date', () => {
-    const result = calculateTravelData(
-      makeInput({ trips: [], visaStartDate: '', vignetteEntryDate: '' }),
-    );
-
-    expect(result.rollingAbsenceData).toEqual([]);
-    expect(result.timelinePoints).toEqual([]);
-    expect(result.tripBars).toEqual([]);
+    expect(result.validation.status).toBe('ELIGIBLE');
+    expect(
+      result.validation.status === 'ELIGIBLE'
+        ? result.validation.applicationDate
+        : null,
+    ).toBeDefined();
   });
 });

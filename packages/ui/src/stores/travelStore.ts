@@ -16,7 +16,7 @@ class TravelStore {
   trips: TripRecord[] = [];
   vignetteEntryDate = '';
   visaStartDate = '';
-  ilrTrack: ILRTrack | null = null;
+  ilrTrack: ILRTrack = 5;
   applicationDate = '';
   isLoading = false;
   error: string | null = null;
@@ -33,7 +33,7 @@ class TravelStore {
       vignetteEntryDate: this.vignetteEntryDate,
       visaStartDate: this.visaStartDate,
       ilrTrack: this.ilrTrack,
-      applicationDate: this.applicationDate,
+      applicationDateOverride: this.applicationDate,
     });
   }
 
@@ -45,12 +45,14 @@ class TravelStore {
     return this.calculations.preEntryPeriod;
   }
 
-  get calculatedApplicationDate(): string | null {
-    return this.calculations.calculatedApplicationDate;
+  get effectiveApplicationDate(): string | null {
+    return this.calculations.validation.status === 'ELIGIBLE'
+      ? this.calculations.validation.applicationDate
+      : null;
   }
 
-  get effectiveApplicationDate(): string | null {
-    return this.calculations.effectiveApplicationDate;
+  get autoDateUsed(): boolean {
+    return this.calculations.summary.autoDateUsed;
   }
 
   get summary() {
@@ -112,7 +114,7 @@ class TravelStore {
     this.visaStartDate = date;
   }
 
-  setILRTrack(track: ILRTrack | null) {
+  setILRTrack(track: ILRTrack) {
     this.ilrTrack = track;
   }
 

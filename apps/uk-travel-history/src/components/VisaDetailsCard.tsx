@@ -74,11 +74,9 @@ export const VisaDetailsCard = observer(() => {
               ILR Track (Years)
             </Label>
             <Select
-              value={travelStore.ilrTrack?.toString() || ''}
+              value={travelStore.ilrTrack.toString()}
               onValueChange={(value) => {
-                travelStore.setILRTrack(
-                  value ? (Number(value) as ILRTrack) : null,
-                );
+                travelStore.setILRTrack(Number(value) as ILRTrack);
               }}
             >
               <SelectTrigger className="w-full">
@@ -98,29 +96,26 @@ export const VisaDetailsCard = observer(() => {
 
           <div className="space-y-1.5">
             <Label htmlFor="applicationDate" className="text-xs font-medium">
-              Application Date (Override)
+              {`Application Date ${travelStore.autoDateUsed ? '' : '(Override)'}`}
             </Label>
             <DatePicker
               value={travelStore.applicationDate}
               onChange={(value) => travelStore.setApplicationDate(value)}
               placeholder={
-                travelStore.calculatedApplicationDate
-                  ? `Auto: ${formatDate(travelStore.calculatedApplicationDate)}`
+                travelStore.autoDateUsed && travelStore.effectiveApplicationDate
+                  ? `Auto: ${formatDate(travelStore.effectiveApplicationDate)}`
                   : 'Will auto-calculate with ILR track'
               }
               className="w-full"
             />
             <p className="text-xs text-muted-foreground leading-tight">
-              {travelStore.calculatedApplicationDate ? (
+              {travelStore.effectiveApplicationDate && (
                 <>
-                  Auto-calculated:{' '}
+                  {travelStore.autoDateUsed ? 'Auto-calculated:' : 'Overridden'}
                   <strong>
-                    {formatDate(travelStore.calculatedApplicationDate)}
+                    {formatDate(travelStore.effectiveApplicationDate)}
                   </strong>
-                  {travelStore.applicationDate && ' (Overridden)'}
                 </>
-              ) : (
-                'Set ILR track to auto-calculate'
               )}
             </p>
           </div>
