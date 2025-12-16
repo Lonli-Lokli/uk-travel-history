@@ -170,8 +170,11 @@ class TravelStore {
   }
 
   selectTrip(name: string, startTimestamp: number, endTimestamp: number) {
-    const startStr = format(new Date(startTimestamp), 'dd/MM/yyyy');
-    const endStr = format(new Date(endTimestamp), 'dd/MM/yyyy');
+    // Convert timestamp to ISO date string, then format for display
+    const startDate = new Date(startTimestamp);
+    const endDate = new Date(endTimestamp);
+    const startStr = format(startDate, 'dd/MM/yyyy');
+    const endStr = format(endDate, 'dd/MM/yyyy');
     this.setSelectedTripDetails({ name, start: startStr, end: endStr });
   }
 

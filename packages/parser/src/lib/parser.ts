@@ -1,7 +1,7 @@
-import { format } from 'date-fns';
+import { differenceInDays, format, parse, parseISO } from 'date-fns';
 
 export interface TravelRecord {
-  date: Date;
+  date: string; // ISO date string (YYYY-MM-DD)
   direction: 'Inbound' | 'Outbound';
   route: string;
   port?: string;
@@ -9,8 +9,8 @@ export interface TravelRecord {
 
 export interface Trip {
   id: number;
-  outDate: Date | null;
-  inDate: Date | null;
+  outDate: string | null; // ISO date string (YYYY-MM-DD)
+  inDate: string | null; // ISO date string (YYYY-MM-DD)
   outRoute: string;
   inRoute: string;
   calendarDays: number | null;
@@ -66,30 +66,29 @@ const portNames: Record<string, string> = {
   GBSPX: 'St Pancras/Eurostar',
 };
 
-export function parseDate(dateStr: string): Date | null {
+/**
+ * Parse date string to ISO format (YYYY-MM-DD)
+ * @param dateStr - Date string in various formats
+ * @returns ISO date string (YYYY-MM-DD) or null if invalid
+ */
+export function parseDate(dateStr: string): string | null {
   const patterns = [
-    /(\d{2})\/(\d{2})\/(\d{4})/, // DD/MM/YYYY
-    /(\d{4})-(\d{2})-(\d{2})/, // YYYY-MM-DD
-    /(\d{2})-(\d{2})-(\d{4})/, // DD-MM-YYYY
+    { regex: /(\d{2})\/(\d{2})\/(\d{4})/, format: 'dd/MM/yyyy' }, // DD/MM/YYYY
+    { regex: /(\d{4})-(\d{2})-(\d{2})/, format: 'yyyy-MM-dd' }, // YYYY-MM-DD
+    { regex: /(\d{2})-(\d{2})-(\d{4})/, format: 'dd-MM-yyyy' }, // DD-MM-YYYY
   ];
 
   for (const pattern of patterns) {
-    const match = dateStr.match(pattern);
+    const match = dateStr.match(pattern.regex);
     if (match) {
-      if (pattern === patterns[1]) {
-        // YYYY-MM-DD: match[1] = year, match[2] = month, match[3] = day
-        return new Date(
-          parseInt(match[1]),
-          parseInt(match[2]) - 1,
-          parseInt(match[3]),
-        );
-      } else {
-        // DD/MM/YYYY or DD-MM-YYYY: match[1] = day, match[2] = month, match[3] = year
-        return new Date(
-          parseInt(match[3]),
-          parseInt(match[2]) - 1,
-          parseInt(match[1]),
-        );
+      try {
+        const parsed = parse(dateStr, pattern.format, new Date());
+        // Validate the parsed date is valid
+        if (!isNaN(parsed.getTime())) {
+          return format(parsed, 'yyyy-MM-dd');
+        }
+      } catch {
+        continue;
       }
     }
   }
@@ -167,14 +166,15 @@ export function parseTravelRecords(text: string): TravelRecord[] {
   const seen = new Set<string>();
 
   for (const record of records) {
-    const key = `${format(record.date, 'yyyy-MM-dd')}-${record.direction}`;
+    // record.date is already in ISO format (YYYY-MM-DD)
+    const key = `${record.date}-${record.direction}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueRecords.push(record);
     }
   }
 
-  uniqueRecords.sort((a, b) => a.date.getTime() - b.date.getTime());
+  uniqueRecords.sort((a, b) => a.date.localeCompare(b.date));
   return uniqueRecords;
 }
 
@@ -197,10 +197,12 @@ export function pairTrips(records: TravelRecord[]): Trip[] {
 
       if (inboundIndex !== -1) {
         const inbound = records[inboundIndex];
-        const calendarDays = Math.floor(
-          (inbound.date.getTime() - record.date.getTime()) /
-            (1000 * 60 * 60 * 24),
+        // Calculate calendar days between ISO date strings using date-fns
+        const calendarDays = differenceInDays(
+          parseISO(inbound.date),
+          parseISO(record.date),
         );
+        // Full days excludes departure and return days (per UK Home Office guidance)
         const fullDays = Math.max(0, calendarDays - 1);
 
         trips.push({

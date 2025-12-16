@@ -1,6 +1,5 @@
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
-import { format } from 'date-fns';
 import { parseDate } from './parser';
 
 export interface CSVTripRow {
@@ -150,9 +149,9 @@ export function parseCsvText(csvText: string): CSVParseResult {
       return;
     }
 
-    // Parse dates
-    let outDate: Date | null = null;
-    let inDate: Date | null = null;
+    // Parse dates to ISO strings
+    let outDate: string | null = null;
+    let inDate: string | null = null;
 
     if (outDateStr) {
       outDate = parseDate(outDateStr);
@@ -174,15 +173,16 @@ export function parseCsvText(csvText: string): CSVParseResult {
       }
     }
 
-    // Validate date logic
+    // Validate date logic: ISO strings (YYYY-MM-DD) can be compared lexicographically
+    // because the format ensures chronological ordering
     if (outDate && inDate && outDate > inDate) {
       errors.push(`Row ${rowNum}: Departure date is after return date`);
       return;
     }
 
     trips.push({
-      outDate: outDate ? format(outDate, 'yyyy-MM-dd') : '',
-      inDate: inDate ? format(inDate, 'yyyy-MM-dd') : '',
+      outDate: outDate || '',  // Already in ISO format (YYYY-MM-DD)
+      inDate: inDate || '',    // Already in ISO format (YYYY-MM-DD)
       outRoute: sanitizeField(row.outRoute || ''),
       inRoute: sanitizeField(row.inRoute || ''),
     });
@@ -277,9 +277,9 @@ export async function parseXlsxFile(
         return;
       }
 
-      // Parse dates
-      let outDate: Date | null = null;
-      let inDate: Date | null = null;
+      // Parse dates to ISO strings
+      let outDate: string | null = null;
+      let inDate: string | null = null;
 
       if (outDateStr) {
         outDate = parseDate(outDateStr);
@@ -301,15 +301,16 @@ export async function parseXlsxFile(
         }
       }
 
-      // Validate date logic
+      // Validate date logic: ISO strings (YYYY-MM-DD) can be compared lexicographically
+      // because the format ensures chronological ordering
       if (outDate && inDate && outDate > inDate) {
         errors.push(`Row ${rowNumber}: Departure date is after return date`);
         return;
       }
 
       trips.push({
-        outDate: outDate ? format(outDate, 'yyyy-MM-dd') : '',
-        inDate: inDate ? format(inDate, 'yyyy-MM-dd') : '',
+        outDate: outDate || '',  // Already in ISO format (YYYY-MM-DD)
+        inDate: inDate || '',    // Already in ISO format (YYYY-MM-DD)
         outRoute: sanitizeField(outRouteCell?.toString() || ''),
         inRoute: sanitizeField(inRouteCell?.toString() || ''),
       });

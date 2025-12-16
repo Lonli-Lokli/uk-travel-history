@@ -1,12 +1,29 @@
 import { differenceInDays, isValid, parseISO } from 'date-fns';
 import { TripRecord, TripWithCalculations } from './shapes';
 
+/**
+ * Validate if a date string is valid ISO format (YYYY-MM-DD)
+ * @param date - ISO date string
+ * @returns true if valid, false otherwise
+ */
 export const isValidDate = (date: string): boolean => {
-  const dateObj = new Date(date);
-  return isValid(dateObj);
+  if (!date || typeof date !== 'string') return false;
+  try {
+    const dateObj = parseISO(date);
+    return isValid(dateObj);
+  } catch {
+    return false;
+  }
 };
 
-const toMs = (d: string) => Date.parse(d + 'T00:00:00.000Z');
+/**
+ * Convert ISO date string to milliseconds for comparison
+ * Avoids timezone issues by treating as UTC midnight
+ */
+const toMs = (d: string): number => {
+  const parsed = parseISO(d);
+  return parsed.getTime();
+};
 
 /** Returns true if any two trips overlap (inclusive: touching counts as overlap). */
 export function hasOverlappingTrips(trips: TripRecord[]): boolean {
