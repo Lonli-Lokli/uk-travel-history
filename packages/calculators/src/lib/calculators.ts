@@ -7,6 +7,7 @@ import {
   isAfter,
   parseISO,
   subDays,
+  subYears,
   isWithinInterval,
   areIntervalsOverlapping,
   startOfDay
@@ -502,50 +503,47 @@ function checkRollingAbsences(
     return sum;
   };
 
-  // Iterate daily
-  for (let i = 0; i <= totalDays; i++) {
-    const checkDate = addDays(periodStart, i);
-    const windowStart = subDays(checkDate, 365); // The 12-month window ending on checkDate
+  // Iterate daily - check every rolling 12-month window
+  // A rolling 12-month window means 12 calendar months (NOT 365 days, due to leap years).
+  // We check all windows that START within the period and span 12 months.
+  // The last valid window starts at max(periodStart, periodEnd - 12 months) and ends at periodEnd.
 
-    // Window must effectively overlap with the period we are interested in checking?
-    // Actually, guidance says "in any 12-month period".
-    // We check the 365 days leading up to checkDate.
-    // However, we only care if the breach occurs *within* the Qualifying Period.
-    // If checkDate is the first day of QP, windowStart is 1 year prior.
-    // Absences *prior* to QP usually don't count unless standard rules say "continuous residence".
-    // Standard rule: "not been absent... for more than 180 days...".
-    // Usually means within the 5 year period. Windows entirely inside.
-    // But a window could straddle the start?
-    // Standard interpretation: The rolling window calculation applies to the period of residence being relied upon.
-    // So we check windows ending at [Start + 365] up to [End].
-    // If i < 365, the window starts before periodStart.
-    // We usually cap the window at periodStart for calculation if strict,
-    // OR we assume we only check full 12-month windows contained in the period?
-    // Actually, standard is "any rolling 12-month period".
-    // We will check windows ending on any day from (PeriodStart) to (PeriodEnd).
-    // Note: If checking a window ending on PeriodStart, it looks at the year BEFORE the period.
-    // We should start checking windows that *start* at PeriodStart.
-    // So checkDate starts at PeriodStart + 365.
+  // If the period is shorter than 12 months, we can't check full rolling windows,
+  // but we should still check if any single absence exceeds 180 days
+  if (totalDays < 365) {
+    for (const abs of absences) {
+      if (abs.days > MAX_ABSENCE_IN_12_MONTHS) {
+        offendingWindows.push({
+          start: format(abs.start, 'yyyy-MM-dd'),
+          end: format(abs.end, 'yyyy-MM-dd'),
+          days: abs.days,
+        });
+        return {
+          passed: false,
+          reason: 'Single absence exceeds 180 days.',
+          offendingWindows,
+        };
+      }
+    }
+    return { passed: true, offendingWindows: [] };
+  }
 
-    if (i < 365) continue; // Skip partial first year windows?
-    // Actually, simplest safe approach: Check every window ending on a day in the period,
-    // but only count absences that fall strictly within the qualifying period?
-    // NO. If you are absent for 180 days in Year 1, you fail.
-    // So we check from day 365 to end.
+  // Calculate the last day we can start a 12-month window that fits within the period
+  const latestWindowStart = subYears(periodEnd, 1);
+  const effectiveLatestStart = latestWindowStart < periodStart ? periodStart : latestWindowStart;
+  const maxStartOffset = differenceInDays(effectiveLatestStart, periodStart);
 
-    // Correction: Rolling means any period of length 365 days.
-    // The first valid full rolling period starts at Day 0 and ends at Day 365.
-    // So we start checking at checkDate = Day 365.
+  for (let i = 0; i <= maxStartOffset; i++) {
+    const windowStart = addDays(periodStart, i);
+    const windowEnd = addYears(windowStart, 1);
 
-    const daysCount = countDaysInWindow(windowStart, checkDate);
+    const daysCount = countDaysInWindow(windowStart, windowEnd);
     if (daysCount > MAX_ABSENCE_IN_12_MONTHS) {
       offendingWindows.push({
         start: format(windowStart, 'yyyy-MM-dd'),
-        end: format(checkDate, 'yyyy-MM-dd'),
+        end: format(windowEnd, 'yyyy-MM-dd'),
         days: daysCount,
       });
-      // Return immediately on first failure for performance/clarity, or collect all?
-      // Collecting all can be spammy. Return first.
       return {
         passed: false,
         reason: 'Rolling 12-month absence limit exceeded.',
