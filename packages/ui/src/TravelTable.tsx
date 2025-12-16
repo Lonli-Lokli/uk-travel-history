@@ -340,7 +340,7 @@ export const TravelTable = observer(() => {
                   colSpan={columns.length}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
-                  No trips yet. Add a trip or import from PDF.
+                  No trips yet. Add a trip or import.
                 </td>
               </tr>
             ) : (

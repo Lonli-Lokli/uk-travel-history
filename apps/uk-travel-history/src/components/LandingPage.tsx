@@ -70,7 +70,21 @@ export const LandingPage = () => {
       handleCancelImport();
       return;
     }
-    csvImport.handleFileSelect(e);
+    try {
+      await csvImport.handleFileSelect(e);
+      router.push('/travel');
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert(
+        'Failed to import CSV/XLSX. Please try again or add trips manually.',
+      );
+    } finally {
+      setIsImporting(false);
+      setActiveAction(null);
+      if (csvImport.fileInputRef.current) {
+        csvImport.fileInputRef.current.value = '';
+      }
+    }
   };
   const handleAddManually = () => {
     router.push('/travel');
@@ -263,7 +277,7 @@ export const LandingPage = () => {
                     ) : (
                       <FileText className="h-4 w-4 mr-2" />
                     )}
-                    Import from CSV
+                    Import from CSV/Xlsx
                     {activeAction === 'csv' && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...

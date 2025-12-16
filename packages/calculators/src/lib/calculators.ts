@@ -836,7 +836,7 @@ function buildRollingAbsenceData(params: {
     });
 
     points.push({
-      date: current.toISOString(),
+      date: format(current, 'yyyy-MM-dd'),
       rollingDays: sum,
       riskLevel: sum > 180 ? 'critical' : sum >= 150 ? 'caution' : 'low',
       formattedDate: format(current, 'dd/MM/yyyy'),

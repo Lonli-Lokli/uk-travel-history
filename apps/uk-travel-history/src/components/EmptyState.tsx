@@ -50,7 +50,7 @@ export const EmptyState = ({
                 onClick={onImportCsvClick}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Import from CSV
+                Import from CSV/Xlsx
               </Button>
               <Button
                 variant="outline"

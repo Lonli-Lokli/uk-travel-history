@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
+import { format } from 'date-fns';
 import { parseDate } from './parser';
 
 export interface CSVTripRow {
@@ -28,7 +29,12 @@ function sanitizeField(field: string): string {
 
   // Check if field starts with potential formula trigger
   const firstChar = trimmed[0];
-  if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@') {
+  if (
+    firstChar === '=' ||
+    firstChar === '+' ||
+    firstChar === '-' ||
+    firstChar === '@'
+  ) {
     // Remove the leading character to prevent formula injection
     return trimmed.substring(1);
   }
@@ -65,23 +71,49 @@ export function parseCsvText(csvText: string): CSVParseResult {
     transformHeader: (header: string) => {
       // Normalize header names to match expected columns
       const normalized = header.trim().toLowerCase();
-      if (normalized === '#' || normalized === 'num' || normalized === 'number') {
+      if (
+        normalized === '#' ||
+        normalized === 'num' ||
+        normalized === 'number'
+      ) {
         return 'num';
       }
-      if (normalized === 'date out' || normalized === 'dateout' || normalized === 'departure date' || normalized === 'out date') {
+      if (
+        normalized === 'date out' ||
+        normalized === 'dateout' ||
+        normalized === 'departure date' ||
+        normalized === 'out date'
+      ) {
         return 'outDate';
       }
-      if (normalized === 'date in' || normalized === 'datein' || normalized === 'return date' || normalized === 'in date') {
+      if (
+        normalized === 'date in' ||
+        normalized === 'datein' ||
+        normalized === 'return date' ||
+        normalized === 'in date'
+      ) {
         return 'inDate';
       }
-      if (normalized === 'departure' || normalized === 'departure route' || normalized === 'out route') {
+      if (
+        normalized === 'departure' ||
+        normalized === 'departure route' ||
+        normalized === 'out route'
+      ) {
         return 'outRoute';
       }
-      if (normalized === 'return' || normalized === 'return route' || normalized === 'in route') {
+      if (
+        normalized === 'return' ||
+        normalized === 'return route' ||
+        normalized === 'in route'
+      ) {
         return 'inRoute';
       }
       // Ignore calculated columns
-      if (normalized === 'calendar days' || normalized === 'full days outside uk' || normalized === 'full days') {
+      if (
+        normalized === 'calendar days' ||
+        normalized === 'full days outside uk' ||
+        normalized === 'full days'
+      ) {
         return '_ignore_' + header;
       }
       return header;
@@ -125,7 +157,9 @@ export function parseCsvText(csvText: string): CSVParseResult {
     if (outDateStr) {
       outDate = parseDate(outDateStr);
       if (!outDate) {
-        errors.push(`Row ${rowNum}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+        errors.push(
+          `Row ${rowNum}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
+        );
         return;
       }
     }
@@ -133,7 +167,9 @@ export function parseCsvText(csvText: string): CSVParseResult {
     if (inDateStr) {
       inDate = parseDate(inDateStr);
       if (!inDate) {
-        errors.push(`Row ${rowNum}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+        errors.push(
+          `Row ${rowNum}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
+        );
         return;
       }
     }
@@ -145,8 +181,8 @@ export function parseCsvText(csvText: string): CSVParseResult {
     }
 
     trips.push({
-      outDate: outDate ? outDate.toISOString().split('T')[0] : '',
-      inDate: inDate ? inDate.toISOString().split('T')[0] : '',
+      outDate: outDate ? format(outDate, 'yyyy-MM-dd') : '',
+      inDate: inDate ? format(inDate, 'yyyy-MM-dd') : '',
       outRoute: sanitizeField(row.outRoute || ''),
       inRoute: sanitizeField(row.inRoute || ''),
     });
@@ -164,7 +200,9 @@ export function parseCsvText(csvText: string): CSVParseResult {
  * Parse XLSX file content
  * Handles Excel files (.xlsx) with the same structure as exported files
  */
-export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseResult> {
+export async function parseXlsxFile(
+  arrayBuffer: ArrayBuffer,
+): Promise<CSVParseResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const trips: ParsedTrip[] = [];
@@ -173,7 +211,8 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(arrayBuffer);
 
-    const sheet = workbook.getWorksheet('Travel History') || workbook.worksheets[0];
+    const sheet =
+      workbook.getWorksheet('Travel History') || workbook.worksheets[0];
     if (!sheet) {
       errors.push('No worksheet found in Excel file');
       return { success: false, trips: [], errors, warnings };
@@ -187,13 +226,31 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
       const value = cell.value?.toString().trim().toLowerCase() || '';
       if (value === '#' || value === 'num' || value === 'number') {
         headers.num = colNumber;
-      } else if (value === 'date out' || value === 'dateout' || value === 'departure date' || value === 'out date') {
+      } else if (
+        value === 'date out' ||
+        value === 'dateout' ||
+        value === 'departure date' ||
+        value === 'out date'
+      ) {
         headers.outDate = colNumber;
-      } else if (value === 'date in' || value === 'datein' || value === 'return date' || value === 'in date') {
+      } else if (
+        value === 'date in' ||
+        value === 'datein' ||
+        value === 'return date' ||
+        value === 'in date'
+      ) {
         headers.inDate = colNumber;
-      } else if (value === 'departure' || value === 'departure route' || value === 'out route') {
+      } else if (
+        value === 'departure' ||
+        value === 'departure route' ||
+        value === 'out route'
+      ) {
         headers.outRoute = colNumber;
-      } else if (value === 'return' || value === 'return route' || value === 'in route') {
+      } else if (
+        value === 'return' ||
+        value === 'return route' ||
+        value === 'in route'
+      ) {
         headers.inRoute = colNumber;
       }
     });
@@ -227,7 +284,9 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
       if (outDateStr) {
         outDate = parseDate(outDateStr);
         if (!outDate) {
-          errors.push(`Row ${rowNumber}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+          errors.push(
+            `Row ${rowNumber}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
+          );
           return;
         }
       }
@@ -235,7 +294,9 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
       if (inDateStr) {
         inDate = parseDate(inDateStr);
         if (!inDate) {
-          errors.push(`Row ${rowNumber}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`);
+          errors.push(
+            `Row ${rowNumber}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
+          );
           return;
         }
       }
@@ -247,8 +308,8 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
       }
 
       trips.push({
-        outDate: outDate ? outDate.toISOString().split('T')[0] : '',
-        inDate: inDate ? inDate.toISOString().split('T')[0] : '',
+        outDate: outDate ? format(outDate, 'yyyy-MM-dd') : '',
+        inDate: inDate ? format(inDate, 'yyyy-MM-dd') : '',
         outRoute: sanitizeField(outRouteCell?.toString() || ''),
         inRoute: sanitizeField(inRouteCell?.toString() || ''),
       });
@@ -261,7 +322,9 @@ export async function parseXlsxFile(arrayBuffer: ArrayBuffer): Promise<CSVParseR
       warnings,
     };
   } catch (error) {
-    errors.push(`Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    errors.push(
+      `Failed to parse Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
     return { success: false, trips: [], errors, warnings };
   }
 }
