@@ -213,8 +213,8 @@ function validateEligibility(params: {
 
   // Determine Qualifying Period [End - Track Years, End]
   // Guidance: We count backwards from the assessment date.
-  const qualifyingEndDate = assessmentDate;
-  // Use startOfDay to avoid timezone shifts when subtracting years
+  // Use startOfDay on both dates to ensure consistent timezone handling
+  const qualifyingEndDate = startOfDay(assessmentDate);
   const qualifyingStartDate = startOfDay(
     addYears(qualifyingEndDate, -ilrTrack),
   );
@@ -568,18 +568,21 @@ function buildAbsenceIntervals(
 
   // 1. Pre-Entry Gap (if strictly valid and exists)
   // Logic: Time between Visa Start and Entry is an absence.
+  // Per Home Office guidance on "full days": exclude both boundary dates (visa start and vignette entry)
+  // This is consistent with how trip absences are calculated (excluding departure and return days).
   if (
     preEntry &&
     preEntry.delayDays > 0 &&
     visaStartDate &&
     vignetteEntryDate
   ) {
-    // Gap starts on Visa Start. Ends on Entry Date - 1 day?
-    // Actually, if I enter on Jan 5, and Visa started Jan 1.
-    // Jan 1, 2, 3, 4 are absences.
-    // Entry date is day of arrival (present).
-    const start = parseISO(visaStartDate);
-    const end = subDays(parseISO(vignetteEntryDate), 1);
+    // Example: If visa starts Jan 1 and you enter Jan 5:
+    // - Jan 1 (visa start): NOT an absence day (like departure day)
+    // - Jan 2, 3, 4: Full absence days
+    // - Jan 5 (entry): NOT an absence day (like return day)
+    // So absence period is Jan 2 to Jan 4.
+    const start = addDays(parseISO(visaStartDate), 1);  // Day AFTER visa start
+    const end = subDays(parseISO(vignetteEntryDate), 1);  // Day BEFORE entry
     if (start <= end) {
       intervals.push({
         start,

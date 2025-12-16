@@ -11,6 +11,7 @@ import {
   TravelCalculationResult,
   calculateTravelData,
 } from '@uth/calculators';
+import { calculateTripDurations } from '@uth/calculators';
 
 class TravelStore {
   trips: TripRecord[] = [];
@@ -53,7 +54,15 @@ class TravelStore {
   }
 
   get tripsWithCalculations(): TripWithCalculations[] {
-    return this.calculations?.tripsWithCalculations || [];
+    // Always return trips with calculations, even if full calculation can't run
+    // This ensures incomplete trips are visible in the table for editing
+    if (this.calculations) {
+      return this.calculations.tripsWithCalculations;
+    }
+
+    // If no full calculation available, compute basic trip data manually
+    // This allows users to see and edit incomplete trips
+    return calculateTripDurations(this.trips);
   }
 
   get preEntryPeriod(): PreEntryPeriodInfo | null {
