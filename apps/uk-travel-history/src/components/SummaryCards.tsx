@@ -15,8 +15,10 @@ import { StatCard } from './StatCard';
 
 export const SummaryCards = observer(() => {
   const summary = travelStore.summary;
+  const validation = travelStore.validation;
   const hasContinuousLeave = summary.continuousLeaveDays !== null;
-  const hasILRDate = summary.ilrEligibilityDate !== null;
+  // Only show ILR date card when ELIGIBLE (not just when date exists)
+  const hasILRDate = validation?.status === 'ELIGIBLE' && summary.ilrEligibilityDate !== null;
 
   const gridColsClass =
     hasContinuousLeave && hasILRDate
@@ -57,15 +59,15 @@ export const SummaryCards = observer(() => {
 
       {hasContinuousLeave && (
         <StatCard
-          icon={summary.hasExceeded180Days ? AlertTriangle : CalendarDays}
+          icon={summary.hasExceededAllowedAbsense ? AlertTriangle : CalendarDays}
           value={summary.continuousLeaveDays!}
           label="Days in UK"
-          variant={summary.hasExceeded180Days ? 'warning' : 'success'}
+          variant={summary.hasExceededAllowedAbsense ? 'warning' : 'success'}
           subtitle={
             summary.maxAbsenceInAny12Months !== null && (
               <>
                 Max 12mo: {summary.maxAbsenceInAny12Months}d{' '}
-                {summary.hasExceeded180Days && '⚠️'}
+                {summary.hasExceededAllowedAbsense && '⚠️'}
               </>
             )
           }

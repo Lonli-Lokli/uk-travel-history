@@ -72,6 +72,7 @@
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
+    "happy-dom": "^20.0.11",
     "jsdom": "~22.1.0",
     "lefthook": "^2.0.12",
     "npm-run-all2": "^8.0.4",

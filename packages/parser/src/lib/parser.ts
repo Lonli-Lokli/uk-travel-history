@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+
 export interface TravelRecord {
   date: Date;
   direction: 'Inbound' | 'Outbound';
@@ -79,14 +81,14 @@ export function parseDate(dateStr: string): Date | null {
         return new Date(
           parseInt(match[1]),
           parseInt(match[2]) - 1,
-          parseInt(match[3])
+          parseInt(match[3]),
         );
       } else {
         // DD/MM/YYYY or DD-MM-YYYY: match[1] = day, match[2] = month, match[3] = year
         return new Date(
           parseInt(match[3]),
           parseInt(match[2]) - 1,
-          parseInt(match[1])
+          parseInt(match[1]),
         );
       }
     }
@@ -97,7 +99,7 @@ export function parseDate(dateStr: string): Date | null {
 export function formatRoute(
   embarkPort: string,
   disembarkPort: string,
-  direction: string
+  direction: string,
 ): string {
   const from = portNames[embarkPort] || embarkPort;
   const to = portNames[disembarkPort] || disembarkPort;
@@ -136,7 +138,7 @@ export function parseTravelRecords(text: string): TravelRecord[] {
         let route = formatRoute(
           embarkPort || '',
           disembarkPort || '',
-          normalizedDirection
+          normalizedDirection,
         );
 
         if (voyageCode.toLowerCase().includes('stenaline')) {
@@ -165,9 +167,7 @@ export function parseTravelRecords(text: string): TravelRecord[] {
   const seen = new Set<string>();
 
   for (const record of records) {
-    const key = `${record.date.toISOString().split('T')[0]}-${
-      record.direction
-    }`;
+    const key = `${format(record.date, 'yyyy-MM-dd')}-${record.direction}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueRecords.push(record);
@@ -199,7 +199,7 @@ export function pairTrips(records: TravelRecord[]): Trip[] {
         const inbound = records[inboundIndex];
         const calendarDays = Math.floor(
           (inbound.date.getTime() - record.date.getTime()) /
-            (1000 * 60 * 60 * 24)
+            (1000 * 60 * 60 * 24),
         );
         const fullDays = Math.max(0, calendarDays - 1);
 
@@ -248,7 +248,7 @@ export function analyzeTravelHistory(text: string): ParseResult {
   const completeTrips = trips.filter((t) => t.fullDays !== null);
   const totalFullDays = completeTrips.reduce(
     (sum, t) => sum + (t.fullDays || 0),
-    0
+    0,
   );
 
   return {

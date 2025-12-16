@@ -44,6 +44,9 @@
       "path": "../parser/tsconfig.lib.json"
     },
     {
+      "path": "../calculators/tsconfig.lib.json"
+    },
+    {
       "path": "../utils/tsconfig.lib.json"
     }
   ]

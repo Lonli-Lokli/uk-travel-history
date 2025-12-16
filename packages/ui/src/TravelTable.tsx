@@ -14,8 +14,9 @@ import {
 import { Trash2, Plus, ArrowUpDown, GripVertical } from 'lucide-react';
 import { Button } from './button';
 import { EditableCell } from './editable-cell';
-import { travelStore, TripWithCalculations } from './stores/travelStore';
+import { travelStore } from './stores/travelStore';
 import { formatDate } from '@uth/utils';
+import { TripWithCalculations } from '@uth/calculators';
 
 export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -339,7 +340,7 @@ export const TravelTable = observer(() => {
                   colSpan={columns.length}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
-                  No trips yet. Add a trip or import from PDF.
+                  No trips yet. Add a trip or import.
                 </td>
               </tr>
             ) : (

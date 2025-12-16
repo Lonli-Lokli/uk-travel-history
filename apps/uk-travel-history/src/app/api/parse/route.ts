@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { ParseResult } from '@uth/parser';
+import { format } from 'date-fns';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!analyzeTravelHistory) {
       return NextResponse.json(
         { error: 'Parser not initialized' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json(
         { error: 'File must be a PDF' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
           error:
             'This does not appear to be a UK border control travel history document',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,17 +87,17 @@ export async function POST(request: NextRequest) {
     if (result.records.length === 0) {
       return NextResponse.json(
         { error: 'No travel records found in the document' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        trips: result.trips.map(trip => ({
+        trips: result.trips.map((trip) => ({
           ...trip,
-          outDate: trip.outDate?.toISOString() || null,
-          inDate: trip.inDate?.toISOString() || null,
+          outDate: trip.outDate ? format(trip.outDate, 'yyyy-MM-dd') : null,
+          inDate: trip.inDate ? format(trip.inDate, 'yyyy-MM-dd') : null,
         })),
         summary: result.summary,
       },
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     logger.error('Error processing PDF:', error);
     return NextResponse.json(
       { error: 'Failed to process PDF file' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

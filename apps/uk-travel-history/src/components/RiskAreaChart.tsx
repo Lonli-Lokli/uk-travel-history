@@ -11,14 +11,13 @@ import { parseISO } from 'date-fns';
 
 import {
   travelStore,
-  RollingDataPoint,
-  TripBar,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@uth/ui';
+import { RollingDataPoint, TripBar } from '@uth/calculators';
 
 type TimelinePoint = {
   id: string;
@@ -29,7 +28,13 @@ type TimelinePoint = {
 };
 
 export const RiskAreaChart: React.FC = observer(() => {
-  const { rollingAbsenceData, tripBars, selectedTripDetails } = travelStore;
+  const {
+    rollingAbsenceData,
+    tripBars,
+    selectedTripDetails,
+    effectiveApplicationDate,
+    autoDateUsed,
+  } = travelStore;
 
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
@@ -59,11 +64,31 @@ export const RiskAreaChart: React.FC = observer(() => {
   // -------- Risk area chart data --------------------------------------------
 
   const riskSeriesData = useMemo<[number, number][]>(() => {
-    return rollingAbsenceData.map((d: RollingDataPoint) => [
-      parseISO(d.date).getTime(),
-      d.rollingDays,
-    ]);
-  }, [rollingAbsenceData]);
+    // Filter data to only show up to the effective application date (if eligible with auto date)
+    // This ensures the chart shows risk based on the calculated/auto application date
+    const effectiveEndDate =
+      effectiveApplicationDate && autoDateUsed
+        ? parseISO(effectiveApplicationDate).getTime()
+        : null;
+
+    const filteredData = effectiveEndDate
+      ? rollingAbsenceData.filter(
+          (d: RollingDataPoint) => parseISO(d.date).getTime() <= effectiveEndDate
+        )
+      : rollingAbsenceData;
+
+    // Cap risk at 180 days - if eligible with future date, risk cannot exceed 180
+    // (otherwise the calculated date would have been pushed further out)
+    return filteredData.map((d: RollingDataPoint) => {
+      const timestamp = parseISO(d.date).getTime();
+      const rollingDays =
+        effectiveApplicationDate && autoDateUsed
+          ? Math.min(d.rollingDays, 180)
+          : d.rollingDays;
+
+      return [timestamp, rollingDays];
+    });
+  }, [rollingAbsenceData, effectiveApplicationDate, autoDateUsed]);
 
   const maxRolling = riskSeriesData.reduce((acc, [, y]) => Math.max(acc, y), 0);
   const yMax = Math.max(maxRolling, 180);
@@ -210,8 +235,36 @@ export const RiskAreaChart: React.FC = observer(() => {
             `<div style="font-size:13px;font-weight:600;color:${displayColor};">Rolling 12-month: ${y} days</div>`;
 
           if (y >= 180) {
-            html +=
-              '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; Exceeds 180-day limit</div>';
+            // At or above the limit - find when it will drop below 180
+            const currentIndex = riskSeriesData.findIndex(([timestamp]) => timestamp === x);
+            if (currentIndex !== -1) {
+              // Look ahead to find when rolling days drop below 180
+              let nextDropIndex = -1;
+              for (let i = currentIndex + 1; i < riskSeriesData.length; i++) {
+                if (riskSeriesData[i][1] < 180) {
+                  nextDropIndex = i;
+                  break;
+                }
+              }
+
+              if (nextDropIndex !== -1) {
+                const nextDropDate = riskSeriesData[nextDropIndex][0];
+                const nextDropDateLabel = Highcharts.dateFormat('%e %b %Y', nextDropDate);
+                const remainingDays = 180 - riskSeriesData[nextDropIndex][1];
+
+                html +=
+                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; At/above 180-day limit</div>' +
+                  `<div style="font-size:11px;color:#dc2626;margin-top:2px;"><strong>Limit expires: ${nextDropDateLabel}</strong></div>` +
+                  `<div style="font-size:11px;color:#475569;">Available margin after: ${remainingDays} days</div>`;
+              } else if (y === 180) {
+                html +=
+                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; At 180-day limit</div>' +
+                  '<div style="font-size:11px;color:#475569;margin-top:2px;">No additional absences allowed</div>';
+              } else {
+                html +=
+                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; Exceeds 180-day limit</div>';
+              }
+            }
           }
 
           html += '</div>';
