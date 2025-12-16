@@ -465,7 +465,10 @@ function checkStandardRollingAbsences(
 /**
  * Generic Rolling 12-month Checker.
  * Checks if any 12-month window within [periodStart, periodEnd] exceeds 180 days.
- * Efficient algorithm: Identify critical points (trip ends) and check windows ending there.
+ *
+ * IMPORTANT: Per UK Home Office guidance, we check ALL possible rolling 12-month windows.
+ * For each day in the qualifying period, we look back 12 months and count absences.
+ * This ensures we catch any violation regardless of when it occurs.
  */
 function checkRollingAbsences(
   absences: { start: Date; end: Date; days: number }[],
@@ -474,18 +477,9 @@ function checkRollingAbsences(
 ): AbsenceCheckResult {
   const offendingWindows: OffendingWindow[] = [];
 
-  // Optimization: Only check windows ending on:
-  // 1. An absence end date (most likely point to breach limit)
-  // 2. The period end date
-  // 3. Every day? (Safe but slow).
-  // Given the complexity of "rolling", checking every day is safest and acceptable for client-side (365*5 = ~1800 checks).
-  // Optimization: Check only days where an absence exists in the preceding 12 months.
-
-  // We scan daily from periodStart to periodEnd.
-  // To verify strict compliance, we should check *every* day in the qualifying period.
   const totalDays = differenceInDays(periodEnd, periodStart);
 
-  // Heuristic: If total absences are small, skip.
+  // Heuristic: If total absences are small, skip detailed checking
   const totalAbs = absences.reduce((sum, a) => sum + a.days, 0);
   if (totalAbs <= 180) return { passed: true, offendingWindows: [] };
 
@@ -502,11 +496,6 @@ function checkRollingAbsences(
     }
     return sum;
   };
-
-  // Iterate daily - check every rolling 12-month window
-  // A rolling 12-month window means 12 calendar months (NOT 365 days, due to leap years).
-  // We check all windows that START within the period and span 12 months.
-  // The last valid window starts at max(periodStart, periodEnd - 12 months) and ends at periodEnd.
 
   // If the period is shorter than 12 months, we can't check full rolling windows,
   // but we should still check if any single absence exceeds 180 days
@@ -528,19 +517,28 @@ function checkRollingAbsences(
     return { passed: true, offendingWindows: [] };
   }
 
-  // Calculate the last day we can start a 12-month window that fits within the period
-  const latestWindowStart = subYears(periodEnd, 1);
-  const effectiveLatestStart = latestWindowStart < periodStart ? periodStart : latestWindowStart;
-  const maxStartOffset = differenceInDays(effectiveLatestStart, periodStart);
+  // CORRECT APPROACH: Check every day in the qualifying period as a window END date.
+  // For each day, look back 12 months and count absences in that window.
+  // This is the true "rolling 12-month" check per Home Office guidance.
 
-  for (let i = 0; i <= maxStartOffset; i++) {
-    const windowStart = addDays(periodStart, i);
-    const windowEnd = addYears(windowStart, 1);
+  // Start checking from the first day where a full 12-month window can fit
+  // (i.e., 12 months after periodStart)
+  const firstFullWindowEnd = addYears(periodStart, 1);
 
-    const daysCount = countDaysInWindow(windowStart, windowEnd);
+  // We need to check all days from firstFullWindowEnd to periodEnd
+  const daysToCheck = differenceInDays(periodEnd, firstFullWindowEnd) + 1;
+
+  for (let i = 0; i < daysToCheck; i++) {
+    const windowEnd = addDays(firstFullWindowEnd, i);
+    const windowStart = subYears(windowEnd, 1);
+
+    // Make sure windowStart doesn't go before periodStart
+    const effectiveWindowStart = windowStart < periodStart ? periodStart : windowStart;
+
+    const daysCount = countDaysInWindow(effectiveWindowStart, windowEnd);
     if (daysCount > MAX_ABSENCE_IN_12_MONTHS) {
       offendingWindows.push({
-        start: format(windowStart, 'yyyy-MM-dd'),
+        start: format(effectiveWindowStart, 'yyyy-MM-dd'),
         end: format(windowEnd, 'yyyy-MM-dd'),
         days: daysCount,
       });
