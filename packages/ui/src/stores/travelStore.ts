@@ -27,7 +27,22 @@ class TravelStore {
     makeAutoObservable(this);
   }
 
-  private get calculations(): TravelCalculationResult {
+  // Check if minimum required fields are present before running calculation
+  get hasRequiredFields(): boolean {
+    return !!(
+      this.vignetteEntryDate &&
+      this.visaStartDate &&
+      this.ilrTrack &&
+      this.trips.every((t) => t.outDate && t.inDate)
+    );
+  }
+
+  private get calculations(): TravelCalculationResult | null {
+    // Gate calculation - return null if required fields missing
+    if (!this.hasRequiredFields) {
+      return null;
+    }
+
     return calculateTravelData({
       trips: this.trips,
       vignetteEntryDate: this.vignetteEntryDate,
@@ -38,37 +53,52 @@ class TravelStore {
   }
 
   get tripsWithCalculations(): TripWithCalculations[] {
-    return this.calculations.tripsWithCalculations;
+    return this.calculations?.tripsWithCalculations || [];
   }
 
   get preEntryPeriod(): PreEntryPeriodInfo | null {
-    return this.calculations.preEntryPeriod;
+    return this.calculations?.preEntryPeriod || null;
+  }
+
+  get validation() {
+    return this.calculations?.validation || null;
   }
 
   get effectiveApplicationDate(): string | null {
-    return this.calculations.validation.status === 'ELIGIBLE'
-      ? this.calculations.validation.applicationDate
+    return this.validation?.status === 'ELIGIBLE'
+      ? this.validation.applicationDate
       : null;
   }
 
   get autoDateUsed(): boolean {
-    return this.calculations.summary.autoDateUsed;
+    return this.calculations?.summary.autoDateUsed || false;
   }
 
   get summary() {
-    return this.calculations.summary;
+    return this.calculations?.summary || {
+      totalTrips: this.trips.length,
+      completeTrips: 0,
+      incompleteTrips: this.trips.length,
+      totalFullDays: 0,
+      continuousLeaveDays: null,
+      maxAbsenceInAny12Months: null,
+      hasExceededAllowedAbsense: false,
+      ilrEligibilityDate: null,
+      daysUntilEligible: null,
+      autoDateUsed: false,
+    };
   }
 
   get rollingAbsenceData(): RollingDataPoint[] {
-    return this.calculations.rollingAbsenceData;
+    return this.calculations?.rollingAbsenceData || [];
   }
 
   get timelinePoints(): TimelinePoint[] {
-    return this.calculations.timelinePoints;
+    return this.calculations?.timelinePoints || [];
   }
 
   get tripBars(): TripBar[] {
-    return this.calculations.tripBars;
+    return this.calculations?.tripBars || [];
   }
 
   generateId(): string {

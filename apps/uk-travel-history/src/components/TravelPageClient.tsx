@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { Header } from './Header';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
+import { ValidationStatusCard } from './ValidationStatusCard';
 import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
@@ -66,6 +67,7 @@ export const TravelPageClient = observer(() => {
       <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 min-h-[calc(100vh-60px)]">
         <SummaryCards />
         <VisaDetailsCard />
+        <ValidationStatusCard />
         <RiskAreaChart />
         <TravelHistoryCard onClearAll={handleClearAll} />
       </main>

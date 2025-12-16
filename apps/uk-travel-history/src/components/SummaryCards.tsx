@@ -15,8 +15,10 @@ import { StatCard } from './StatCard';
 
 export const SummaryCards = observer(() => {
   const summary = travelStore.summary;
+  const validation = travelStore.validation;
   const hasContinuousLeave = summary.continuousLeaveDays !== null;
-  const hasILRDate = summary.ilrEligibilityDate !== null;
+  // Only show ILR date card when ELIGIBLE (not just when date exists)
+  const hasILRDate = validation?.status === 'ELIGIBLE' && summary.ilrEligibilityDate !== null;
 
   const gridColsClass =
     hasContinuousLeave && hasILRDate
