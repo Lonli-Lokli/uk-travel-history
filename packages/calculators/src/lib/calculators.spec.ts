@@ -158,9 +158,11 @@ describe('Complex Rolling Window Scenarios', () => {
     });
 
     expect(result.validation.status).toBe('INELIGIBLE');
-    expect(result.validation.status === 'INELIGIBLE' ? result.validation.reason.type : null).toBe(
-      'TOO_EARLY' satisfies IneligibilityReason['type'],
-    );
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('TOO_EARLY' satisfies IneligibilityReason['type']);
   });
 
   it('flags when rolling 12-month absences exceed 180 days', () => {
@@ -261,7 +263,7 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
     expect(result.summary.totalFullDays).toBeGreaterThanOrEqual(150);
   });
 
-  it('delays eligibility date when absences exceed 180 days (Issue #29)', () => {
+  it('delays eligibility date when absences exceed 180 days', () => {
     // Scenario: Absences are too high in the first year.
     // The calculator must find a date LATER than the standard "-28 days" date
     // where the rolling window no longer exceeds 180 days.
@@ -283,7 +285,7 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
         inDate: '2023-11-01',
         outRoute: '',
         inRoute: '',
-      }, // 60 days
+      }, // 59 days
       {
         id: '3',
         outDate: '2024-01-01',
@@ -303,17 +305,12 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
 
     expect(result.validation.status).toBe('ELIGIBLE');
 
-    const standardDate = '2026-03-01';
     const calculatedDate =
       result.validation.status === 'ELIGIBLE'
         ? result.validation.applicationDate
         : '';
 
-    // The calculated date MUST be later than the standard date because the user
-    // has to wait for the concentrated absences to "roll out" of the 12-month window.
-    expect(new Date(calculatedDate).getTime()).toBeGreaterThan(
-      new Date(standardDate).getTime(),
-    );
+    expect(calculatedDate).toBe('2026-03-10');
   });
 });
 
@@ -412,7 +409,7 @@ describe('Long Residence (10 Year) Transitional Rules', () => {
     expect(result.validation.status).toBe('INELIGIBLE');
   });
 
-  it.skip('enforces rolling 180-day limit for absences starting ON/AFTER 11 April 2024', () => {
+  it('enforces rolling 180-day limit for absences starting ON/AFTER 11 April 2024', () => {
     const trips: TripRecord[] = [
       {
         id: 'post-2024',
@@ -432,9 +429,11 @@ describe('Long Residence (10 Year) Transitional Rules', () => {
     });
 
     expect(result.validation.status).toBe('INELIGIBLE');
-    expect(result.validation.status === 'INELIGIBLE' ? result.validation.reason.type : null).toBe(
-      'EXCESSIVE_ABSENCE' satisfies IneligibilityReason['type'],
-    );
+    expect(
+      result.validation.status === 'INELIGIBLE'
+        ? result.validation.reason.type
+        : null,
+    ).toBe('EXCESSIVE_ABSENCE' satisfies IneligibilityReason['type']);
   });
 });
 
