@@ -95,6 +95,8 @@ class TravelStore {
       ilrEligibilityDate: null,
       daysUntilEligible: null,
       autoDateUsed: false,
+      currentRollingAbsenceToday: null,
+      remaining180LimitToday: null,
     };
   }
 

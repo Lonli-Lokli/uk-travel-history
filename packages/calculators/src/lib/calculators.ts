@@ -673,18 +673,36 @@ function calculateLegalEarliestDate(params: {
 
 function createErrorResult(
   trips: TripWithCalculations[],
-  type: IneligibilityReason['type'],
+  type: 'INCORRECT_INPUT' | 'INCOMPLETED_TRIPS',
   message: string,
 ): TravelCalculationResult {
+  const reason: IneligibilityReason =
+    type === 'INCOMPLETED_TRIPS' || type === 'INCORRECT_INPUT'
+      ? { type, message }
+      : { type: 'INCORRECT_INPUT', message }; // Fallback to INCORRECT_INPUT
+
   return {
     tripsWithCalculations: trips,
     preEntryPeriod: null,
-    validation: { status: 'INELIGIBLE', reason: { type, message } },
-    summary: {} as ILRSummary,
+    validation: { status: 'INELIGIBLE', reason },
+    summary: {
+      totalTrips: trips.length,
+      completeTrips: trips.filter((t) => !t.isIncomplete).length,
+      incompleteTrips: trips.filter((t) => t.isIncomplete).length,
+      totalFullDays: trips.reduce((sum, t) => sum + (t.fullDays || 0), 0),
+      continuousLeaveDays: null,
+      maxAbsenceInAny12Months: null,
+      hasExceededAllowedAbsense: false,
+      ilrEligibilityDate: null,
+      daysUntilEligible: null,
+      autoDateUsed: false,
+      currentRollingAbsenceToday: null,
+      remaining180LimitToday: null,
+    },
     rollingAbsenceData: [],
     timelinePoints: [],
     tripBars: [],
-  } as TravelCalculationResult;
+  };
 }
 
 // --- UI DATA BUILDERS (Summary, Rolling Data, Bars) ---
