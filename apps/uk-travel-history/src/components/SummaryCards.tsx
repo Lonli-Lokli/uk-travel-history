@@ -25,11 +25,11 @@ export const SummaryCards = observer(() => {
 
   const gridColsClass =
     hasContinuousLeave && hasILRDate && hasTodayQuota
-      ? 'sm:grid-cols-7'
+      ? 'sm:grid-cols-4 lg:grid-cols-7'
       : hasContinuousLeave && hasILRDate
-      ? 'sm:grid-cols-6'
+      ? 'sm:grid-cols-3 lg:grid-cols-6'
       : hasContinuousLeave
-      ? 'sm:grid-cols-5'
+      ? 'sm:grid-cols-4 lg:grid-cols-5'
       : 'sm:grid-cols-4';
 
   return (

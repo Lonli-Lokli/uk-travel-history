@@ -277,8 +277,8 @@ export const RiskAreaChart: React.FC = observer(() => {
 
             html +=
               `<div style="font-size:11px;color:#059669;margin-top:4px;">Available Limit: ${availableLimit} days</div>` +
-              `<div style="font-size:11px;color:#475569;margin-top:2px;">Next Quota Increase: ${expirationDateLabel}</div>` +
-              `<div style="font-size:11px;color:#475569;">${dataPoint.daysToExpire} days will roll out</div>`;
+              `<div style="font-size:11px;color:#475569;margin-top:2px;">Oldest Trip Expires: ${expirationDateLabel}</div>` +
+              `<div style="font-size:11px;color:#475569;">+${dataPoint.daysToExpire} days available</div>`;
           }
 
           html += '</div>';

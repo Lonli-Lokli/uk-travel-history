@@ -17,8 +17,18 @@ export interface RollingDataPoint {
   rollingDays: number;
   riskLevel: 'low' | 'caution' | 'critical';
   formattedDate: string;
-  nextExpirationDate: string | null; // Date when oldest trip(s) will roll out of the 12-month window
-  daysToExpire: number | null; // Number of days that will be freed up
+  /**
+   * ISO date when the oldest absence in the current rolling 12-month window will expire (365 days from its start).
+   * At this point, that absence will no longer be counted in the rolling window.
+   * Null if no absences are contributing to this data point.
+   */
+  nextExpirationDate: string | null;
+  /**
+   * Number of absence days that will be freed up when the oldest trip expires.
+   * This represents the clipped days from the oldest interval within the current rolling window.
+   * Null if no absences are contributing to this data point.
+   */
+  daysToExpire: number | null;
 }
 
 export interface TimelinePoint {

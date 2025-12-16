@@ -127,6 +127,14 @@ export function calculateTravelData(
   }
 
   // 7. Generate Auxiliary Data (UI Visuals)
+  // Build absence intervals once and reuse to avoid redundant calculations
+  const absenceIntervals = buildAbsenceIntervals(
+    tripsWithCalculations,
+    preEntryPeriod,
+    input.visaStartDate,
+    input.vignetteEntryDate,
+  );
+
   const summary = buildSummary({
     tripsWithCalculations,
     preEntryPeriod,
@@ -136,6 +144,7 @@ export function calculateTravelData(
     vignetteEntryDate: input.vignetteEntryDate,
     visaStartDate: input.visaStartDate,
     autoDateUsed: !input.applicationDateOverride,
+    absenceIntervals,
   });
 
   const rollingAbsenceData = buildRollingAbsenceData({
@@ -144,6 +153,7 @@ export function calculateTravelData(
     vignetteEntryDate: input.vignetteEntryDate,
     visaStartDate: input.visaStartDate,
     effectiveApplicationDate,
+    absenceIntervals,
   });
 
   const timelinePoints = buildTimelinePoints({
@@ -676,10 +686,7 @@ function createErrorResult(
   type: 'INCORRECT_INPUT' | 'INCOMPLETED_TRIPS',
   message: string,
 ): TravelCalculationResult {
-  const reason: IneligibilityReason =
-    type === 'INCOMPLETED_TRIPS' || type === 'INCORRECT_INPUT'
-      ? { type, message }
-      : { type: 'INCORRECT_INPUT', message }; // Fallback to INCORRECT_INPUT
+  const reason: IneligibilityReason = { type, message };
 
   return {
     tripsWithCalculations: trips,
@@ -716,6 +723,7 @@ function buildSummary(params: {
   effectiveApplicationDate: string | null;
   validation: ILRValidationResult;
   autoDateUsed: boolean;
+  absenceIntervals: ReturnType<typeof buildAbsenceIntervals>;
 }): ILRSummary {
   const {
     tripsWithCalculations,
@@ -725,6 +733,7 @@ function buildSummary(params: {
     visaStartDate,
     vignetteEntryDate,
     ilrTrack,
+    absenceIntervals,
   } = params;
   const complete = tripsWithCalculations.filter((t) => !t.isIncomplete);
 
@@ -809,15 +818,9 @@ function buildSummary(params: {
     // Only calculate if we're past the visa start date
     if (isAfter(today, start) || today.getTime() === start.getTime()) {
       const windowStart = subDays(today, 365);
-      const intervals = buildAbsenceIntervals(
-        tripsWithCalculations,
-        preEntryPeriod,
-        visaStartDate,
-        vignetteEntryDate,
-      );
 
       let todaySum = 0;
-      intervals.forEach((abc) => {
+      absenceIntervals.forEach((abc) => {
         const is = abc.start < windowStart ? windowStart : abc.start;
         const ie = abc.end > today ? today : abc.end;
         if (is <= ie) {
@@ -852,13 +855,13 @@ function buildRollingAbsenceData(params: {
   vignetteEntryDate: string;
   visaStartDate: string;
   effectiveApplicationDate: string | null;
+  absenceIntervals: ReturnType<typeof buildAbsenceIntervals>;
 }): RollingDataPoint[] {
   const {
-    tripsWithCalculations,
-    preEntryPeriod,
     visaStartDate,
     vignetteEntryDate,
     effectiveApplicationDate,
+    absenceIntervals,
   } = params;
   const startStr = visaStartDate || vignetteEntryDate;
   if (!startStr) return [];
@@ -872,12 +875,6 @@ function buildRollingAbsenceData(params: {
 
   if (totalDays < 0 || totalDays > 4000) return []; // Safety
 
-  const intervals = buildAbsenceIntervals(
-    tripsWithCalculations,
-    preEntryPeriod,
-    visaStartDate,
-    vignetteEntryDate,
-  );
   const points: RollingDataPoint[] = [];
   const step = Math.max(1, Math.floor(totalDays / 100)); // ~100 points
 
@@ -887,9 +884,9 @@ function buildRollingAbsenceData(params: {
 
     // Calculate rolling absence ending on `current`
     let sum = 0;
-    const contributingIntervals: { interval: typeof intervals[0], days: number }[] = [];
+    const contributingIntervals: { interval: typeof absenceIntervals[0], days: number }[] = [];
 
-    intervals.forEach((abc) => {
+    absenceIntervals.forEach((abc) => {
       const is = abc.start < windowStart ? windowStart : abc.start;
       const ie = abc.end > current ? current : abc.end;
       if (is <= ie) {
@@ -905,8 +902,11 @@ function buildRollingAbsenceData(params: {
     let daysToExpire: number | null = null;
 
     if (contributingIntervals.length > 0) {
-      // The oldest interval is the first one that contributed
-      const oldestInterval = contributingIntervals[0].interval;
+      // Find the oldest interval by start date (not just the first in the array)
+      const oldestContributing = contributingIntervals.reduce((oldest, current) =>
+        current.interval.start < oldest.interval.start ? current : oldest
+      );
+      const oldestInterval = oldestContributing.interval;
 
       // The expiration date is 365 days after the START of the oldest absence
       // At that point, this absence will no longer be in the rolling window
@@ -915,7 +915,7 @@ function buildRollingAbsenceData(params: {
       // Only set expiration if it's in the future from current point
       if (isAfter(expirationDate, current)) {
         nextExpirationDate = format(expirationDate, 'yyyy-MM-dd');
-        daysToExpire = contributingIntervals[0].days;
+        daysToExpire = oldestContributing.days;
       }
     }
 
