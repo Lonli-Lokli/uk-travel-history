@@ -173,7 +173,8 @@ export function parseCsvText(csvText: string): CSVParseResult {
       }
     }
 
-    // Validate date logic (compare ISO strings)
+    // Validate date logic: ISO strings (YYYY-MM-DD) can be compared lexicographically
+    // because the format ensures chronological ordering
     if (outDate && inDate && outDate > inDate) {
       errors.push(`Row ${rowNum}: Departure date is after return date`);
       return;
@@ -300,7 +301,8 @@ export async function parseXlsxFile(
         }
       }
 
-      // Validate date logic (compare ISO strings)
+      // Validate date logic: ISO strings (YYYY-MM-DD) can be compared lexicographically
+      // because the format ensures chronological ordering
       if (outDate && inDate && outDate > inDate) {
         errors.push(`Row ${rowNumber}: Departure date is after return date`);
         return;

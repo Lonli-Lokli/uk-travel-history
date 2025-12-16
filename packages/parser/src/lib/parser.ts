@@ -1,4 +1,4 @@
-import { format, parse } from 'date-fns';
+import { differenceInDays, format, parse, parseISO } from 'date-fns';
 
 export interface TravelRecord {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -166,7 +166,8 @@ export function parseTravelRecords(text: string): TravelRecord[] {
   const seen = new Set<string>();
 
   for (const record of records) {
-    const key = `${format(record.date, 'yyyy-MM-dd')}-${record.direction}`;
+    // record.date is already in ISO format (YYYY-MM-DD)
+    const key = `${record.date}-${record.direction}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueRecords.push(record);
@@ -196,12 +197,12 @@ export function pairTrips(records: TravelRecord[]): Trip[] {
 
       if (inboundIndex !== -1) {
         const inbound = records[inboundIndex];
-        // Use date-fns to calculate difference in days
-        const outDateObj = parse(record.date, 'yyyy-MM-dd', new Date());
-        const inDateObj = parse(inbound.date, 'yyyy-MM-dd', new Date());
-        const calendarDays = Math.floor(
-          (inDateObj.getTime() - outDateObj.getTime()) / (1000 * 60 * 60 * 24),
+        // Calculate calendar days between ISO date strings using date-fns
+        const calendarDays = differenceInDays(
+          parseISO(inbound.date),
+          parseISO(record.date),
         );
+        // Full days excludes departure and return days (per UK Home Office guidance)
         const fullDays = Math.max(0, calendarDays - 1);
 
         trips.push({
