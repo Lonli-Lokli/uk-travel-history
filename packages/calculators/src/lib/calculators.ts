@@ -127,6 +127,14 @@ export function calculateTravelData(
   }
 
   // 7. Generate Auxiliary Data (UI Visuals)
+  // Build absence intervals once and reuse to avoid redundant calculations
+  const absenceIntervals = buildAbsenceIntervals(
+    tripsWithCalculations,
+    preEntryPeriod,
+    input.visaStartDate,
+    input.vignetteEntryDate,
+  );
+
   const summary = buildSummary({
     tripsWithCalculations,
     preEntryPeriod,
@@ -136,6 +144,7 @@ export function calculateTravelData(
     vignetteEntryDate: input.vignetteEntryDate,
     visaStartDate: input.visaStartDate,
     autoDateUsed: !input.applicationDateOverride,
+    absenceIntervals,
   });
 
   const rollingAbsenceData = buildRollingAbsenceData({
@@ -143,6 +152,8 @@ export function calculateTravelData(
     preEntryPeriod,
     vignetteEntryDate: input.vignetteEntryDate,
     visaStartDate: input.visaStartDate,
+    effectiveApplicationDate,
+    absenceIntervals,
   });
 
   const timelinePoints = buildTimelinePoints({
@@ -672,18 +683,33 @@ function calculateLegalEarliestDate(params: {
 
 function createErrorResult(
   trips: TripWithCalculations[],
-  type: IneligibilityReason['type'],
+  type: 'INCORRECT_INPUT' | 'INCOMPLETED_TRIPS',
   message: string,
 ): TravelCalculationResult {
+  const reason: IneligibilityReason = { type, message };
+
   return {
     tripsWithCalculations: trips,
     preEntryPeriod: null,
-    validation: { status: 'INELIGIBLE', reason: { type, message } },
-    summary: {} as ILRSummary,
+    validation: { status: 'INELIGIBLE', reason },
+    summary: {
+      totalTrips: trips.length,
+      completeTrips: trips.filter((t) => !t.isIncomplete).length,
+      incompleteTrips: trips.filter((t) => t.isIncomplete).length,
+      totalFullDays: trips.reduce((sum, t) => sum + (t.fullDays || 0), 0),
+      continuousLeaveDays: null,
+      maxAbsenceInAny12Months: null,
+      hasExceededAllowedAbsense: false,
+      ilrEligibilityDate: null,
+      daysUntilEligible: null,
+      autoDateUsed: false,
+      currentRollingAbsenceToday: null,
+      remaining180LimitToday: null,
+    },
     rollingAbsenceData: [],
     timelinePoints: [],
     tripBars: [],
-  } as TravelCalculationResult;
+  };
 }
 
 // --- UI DATA BUILDERS (Summary, Rolling Data, Bars) ---
@@ -697,6 +723,7 @@ function buildSummary(params: {
   effectiveApplicationDate: string | null;
   validation: ILRValidationResult;
   autoDateUsed: boolean;
+  absenceIntervals: ReturnType<typeof buildAbsenceIntervals>;
 }): ILRSummary {
   const {
     tripsWithCalculations,
@@ -706,6 +733,7 @@ function buildSummary(params: {
     visaStartDate,
     vignetteEntryDate,
     ilrTrack,
+    absenceIntervals,
   } = params;
   const complete = tripsWithCalculations.filter((t) => !t.isIncomplete);
 
@@ -779,6 +807,32 @@ function buildSummary(params: {
     daysUntilEligible = differenceInDays(appDate, new Date());
   }
 
+  // Feature 3: Calculate today's 180-day rolling absence quota
+  let currentRollingAbsenceToday: number | null = null;
+  let remaining180LimitToday: number | null = null;
+
+  if (visaStartDate) {
+    const today = new Date();
+    const start = parseISO(visaStartDate);
+
+    // Only calculate if we're past the visa start date
+    if (isAfter(today, start) || today.getTime() === start.getTime()) {
+      const windowStart = subDays(today, 365);
+
+      let todaySum = 0;
+      absenceIntervals.forEach((abc) => {
+        const is = abc.start < windowStart ? windowStart : abc.start;
+        const ie = abc.end > today ? today : abc.end;
+        if (is <= ie) {
+          todaySum += differenceInDays(ie, is) + 1;
+        }
+      });
+
+      currentRollingAbsenceToday = todaySum;
+      remaining180LimitToday = Math.max(0, MAX_ABSENCE_IN_12_MONTHS - todaySum);
+    }
+  }
+
   return {
     totalTrips: tripsWithCalculations.length,
     completeTrips: complete.length,
@@ -790,6 +844,8 @@ function buildSummary(params: {
     ilrEligibilityDate: effectiveApplicationDate,
     daysUntilEligible,
     autoDateUsed: params.autoDateUsed,
+    currentRollingAbsenceToday,
+    remaining180LimitToday,
   };
 }
 
@@ -798,28 +854,27 @@ function buildRollingAbsenceData(params: {
   preEntryPeriod: PreEntryPeriodInfo | null;
   vignetteEntryDate: string;
   visaStartDate: string;
+  effectiveApplicationDate: string | null;
+  absenceIntervals: ReturnType<typeof buildAbsenceIntervals>;
 }): RollingDataPoint[] {
   const {
-    tripsWithCalculations,
-    preEntryPeriod,
     visaStartDate,
     vignetteEntryDate,
+    effectiveApplicationDate,
+    absenceIntervals,
   } = params;
   const startStr = visaStartDate || vignetteEntryDate;
   if (!startStr) return [];
 
   const start = parseISO(startStr);
-  const end = new Date(); // Show up to today
+
+  // Feature 2: Chart should end at eligibility date, not today
+  // This prevents showing false positive breaches after the qualifying period ends
+  const end = effectiveApplicationDate ? parseISO(effectiveApplicationDate) : new Date();
   const totalDays = differenceInDays(end, start);
 
   if (totalDays < 0 || totalDays > 4000) return []; // Safety
 
-  const intervals = buildAbsenceIntervals(
-    tripsWithCalculations,
-    preEntryPeriod,
-    visaStartDate,
-    vignetteEntryDate,
-  );
   const points: RollingDataPoint[] = [];
   const step = Math.max(1, Math.floor(totalDays / 100)); // ~100 points
 
@@ -829,17 +884,48 @@ function buildRollingAbsenceData(params: {
 
     // Calculate rolling absence ending on `current`
     let sum = 0;
-    intervals.forEach((abc) => {
+    const contributingIntervals: { interval: typeof absenceIntervals[0], days: number }[] = [];
+
+    absenceIntervals.forEach((abc) => {
       const is = abc.start < windowStart ? windowStart : abc.start;
       const ie = abc.end > current ? current : abc.end;
-      if (is <= ie) sum += differenceInDays(ie, is) + 1;
+      if (is <= ie) {
+        const days = differenceInDays(ie, is) + 1;
+        sum += days;
+        contributingIntervals.push({ interval: abc, days });
+      }
     });
+
+    // Feature 1: Calculate next expiration date and days to expire
+    // Find the oldest trip(s) contributing to this window and when they'll roll out
+    let nextExpirationDate: string | null = null;
+    let daysToExpire: number | null = null;
+
+    if (contributingIntervals.length > 0) {
+      // Find the oldest interval by start date (not just the first in the array)
+      const oldestContributing = contributingIntervals.reduce((oldest, current) =>
+        current.interval.start < oldest.interval.start ? current : oldest
+      );
+      const oldestInterval = oldestContributing.interval;
+
+      // The expiration date is 365 days after the START of the oldest absence
+      // At that point, this absence will no longer be in the rolling window
+      const expirationDate = addDays(oldestInterval.start, 365);
+
+      // Only set expiration if it's in the future from current point
+      if (isAfter(expirationDate, current)) {
+        nextExpirationDate = format(expirationDate, 'yyyy-MM-dd');
+        daysToExpire = oldestContributing.days;
+      }
+    }
 
     points.push({
       date: format(current, 'yyyy-MM-dd'),
       rollingDays: sum,
       riskLevel: sum > 180 ? 'critical' : sum >= 150 ? 'caution' : 'low',
       formattedDate: format(current, 'dd/MM/yyyy'),
+      nextExpirationDate,
+      daysToExpire,
     });
   }
   return points;

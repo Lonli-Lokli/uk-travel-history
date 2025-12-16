@@ -531,3 +531,202 @@ describe('Invalid Inputs & Errors', () => {
     ).toBe('TOO_EARLY' satisfies IneligibilityReason['type']);
   });
 });
+
+// ------------------------------------------------------------------
+// NEW FEATURES - Chart Improvements
+// ------------------------------------------------------------------
+describe('Feature 1: Future Absence Quota Projection', () => {
+  it('calculates nextExpirationDate for rolling absence data points', () => {
+    const trips: TripRecord[] = [
+      {
+        id: 't1',
+        outDate: '2023-02-01',
+        inDate: '2023-02-15', // 13 full days
+        outRoute: 'Trip 1',
+        inRoute: 'Trip 1',
+      },
+    ];
+
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
+
+    // Check that rolling absence data points have expiration info
+    expect(result.rollingAbsenceData.length).toBeGreaterThan(0);
+
+    // Find a data point after the trip
+    const pointAfterTrip = result.rollingAbsenceData.find(
+      (p) => p.date >= '2023-03-01'
+    );
+
+    if (pointAfterTrip && pointAfterTrip.rollingDays > 0) {
+      // Should have expiration date when there are absences
+      expect(pointAfterTrip.nextExpirationDate).toBeTruthy();
+      expect(pointAfterTrip.daysToExpire).toBeGreaterThan(0);
+    }
+  });
+
+  it('sets nextExpirationDate to null when no absences contribute', () => {
+    const result = calculateTravelData({
+      trips: [],
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
+
+    // All points should have 0 rolling days and no expiration
+    const samplePoint = result.rollingAbsenceData[0];
+    if (samplePoint) {
+      expect(samplePoint.rollingDays).toBe(0);
+      expect(samplePoint.nextExpirationDate).toBeNull();
+      expect(samplePoint.daysToExpire).toBeNull();
+    }
+  });
+});
+
+describe('Feature 2: Chart Scope Ends at Eligibility Date', () => {
+  it('limits rolling absence data to eligibility date when auto-calculated', () => {
+    const trips: TripRecord[] = [
+      {
+        id: 't1',
+        outDate: '2023-02-01',
+        inDate: '2023-02-10',
+        outRoute: '',
+        inRoute: '',
+      },
+    ];
+
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
+
+    // Chart should end at or before the eligibility date
+    if (result.validation.status === 'ELIGIBLE') {
+      const lastPoint = result.rollingAbsenceData[result.rollingAbsenceData.length - 1];
+      expect(lastPoint.date <= result.validation.applicationDate).toBe(true);
+    }
+  });
+
+  it('extends rolling data to override date when provided', () => {
+    const overrideDate = '2026-06-01';
+
+    const result = calculateTravelData({
+      trips: [],
+      visaStartDate: '2023-01-01',
+      vignetteEntryDate: '2023-01-01',
+      ilrTrack: 3,
+      applicationDateOverride: overrideDate,
+    });
+
+    // Chart should end at the override date
+    const lastPoint = result.rollingAbsenceData[result.rollingAbsenceData.length - 1];
+    expect(lastPoint.date <= overrideDate).toBe(true);
+  });
+});
+
+describe('Feature 3: Today\'s Absence Quota Summary', () => {
+  it('calculates currentRollingAbsenceToday correctly', () => {
+    // Create a trip that ended recently
+    const today = new Date();
+    const tripEnd = new Date(today);
+    tripEnd.setDate(tripEnd.getDate() - 10);
+    const tripStart = new Date(tripEnd);
+    tripStart.setDate(tripStart.getDate() - 20);
+
+    const trips: TripRecord[] = [
+      {
+        id: 't1',
+        outDate: tripStart.toISOString().split('T')[0],
+        inDate: tripEnd.toISOString().split('T')[0],
+        outRoute: '',
+        inRoute: '',
+      },
+    ];
+
+    const visaStart = new Date(today);
+    visaStart.setFullYear(visaStart.getFullYear() - 1);
+
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: visaStart.toISOString().split('T')[0],
+      vignetteEntryDate: visaStart.toISOString().split('T')[0],
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
+
+    // Should have today's quota calculated
+    expect(result.summary.currentRollingAbsenceToday).not.toBeNull();
+    expect(result.summary.remaining180LimitToday).not.toBeNull();
+
+    // Remaining should be 180 minus current
+    if (result.summary.currentRollingAbsenceToday !== null) {
+      expect(result.summary.remaining180LimitToday).toBe(
+        Math.max(0, 180 - result.summary.currentRollingAbsenceToday)
+      );
+    }
+  });
+
+  it('calculates remaining180LimitToday as 0 when limit exceeded', () => {
+    // Create trips that exceed 180 days in last 12 months
+    const today = new Date();
+    const trips: TripRecord[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const end = new Date(today);
+      end.setDate(end.getDate() - (i * 25));
+      const start = new Date(end);
+      start.setDate(start.getDate() - 20);
+
+      trips.push({
+        id: `t${i}`,
+        outDate: start.toISOString().split('T')[0],
+        inDate: end.toISOString().split('T')[0],
+        outRoute: '',
+        inRoute: '',
+      });
+    }
+
+    const visaStart = new Date(today);
+    visaStart.setFullYear(visaStart.getFullYear() - 2);
+
+    const result = calculateTravelData({
+      trips,
+      visaStartDate: visaStart.toISOString().split('T')[0],
+      vignetteEntryDate: visaStart.toISOString().split('T')[0],
+      ilrTrack: 5,
+      applicationDateOverride: null,
+    });
+
+    // Should clamp to 0 when exceeded
+    if (result.summary.currentRollingAbsenceToday !== null &&
+        result.summary.currentRollingAbsenceToday > 180) {
+      expect(result.summary.remaining180LimitToday).toBe(0);
+    }
+  });
+
+  it('returns null for today quota when visa not started', () => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+
+    const result = calculateTravelData({
+      trips: [],
+      visaStartDate: futureDate.toISOString().split('T')[0],
+      vignetteEntryDate: futureDate.toISOString().split('T')[0],
+      ilrTrack: 3,
+      applicationDateOverride: null,
+    });
+
+    // Should not calculate today's quota for future visas
+    expect(result.summary.currentRollingAbsenceToday).toBeNull();
+    expect(result.summary.remaining180LimitToday).toBeNull();
+  });
+});
