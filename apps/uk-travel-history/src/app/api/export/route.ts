@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
+import { format, parseISO } from 'date-fns';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'UK Travel Parser';
-    workbook.created = new Date();
+    // No need to set created date - ExcelJS handles this
 
     const sheet = workbook.addWorksheet('Travel History', {
       views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
@@ -73,11 +74,18 @@ export async function POST(request: NextRequest) {
     headerRow.height = 26;
 
     trips.forEach((trip, index) => {
-      const formatDate = (dateStr: string) => {
+      /**
+       * Format ISO date string to DD/MM/YYYY for Excel display
+       * Uses date-fns to avoid timezone issues
+       */
+      const formatDate = (dateStr: string): string => {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return '';
-        return date.toLocaleDateString('en-GB');
+        try {
+          const date = parseISO(dateStr);
+          return format(date, 'dd/MM/yyyy');
+        } catch {
+          return '';
+        }
       };
 
       const row = sheet.addRow({
