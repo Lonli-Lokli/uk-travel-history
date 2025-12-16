@@ -576,13 +576,15 @@ function buildAbsenceIntervals(
     visaStartDate &&
     vignetteEntryDate
   ) {
+    // Per Home Office guidance: The visa start date is an absence day (person not yet present),
+    // but the vignette entry date is a presence day (person has arrived).
     // Example: If visa starts Jan 1 and you enter Jan 5:
-    // - Jan 1 (visa start): NOT an absence day (like departure day)
+    // - Jan 1 (visa start): IS an absence day (not physically present yet)
     // - Jan 2, 3, 4: Full absence days
-    // - Jan 5 (entry): NOT an absence day (like return day)
-    // So absence period is Jan 2 to Jan 4.
-    const start = addDays(parseISO(visaStartDate), 1);  // Day AFTER visa start
-    const end = subDays(parseISO(vignetteEntryDate), 1);  // Day BEFORE entry
+    // - Jan 5 (entry): IS a presence day (has arrived in UK)
+    // So absence period is Jan 1 to Jan 4.
+    const start = parseISO(visaStartDate);  // INCLUDES visa start (absence day)
+    const end = subDays(parseISO(vignetteEntryDate), 1);  // Day BEFORE entry (presence day)
     if (start <= end) {
       intervals.push({
         start,

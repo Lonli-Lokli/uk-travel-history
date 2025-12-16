@@ -269,8 +269,9 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
     // where the rolling window no longer exceeds 180 days.
 
     // Visa: 2023-03-29. Standard 3yr Eligibility: 2026-03-29 (-28d) = 2026-03-01.
-    // Absences: 176 days from trips, but adding pre-entry (15 days) = 191 total in first year.
-    // Expected date: 2026-04-09 (when first 12-month window has only 4 days of pre-entry overlap, totaling 180 days).
+    // Absences: 176 days from trips, plus pre-entry (15 days, Mar 29-Apr 12) = 191 total.
+    // Expected date: 2026-04-09 (qualifying period starts 2023-04-09, only 4 days of pre-entry
+    // overlap: Apr 9-12, plus 176 trip days = 180 days exactly).
     const trips: TripRecord[] = [
       {
         id: '1',
@@ -285,7 +286,7 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
         inDate: '2023-11-01',
         outRoute: '',
         inRoute: '',
-      }, // 59 days
+      }, // 60 days
       {
         id: '3',
         outDate: '2024-01-01',
@@ -293,7 +294,7 @@ describe('Eligibility Dates & Delayed Eligibility', () => {
         outRoute: '',
         inRoute: '',
       }, // 25 days
-    ]; // Total trips: 176. Pre-entry: 15 (Apr 13 - Mar 29). Total ~191 in first year.
+    ]; // Total trips: 176 (91+60+25). Pre-entry: 15 days (Mar 29 - Apr 12). Total: 191 days in first year.
 
     const result = calculateTravelData({
       visaStartDate: '2023-03-29',
