@@ -229,6 +229,11 @@ export const RiskAreaChart: React.FC = observer(() => {
           const dateLabel = x > 0 ? Highcharts.dateFormat('%e %b %Y', x) : '';
           const displayColor = y >= 180 ? '#ef4444' : '#3b82f6';
 
+          // Find the data point to get nextExpirationDate info
+          const dataPoint = rollingAbsenceData.find((d: RollingDataPoint) =>
+            parseISO(d.date).getTime() === x
+          );
+
           let html =
             '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;box-shadow:0 2px 4px rgba(15,23,42,0.08);">' +
             `<div style="font-size:11px;color:#475569;margin-bottom:2px;">${dateLabel}</div>` +
@@ -265,6 +270,15 @@ export const RiskAreaChart: React.FC = observer(() => {
                   '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; Exceeds 180-day limit</div>';
               }
             }
+          } else if (y < 180 && dataPoint?.nextExpirationDate && dataPoint.daysToExpire) {
+            // Feature 1: Show future quota information for compliant dates
+            const availableLimit = 180 - y;
+            const expirationDateLabel = Highcharts.dateFormat('%e %b %Y', parseISO(dataPoint.nextExpirationDate).getTime());
+
+            html +=
+              `<div style="font-size:11px;color:#059669;margin-top:4px;">Available Limit: ${availableLimit} days</div>` +
+              `<div style="font-size:11px;color:#475569;margin-top:2px;">Next Quota Increase: ${expirationDateLabel}</div>` +
+              `<div style="font-size:11px;color:#475569;">${dataPoint.daysToExpire} days will roll out</div>`;
           }
 
           html += '</div>';

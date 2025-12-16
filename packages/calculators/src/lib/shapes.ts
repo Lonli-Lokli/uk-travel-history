@@ -17,6 +17,8 @@ export interface RollingDataPoint {
   rollingDays: number;
   riskLevel: 'low' | 'caution' | 'critical';
   formattedDate: string;
+  nextExpirationDate: string | null; // Date when oldest trip(s) will roll out of the 12-month window
+  daysToExpire: number | null; // Number of days that will be freed up
 }
 
 export interface TimelinePoint {
@@ -62,6 +64,8 @@ export type ILRSummary = {
   ilrEligibilityDate: string | null;
   daysUntilEligible: number | null;
   autoDateUsed: boolean;
+  currentRollingAbsenceToday: number | null; // Absence days in 12-month period ending today
+  remaining180LimitToday: number | null; // 180 - currentRollingAbsenceToday
 };
 
 export type ILRCalculationInput = {

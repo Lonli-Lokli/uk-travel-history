@@ -143,6 +143,7 @@ export function calculateTravelData(
     preEntryPeriod,
     vignetteEntryDate: input.vignetteEntryDate,
     visaStartDate: input.visaStartDate,
+    effectiveApplicationDate,
   });
 
   const timelinePoints = buildTimelinePoints({
@@ -779,6 +780,38 @@ function buildSummary(params: {
     daysUntilEligible = differenceInDays(appDate, new Date());
   }
 
+  // Feature 3: Calculate today's 180-day rolling absence quota
+  let currentRollingAbsenceToday: number | null = null;
+  let remaining180LimitToday: number | null = null;
+
+  if (visaStartDate) {
+    const today = new Date();
+    const start = parseISO(visaStartDate);
+
+    // Only calculate if we're past the visa start date
+    if (isAfter(today, start) || today.getTime() === start.getTime()) {
+      const windowStart = subDays(today, 365);
+      const intervals = buildAbsenceIntervals(
+        tripsWithCalculations,
+        preEntryPeriod,
+        visaStartDate,
+        vignetteEntryDate,
+      );
+
+      let todaySum = 0;
+      intervals.forEach((abc) => {
+        const is = abc.start < windowStart ? windowStart : abc.start;
+        const ie = abc.end > today ? today : abc.end;
+        if (is <= ie) {
+          todaySum += differenceInDays(ie, is) + 1;
+        }
+      });
+
+      currentRollingAbsenceToday = todaySum;
+      remaining180LimitToday = Math.max(0, MAX_ABSENCE_IN_12_MONTHS - todaySum);
+    }
+  }
+
   return {
     totalTrips: tripsWithCalculations.length,
     completeTrips: complete.length,
@@ -790,6 +823,8 @@ function buildSummary(params: {
     ilrEligibilityDate: effectiveApplicationDate,
     daysUntilEligible,
     autoDateUsed: params.autoDateUsed,
+    currentRollingAbsenceToday,
+    remaining180LimitToday,
   };
 }
 
@@ -798,18 +833,23 @@ function buildRollingAbsenceData(params: {
   preEntryPeriod: PreEntryPeriodInfo | null;
   vignetteEntryDate: string;
   visaStartDate: string;
+  effectiveApplicationDate: string | null;
 }): RollingDataPoint[] {
   const {
     tripsWithCalculations,
     preEntryPeriod,
     visaStartDate,
     vignetteEntryDate,
+    effectiveApplicationDate,
   } = params;
   const startStr = visaStartDate || vignetteEntryDate;
   if (!startStr) return [];
 
   const start = parseISO(startStr);
-  const end = new Date(); // Show up to today
+
+  // Feature 2: Chart should end at eligibility date, not today
+  // This prevents showing false positive breaches after the qualifying period ends
+  const end = effectiveApplicationDate ? parseISO(effectiveApplicationDate) : new Date();
   const totalDays = differenceInDays(end, start);
 
   if (totalDays < 0 || totalDays > 4000) return []; // Safety
@@ -829,17 +869,45 @@ function buildRollingAbsenceData(params: {
 
     // Calculate rolling absence ending on `current`
     let sum = 0;
+    const contributingIntervals: { interval: typeof intervals[0], days: number }[] = [];
+
     intervals.forEach((abc) => {
       const is = abc.start < windowStart ? windowStart : abc.start;
       const ie = abc.end > current ? current : abc.end;
-      if (is <= ie) sum += differenceInDays(ie, is) + 1;
+      if (is <= ie) {
+        const days = differenceInDays(ie, is) + 1;
+        sum += days;
+        contributingIntervals.push({ interval: abc, days });
+      }
     });
+
+    // Feature 1: Calculate next expiration date and days to expire
+    // Find the oldest trip(s) contributing to this window and when they'll roll out
+    let nextExpirationDate: string | null = null;
+    let daysToExpire: number | null = null;
+
+    if (contributingIntervals.length > 0) {
+      // The oldest interval is the first one that contributed
+      const oldestInterval = contributingIntervals[0].interval;
+
+      // The expiration date is 365 days after the START of the oldest absence
+      // At that point, this absence will no longer be in the rolling window
+      const expirationDate = addDays(oldestInterval.start, 365);
+
+      // Only set expiration if it's in the future from current point
+      if (isAfter(expirationDate, current)) {
+        nextExpirationDate = format(expirationDate, 'yyyy-MM-dd');
+        daysToExpire = contributingIntervals[0].days;
+      }
+    }
 
     points.push({
       date: format(current, 'yyyy-MM-dd'),
       rollingDays: sum,
       riskLevel: sum > 180 ? 'critical' : sum >= 150 ? 'caution' : 'low',
       formattedDate: format(current, 'dd/MM/yyyy'),
+      nextExpirationDate,
+      daysToExpire,
     });
   }
   return points;

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Target,
+  Clock,
 } from 'lucide-react';
 import { StatCard } from './StatCard';
 
@@ -19,9 +20,13 @@ export const SummaryCards = observer(() => {
   const hasContinuousLeave = summary.continuousLeaveDays !== null;
   // Only show ILR date card when ELIGIBLE (not just when date exists)
   const hasILRDate = validation?.status === 'ELIGIBLE' && summary.ilrEligibilityDate !== null;
+  // Show today's quota card when we have the data
+  const hasTodayQuota = summary.remaining180LimitToday !== null;
 
   const gridColsClass =
-    hasContinuousLeave && hasILRDate
+    hasContinuousLeave && hasILRDate && hasTodayQuota
+      ? 'sm:grid-cols-7'
+      : hasContinuousLeave && hasILRDate
       ? 'sm:grid-cols-6'
       : hasContinuousLeave
       ? 'sm:grid-cols-5'
@@ -97,6 +102,29 @@ export const SummaryCards = observer(() => {
                 ) : (
                   <>{summary.daysUntilEligible}d remaining</>
                 )}
+              </>
+            )
+          }
+          className="col-span-2 sm:col-span-1"
+        />
+      )}
+
+      {hasTodayQuota && summary.remaining180LimitToday !== null && (
+        <StatCard
+          icon={Clock}
+          value={summary.remaining180LimitToday}
+          label="Today's 180-Day Limit"
+          variant={
+            summary.remaining180LimitToday <= 0
+              ? 'warning'
+              : summary.remaining180LimitToday < 30
+              ? 'warning'
+              : 'success'
+          }
+          subtitle={
+            summary.currentRollingAbsenceToday !== null && (
+              <>
+                {summary.currentRollingAbsenceToday}d absent in rolling 12mo
               </>
             )
           }
