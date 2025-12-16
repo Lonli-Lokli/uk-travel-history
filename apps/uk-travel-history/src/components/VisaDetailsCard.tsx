@@ -111,7 +111,7 @@ export const VisaDetailsCard = observer(() => {
             <p className="text-xs text-muted-foreground leading-tight">
               {travelStore.effectiveApplicationDate && (
                 <>
-                  {travelStore.autoDateUsed ? 'Auto-calculated:' : 'Overridden'}
+                  {travelStore.autoDateUsed ? 'Auto-calculated: ' : 'Overridden '}
                   <strong>
                     {formatDate(travelStore.effectiveApplicationDate)}
                   </strong>
