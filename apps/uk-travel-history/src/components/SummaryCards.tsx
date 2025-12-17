@@ -145,7 +145,8 @@ export const SummaryCards = observer(() => {
                     tooltip: 'Total number of full days you have been absent from the UK in the current rolling 12-month period (looking back from today).'
                   },
                 ]
-              : [
+              : validation.status === 'INELIGIBLE'
+              ? [
                   {
                     value: 'NOT ELIGIBLE',
                     label: 'ILR Status',
@@ -183,12 +184,13 @@ export const SummaryCards = observer(() => {
                     tooltip: 'Total number of full days you have been absent from the UK in the current rolling 12-month period (looking back from today).'
                   },
                 ]
+              : []
           }
           variant={isEligible ? 'success' : 'warning'}
           subtitle={
-            !isEligible && validation.reason.type === 'TOO_EARLY'
+            !isEligible && validation.status === 'INELIGIBLE' && validation.reason.type === 'TOO_EARLY'
               ? 'Application date is before the required continuous residence period'
-              : !isEligible && validation.reason.type === 'EXCESSIVE_ABSENCE'
+              : !isEligible && validation.status === 'INELIGIBLE' && validation.reason.type === 'EXCESSIVE_ABSENCE'
               ? '180-day rolling absence limit has been exceeded'
               : undefined
           }
