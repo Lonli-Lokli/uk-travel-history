@@ -28,8 +28,8 @@ function validateConfig() {
 }
 
 // Initialize Firebase app (singleton pattern)
-let app: FirebaseApp;
-let auth: Auth;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 
 function initializeFirebase() {
   if (typeof window === 'undefined') {
@@ -43,7 +43,13 @@ function initializeFirebase() {
   if (getApps().length > 0) {
     app = getApps()[0];
   } else {
-    app = initializeApp(firebaseConfig);
+    try {
+      app = initializeApp(firebaseConfig);
+    } catch (error) {
+      console.error('Failed to initialize Firebase:', error);
+      // Allow app to continue without auth
+      return;
+    }
   }
 
   auth = getAuth(app);
@@ -54,5 +60,22 @@ if (typeof window !== 'undefined') {
   initializeFirebase();
 }
 
+/**
+ * Get the Firebase Auth instance
+ * @throws Error if called on server-side or if Firebase is not initialized
+ */
+export function getAuthInstance(): Auth {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Auth can only be used on the client side');
+  }
+
+  if (!auth) {
+    throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
+  }
+
+  return auth;
+}
+
+// Export auth as-is for backwards compatibility, but prefer getAuthInstance()
 export { auth };
 export type { Auth };

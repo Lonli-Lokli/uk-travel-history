@@ -14,8 +14,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call firebase-web-authn extension endpoint
+    // Validate Firebase configuration
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Firebase not configured' },
+        { status: 503 }
+      );
+    }
+
+    // Call firebase-web-authn extension endpoint
     const extensionUrl = `https://ext-firebase-web-authn-api-${projectId}.cloudfunctions.net/register/finish`;
 
     const response = await fetch(extensionUrl, {

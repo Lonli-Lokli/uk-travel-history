@@ -35,13 +35,16 @@ class AuthStore {
     makeAutoObservable(this);
 
     // Listen for auth state changes
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && auth) {
       onAuthStateChanged(auth, (user) => {
         runInAction(() => {
           this.user = user;
           this.isLoading = false;
         });
       });
+    } else {
+      // If auth is not available, set loading to false immediately
+      this.isLoading = false;
     }
   }
 
@@ -126,6 +129,9 @@ class AuthStore {
       const { customToken } = await verifyResponse.json();
 
       // Step 4: Sign in to Firebase with custom token
+      if (!auth) {
+        throw new Error('Firebase Auth is not initialized');
+      }
       await signInWithCustomToken(auth, customToken);
 
       runInAction(() => {
@@ -146,6 +152,11 @@ class AuthStore {
   async registerPasskey(email: string, displayName?: string): Promise<void> {
     if (!this.isPasskeySupported) {
       throw new Error('Passkeys are not supported in this browser');
+    }
+
+    // Validate email format
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('Please enter a valid email address');
     }
 
     this.isAuthenticating = true;
@@ -202,6 +213,9 @@ class AuthStore {
       const { customToken } = await verifyResponse.json();
 
       // Step 4: Sign in to Firebase with custom token
+      if (!auth) {
+        throw new Error('Firebase Auth is not initialized');
+      }
       await signInWithCustomToken(auth, customToken);
 
       runInAction(() => {
@@ -220,6 +234,9 @@ class AuthStore {
    * Sign out the current user
    */
   async signOut(): Promise<void> {
+    if (!auth) {
+      throw new Error('Firebase Auth is not initialized');
+    }
     await firebaseSignOut(auth);
   }
 
@@ -237,23 +254,11 @@ class AuthStore {
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    let binary = '';
+    const chars: string[] = [];
     for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+      chars.push(String.fromCharCode(bytes[i]));
     }
-    return btoa(binary);
-  }
-
-  /**
-   * Helper to convert base64 to ArrayBuffer
-   */
-  private base64ToArrayBuffer(base64: string): ArrayBuffer {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes.buffer;
+    return btoa(chars.join(''));
   }
 }
 

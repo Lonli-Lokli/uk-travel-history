@@ -5,8 +5,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    // Call firebase-web-authn extension endpoint
+    // Validate Firebase configuration
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Firebase not configured' },
+        { status: 503 }
+      );
+    }
+
+    // Call firebase-web-authn extension endpoint
     const extensionUrl = `https://ext-firebase-web-authn-api-${projectId}.cloudfunctions.net/signin/start`;
 
     const response = await fetch(extensionUrl, {

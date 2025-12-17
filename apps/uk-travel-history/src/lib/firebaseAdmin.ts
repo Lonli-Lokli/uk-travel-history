@@ -46,7 +46,7 @@ function initializeFirebaseAdmin() {
     adminAuth = getAuth(adminApp);
   } catch (error) {
     console.error('Failed to initialize Firebase Admin SDK:', error);
-    throw error;
+    // Don't throw - allow app to run without auth in development
   }
 }
 
