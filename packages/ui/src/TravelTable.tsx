@@ -79,7 +79,7 @@ export const TravelTable = observer(() => {
                 ? formatDate(row.original.outDate)
                 : undefined
             }
-            placeholder="Set date"
+            placeholder="Set date (YYYY-MM-DD)"
           />
         ),
       },
@@ -106,7 +106,8 @@ export const TravelTable = observer(() => {
             displayValue={
               row.original.inDate ? formatDate(row.original.inDate) : undefined
             }
-            placeholder="Set date"
+            defaultMonth={row.original.outDate}
+            placeholder="Set date (YYYY-MM-DD)"
           />
         ),
       },
@@ -285,6 +286,7 @@ export const TravelTable = observer(() => {
                     ? formatDate(row.original.inDate)
                     : 'Tap to set date'
                 }
+                defaultMonth={row.original.outDate}
               />
               <EditableCell
                 value={row.original.inRoute}
