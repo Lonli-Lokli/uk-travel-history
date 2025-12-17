@@ -14,9 +14,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Button,
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
-import { FileText, Target } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
 import { ILRTrack } from '@uth/calculators';
 
 export const VisaDetailsCard = observer(() => {
@@ -66,11 +67,7 @@ export const VisaDetailsCard = observer(() => {
           </div>
 
           <div className="space-y-1.5">
-            <Label
-              htmlFor="ilrTrack"
-              className="text-xs font-medium flex items-center gap-1"
-            >
-              <Target className="w-3 h-3" />
+            <Label htmlFor="ilrTrack" className="text-xs font-medium">
               ILR Track (Years)
             </Label>
             <Select
@@ -95,9 +92,22 @@ export const VisaDetailsCard = observer(() => {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="applicationDate" className="text-xs font-medium">
-              {`Application Date ${travelStore.autoDateUsed ? '' : '(Override)'}`}
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="applicationDate" className="text-xs font-medium">
+                {`Application Date ${travelStore.autoDateUsed ? '' : '(Override)'}`}
+              </Label>
+              {!travelStore.autoDateUsed && travelStore.applicationDate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => travelStore.setApplicationDate('')}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
             <DatePicker
               value={travelStore.applicationDate}
               onChange={(value) => travelStore.setApplicationDate(value)}

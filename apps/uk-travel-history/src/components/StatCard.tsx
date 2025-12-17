@@ -66,23 +66,23 @@ export const StatCard = ({
   return (
     <Card className={`${styles.card} ${className}`}>
       <CardContent className="p-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div
-            className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
+            className={`w-6 h-6 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
           >
-            <Icon className={`w-4 h-4 ${styles.iconColor}`} />
+            <Icon className={`w-3 h-3 ${styles.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
             <p
-              className={`text-lg font-bold ${styles.valueColor} leading-tight`}
+              className={`text-base font-bold ${styles.valueColor} leading-tight`}
             >
               {value}
             </p>
-            <p className={`text-xs ${styles.labelColor} leading-tight`}>
+            <p className={`text-[0.625rem] ${styles.labelColor} leading-tight`}>
               {label}
             </p>
             {subtitle && (
-              <div className="text-[0.625rem] opacity-75 mt-0.5 leading-tight">
+              <div className="text-[0.5rem] opacity-75 mt-0.5 leading-tight">
                 {subtitle}
               </div>
             )}

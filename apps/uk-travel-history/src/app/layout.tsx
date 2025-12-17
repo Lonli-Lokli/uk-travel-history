@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@uth/ui';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
+import { Geist } from 'next/font/google'
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -95,13 +96,17 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+const geist = Geist({
+  subsets: ['latin'],
+})
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className={`${geist.className} h-full`}>
       <body className="h-full bg-slate-50 overflow-y-scroll">
         {children}
         <Toaster />

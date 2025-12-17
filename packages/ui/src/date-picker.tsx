@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { format, parse } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { cn } from '@uth/utils';
 import { Button } from './button';
 import { Calendar } from './calendar';
@@ -41,38 +42,37 @@ export function DatePicker({
     : placeholder;
 
   return (
-    <div className="relative">
-      <Button
-        variant="outline"
-        disabled={disabled}
-        className={cn(
-          'w-full justify-start text-left font-normal h-9 text-sm',
-          !selectedDate && 'text-muted-foreground',
-          className
-        )}
-        onClick={() => setIsOpen(!isOpen)}
-        type="button"
-      >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {displayValue}
-      </Button>
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
+    <PopoverPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverPrimitive.Trigger asChild>
+        <Button
+          variant="outline"
+          disabled={disabled}
+          className={cn(
+            'w-full justify-start text-left font-normal h-9 text-sm',
+            !selectedDate && 'text-muted-foreground',
+            className
+          )}
+          type="button"
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {displayValue}
+        </Button>
+      </PopoverPrimitive.Trigger>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          align="start"
+          className="z-50 bg-white rounded-md border border-slate-200 shadow-lg p-0 outline-none"
+          sideOffset={4}
+        >
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleSelect}
+            defaultMonth={selectedDate}
+            autoFocus
           />
-          <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-md border border-slate-200 shadow-lg">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleSelect}
-              defaultMonth={selectedDate}
-              autoFocus
-            />
-          </div>
-        </>
-      )}
-    </div>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 }

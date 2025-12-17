@@ -141,17 +141,6 @@ export const TravelTable = observer(() => {
         ),
       },
       {
-        accessorKey: 'calendarDays',
-        header: () => (
-          <span className="text-xs font-semibold hidden sm:inline">Days</span>
-        ),
-        cell: ({ row }) => (
-          <span className="hidden sm:inline text-center">
-            {row.original.calendarDays ?? '—'}
-          </span>
-        ),
-      },
-      {
         accessorKey: 'fullDays',
         header: () => (
           <span className="text-xs font-semibold text-primary">Full Days</span>
