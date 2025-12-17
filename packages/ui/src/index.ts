@@ -14,6 +14,3 @@ export * from './editable-cell';
 export * from './TravelTable';
 
 export { travelStore } from './stores/travelStore';
-
-// Feature Registry & Configuration
-export * from './config/features';
