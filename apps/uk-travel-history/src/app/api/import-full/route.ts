@@ -30,10 +30,9 @@ export async function POST(request: NextRequest) {
 
     // Read the Excel file
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(arrayBuffer);
 
     // Look for the "Import Data (JSON)" sheet
     const jsonSheet = workbook.getWorksheet('Import Data (JSON)');
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
     let importedData: ImportedData;
     try {
       importedData = JSON.parse(jsonString);
-    } catch (e) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid JSON data in import file' },
         { status: 400 }

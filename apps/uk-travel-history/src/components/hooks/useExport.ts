@@ -37,9 +37,9 @@ export const useExport = () => {
             mode === 'full'
               ? 'Full data export downloaded'
               : 'ILR application export downloaded',
-          variant: 'success' as any,
+          variant: 'success' as const,
         });
-      } catch (err) {
+      } catch {
         toast({
           title: 'Export failed',
           description: 'Failed to generate Excel file',

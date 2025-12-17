@@ -92,7 +92,12 @@ export const FullDataImportDialog = ({
           {/* Import Mode Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Import Mode</Label>
-            <RadioGroup value={importMode} onValueChange={setImportMode as any}>
+            <RadioGroup
+              value={importMode}
+              onValueChange={(value) =>
+                setImportMode(value as 'replace' | 'append')
+              }
+            >
               <div className="flex items-center space-x-2 rounded-md border border-slate-200 p-3 hover:bg-slate-50">
                 <RadioGroupItem value="replace" id="replace" />
                 <Label htmlFor="replace" className="flex-1 cursor-pointer">
