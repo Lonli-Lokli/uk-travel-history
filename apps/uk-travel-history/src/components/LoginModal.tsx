@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { authStore } from '@uth/ui';
+import { authStore, uiStore } from '@uth/ui';
 import {
   Dialog,
   DialogContent,
@@ -15,47 +14,17 @@ import {
 } from '@uth/ui';
 import { Fingerprint, Loader2, AlertCircle } from 'lucide-react';
 
-interface LoginModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export const LoginModal = observer(({ open, onOpenChange }: LoginModalProps) => {
-  const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [mode, setMode] = useState<'signin' | 'register'>('signin');
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSignIn = async () => {
-    setError(null);
-    try {
-      await authStore.signInWithPasskey();
-      onOpenChange(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!email) {
-      setError('Email is required');
-      return;
-    }
-
-    setError(null);
-    try {
-      await authStore.registerPasskey(email, displayName || undefined);
-      onOpenChange(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to register');
-    }
-  };
-
+export const LoginModal = observer(() => {
   const isAuthenticating = authStore.isAuthenticating;
   const isPasskeySupported = authStore.isPasskeySupported;
+  const open = uiStore.isLoginModalOpen;
+  const email = uiStore.loginEmail;
+  const displayName = uiStore.loginDisplayName;
+  const mode = uiStore.loginMode;
+  const error = uiStore.loginError;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => uiStore.setLoginModalOpen(open)}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -94,7 +63,7 @@ export const LoginModal = observer(({ open, onOpenChange }: LoginModalProps) => 
                     type="email"
                     placeholder="your@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => uiStore.setLoginEmail(e.target.value)}
                     disabled={isAuthenticating}
                   />
                 </div>
@@ -106,7 +75,7 @@ export const LoginModal = observer(({ open, onOpenChange }: LoginModalProps) => 
                     type="text"
                     placeholder="Your Name"
                     value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    onChange={(e) => uiStore.setLoginDisplayName(e.target.value)}
                     disabled={isAuthenticating}
                   />
                 </div>
@@ -114,7 +83,7 @@ export const LoginModal = observer(({ open, onOpenChange }: LoginModalProps) => 
             )}
 
             <Button
-              onClick={mode === 'signin' ? handleSignIn : handleRegister}
+              onClick={() => mode === 'signin' ? uiStore.handleSignIn() : uiStore.handleRegister()}
               disabled={isAuthenticating || (mode === 'register' && !email)}
               className="w-full"
             >
@@ -139,10 +108,7 @@ export const LoginModal = observer(({ open, onOpenChange }: LoginModalProps) => 
 
             <Button
               variant="ghost"
-              onClick={() => {
-                setMode(mode === 'signin' ? 'register' : 'signin');
-                setError(null);
-              }}
+              onClick={() => uiStore.setLoginMode(mode === 'signin' ? 'register' : 'signin')}
               disabled={isAuthenticating}
               className="w-full"
             >
