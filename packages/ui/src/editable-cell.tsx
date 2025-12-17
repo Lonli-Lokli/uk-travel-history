@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { parse } from 'date-fns';
 import { cn } from '@uth/utils';
 import { Input } from './input';
 import { DatePicker } from './date-picker';
@@ -15,6 +16,7 @@ interface EditableCellProps {
   className?: string;
   displayValue?: string;
   editable?: boolean;
+  defaultMonth?: string; // ISO date to suggest a default month for date picker
 }
 
 export function EditableCell({
@@ -25,6 +27,7 @@ export function EditableCell({
   className,
   displayValue,
   editable = true,
+  defaultMonth,
 }: EditableCellProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(value);
@@ -54,6 +57,12 @@ export function EditableCell({
     }
   };
 
+  // For date fields, auto-save on change
+  const handleDateChange = (newValue: string) => {
+    setEditValue(newValue);
+    onSave(newValue);
+  };
+
   if (!editable) {
     return (
       <div className={cn('px-1 py-0.5', className)}>
@@ -62,6 +71,26 @@ export function EditableCell({
     );
   }
 
+  // For date type, show date picker immediately (no intermediate edit state)
+  if (type === 'date') {
+    // Parse defaultMonth if provided
+    const defaultMonthDate = defaultMonth
+      ? parse(defaultMonth, 'yyyy-MM-dd', new Date())
+      : undefined;
+
+    return (
+      <div className={cn('min-w-0', className)}>
+        <DatePicker
+          value={value}
+          onChange={handleDateChange}
+          placeholder={placeholder}
+          defaultMonth={defaultMonthDate}
+        />
+      </div>
+    );
+  }
+
+  // For text type, keep the existing edit state behavior
   if (!isEditing) {
     return (
       <div
@@ -79,23 +108,14 @@ export function EditableCell({
 
   return (
     <div className="flex items-center gap-1">
-      {type === 'date' ? (
-        <DatePicker
-          value={editValue}
-          onChange={setEditValue}
-          placeholder="Select date"
-          className="h-7 text-xs"
-        />
-      ) : (
-        <Input
-          ref={inputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="h-7 text-xs"
-          placeholder={placeholder}
-        />
-      )}
+      <Input
+        ref={inputRef}
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="h-7 text-xs"
+        placeholder={placeholder}
+      />
       <Button
         size="icon"
         variant="ghost"
