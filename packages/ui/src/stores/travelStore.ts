@@ -84,11 +84,21 @@ class TravelStore {
   }
 
   get summary() {
-    return this.calculations?.summary || {
+    if (this.calculations?.summary) {
+      return this.calculations.summary;
+    }
+
+    // Fallback: Calculate basic stats when visa details aren't set
+    const tripsWithCalcs = calculateTripDurations(this.trips);
+    const complete = tripsWithCalcs.filter((t) => !t.isIncomplete);
+    const incomplete = tripsWithCalcs.filter((t) => t.isIncomplete);
+    const totalFullDays = complete.reduce((sum, t) => sum + (t.fullDays || 0), 0);
+
+    return {
       totalTrips: this.trips.length,
-      completeTrips: 0,
-      incompleteTrips: this.trips.length,
-      totalFullDays: 0,
+      completeTrips: complete.length,
+      incompleteTrips: incomplete.length,
+      totalFullDays,
       continuousLeaveDays: null,
       maxAbsenceInAny12Months: null,
       hasExceededAllowedAbsense: false,

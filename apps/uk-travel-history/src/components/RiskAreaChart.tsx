@@ -93,6 +93,27 @@ export const RiskAreaChart: React.FC = observer(() => {
   const maxRolling = riskSeriesData.reduce((acc, [, y]) => Math.max(acc, y), 0);
   const yMax = Math.max(maxRolling, 180);
 
+  // Find crossover points where the line crosses 180-day limit
+  const crossoverPoints = useMemo(() => {
+    const points: { x: number; type: 'breach' | 'recover' }[] = [];
+
+    for (let i = 1; i < riskSeriesData.length; i++) {
+      const [prevX, prevY] = riskSeriesData[i - 1];
+      const [currX, currY] = riskSeriesData[i];
+
+      // Crossing upward (breach)
+      if (prevY < 180 && currY >= 180) {
+        points.push({ x: currX, type: 'breach' });
+      }
+      // Crossing downward (recovery)
+      else if (prevY >= 180 && currY < 180) {
+        points.push({ x: currX, type: 'recover' });
+      }
+    }
+
+    return points;
+  }, [riskSeriesData]);
+
   // -------- Trip timeline data (single row until overlap) -------------------
 
   const timeline = useMemo<{
@@ -227,7 +248,6 @@ export const RiskAreaChart: React.FC = observer(() => {
           const y: number = typeof this.y === 'number' ? this.y : 0;
 
           const dateLabel = x > 0 ? Highcharts.dateFormat('%e %b %Y', x) : '';
-          const displayColor = y >= 180 ? '#ef4444' : '#3b82f6';
 
           // Find the data point to get nextExpirationDate info
           const dataPoint = rollingAbsenceData.find((d: RollingDataPoint) =>
@@ -235,15 +255,21 @@ export const RiskAreaChart: React.FC = observer(() => {
           );
 
           let html =
-            '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;box-shadow:0 2px 4px rgba(15,23,42,0.08);">' +
-            `<div style="font-size:11px;color:#475569;margin-bottom:2px;">${dateLabel}</div>` +
-            `<div style="font-size:13px;font-weight:600;color:${displayColor};">Rolling 12-month: ${y} days</div>`;
+            '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;box-shadow:0 4px 6px rgba(15,23,42,0.1);min-width:240px;">' +
+            `<div style="font-size:12px;color:#475569;margin-bottom:4px;font-weight:500;">${dateLabel}</div>` +
+            '<div style="border-bottom:1px solid #e2e8f0;margin-bottom:6px;"></div>';
 
           if (y >= 180) {
-            // At or above the limit - find when it will drop below 180
+            // BREACH: At or above the limit
+            const excessDays = y - 180;
+            html +=
+              `<div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:6px;">&#9888; LIMIT BREACH</div>` +
+              `<div style="font-size:12px;color:#1e293b;margin-bottom:3px;"><strong>Current Absences:</strong> ${y} days</div>` +
+              `<div style="font-size:12px;color:#dc2626;margin-bottom:6px;"><strong>Over Limit By:</strong> ${excessDays} day${excessDays !== 1 ? 's' : ''}</div>`;
+
+            // Find when it will drop below 180
             const currentIndex = riskSeriesData.findIndex(([timestamp]) => timestamp === x);
             if (currentIndex !== -1) {
-              // Look ahead to find when rolling days drop below 180
               let nextDropIndex = -1;
               for (let i = currentIndex + 1; i < riskSeriesData.length; i++) {
                 if (riskSeriesData[i][1] < 180) {
@@ -255,30 +281,38 @@ export const RiskAreaChart: React.FC = observer(() => {
               if (nextDropIndex !== -1) {
                 const nextDropDate = riskSeriesData[nextDropIndex][0];
                 const nextDropDateLabel = Highcharts.dateFormat('%e %b %Y', nextDropDate);
-                const remainingDays = 180 - riskSeriesData[nextDropIndex][1];
+                const daysAfterDrop = 180 - riskSeriesData[nextDropIndex][1];
 
                 html +=
-                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; At/above 180-day limit</div>' +
-                  `<div style="font-size:11px;color:#dc2626;margin-top:2px;"><strong>Limit expires: ${nextDropDateLabel}</strong></div>` +
-                  `<div style="font-size:11px;color:#475569;">Available margin after: ${remainingDays} days</div>`;
+                  '<div style="border-top:1px solid #fee2e2;margin:6px 0;"></div>' +
+                  `<div style="font-size:11px;color:#475569;margin-bottom:2px;">Recovery Date:</div>` +
+                  `<div style="font-size:12px;color:#059669;font-weight:600;margin-bottom:4px;">${nextDropDateLabel}</div>` +
+                  `<div style="font-size:11px;color:#475569;">Available After Recovery: ${daysAfterDrop} days</div>`;
               } else if (y === 180) {
-                html +=
-                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; At 180-day limit</div>' +
-                  '<div style="font-size:11px;color:#475569;margin-top:2px;">No additional absences allowed</div>';
-              } else {
-                html +=
-                  '<div style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; Exceeds 180-day limit</div>';
+                html += '<div style="font-size:11px;color:#dc2626;margin-top:4px;">No additional absences allowed</div>';
               }
             }
-          } else if (y < 180 && dataPoint?.nextExpirationDate && dataPoint.daysToExpire) {
-            // Feature 1: Show future quota information for compliant dates
-            const availableLimit = 180 - y;
-            const expirationDateLabel = Highcharts.dateFormat('%e %b %Y', parseISO(dataPoint.nextExpirationDate).getTime());
+          } else {
+            // COMPLIANT: Below the limit
+            const availableQuota = 180 - y;
+            const quotaPercent = Math.round((y / 180) * 100);
 
             html +=
-              `<div style="font-size:11px;color:#059669;margin-top:4px;">Available Limit: ${availableLimit} days</div>` +
-              `<div style="font-size:11px;color:#475569;margin-top:2px;">Oldest Trip Expires: ${expirationDateLabel}</div>` +
-              `<div style="font-size:11px;color:#475569;">+${dataPoint.daysToExpire} days available</div>`;
+              `<div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:6px;">✓ Compliant</div>` +
+              `<div style="font-size:12px;color:#1e293b;margin-bottom:3px;"><strong>Current Absences:</strong> ${y} days (${quotaPercent}% used)</div>` +
+              `<div style="font-size:12px;color:#059669;margin-bottom:6px;"><strong>Available Quota:</strong> ${availableQuota} days</div>`;
+
+            if (dataPoint?.nextExpirationDate && dataPoint.daysToExpire) {
+              const expirationDateLabel = Highcharts.dateFormat('%e %b %Y', parseISO(dataPoint.nextExpirationDate).getTime());
+              const futureQuota = availableQuota + dataPoint.daysToExpire;
+
+              html +=
+                '<div style="border-top:1px solid #d1fae5;margin:6px 0;"></div>' +
+                `<div style="font-size:11px;color:#475569;margin-bottom:2px;">Next Quota Increase:</div>` +
+                `<div style="font-size:12px;color:#1e293b;font-weight:600;margin-bottom:2px;">${expirationDateLabel}</div>` +
+                `<div style="font-size:11px;color:#475569;margin-bottom:2px;">Oldest trip expires, freeing <strong>${dataPoint.daysToExpire} days</strong></div>` +
+                `<div style="font-size:11px;color:#059669;"><strong>Total After:</strong> ${futureQuota} days available</div>`;
+            }
           }
 
           html += '</div>';
@@ -312,9 +346,50 @@ export const RiskAreaChart: React.FC = observer(() => {
             { color: '#ef4444' }, // red for exceeding 180 days
           ],
         },
+        // Crossover markers
+        {
+          type: 'scatter',
+          name: 'Limit Crossings',
+          data: crossoverPoints.map((p) => ({
+            x: p.x,
+            y: 180,
+            marker: {
+              symbol: p.type === 'breach' ? 'url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgZmlsbD0iI2VmNDQ0NCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNNSA1TDExIDExTTExIDVMNSAxMSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==)'
+                : 'url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgZmlsbD0iIzA1OTY2OSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNNSA4TDcgMTBMMTEgNiIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==)',
+              width: 16,
+              height: 16,
+            },
+            name: p.type === 'breach' ? 'Limit Breached' : 'Limit Recovered',
+            custom: {
+              type: p.type,
+            },
+          })),
+          marker: {
+            enabled: true,
+          },
+          enableMouseTracking: true,
+          showInLegend: false,
+          tooltip: {
+            pointFormatter: function (this: any) {
+              const dateLabel = Highcharts.dateFormat('%e %b %Y', this.x);
+              const isBreach = this.custom?.type === 'breach';
+              return (
+                '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;box-shadow:0 4px 6px rgba(15,23,42,0.1);">' +
+                `<div style="font-size:12px;color:#475569;margin-bottom:4px;font-weight:500;">${dateLabel}</div>` +
+                '<div style="border-bottom:1px solid #e2e8f0;margin-bottom:6px;"></div>' +
+                (isBreach
+                  ? '<div style="font-size:13px;font-weight:700;color:#dc2626;">&#9888; 180-Day Limit Breached</div>' +
+                    '<div style="font-size:11px;color:#475569;margin-top:4px;">Absences exceeded 180 days on this date</div>'
+                  : '<div style="font-size:13px;font-weight:700;color:#059669;">✓ Limit Recovered</div>' +
+                    '<div style="font-size:11px;color:#475569;margin-top:4px;">Absences dropped below 180 days on this date</div>') +
+                '</div>'
+              );
+            },
+          },
+        },
       ],
     }),
-    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes],
+    [chartDomain.min, chartDomain.max, riskSeriesData, yMax, syncExtremes, crossoverPoints, rollingAbsenceData],
   );
 
   // -------- Highcharts options: trip Gantt timeline -------------------------
@@ -513,6 +588,24 @@ export const RiskAreaChart: React.FC = observer(() => {
             />
             <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
           </div>
+          {crossoverPoints.length > 0 && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="7" fill="#ef4444" stroke="#ffffff" strokeWidth="2"/>
+                  <path d="M5 5L11 11M11 5L5 11" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <span className="text-slate-600">Limit Breached</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="7" fill="#059669" stroke="#ffffff" strokeWidth="2"/>
+                  <path d="M5 8L7 10L11 6" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-slate-600">Limit Recovered</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
