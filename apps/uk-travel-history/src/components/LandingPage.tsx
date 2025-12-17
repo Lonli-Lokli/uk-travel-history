@@ -16,6 +16,7 @@ import {
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 
 export const LandingPage = () => {
@@ -123,6 +124,15 @@ export const LandingPage = () => {
     }
   };
 
+  const handleFullDataImportConfirm = async (mode: 'replace' | 'append') => {
+    await csvImport.confirmFullDataImport(mode);
+    setActiveAction(null);
+    // Navigate to travel page after successful import
+    if (!csvImport.isFullDataDialogOpen) {
+      router.push('/travel');
+    }
+  };
+
   const handleCancelImport = () => {
     setActiveAction(null);
   };
@@ -164,6 +174,20 @@ export const LandingPage = () => {
           onConfirm={handleClipboardImportConfirm}
           onCancel={() => {
             clipboardImport.cancelImport();
+            handleCancelImport();
+          }}
+        />
+      )}
+      {csvImport.isFullDataDialogOpen && csvImport.fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={csvImport.isFullDataDialogOpen}
+          tripCount={csvImport.fullDataPreviewData.tripCount}
+          hasVignetteDate={csvImport.fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={csvImport.fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={csvImport.fullDataPreviewData.hasIlrTrack}
+          onConfirm={handleFullDataImportConfirm}
+          onCancel={() => {
+            csvImport.cancelFullDataImport();
             handleCancelImport();
           }}
         />
