@@ -29,7 +29,8 @@
       "exclude": [
         "packages/parser/*",
         "packages/utils/*",
-        "packages/calculators/*"
+        "packages/calculators/*",
+        "packages/features/*"
       ]
     },
     {
@@ -54,7 +55,8 @@
       "include": [
         "packages/parser/*",
         "packages/utils/*",
-        "packages/calculators/*"
+        "packages/calculators/*",
+        "packages/features/*"
       ],
       "options": {
         "typecheck": {

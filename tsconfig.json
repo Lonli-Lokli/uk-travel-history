@@ -17,6 +17,9 @@
     },
     {
       "path": "./packages/calculators"
+    },
+    {
+      "path": "./packages/features"
     }
   ]
 }

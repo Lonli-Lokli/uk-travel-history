@@ -44,7 +44,7 @@ export type EdgeConfigFlags = Record<string, FeatureFlag>;
  * // Check without user context
  * const isEnabled = await isFeatureEnabled('monetization');
  */
-export async function isFeatureEnabled(
+export async function isFeatureEnabledOnVercel(
   featureId: string,
   userId?: string
 ): Promise<boolean> {
