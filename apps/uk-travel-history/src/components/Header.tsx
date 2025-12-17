@@ -26,7 +26,7 @@ interface HeaderProps {
   onImportPdfClick: () => void;
   onImportCsvClick: () => void;
   onImportClipboardClick: () => void;
-  onExportClick: () => void;
+  onExportClick: (mode: 'ilr' | 'full') => void;
 }
 
 export const Header = observer(
@@ -119,7 +119,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV/Excel
+                    From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
@@ -152,7 +152,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV/Excel
+                    From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
@@ -162,24 +162,49 @@ export const Header = observer(
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button
-                size="sm"
-                className="hidden sm:flex"
-                onClick={onExportClick}
-                disabled={!hasTrips}
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                Export Excel
-              </Button>
+              {/* Desktop: Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="hidden sm:flex"
+                    disabled={!hasTrips}
+                  >
+                    <Download className="h-4 w-4 mr-1.5" />
+                    Export
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Travel history only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportClick('full')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full backup
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <Button
-                size="icon"
-                className="sm:hidden"
-                onClick={onExportClick}
-                disabled={!hasTrips}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+              {/* Mobile: Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" className="sm:hidden" disabled={!hasTrips}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Travel history only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportClick('full')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full backup
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

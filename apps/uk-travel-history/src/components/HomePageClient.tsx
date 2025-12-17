@@ -9,6 +9,7 @@ import { VisaDetailsCard } from './VisaDetailsCard';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { EmptyState } from './EmptyState';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import {
   useFileUpload,
   useExport,
@@ -31,6 +32,10 @@ export const HomePageClient = observer(() => {
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
     cancelImport: cancelCsvImport,
+    isFullDataDialogOpen,
+    fullDataPreviewData,
+    confirmFullDataImport,
+    cancelFullDataImport,
   } = useCsvImport();
 
   const {
@@ -113,6 +118,19 @@ export const HomePageClient = observer(() => {
           tripCount={clipboardPreviewData.tripCount}
           onConfirm={confirmClipboardImport}
           onCancel={cancelClipboardImport}
+        />
+      )}
+
+      {/* Full Data Import Preview Dialog */}
+      {fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={isFullDataDialogOpen}
+          tripCount={fullDataPreviewData.tripCount}
+          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
+          onConfirm={confirmFullDataImport}
+          onCancel={cancelFullDataImport}
         />
       )}
     </div>

@@ -249,7 +249,7 @@ class TravelStore {
     }
   }
 
-  async exportToExcel(): Promise<Blob> {
+  async exportToExcel(mode: 'ilr' | 'full' = 'ilr'): Promise<Blob> {
     const formData = new FormData();
 
     const exportData = {
@@ -261,6 +261,7 @@ class TravelStore {
     };
 
     formData.append('tripsData', JSON.stringify(exportData));
+    formData.append('exportMode', mode);
     formData.append('responseType', 'excel');
 
     const response = await fetch('/api/export', {
@@ -370,6 +371,79 @@ class TravelStore {
           err instanceof Error
             ? err.message
             : 'Failed to import from clipboard';
+        this.isLoading = false;
+      });
+      throw err;
+    }
+  }
+
+  async importFullData(
+    file: File,
+    mode: 'replace' | 'append' = 'replace',
+  ): Promise<{ success: boolean; message: string; tripCount: number }> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/import-full', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import file');
+      }
+
+      runInAction(() => {
+        const importedTrips: TripRecord[] = result.data.trips.map(
+          (trip: {
+            outDate: string;
+            inDate: string;
+            outRoute: string;
+            inRoute: string;
+          }) => ({
+            id: this.generateId(),
+            outDate: trip.outDate,
+            inDate: trip.inDate,
+            outRoute: trip.outRoute,
+            inRoute: trip.inRoute,
+          }),
+        );
+
+        if (mode === 'replace') {
+          this.trips = importedTrips;
+        } else {
+          this.trips = [...this.trips, ...importedTrips];
+        }
+
+        // Import visa details
+        if (result.data.vignetteEntryDate) {
+          this.vignetteEntryDate = result.data.vignetteEntryDate;
+        }
+        if (result.data.visaStartDate) {
+          this.visaStartDate = result.data.visaStartDate;
+        }
+        if (result.data.ilrTrack) {
+          this.ilrTrack = result.data.ilrTrack;
+        }
+
+        this.isLoading = false;
+      });
+
+      return {
+        success: true,
+        message: `Successfully imported ${result.metadata.tripCount} trips and visa details`,
+        tripCount: result.metadata.tripCount,
+      };
+    } catch (err) {
+      runInAction(() => {
+        this.error =
+          err instanceof Error ? err.message : 'Failed to import full data';
         this.isLoading = false;
       });
       throw err;

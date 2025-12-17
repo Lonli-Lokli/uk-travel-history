@@ -8,6 +8,7 @@ import { ValidationStatusCard } from './ValidationStatusCard';
 import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import {
   useFileUpload,
   useExport,
@@ -29,6 +30,10 @@ export const TravelPageClient = observer(() => {
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
     cancelImport: cancelCsvImport,
+    isFullDataDialogOpen,
+    fullDataPreviewData,
+    confirmFullDataImport,
+    cancelFullDataImport,
   } = useCsvImport();
 
   const {
@@ -89,6 +94,19 @@ export const TravelPageClient = observer(() => {
           tripCount={clipboardPreviewData.tripCount}
           onConfirm={confirmClipboardImport}
           onCancel={cancelClipboardImport}
+        />
+      )}
+
+      {/* Full Data Import Preview Dialog */}
+      {fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={isFullDataDialogOpen}
+          tripCount={fullDataPreviewData.tripCount}
+          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
+          onConfirm={confirmFullDataImport}
+          onCancel={cancelFullDataImport}
         />
       )}
     </>

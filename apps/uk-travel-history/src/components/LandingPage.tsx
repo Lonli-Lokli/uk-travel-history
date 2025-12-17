@@ -16,6 +16,7 @@ import {
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 
 export const LandingPage = () => {
@@ -75,7 +76,7 @@ export const LandingPage = () => {
     } catch (error) {
       console.error('Import failed:', error);
       alert(
-        'Failed to import CSV/XLSX. Please try again or add trips manually.',
+        'Failed to import Excel file. Please try again or add trips manually.',
       );
     } finally {
       setIsImporting(false);
@@ -123,6 +124,14 @@ export const LandingPage = () => {
     }
   };
 
+  const handleFullDataImportConfirm = async (mode: 'replace' | 'append') => {
+    await csvImport.confirmFullDataImport(mode, () => {
+      // Navigate to travel page after successful import
+      setActiveAction(null);
+      router.push('/travel');
+    });
+  };
+
   const handleCancelImport = () => {
     setActiveAction(null);
   };
@@ -164,6 +173,20 @@ export const LandingPage = () => {
           onConfirm={handleClipboardImportConfirm}
           onCancel={() => {
             clipboardImport.cancelImport();
+            handleCancelImport();
+          }}
+        />
+      )}
+      {csvImport.isFullDataDialogOpen && csvImport.fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={csvImport.isFullDataDialogOpen}
+          tripCount={csvImport.fullDataPreviewData.tripCount}
+          hasVignetteDate={csvImport.fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={csvImport.fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={csvImport.fullDataPreviewData.hasIlrTrack}
+          onConfirm={handleFullDataImportConfirm}
+          onCancel={() => {
+            csvImport.cancelFullDataImport();
             handleCancelImport();
           }}
         />
@@ -276,7 +299,7 @@ export const LandingPage = () => {
                     ) : (
                       <FileText className="h-4 w-4 mr-2" />
                     )}
-                    Import from CSV/Xlsx
+                    Import from Excel
                     {activeAction === 'csv' && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...
