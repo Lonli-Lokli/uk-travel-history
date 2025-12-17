@@ -4,9 +4,22 @@ This guide explains how to set up Firebase Authentication with Passkey support f
 
 ## Prerequisites
 
+Before installing the Firebase Web Authn extension, you **must** set up these services:
+
 - Firebase account (free tier is sufficient)
 - Access to Firebase Console
+- Access to Google Cloud Console (for App Check setup)
 - Access to Vercel Dashboard (for environment variables)
+
+### Required Firebase Services
+
+The Firebase Web Authn extension requires the following services to be enabled:
+
+1. **App Check** with reCAPTCHA Enterprise or v3 (security requirement)
+2. **Firebase Authentication** with the **Anonymous provider** enabled (required for the extension)
+3. **Firestore Database** (default database for user data)
+4. **Cloud Functions** (automatically enabled when extension is installed)
+5. **Separate Firestore Database** with ID `ext-firebase-web-authn` (for passkey credentials)
 
 ## Step 1: Create Firebase Project
 
@@ -35,7 +48,100 @@ const firebaseConfig = {
 };
 ```
 
-## Step 3: Install Firebase Web Authn Extension
+## Step 3: Enable App Check with reCAPTCHA
+
+App Check is **required** for the Firebase Web Authn extension to work securely.
+
+### Create reCAPTCHA v3 Site Key
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Firebase project
+3. Go to **Security** → **reCAPTCHA Enterprise**
+4. Click **Create Key**
+5. Configure the key:
+   - **Display name**: `UK Travel History Web`
+   - **Platform type**: Select **Website**
+   - **Domains**: Add your domains (one per line):
+     ```
+     localhost
+     your-app.vercel.app
+     your-custom-domain.com
+     ```
+   - **reCAPTCHA type**: Select **Score-based (reCAPTCHA v3)**
+   - Click **Create**
+6. Copy the **Site Key** (you'll need this for `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`)
+
+### Enable App Check in Firebase
+
+1. In Firebase Console, go to **App Check** (in left sidebar under "Release & Monitor")
+2. Click **Get Started** (if not already enabled)
+3. Select your web app
+4. Click **reCAPTCHA v3**
+5. Paste the **Site Key** you copied above
+6. Click **Save**
+
+## Step 4: Enable Firebase Authentication
+
+1. In Firebase Console, go to **Authentication** (in left sidebar under "Build")
+2. Click **Get Started** (if not already enabled)
+3. Go to **Sign-in method** tab
+4. Enable **Anonymous** provider:
+   - Click on **Anonymous**
+   - Toggle **Enable**
+   - Click **Save**
+
+⚠️ **Important**: The Anonymous provider is required for the Firebase Web Authn extension. Users will be automatically signed in anonymously, then upgraded to passkey accounts.
+
+## Step 5: Enable Firestore
+
+1. In Firebase Console, go to **Firestore Database** (in left sidebar under "Build")
+2. Click **Create database**
+3. Select **Production mode**
+4. Choose a location close to your users (e.g., `nam5` for North America, `eur3` for Europe)
+5. Click **Enable**
+
+## Step 6: Create Separate Firestore Database for Extension
+
+The Firebase Web Authn extension requires a **separate** Firestore database to store passkey credentials.
+
+### Using Firebase CLI (Recommended)
+
+1. Install Firebase CLI if not already installed:
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. Login to Firebase:
+   ```bash
+   firebase login
+   ```
+
+3. Initialize Firebase in your project (if not already done):
+   ```bash
+   firebase init
+   ```
+
+4. Create the extension database:
+   ```bash
+   firebase firestore:databases:create ext-firebase-web-authn --location nam5 --delete-protection ENABLED
+   ```
+
+   Replace `nam5` with your region:
+   - North America: `nam5`
+   - Europe: `eur3`
+   - Asia: `asia-south1`
+
+### Using Google Cloud Console (Alternative)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Firebase project
+3. Go to **Firestore** → **Databases**
+4. Click **Create Database**
+5. Database ID: `ext-firebase-web-authn`
+6. Location: Choose same region as your main Firestore database
+7. Click **Create**
+
+## Step 7: Install Firebase Web Authn Extension
 
 This extension enables passkey authentication.
 
@@ -43,22 +149,40 @@ This extension enables passkey authentication.
 2. Click **Install Extension**
 3. Search for **"firebase-web-authn"** by gavinsawyer
 4. Click **Install** on the extension
-5. Configure the extension:
-   - **Cloud Functions location**: Choose region closest to your users (e.g., `us-central1`, `europe-west1`)
+5. Review billing (extension uses Cloud Functions - free tier is sufficient)
+6. Configure the extension:
+   - **Cloud Functions location**: Choose same region as your databases (e.g., `us-central1` for nam5, `europe-west1` for eur3)
    - **Allowed origins**: Add your domains:
      ```
      http://localhost:3000,https://your-app.vercel.app,https://your-custom-domain.com
      ```
    - **User creation mode**: Select `automatic` (creates users on first sign-in)
-6. Click **Install extension**
-7. Wait for installation to complete (2-3 minutes)
+7. Click **Install extension**
+8. Wait for installation to complete (2-3 minutes)
 
-**Note the extension endpoint URL** (you'll see it after installation):
+**The extension will be available at**:
 ```
 https://ext-firebase-web-authn-api-{project-id}.cloudfunctions.net
 ```
 
-## Step 4: Generate Service Account Key
+## Step 8: Configure IAM Permissions
+
+After the extension is installed, you must grant additional permissions to the extension's service account.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Firebase project
+3. Go to **IAM & Admin** → **IAM**
+4. Find the service account: `ext-firebase-web-authn@{project-id}.iam.gserviceaccount.com`
+   - If it's not listed, click **Grant Access** and enter this email
+5. Click **Edit** (pencil icon) on the service account
+6. Click **Add Another Role** and add:
+   - **Service Account Token Creator** (`roles/iam.serviceAccountTokenCreator`)
+   - **Service Usage Consumer** (`roles/serviceusage.serviceUsageConsumer`)
+7. Click **Save**
+
+⚠️ **Important**: The extension will not work without these permissions. This is a known limitation of Firebase Extensions.
+
+## Step 9: Generate Service Account Key
 
 For server-side authentication verification, you need a service account key.
 
@@ -73,7 +197,7 @@ For server-side authentication verification, you need a service account key.
 
 ⚠️ **Security Warning**: Never commit this file to Git. Keep it secure.
 
-## Step 5: Configure Environment Variables
+## Step 10: Configure Environment Variables
 
 ### Local Development
 
@@ -92,6 +216,9 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
 FIREBASE_ADMIN_PROJECT_ID=your-project-id
 FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-abc@your-project.iam.gserviceaccount.com
 FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+
+# App Check (Required for Firebase Web Authn)
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Lf...
 
 # Feature Flags
 NEXT_PUBLIC_FF_FIREBASE_AUTH=true
@@ -117,7 +244,9 @@ npm run start
 
 ⚠️ **Important**: For `FIREBASE_ADMIN_PRIVATE_KEY`, make sure to paste the entire key including newlines. Vercel will handle the formatting.
 
-## Step 6: Test Authentication
+⚠️ **Important**: For `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, use the Site Key you copied in Step 3.
+
+## Step 11: Test Authentication
 
 ### Test Passkey Registration
 
@@ -149,7 +278,7 @@ npm run start
 3. You should see your user listed
 4. The sign-in provider will show as **Custom** (because passkeys use custom tokens)
 
-## Step 7: Enable Authentication in Production
+## Step 12: Enable Authentication in Production
 
 1. Set the feature flag in Vercel:
    ```

@@ -3,27 +3,17 @@
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
-  signInWithCustomToken,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
+import {
+  createUserWithPasskey,
+  signInWithPasskey as sdkSignInWithPasskey,
+  FirebaseWebAuthnError,
+} from '@firebase-web-authn/browser';
+import { getAuthInstance, getFunctionsInstance } from '../lib/firebase';
 import { auth } from '../lib/firebase';
-
-/**
- * Passkey credential response from firebase-web-authn extension
- */
-interface PasskeyCredential {
-  id: string;
-  rawId: string;
-  response: {
-    clientDataJSON: string;
-    authenticatorData: string;
-    signature: string;
-    userHandle?: string;
-  };
-  type: 'public-key';
-}
 
 class AuthStore {
   user: User | null = null;
@@ -61,7 +51,7 @@ class AuthStore {
 
   /**
    * Sign in with passkey
-   * This works with the firebase-web-authn extension
+   * Uses the official @firebase-web-authn/browser SDK
    */
   async signInWithPasskey(): Promise<void> {
     if (!this.isPasskeySupported) {
@@ -72,74 +62,23 @@ class AuthStore {
     this.error = null;
 
     try {
-      // Step 1: Request authentication options from the extension
-      const optionsResponse = await fetch('/api/auth/passkey/signin/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const auth = getAuthInstance();
+      const functions = getFunctionsInstance();
 
-      if (!optionsResponse.ok) {
-        throw new Error('Failed to start passkey sign-in');
-      }
-
-      const options = await optionsResponse.json();
-
-      // Step 2: Use WebAuthn API to get credential
-      const credential = (await navigator.credentials.get({
-        publicKey: options.publicKey,
-      })) as PublicKeyCredential | null;
-
-      if (!credential) {
-        throw new Error('No credential received');
-      }
-
-      // Step 3: Send credential to extension for verification
-      const verifyResponse = await fetch('/api/auth/passkey/signin/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential: {
-            id: credential.id,
-            rawId: this.arrayBufferToBase64(credential.rawId),
-            response: {
-              clientDataJSON: this.arrayBufferToBase64(
-                (credential.response as AuthenticatorAssertionResponse).clientDataJSON
-              ),
-              authenticatorData: this.arrayBufferToBase64(
-                (credential.response as AuthenticatorAssertionResponse).authenticatorData
-              ),
-              signature: this.arrayBufferToBase64(
-                (credential.response as AuthenticatorAssertionResponse).signature
-              ),
-              userHandle: (credential.response as AuthenticatorAssertionResponse).userHandle
-                ? this.arrayBufferToBase64(
-                    (credential.response as AuthenticatorAssertionResponse).userHandle!
-                  )
-                : undefined,
-            },
-            type: credential.type,
-          },
-        }),
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('Failed to verify passkey');
-      }
-
-      const { customToken } = await verifyResponse.json();
-
-      // Step 4: Sign in to Firebase with custom token
-      if (!auth) {
-        throw new Error('Firebase Auth is not initialized');
-      }
-      await signInWithCustomToken(auth, customToken);
+      // Use the official SDK method
+      await sdkSignInWithPasskey(auth, functions);
 
       runInAction(() => {
         this.isAuthenticating = false;
       });
     } catch (error) {
       runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to sign in with passkey';
+        // Handle FirebaseWebAuthnError with more detailed messages
+        if (error instanceof FirebaseWebAuthnError) {
+          this.error = error.message;
+        } else {
+          this.error = error instanceof Error ? error.message : 'Failed to sign in with passkey';
+        }
         this.isAuthenticating = false;
       });
       throw error;
@@ -148,6 +87,7 @@ class AuthStore {
 
   /**
    * Register a new passkey
+   * Uses the official @firebase-web-authn/browser SDK
    */
   async registerPasskey(email: string, displayName?: string): Promise<void> {
     if (!this.isPasskeySupported) {
@@ -163,67 +103,25 @@ class AuthStore {
     this.error = null;
 
     try {
-      // Step 1: Request registration options from the extension
-      const optionsResponse = await fetch('/api/auth/passkey/register/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, displayName }),
-      });
+      const auth = getAuthInstance();
+      const functions = getFunctionsInstance();
 
-      if (!optionsResponse.ok) {
-        throw new Error('Failed to start passkey registration');
-      }
-
-      const options = await optionsResponse.json();
-
-      // Step 2: Create credential using WebAuthn API
-      const credential = (await navigator.credentials.create({
-        publicKey: options.publicKey,
-      })) as PublicKeyCredential | null;
-
-      if (!credential) {
-        throw new Error('No credential created');
-      }
-
-      // Step 3: Send credential to extension for verification
-      const verifyResponse = await fetch('/api/auth/passkey/register/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential: {
-            id: credential.id,
-            rawId: this.arrayBufferToBase64(credential.rawId),
-            response: {
-              clientDataJSON: this.arrayBufferToBase64(
-                (credential.response as AuthenticatorAttestationResponse).clientDataJSON
-              ),
-              attestationObject: this.arrayBufferToBase64(
-                (credential.response as AuthenticatorAttestationResponse).attestationObject
-              ),
-            },
-            type: credential.type,
-          },
-        }),
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('Failed to verify passkey registration');
-      }
-
-      const { customToken } = await verifyResponse.json();
-
-      // Step 4: Sign in to Firebase with custom token
-      if (!auth) {
-        throw new Error('Firebase Auth is not initialized');
-      }
-      await signInWithCustomToken(auth, customToken);
+      // Use the official SDK method
+      // The 'name' parameter is what the passkey manager will display
+      const name = displayName || email;
+      await createUserWithPasskey(auth, functions, name);
 
       runInAction(() => {
         this.isAuthenticating = false;
       });
     } catch (error) {
       runInAction(() => {
-        this.error = error instanceof Error ? error.message : 'Failed to register passkey';
+        // Handle FirebaseWebAuthnError with more detailed messages
+        if (error instanceof FirebaseWebAuthnError) {
+          this.error = error.message;
+        } else {
+          this.error = error instanceof Error ? error.message : 'Failed to register passkey';
+        }
         this.isAuthenticating = false;
       });
       throw error;
@@ -247,18 +145,6 @@ class AuthStore {
   async getIdToken(): Promise<string | null> {
     if (!this.user) return null;
     return this.user.getIdToken();
-  }
-
-  /**
-   * Helper to convert ArrayBuffer to base64
-   */
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    const chars: string[] = [];
-    for (let i = 0; i < bytes.byteLength; i++) {
-      chars.push(String.fromCharCode(bytes[i]));
-    }
-    return btoa(chars.join(''));
   }
 }
 

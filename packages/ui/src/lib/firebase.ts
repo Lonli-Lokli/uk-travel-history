@@ -3,6 +3,8 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
+import { getFunctions, type Functions } from 'firebase/functions';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -30,6 +32,7 @@ function validateConfig() {
 // Initialize Firebase app (singleton pattern)
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
+let functions: Functions | undefined;
 
 function initializeFirebase() {
   if (typeof window === 'undefined') {
@@ -52,13 +55,34 @@ function initializeFirebase() {
     }
   }
 
-  // Only get auth if app was successfully initialized
+  // Only get auth and functions if app was successfully initialized
   if (app) {
     try {
       auth = getAuth(app);
     } catch (error) {
       console.error('Failed to get Firebase Auth:', error);
       // Allow app to continue without auth
+    }
+
+    try {
+      functions = getFunctions(app);
+    } catch (error) {
+      console.error('Failed to get Firebase Functions:', error);
+      // Allow app to continue without functions
+    }
+
+    // Initialize App Check if reCAPTCHA site key is provided
+    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (recaptchaSiteKey) {
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+          isTokenAutoRefreshEnabled: true,
+        });
+      } catch (error) {
+        console.error('Failed to initialize App Check:', error);
+        // Allow app to continue without App Check
+      }
     }
   }
 }
@@ -84,6 +108,22 @@ export function getAuthInstance(): Auth {
   return auth;
 }
 
-// Export auth as-is for backwards compatibility, but prefer getAuthInstance()
-export { auth };
-export type { Auth };
+/**
+ * Get the Firebase Functions instance
+ * @throws Error if called on server-side or if Firebase is not initialized
+ */
+export function getFunctionsInstance(): Functions {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Functions can only be used on the client side');
+  }
+
+  if (!functions) {
+    throw new Error('Firebase Functions is not initialized. Check your Firebase configuration.');
+  }
+
+  return functions;
+}
+
+// Export auth and functions as-is for backwards compatibility, but prefer getInstance() methods
+export { auth, functions };
+export type { Auth, Functions };
