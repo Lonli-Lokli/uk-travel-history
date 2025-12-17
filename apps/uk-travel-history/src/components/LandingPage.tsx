@@ -76,7 +76,7 @@ export const LandingPage = () => {
     } catch (error) {
       console.error('Import failed:', error);
       alert(
-        'Failed to import CSV/XLSX. Please try again or add trips manually.',
+        'Failed to import Excel file. Please try again or add trips manually.',
       );
     } finally {
       setIsImporting(false);
@@ -300,7 +300,7 @@ export const LandingPage = () => {
                     ) : (
                       <FileText className="h-4 w-4 mr-2" />
                     )}
-                    Import from CSV/Xlsx
+                    Import from Excel
                     {activeAction === 'csv' && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...

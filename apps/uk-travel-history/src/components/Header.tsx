@@ -178,11 +178,11 @@ export const Header = observer(
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onExportClick('ilr')}>
                     <FileText className="h-4 w-4 mr-2" />
-                    ILR Application
+                    Travel history only
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onExportClick('full')}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Full Data (Backup)
+                    Full backup
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -197,11 +197,11 @@ export const Header = observer(
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onExportClick('ilr')}>
                     <FileText className="h-4 w-4 mr-2" />
-                    ILR Application
+                    Travel history only
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onExportClick('full')}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Full Data (Backup)
+                    Full backup
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
