@@ -29,6 +29,7 @@ export const metadata: Metadata = {
     'excel export',
     'UK visa compliance',
     'settlement calculator',
+    'ilr track time'
   ],
   authors: [{ name: 'UK Travel History Parser' }],
   creator: 'UK Travel History Parser',

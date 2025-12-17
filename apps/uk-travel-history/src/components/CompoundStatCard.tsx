@@ -1,9 +1,9 @@
 'use client';
 
 import { Card, CardContent } from '@uth/ui';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Info } from 'lucide-react';
 import { ReactNode } from 'react';
-import * as Tooltip from '@radix-ui/react-tooltip';
+import * as Popover from '@radix-ui/react-popover';
 
 interface StatItem {
   value: string | number;
@@ -91,73 +91,73 @@ export const CompoundStatCard = ({
   };
 
   return (
-    <Tooltip.Provider delayDuration={200}>
-      <Card className={`${styles.card} ${className}`}>
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
-            >
-              <Icon className={`w-4 h-4 ${styles.iconColor}`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
-                {title}
-              </p>
-            </div>
+    <Card className={`${styles.card} ${className}`}>
+      <CardContent className="p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
+          >
+            <Icon className={`w-4 h-4 ${styles.iconColor}`} />
           </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
+              {title}
+            </p>
+          </div>
+        </div>
 
-          <div className={`grid ${getGridCols()} gap-3`}>
-            {stats.map((stat, index) => {
-              const statColor = variant !== 'default' && variant !== 'neutral'
-                ? styles.titleColor
-                : stat.variant
-                  ? statVariantStyles[stat.variant]
-                  : styles.titleColor;
+        <div className={`grid ${getGridCols()} gap-3`}>
+          {stats.map((stat, index) => {
+            const statColor = variant !== 'default' && variant !== 'neutral'
+              ? styles.titleColor
+              : stat.variant
+                ? statVariantStyles[stat.variant]
+                : styles.titleColor;
 
-              const content = (
-                <div className="text-center">
-                  <p className={`text-xl font-bold ${statColor} leading-tight`}>
-                    {stat.value}
-                  </p>
-                  <p className={`text-xs ${styles.labelColor} leading-tight mt-1`}>
+            return (
+              <div key={index} className="text-center">
+                <p className={`text-xl font-bold ${statColor} leading-tight`}>
+                  {stat.value}
+                </p>
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <p className={`text-xs ${styles.labelColor} leading-tight`}>
                     {stat.label}
                   </p>
+                  {stat.tooltip && (
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button
+                          className="inline-flex items-center justify-center rounded-full hover:bg-black/10 transition-colors p-0.5"
+                          type="button"
+                          aria-label={`Info about ${stat.label}`}
+                        >
+                          <Info className={`w-3 h-3 ${styles.labelColor}`} />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="bg-slate-900 text-white px-3 py-2 rounded-md text-xs max-w-xs shadow-lg z-50 animate-in fade-in-0 zoom-in-95"
+                          sideOffset={5}
+                          align="center"
+                        >
+                          {stat.tooltip}
+                          <Popover.Arrow className="fill-slate-900" />
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  )}
                 </div>
-              );
+              </div>
+            );
+          })}
+        </div>
 
-              if (stat.tooltip) {
-                return (
-                  <Tooltip.Root key={index}>
-                    <Tooltip.Trigger asChild>
-                      <div className="cursor-help">
-                        {content}
-                      </div>
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                      <Tooltip.Content
-                        className="bg-slate-900 text-white px-3 py-2 rounded-md text-xs max-w-xs shadow-lg z-50"
-                        sideOffset={5}
-                      >
-                        {stat.tooltip}
-                        <Tooltip.Arrow className="fill-slate-900" />
-                      </Tooltip.Content>
-                    </Tooltip.Portal>
-                  </Tooltip.Root>
-                );
-              }
-
-              return <div key={index}>{content}</div>;
-            })}
+        {subtitle && (
+          <div className={`text-xs ${styles.labelColor} mt-2 leading-tight`}>
+            {subtitle}
           </div>
-
-          {subtitle && (
-            <div className={`text-xs ${styles.labelColor} mt-2 leading-tight`}>
-              {subtitle}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Tooltip.Provider>
+        )}
+      </CardContent>
+    </Card>
   );
 };

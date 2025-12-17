@@ -72,7 +72,6 @@ export const LandingPage = () => {
     }
     try {
       await csvImport.handleFileSelect(e);
-      router.push('/travel');
     } catch (error) {
       console.error('Import failed:', error);
       alert(
