@@ -76,7 +76,7 @@ export async function isFeatureEnabledOnVercel(
 
     // 4. Check rollout percentage
     if (flag.rolloutPercentage !== undefined && userId) {
-      const userHash = hashUserId(userId);
+      const userHash = hashUserId(userId, featureId);
       return userHash % 100 < flag.rolloutPercentage;
     }
 
@@ -91,14 +91,18 @@ export async function isFeatureEnabledOnVercel(
 
 /**
  * Hash a user ID for consistent rollout percentage assignment
+ * Includes feature-specific salt to enable independent rollouts per feature
  *
  * @param userId - The user ID to hash
+ * @param featureId - The feature ID for feature-specific hashing
  * @returns A number between 0-99 for percentage-based rollout
  */
-function hashUserId(userId: string): number {
+function hashUserId(userId: string, featureId: string): number {
+  // Combine userId and featureId for feature-specific hashing
+  const input = `${userId}:${featureId}`;
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash) + input.charCodeAt(i);
     hash |= 0; // Convert to 32-bit integer
   }
   return Math.abs(hash);
@@ -121,10 +125,10 @@ export async function isEnabledForUser(
   userId: string,
   percentage: number
 ): Promise<boolean> {
-  const isEnabled = await isFeatureEnabled(featureId);
+  const isEnabled = await isFeatureEnabledOnVercel(featureId);
   if (!isEnabled) return false;
 
-  const hash = hashUserId(userId);
+  const hash = hashUserId(userId, featureId);
   return hash % 100 < percentage;
 }
 
