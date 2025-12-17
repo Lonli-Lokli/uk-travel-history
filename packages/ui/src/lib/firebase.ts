@@ -52,7 +52,15 @@ function initializeFirebase() {
     }
   }
 
-  auth = getAuth(app);
+  // Only get auth if app was successfully initialized
+  if (app) {
+    try {
+      auth = getAuth(app);
+    } catch (error) {
+      console.error('Failed to get Firebase Auth:', error);
+      // Allow app to continue without auth
+    }
+  }
 }
 
 // Initialize on module load (client-side only)
