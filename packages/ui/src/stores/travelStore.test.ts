@@ -73,9 +73,8 @@ describe('TravelStore', () => {
           ],
         },
         metadata: {
-          version: '1.0',
-          exportDate: '2024-01-01',
           tripCount: 1,
+          hasVisaDetails: true,
         },
       };
 
@@ -112,9 +111,8 @@ describe('TravelStore', () => {
           ],
         },
         metadata: {
-          version: '1.0',
-          exportDate: '2024-01-01',
           tripCount: 1,
+          hasVisaDetails: true,
         },
       };
 
