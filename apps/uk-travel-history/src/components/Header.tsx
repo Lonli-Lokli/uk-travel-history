@@ -26,7 +26,8 @@ interface HeaderProps {
   onImportPdfClick: () => void;
   onImportCsvClick: () => void;
   onImportClipboardClick: () => void;
-  onExportClick: () => void;
+  onImportFullDataClick: () => void;
+  onExportClick: (mode: 'ilr' | 'full') => void;
 }
 
 export const Header = observer(
@@ -34,6 +35,7 @@ export const Header = observer(
     onImportPdfClick,
     onImportCsvClick,
     onImportClipboardClick,
+    onImportFullDataClick,
     onExportClick,
   }: HeaderProps) => {
     const isLoading = travelStore.isLoading;
@@ -121,6 +123,10 @@ export const Header = observer(
                     <FileText className="h-4 w-4 mr-2" />
                     From CSV/Excel
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onImportFullDataClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full Data (Backup)
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
                     <Clipboard className="h-4 w-4 mr-2" />
@@ -154,6 +160,10 @@ export const Header = observer(
                     <FileText className="h-4 w-4 mr-2" />
                     From CSV/Excel
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onImportFullDataClick}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full Data (Backup)
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
                     <Clipboard className="h-4 w-4 mr-2" />
@@ -162,24 +172,49 @@ export const Header = observer(
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button
-                size="sm"
-                className="hidden sm:flex"
-                onClick={onExportClick}
-                disabled={!hasTrips}
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                Export Excel
-              </Button>
+              {/* Desktop: Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="hidden sm:flex"
+                    disabled={!hasTrips}
+                  >
+                    <Download className="h-4 w-4 mr-1.5" />
+                    Export
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    ILR Application
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportClick('full')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full Data (Backup)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <Button
-                size="icon"
-                className="sm:hidden"
-                onClick={onExportClick}
-                disabled={!hasTrips}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
+              {/* Mobile: Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" className="sm:hidden" disabled={!hasTrips}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    ILR Application
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportClick('full')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Full Data (Backup)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

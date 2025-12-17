@@ -15,6 +15,7 @@ import {
   useClearAll,
   useCsvImport,
   useClipboardImport,
+  useFullDataImport,
 } from './hooks';
 
 export const HomePageClient = observer(() => {
@@ -40,6 +41,10 @@ export const HomePageClient = observer(() => {
     confirmImport: confirmClipboardImport,
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
+
+  const {
+    triggerFileInput: triggerFullDataFileInput,
+  } = useFullDataImport();
 
   const hasTrips = travelStore.trips.length > 0;
 
@@ -74,6 +79,7 @@ export const HomePageClient = observer(() => {
         onImportPdfClick={triggerFileInput}
         onImportCsvClick={triggerCsvFileInput}
         onImportClipboardClick={handleClipboardPaste}
+        onImportFullDataClick={triggerFullDataFileInput}
         onExportClick={handleExport}
       />
 

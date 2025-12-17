@@ -8,12 +8,14 @@ import { ValidationStatusCard } from './ValidationStatusCard';
 import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import {
   useFileUpload,
   useExport,
   useClearAll,
   useCsvImport,
   useClipboardImport,
+  useFullDataImport,
 } from './hooks';
 
 export const TravelPageClient = observer(() => {
@@ -39,6 +41,16 @@ export const TravelPageClient = observer(() => {
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
 
+  const {
+    fileInputRef: fullDataFileInputRef,
+    handleFileSelect: handleFullDataFileSelect,
+    triggerFileInput: triggerFullDataFileInput,
+    isDialogOpen: isFullDataDialogOpen,
+    previewData: fullDataPreviewData,
+    confirmImport: confirmFullDataImport,
+    cancelImport: cancelFullDataImport,
+  } = useFullDataImport();
+
   return (
     <>
       <input
@@ -57,10 +69,19 @@ export const TravelPageClient = observer(() => {
         onChange={handleCsvFileSelect}
       />
 
+      <input
+        ref={fullDataFileInputRef}
+        type="file"
+        accept=".xlsx"
+        className="hidden"
+        onChange={handleFullDataFileSelect}
+      />
+
       <Header
         onImportPdfClick={triggerFileInput}
         onImportCsvClick={triggerCsvFileInput}
         onImportClipboardClick={handleClipboardPaste}
+        onImportFullDataClick={triggerFullDataFileInput}
         onExportClick={handleExport}
       />
 
@@ -89,6 +110,19 @@ export const TravelPageClient = observer(() => {
           tripCount={clipboardPreviewData.tripCount}
           onConfirm={confirmClipboardImport}
           onCancel={cancelClipboardImport}
+        />
+      )}
+
+      {/* Full Data Import Preview Dialog */}
+      {fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={isFullDataDialogOpen}
+          tripCount={fullDataPreviewData.tripCount}
+          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
+          onConfirm={confirmFullDataImport}
+          onCancel={cancelFullDataImport}
         />
       )}
     </>
