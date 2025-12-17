@@ -20,7 +20,7 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = 'Pick a date',
+  placeholder = 'YYYY-MM-DD',
   disabled = false,
   className,
   defaultMonth,
@@ -37,7 +37,7 @@ export function DatePicker({
   // Initialize input value when component mounts or value changes
   React.useEffect(() => {
     if (selectedDate) {
-      setInputValue(format(selectedDate, 'dd/MM/yyyy'));
+      setInputValue(format(selectedDate, 'yyyy-MM-dd'));
     } else {
       setInputValue('');
     }
@@ -54,19 +54,8 @@ export function DatePicker({
     const newValue = e.target.value;
     setInputValue(newValue);
 
-    // Try to parse various date formats
-    let parsedDate: Date | null = null;
-
-    // Try DD/MM/YYYY format
-    parsedDate = parse(newValue, 'dd/MM/yyyy', new Date());
-    if (!isValid(parsedDate)) {
-      // Try DD-MM-YYYY format
-      parsedDate = parse(newValue, 'dd-MM-yyyy', new Date());
-    }
-    if (!isValid(parsedDate)) {
-      // Try DD.MM.YYYY format
-      parsedDate = parse(newValue, 'dd.MM.yyyy', new Date());
-    }
+    // Only parse YYYY-MM-DD format
+    const parsedDate = parse(newValue, 'yyyy-MM-dd', new Date());
 
     // If we successfully parsed a valid date, update the value
     if (parsedDate && isValid(parsedDate)) {
@@ -77,7 +66,7 @@ export function DatePicker({
   const handleInputBlur = () => {
     // Restore formatted value on blur if we have a valid date
     if (selectedDate) {
-      setInputValue(format(selectedDate, 'dd/MM/yyyy'));
+      setInputValue(format(selectedDate, 'yyyy-MM-dd'));
     } else {
       setInputValue('');
     }

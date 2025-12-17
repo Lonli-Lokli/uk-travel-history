@@ -79,7 +79,6 @@ export const TravelTable = observer(() => {
                 ? formatDate(row.original.outDate)
                 : undefined
             }
-            placeholder="Set date"
           />
         ),
       },
@@ -106,7 +105,6 @@ export const TravelTable = observer(() => {
             displayValue={
               row.original.inDate ? formatDate(row.original.inDate) : undefined
             }
-            placeholder="Set date"
             defaultMonth={row.original.outDate}
           />
         ),
