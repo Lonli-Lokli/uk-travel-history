@@ -127,7 +127,7 @@ describe('Feature Flags (Backward Compatibility)', () => {
 
     it('should return only enabled flags', () => {
       const enabled = getEnabledFlags();
-      enabled.forEach((flag) => {
+      enabled.forEach((flag: FeatureFlagKey) => {
         expect(FEATURE_FLAGS[flag]).toBe(true);
       });
     });
@@ -204,15 +204,15 @@ describe('Feature Flags (Backward Compatibility)', () => {
       // const invalidKey: FeatureFlagKey = 'INVALID_KEY';
     });
 
-    it('should have readonly const assertion', () => {
-      // Verify the as const assertion makes the object deeply readonly
-      type Writeable<T> = { -readonly [P in keyof T]: T[P] };
-      type IsReadonly<T> = T extends Writeable<T> ? false : true;
+    it('should provide dynamic flag values through getters', () => {
+      // With the new getter-based implementation, flags read from cache
+      // This test verifies the backward compatibility layer works correctly
+      const allFlags = getAllFlagStates();
 
-      // This type check ensures FEATURE_FLAGS is readonly
-      type FlagsReadonly = IsReadonly<typeof FEATURE_FLAGS>;
-      const isReadonly: FlagsReadonly = true;
-      expect(isReadonly).toBe(true);
+      // All flags should be boolean values
+      Object.values(allFlags).forEach((value) => {
+        expect(typeof value).toBe('boolean');
+      });
     });
   });
 });
