@@ -14,3 +14,5 @@ export * from './editable-cell';
 export * from './TravelTable';
 
 export { travelStore } from './stores/travelStore';
+export { authStore } from './stores/authStore';
+export { FEATURE_FLAGS } from '@uth/features';

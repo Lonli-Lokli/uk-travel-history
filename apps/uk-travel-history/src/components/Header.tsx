@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
 import {
   travelStore,
+  authStore,
+  FEATURE_FLAGS,
   Button,
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +23,11 @@ import {
   FileText,
   Clipboard,
   ChevronDown,
+  User,
+  LogOut,
+  Fingerprint,
 } from 'lucide-react';
+import { LoginModal } from './LoginModal';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -36,8 +43,19 @@ export const Header = observer(
     onImportClipboardClick,
     onExportClick,
   }: HeaderProps) => {
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
+    const user = authStore.user;
+    const isAuthEnabled = FEATURE_FLAGS.FIREBASE_AUTH_ENABLED;
+
+    const handleSignOut = async () => {
+      try {
+        await authStore.signOut();
+      } catch (error) {
+        console.error('Sign out error:', error);
+      }
+    };
 
     return (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -180,9 +198,57 @@ export const Header = observer(
               >
                 <Download className="h-4 w-4" />
               </Button>
+
+              {/* Auth UI - only show if feature flag is enabled */}
+              {isAuthEnabled && (
+                <>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <User className="h-4 w-4 mr-1.5" />
+                          <span className="hidden sm:inline">
+                            {user.displayName || user.email?.split('@')[0] || 'Account'}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{user.displayName || 'User'}</span>
+                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowLoginModal(true)}
+                    >
+                      <Fingerprint className="h-4 w-4 mr-1.5" />
+                      <span className="hidden sm:inline">Sign In</span>
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Login Modal */}
+        {isAuthEnabled && (
+          <LoginModal
+            open={showLoginModal}
+            onOpenChange={setShowLoginModal}
+          />
+        )}
       </header>
     );
   }

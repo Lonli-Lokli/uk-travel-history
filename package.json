@@ -30,6 +30,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "firebase": "^12.7.0",
+    "firebase-admin": "^13.6.0",
     "highcharts": "^12.4.0",
     "highcharts-react-official": "^3.2.3",
     "lucide-react": "^0.561.0",
