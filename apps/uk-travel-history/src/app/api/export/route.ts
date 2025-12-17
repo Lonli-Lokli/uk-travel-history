@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const tripsDataStr = formData.get('tripsData') as string;
+    const exportMode = (formData.get('exportMode') as string) || 'ilr';
 
     if (!tripsDataStr) {
       return NextResponse.json({ error: 'No data provided' }, { status: 400 });
@@ -49,8 +50,19 @@ export async function POST(request: NextRequest) {
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'UK Travel Parser';
-    // No need to set created date - ExcelJS handles this
 
+    // Helper function to format dates
+    const formatDate = (dateStr: string): string => {
+      if (!dateStr) return '';
+      try {
+        const date = parseISO(dateStr);
+        return format(date, 'dd/MM/yyyy');
+      } catch {
+        return '';
+      }
+    };
+
+    // Sheet 1: Travel History (identical for both modes)
     const sheet = workbook.addWorksheet('Travel History', {
       views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
     });
@@ -74,20 +86,6 @@ export async function POST(request: NextRequest) {
     headerRow.height = 26;
 
     trips.forEach((trip, index) => {
-      /**
-       * Format ISO date string to DD/MM/YYYY for Excel display
-       * Uses date-fns to avoid timezone issues
-       */
-      const formatDate = (dateStr: string): string => {
-        if (!dateStr) return '';
-        try {
-          const date = parseISO(dateStr);
-          return format(date, 'dd/MM/yyyy');
-        } catch {
-          return '';
-        }
-      };
-
       const row = sheet.addRow({
         num: index + 1,
         outDate: formatDate(trip.outDate),
@@ -129,6 +127,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sheet 2: Visa Details (only for full mode)
+    if (exportMode === 'full') {
+      const detailsSheet = workbook.addWorksheet('Visa Details');
+
+      // Add header row with styling
+      const detailsHeader = detailsSheet.addRow(['Field', 'Value']);
+      detailsHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      detailsHeader.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4472C4' },
+      };
+      detailsHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+      detailsHeader.height = 26;
+
+      // Add visa details rows
+      const addDetailRow = (field: string, value: string | number) => {
+        const row = detailsSheet.addRow([field, value]);
+        row.getCell(1).font = { bold: true };
+        row.getCell(1).alignment = { vertical: 'middle' };
+        row.getCell(2).alignment = { vertical: 'middle' };
+        row.height = 20;
+
+        // Add borders
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            right: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          };
+        });
+      };
+
+      addDetailRow('Vignette Entry Date', data.vignetteEntryDate ? formatDate(data.vignetteEntryDate) : '');
+      addDetailRow('Visa Start Date', data.visaStartDate ? formatDate(data.visaStartDate) : '');
+      addDetailRow('ILR Track (Years)', data.ilrTrack?.toString() || '5');
+
+      // Set column widths
+      detailsSheet.getColumn(1).width = 25;
+      detailsSheet.getColumn(2).width = 20;
+
+      // Apply border to header cells
+      detailsHeader.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          right: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+        };
+      });
+    }
+
     const buffer = await workbook.xlsx.writeBuffer();
 
     return new NextResponse(buffer, {
@@ -136,7 +187,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type':
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': 'attachment; filename="UK_Travel_History.xlsx"',
+        'Content-Disposition': `attachment; filename="UK_Travel_History${exportMode === 'full' ? '_Full' : ''}.xlsx"`,
       },
     });
   } catch (error) {
