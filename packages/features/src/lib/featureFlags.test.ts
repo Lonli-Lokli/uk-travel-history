@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   FEATURE_FLAGS,
   isFeatureEnabled,
@@ -7,11 +7,26 @@ import {
   getAllFlagStates,
   type FeatureFlagKey,
 } from './featureFlags';
+import { setCachedFlags, FEATURE_KEYS } from './edgeConfigFlags';
 
-describe('Feature Flags', () => {
+describe('Feature Flags (Backward Compatibility)', () => {
+  beforeEach(() => {
+    // Reset cache before each test
+    setCachedFlags({
+      [FEATURE_KEYS.MONETIZATION_ENABLED]: false,
+      [FEATURE_KEYS.FIREBASE_AUTH_ENABLED]: false,
+      [FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED]: false,
+      [FEATURE_KEYS.EXCEL_EXPORT_PREMIUM]: false,
+      [FEATURE_KEYS.PDF_EXPORT_ENABLED]: false,
+      [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
+      [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
+      [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
+    });
+  });
+
   describe('FEATURE_FLAGS', () => {
-    it('should default all flags to false when env vars are not set', () => {
-      // In test environment, env vars are not set by default
+    it('should default all flags to false when cache is empty', () => {
+      // Flags should read from cache which defaults to false
       expect(FEATURE_FLAGS.MONETIZATION_ENABLED).toBe(false);
       expect(FEATURE_FLAGS.FIREBASE_AUTH_ENABLED).toBe(false);
       expect(FEATURE_FLAGS.STRIPE_CHECKOUT_ENABLED).toBe(false);
@@ -22,9 +37,27 @@ describe('Feature Flags', () => {
       expect(FEATURE_FLAGS.PREMIUM_BADGE_ENABLED).toBe(false);
     });
 
-    it('should have DEV_MODE_TOGGLE true in test environment', () => {
-      // NODE_ENV is 'test' in vitest
-      expect(FEATURE_FLAGS.DEV_MODE_TOGGLE).toBe(false);
+    it('should have DEV_MODE_TOGGLE based on NODE_ENV', () => {
+      // NODE_ENV is 'test' in vitest, so DEV_MODE_TOGGLE should be false
+      expect(FEATURE_FLAGS.DEV_MODE_TOGGLE).toBe(process.env.NODE_ENV === 'development');
+    });
+
+    it('should read from cached Edge Config flags', () => {
+      // Set some flags to true via cache
+      setCachedFlags({
+        [FEATURE_KEYS.MONETIZATION_ENABLED]: true,
+        [FEATURE_KEYS.FIREBASE_AUTH_ENABLED]: true,
+        [FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED]: false,
+        [FEATURE_KEYS.EXCEL_EXPORT_PREMIUM]: false,
+        [FEATURE_KEYS.PDF_EXPORT_ENABLED]: false,
+        [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
+        [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
+        [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
+      });
+
+      expect(FEATURE_FLAGS.MONETIZATION_ENABLED).toBe(true);
+      expect(FEATURE_FLAGS.FIREBASE_AUTH_ENABLED).toBe(true);
+      expect(FEATURE_FLAGS.STRIPE_CHECKOUT_ENABLED).toBe(false);
     });
 
     it('should be immutable (as const)', () => {
@@ -134,24 +167,30 @@ describe('Feature Flags', () => {
     });
   });
 
-  describe('Environment Variable Parsing', () => {
-    it('should only enable flags when env var is exactly "true"', () => {
-      // This test documents the behavior: only "true" string enables flags
-      // Values like "1", "yes", "TRUE" will NOT enable the flag
-      const testCases = [
-        { value: 'true', expected: true },
-        { value: 'false', expected: false },
-        { value: 'TRUE', expected: false },
-        { value: '1', expected: false },
-        { value: 'yes', expected: false },
-        { value: '', expected: false },
-        { value: undefined, expected: false },
-      ];
+  describe('Backward Compatibility', () => {
+    it('should maintain same API as old implementation', () => {
+      // Verify that the compat layer provides the same API
+      expect(typeof FEATURE_FLAGS.MONETIZATION_ENABLED).toBe('boolean');
+      expect(typeof isFeatureEnabled).toBe('function');
+      expect(typeof isMonetizationActive).toBe('function');
+      expect(typeof getEnabledFlags).toBe('function');
+      expect(typeof getAllFlagStates).toBe('function');
+    });
 
-      testCases.forEach(({ value, expected }) => {
-        const result = value === 'true';
-        expect(result).toBe(expected);
+    it('should work with Edge Config cached flags', () => {
+      setCachedFlags({
+        [FEATURE_KEYS.MONETIZATION_ENABLED]: true,
+        [FEATURE_KEYS.FIREBASE_AUTH_ENABLED]: false,
+        [FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED]: false,
+        [FEATURE_KEYS.EXCEL_EXPORT_PREMIUM]: false,
+        [FEATURE_KEYS.PDF_EXPORT_ENABLED]: false,
+        [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
+        [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
+        [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
       });
+
+      expect(isMonetizationActive()).toBe(true);
+      expect(getEnabledFlags()).toContain('MONETIZATION_ENABLED');
     });
   });
 
