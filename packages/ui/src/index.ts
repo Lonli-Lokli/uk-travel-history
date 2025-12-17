@@ -17,3 +17,7 @@ export { travelStore } from './stores/travelStore';
 
 // Feature Registry & Configuration
 export * from './config/features';
+export * from './config/featureFlags';
+
+// Feature Flag Helpers
+export * from './lib/featureFlags';

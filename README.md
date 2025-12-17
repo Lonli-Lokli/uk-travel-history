@@ -187,6 +187,27 @@ npm run format
 npm run build
 ```
 
+## Feature Flags
+
+The application supports a two-layer feature flag system for controlled rollout of monetization features:
+
+- **Environment Variables**: Simple boolean flags for basic enable/disable
+- **Vercel Edge Config**: Dynamic flags with percentage-based rollouts and beta user targeting
+
+For detailed documentation on setting up and using feature flags, see [docs/feature-flags.md](docs/feature-flags.md).
+
+### Quick Start
+
+```bash
+# Copy environment example
+cp apps/uk-travel-history/.env.local.example apps/uk-travel-history/.env.local
+
+# Enable features for development
+# Edit .env.local and set desired flags to 'true'
+```
+
+See [RFC-007](https://github.com/Lonli-Lokli/uk-travel-history/issues/52) for the complete feature flag specification.
+
 ## License
 
 MIT
