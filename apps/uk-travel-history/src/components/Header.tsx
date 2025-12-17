@@ -26,7 +26,6 @@ interface HeaderProps {
   onImportPdfClick: () => void;
   onImportCsvClick: () => void;
   onImportClipboardClick: () => void;
-  onImportFullDataClick: () => void;
   onExportClick: (mode: 'ilr' | 'full') => void;
 }
 
@@ -35,7 +34,6 @@ export const Header = observer(
     onImportPdfClick,
     onImportCsvClick,
     onImportClipboardClick,
-    onImportFullDataClick,
     onExportClick,
   }: HeaderProps) => {
     const isLoading = travelStore.isLoading;
@@ -121,11 +119,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV/Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onImportFullDataClick}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Full Data (Backup)
+                    From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
@@ -158,11 +152,7 @@ export const Header = observer(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
                     <FileText className="h-4 w-4 mr-2" />
-                    From CSV/Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onImportFullDataClick}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Full Data (Backup)
+                    From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>

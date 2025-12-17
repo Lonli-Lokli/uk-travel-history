@@ -15,7 +15,6 @@ import {
   useClearAll,
   useCsvImport,
   useClipboardImport,
-  useFullDataImport,
 } from './hooks';
 
 export const TravelPageClient = observer(() => {
@@ -31,6 +30,10 @@ export const TravelPageClient = observer(() => {
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
     cancelImport: cancelCsvImport,
+    isFullDataDialogOpen,
+    fullDataPreviewData,
+    confirmFullDataImport,
+    cancelFullDataImport,
   } = useCsvImport();
 
   const {
@@ -40,16 +43,6 @@ export const TravelPageClient = observer(() => {
     confirmImport: confirmClipboardImport,
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
-
-  const {
-    fileInputRef: fullDataFileInputRef,
-    handleFileSelect: handleFullDataFileSelect,
-    triggerFileInput: triggerFullDataFileInput,
-    isDialogOpen: isFullDataDialogOpen,
-    previewData: fullDataPreviewData,
-    confirmImport: confirmFullDataImport,
-    cancelImport: cancelFullDataImport,
-  } = useFullDataImport();
 
   return (
     <>
@@ -69,19 +62,10 @@ export const TravelPageClient = observer(() => {
         onChange={handleCsvFileSelect}
       />
 
-      <input
-        ref={fullDataFileInputRef}
-        type="file"
-        accept=".xlsx"
-        className="hidden"
-        onChange={handleFullDataFileSelect}
-      />
-
       <Header
         onImportPdfClick={triggerFileInput}
         onImportCsvClick={triggerCsvFileInput}
         onImportClipboardClick={handleClipboardPaste}
-        onImportFullDataClick={triggerFullDataFileInput}
         onExportClick={handleExport}
       />
 

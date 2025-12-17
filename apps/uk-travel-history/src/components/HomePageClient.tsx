@@ -9,13 +9,13 @@ import { VisaDetailsCard } from './VisaDetailsCard';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { EmptyState } from './EmptyState';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
+import { FullDataImportDialog } from './FullDataImportDialog';
 import {
   useFileUpload,
   useExport,
   useClearAll,
   useCsvImport,
   useClipboardImport,
-  useFullDataImport,
 } from './hooks';
 
 export const HomePageClient = observer(() => {
@@ -32,6 +32,10 @@ export const HomePageClient = observer(() => {
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
     cancelImport: cancelCsvImport,
+    isFullDataDialogOpen,
+    fullDataPreviewData,
+    confirmFullDataImport,
+    cancelFullDataImport,
   } = useCsvImport();
 
   const {
@@ -41,10 +45,6 @@ export const HomePageClient = observer(() => {
     confirmImport: confirmClipboardImport,
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
-
-  const {
-    triggerFileInput: triggerFullDataFileInput,
-  } = useFullDataImport();
 
   const hasTrips = travelStore.trips.length > 0;
 
@@ -79,7 +79,6 @@ export const HomePageClient = observer(() => {
         onImportPdfClick={triggerFileInput}
         onImportCsvClick={triggerCsvFileInput}
         onImportClipboardClick={handleClipboardPaste}
-        onImportFullDataClick={triggerFullDataFileInput}
         onExportClick={handleExport}
       />
 
@@ -119,6 +118,19 @@ export const HomePageClient = observer(() => {
           tripCount={clipboardPreviewData.tripCount}
           onConfirm={confirmClipboardImport}
           onCancel={cancelClipboardImport}
+        />
+      )}
+
+      {/* Full Data Import Preview Dialog */}
+      {fullDataPreviewData && (
+        <FullDataImportDialog
+          isOpen={isFullDataDialogOpen}
+          tripCount={fullDataPreviewData.tripCount}
+          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
+          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
+          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
+          onConfirm={confirmFullDataImport}
+          onCancel={cancelFullDataImport}
         />
       )}
     </div>
