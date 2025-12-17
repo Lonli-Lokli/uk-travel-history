@@ -1,6 +1,5 @@
 // New unified feature flag system (Vercel Edge Config only)
 export * from './edgeConfigFlags';
-export * from './FeatureFlagsProvider';
 
 // Feature tier system
 export * from './features';

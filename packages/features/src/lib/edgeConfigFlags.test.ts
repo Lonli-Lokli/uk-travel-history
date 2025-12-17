@@ -258,7 +258,9 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return default flags when no cache is set', () => {
-      // Clear any existing cache by setting to empty/default
+      // Clear any existing cache by setting to null
+      setCachedFlags(null);
+
       const cached = getCachedFlags();
 
       Object.values(FEATURE_KEYS).forEach((key) => {

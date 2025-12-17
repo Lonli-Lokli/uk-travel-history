@@ -51,9 +51,11 @@ let cachedFlags: Record<FeatureFlagKey, boolean> | null = null;
 
 /**
  * Set cached feature flags (called from server components)
- * @param flags - The flags to cache
+ * @param flags - The flags to cache (or null to clear cache)
  */
-export function setCachedFlags(flags: Record<FeatureFlagKey, boolean>): void {
+export function setCachedFlags(
+  flags: Record<FeatureFlagKey, boolean> | null
+): void {
   cachedFlags = flags;
 }
 

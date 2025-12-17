@@ -5,7 +5,7 @@ import {
   setCachedFlags,
   isFeatureEnabledClient,
   type FeatureFlagKey,
-} from './edgeConfigFlags';
+} from '@uth/features';
 
 /**
  * Feature flags context
