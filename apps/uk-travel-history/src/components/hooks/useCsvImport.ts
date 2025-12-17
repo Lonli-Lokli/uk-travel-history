@@ -153,7 +153,7 @@ export const useCsvImport = () => {
   }, []);
 
   const confirmFullDataImport = useCallback(
-    async (mode: 'replace' | 'append') => {
+    async (mode: 'replace' | 'append', onSuccess?: () => void) => {
       if (!pendingFullDataFile) return;
 
       try {
@@ -168,6 +168,11 @@ export const useCsvImport = () => {
         setIsFullDataDialogOpen(false);
         setFullDataPreviewData(null);
         setPendingFullDataFile(null);
+
+        // Call success callback after state updates
+        if (onSuccess) {
+          onSuccess();
+        }
       } catch (err) {
         toast({
           title: 'Import failed',

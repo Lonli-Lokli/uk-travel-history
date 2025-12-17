@@ -125,12 +125,11 @@ export const LandingPage = () => {
   };
 
   const handleFullDataImportConfirm = async (mode: 'replace' | 'append') => {
-    await csvImport.confirmFullDataImport(mode);
-    setActiveAction(null);
-    // Navigate to travel page after successful import
-    if (!csvImport.isFullDataDialogOpen) {
+    await csvImport.confirmFullDataImport(mode, () => {
+      // Navigate to travel page after successful import
+      setActiveAction(null);
       router.push('/travel');
-    }
+    });
   };
 
   const handleCancelImport = () => {
