@@ -781,29 +781,33 @@ function buildSummary(params: {
 
   // Continuous Leave Days
   // (Total Period Days) - (Total Absences in Period)
+  // Calculate from actual entry date to today, regardless of eligibility status
   let continuousLeaveDays: number | null = null;
   let daysUntilEligible: number | null = null;
 
+  if (visaStartDate || vignetteEntryDate) {
+    const startDate = parseISO(visaStartDate || vignetteEntryDate);
+    const today = startOfDay(new Date());
+
+    // Only calculate if we're past the start date
+    if (isAfter(today, startDate) || today.getTime() === startDate.getTime()) {
+      const totalPeriod = differenceInDays(today, startDate) + 1;
+
+      // Count exact absences from entry to today
+      let absInPeriod = 0;
+      absenceIntervals.forEach((abc) => {
+        const is = abc.start < startDate ? startDate : abc.start;
+        const ie = abc.end > today ? today : abc.end;
+        if (is <= ie) absInPeriod += differenceInDays(ie, is) + 1;
+      });
+
+      continuousLeaveDays = totalPeriod - absInPeriod;
+    }
+  }
+
+  // Calculate days until eligible if ILR eligible
   if (validation.status === 'ELIGIBLE' && effectiveApplicationDate) {
     const appDate = parseISO(effectiveApplicationDate);
-    const start = startOfDay(addYears(appDate, -ilrTrack));
-    const totalPeriod = differenceInDays(appDate, start) + 1;
-
-    // Count exact absences in this window
-    const intervals = buildAbsenceIntervals(
-      tripsWithCalculations,
-      preEntryPeriod,
-      visaStartDate,
-      vignetteEntryDate,
-    );
-    let absInPeriod = 0;
-    intervals.forEach((abc) => {
-      const is = abc.start < start ? start : abc.start;
-      const ie = abc.end > appDate ? appDate : abc.end;
-      if (is <= ie) absInPeriod += differenceInDays(ie, is) + 1;
-    });
-
-    continuousLeaveDays = totalPeriod - absInPeriod;
     daysUntilEligible = differenceInDays(appDate, new Date());
   }
 

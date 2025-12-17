@@ -478,7 +478,7 @@ export const RiskAreaChart: React.FC = observer(() => {
 
   if (!rollingAbsenceData || rollingAbsenceData.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-3">
         <h3 className="text-base font-semibold text-slate-800 mb-2">
           Risk-Based Timeline
         </h3>
@@ -493,7 +493,7 @@ export const RiskAreaChart: React.FC = observer(() => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 mb-3">
       <div className="mb-3">
         <h3 className="text-base font-semibold text-slate-800 mb-2">
           180-Day Rolling Absence Risk Timeline

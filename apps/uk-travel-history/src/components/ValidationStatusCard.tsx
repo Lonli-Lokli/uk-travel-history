@@ -87,18 +87,21 @@ export const ValidationStatusCard = observer(() => {
 
   if (reason.type === 'TOO_EARLY') {
     return (
-      <Card className="bg-blue-50 border-blue-300 mb-3">
+      <Card className="bg-red-50 border-red-300 mb-3">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2 text-blue-900">
-            <Info className="w-4 h-4" />
-            Application Date Too Early
+          <CardTitle className="text-base flex items-center gap-2 text-red-900">
+            <XCircle className="w-4 h-4" />
+            NOT ELIGIBLE - Application Date Too Early
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-blue-800 mb-2">{reason.message}</p>
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-red-800 mb-2 font-semibold">{reason.message}</p>
+          <p className="text-sm text-red-800">
             <strong>Earliest allowed date:</strong>{' '}
             {formatDate(reason.earliestAllowedDate)}
+          </p>
+          <p className="text-xs text-red-700 mt-2">
+            You cannot apply for ILR before completing the required continuous residence period.
           </p>
         </CardContent>
       </Card>

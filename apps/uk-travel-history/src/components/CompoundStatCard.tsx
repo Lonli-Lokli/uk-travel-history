@@ -3,11 +3,13 @@
 import { Card, CardContent } from '@uth/ui';
 import { LucideIcon } from 'lucide-react';
 import { ReactNode } from 'react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 interface StatItem {
   value: string | number;
   label: string;
   variant?: 'default' | 'success' | 'warning';
+  tooltip?: string;
 }
 
 interface CompoundStatCardProps {
@@ -89,48 +91,73 @@ export const CompoundStatCard = ({
   };
 
   return (
-    <Card className={`${styles.card} ${className}`}>
-      <CardContent className="p-2">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <div
-            className={`w-6 h-6 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
-          >
-            <Icon className={`w-3 h-3 ${styles.iconColor}`} />
+    <Tooltip.Provider delayDuration={200}>
+      <Card className={`${styles.card} ${className}`}>
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
+            >
+              <Icon className={`w-4 h-4 ${styles.iconColor}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
+                {title}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-[0.625rem] font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
-              {title}
-            </p>
+
+          <div className={`grid ${getGridCols()} gap-3`}>
+            {stats.map((stat, index) => {
+              const statColor = variant !== 'default' && variant !== 'neutral'
+                ? styles.titleColor
+                : stat.variant
+                  ? statVariantStyles[stat.variant]
+                  : styles.titleColor;
+
+              const content = (
+                <div className="text-center">
+                  <p className={`text-xl font-bold ${statColor} leading-tight`}>
+                    {stat.value}
+                  </p>
+                  <p className={`text-xs ${styles.labelColor} leading-tight mt-1`}>
+                    {stat.label}
+                  </p>
+                </div>
+              );
+
+              if (stat.tooltip) {
+                return (
+                  <Tooltip.Root key={index}>
+                    <Tooltip.Trigger asChild>
+                      <div className="cursor-help">
+                        {content}
+                      </div>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content
+                        className="bg-slate-900 text-white px-3 py-2 rounded-md text-xs max-w-xs shadow-lg z-50"
+                        sideOffset={5}
+                      >
+                        {stat.tooltip}
+                        <Tooltip.Arrow className="fill-slate-900" />
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+                );
+              }
+
+              return <div key={index}>{content}</div>;
+            })}
           </div>
-        </div>
 
-        <div className={`grid ${getGridCols()} gap-2`}>
-          {stats.map((stat, index) => {
-            const statColor = variant !== 'default' && variant !== 'neutral'
-              ? styles.titleColor
-              : stat.variant
-                ? statVariantStyles[stat.variant]
-                : styles.titleColor;
-
-            return (
-              <div key={index} className="text-center">
-                <p className={`text-lg font-bold ${statColor} leading-tight`}>
-                  {stat.value}
-                </p>
-                <p className={`text-[0.5rem] ${styles.labelColor} leading-tight mt-0.5`}>
-                  {stat.label}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {subtitle && (
-          <div className={`text-[0.5rem] ${styles.labelColor} mt-1.5 leading-tight`}>
-            {subtitle}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {subtitle && (
+            <div className={`text-xs ${styles.labelColor} mt-2 leading-tight`}>
+              {subtitle}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Tooltip.Provider>
   );
 };

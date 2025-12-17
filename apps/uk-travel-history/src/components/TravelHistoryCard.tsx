@@ -29,7 +29,7 @@ export const TravelHistoryCard = observer(
     const tripCount = travelStore.trips.length;
 
     return (
-      <Card className="bg-white">
+      <Card className="bg-white mb-3">
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">

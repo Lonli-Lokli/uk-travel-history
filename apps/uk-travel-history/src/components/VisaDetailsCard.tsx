@@ -67,9 +67,11 @@ export const VisaDetailsCard = observer(() => {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ilrTrack" className="text-xs font-medium">
-              ILR Track (Years)
-            </Label>
+            <div className="flex items-center justify-between min-h-[20px]">
+              <Label htmlFor="ilrTrack" className="text-xs font-medium">
+                ILR Track (Years)
+              </Label>
+            </div>
             <Select
               value={travelStore.ilrTrack.toString()}
               onValueChange={(value) => {
@@ -92,7 +94,7 @@ export const VisaDetailsCard = observer(() => {
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between min-h-[20px]">
               <Label htmlFor="applicationDate" className="text-xs font-medium">
                 {`Application Date ${travelStore.autoDateUsed ? '' : '(Override)'}`}
               </Label>
