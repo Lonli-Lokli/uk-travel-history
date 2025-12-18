@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, STRIPE_PRICES } from '@uth/stripe';
+import { StripeAPI, STRIPE_PRICES } from '@uth/stripe-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     // Create Stripe Checkout session (anonymous - no customer_email preset)
-    const session = await stripe.checkout.sessions.create({
+    const session = await StripeAPI.checkout.sessions.create({
       // No customer_email - Stripe will collect it
       // No client_reference_id - user doesn't exist yet
       metadata: {

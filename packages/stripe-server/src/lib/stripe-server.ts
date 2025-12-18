@@ -8,7 +8,7 @@ import Stripe from 'stripe';
 const stripeSecretKey =
   process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build';
 
-export const stripe = new Stripe(stripeSecretKey, {
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-12-15.clover',
   typescript: true,
 });
@@ -22,3 +22,5 @@ export const STRIPE_PRICES = {
     process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 'price_premium_annual',
   PREMIUM_ONCE: process.env.STRIPE_PRICE_PREMIUM_ONCE || 'price_premium_once',
 };
+
+export { stripe as StripeAPI };

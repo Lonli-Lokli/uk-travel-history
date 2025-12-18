@@ -2,6 +2,7 @@
 // Used for redirecting to Stripe Checkout
 
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { logger } from '@uth/utils';
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
@@ -14,7 +15,7 @@ export function getStripe(): Promise<Stripe | null> {
     const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
     if (!publishableKey) {
-      console.warn(
+      logger.warn(
         'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not defined. Stripe checkout will not work.',
       );
       return Promise.resolve(null);

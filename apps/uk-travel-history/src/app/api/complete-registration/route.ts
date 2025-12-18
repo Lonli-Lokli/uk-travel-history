@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@uth/stripe';
+import { StripeAPI } from '@uth/stripe-server';
 import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
+import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Retrieve session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
 
     // Verify payment was completed
     if (session.payment_status !== 'paid') {
@@ -139,7 +140,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch subscription details
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
+      subscriptionId,
+    );
+
+    // Extract subscription data from Response wrapper
+    // Using any here because Stripe SDK types can vary between versions
+    const subscription =
+      'data' in subscriptionResponse
+        ? (subscriptionResponse as any).data
+        : (subscriptionResponse as any);
 
     // Create subscription document in Firestore
     const subscriptionData = {
@@ -148,9 +158,11 @@ export async function POST(request: NextRequest) {
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId,
       stripeSessionId: session_id, // Mark session as consumed
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodStart: new Date(
+        (subscription.current_period_start ?? 0) * 1000,
+      ),
+      currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

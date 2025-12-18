@@ -138,9 +138,9 @@ class PaymentStore {
         throw new Error('Stripe publishable key not configured');
       }
 
-      const stripe = await loadStripe(stripePublishableKey);
+      const stripeInstance = await loadStripe(stripePublishableKey);
 
-      if (!stripe) {
+      if (!stripeInstance) {
         throw new Error('Failed to load Stripe');
       }
 
@@ -156,9 +156,12 @@ class PaymentStore {
       });
 
       // Redirect to Stripe Checkout
-      const { error: stripeError } = await stripe.redirectToCheckout({
+      // TypeScript has issues with Stripe.js types, so we use type assertion
+      const result = await (stripeInstance as any).redirectToCheckout({
         sessionId,
       });
+
+      const stripeError = result?.error;
 
       if (stripeError) {
         throw stripeError;

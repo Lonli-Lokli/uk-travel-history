@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, STRIPE_PRICES } from '@uth/stripe';
+import { StripeAPI, STRIPE_PRICES } from '@uth/stripe-server';
 import { getAdminAuth } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     // Create Stripe Checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await StripeAPI.checkout.sessions.create({
       customer_email: userEmail,
       client_reference_id: userId, // Link to Firebase user
       metadata: {

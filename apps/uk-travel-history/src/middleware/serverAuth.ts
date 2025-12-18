@@ -113,7 +113,7 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
 
     const isPremium = premiumFeatures.includes(featureId);
 
-    logger.info('[Feature Check] Feature checked', {
+    logger.log('[Feature Check] Feature checked', {
       featureId,
       isPremium,
       totalPremiumFeatures: premiumFeatures.length,
@@ -183,7 +183,7 @@ export async function requirePaidFeature(
 
   if (!isPremium) {
     // Feature is not premium - allow access without subscription check
-    logger.info('[Paid Feature] Free feature accessed', {
+    logger.log('[Paid Feature] Free feature accessed', {
       userId: authContext.userId,
       featureId,
     });
@@ -192,7 +192,7 @@ export async function requirePaidFeature(
 
   // Feature IS premium - subscription already verified in verifyAuth()
   // If we're here, user has active subscription, so they can access it
-  logger.info('[Paid Feature] Premium feature accessed', {
+  logger.log('[Paid Feature] Premium feature accessed', {
     userId: authContext.userId,
     featureId,
   });

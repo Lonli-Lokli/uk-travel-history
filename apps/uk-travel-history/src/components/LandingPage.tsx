@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent } from '@uth/ui';
+import { Button, Card, CardContent, toast } from '@uth/ui';
 import {
   FileText,
   Plus,
@@ -19,6 +19,7 @@ import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
+import { logger } from '@uth/utils';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -53,8 +54,13 @@ export const LandingPage = () => {
       await travelStore.importFromPdf(file);
       router.push('/travel');
     } catch (error) {
-      console.error('Import failed:', error);
-      alert('Failed to import PDF. Please try again or add trips manually.');
+      logger.error('Import failed:', error);
+      toast({
+        title: 'Import Failed',
+        description:
+          'Failed to import PDF. Please try again or add trips manually.',
+        variant: 'destructive',
+      });
     } finally {
       setIsImporting(false);
       setActiveAction(null);
@@ -75,10 +81,13 @@ export const LandingPage = () => {
     try {
       await csvImport.handleFileSelect(e);
     } catch (error) {
-      console.error('Import failed:', error);
-      alert(
-        'Failed to import Excel file. Please try again or add trips manually.',
-      );
+      logger.error('Import failed:', error);
+      toast({
+        title: 'Import Failed',
+        description:
+          'Failed to import Excel file. Please try again or add trips manually.',
+        variant: 'destructive',
+      })
     } finally {
       setIsImporting(false);
       setActiveAction(null);

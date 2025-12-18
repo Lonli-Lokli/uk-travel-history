@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@uth/stripe-client';
+import { StripeAPI } from '@uth/stripe-server';
 import { logger } from '@uth/utils';
 import { getAdminFirestore } from '@uth/firebase-server';
 import * as Sentry from '@sentry/nextjs';
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Retrieve session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
 
     // Check if session is for new subscription
     if (session.metadata?.checkoutType !== 'new_subscription') {

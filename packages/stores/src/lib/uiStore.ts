@@ -3,6 +3,7 @@
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import { authStore } from './authStore';
+import { logger } from '@uth/utils';
 
 class UIStore {
   // Login Modal State
@@ -129,7 +130,7 @@ class UIStore {
     try {
       await authStore.signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
+      logger.error('Sign out error:', error);
       throw error;
     }
   }

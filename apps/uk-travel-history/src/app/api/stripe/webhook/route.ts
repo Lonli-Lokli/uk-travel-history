@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@uth/stripe-server';
+import { StripeAPI } from '@uth/stripe-server';
 import { getAdminFirestore } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Verify webhook signature (CRITICAL for security)
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      event = StripeAPI.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       logger.error('Webhook signature verification failed', {
@@ -134,22 +134,44 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId || session.client_reference_id;
+
+  // PAYMENT-FIRST ARCHITECTURE:
+  // If no userId, this is a pre-registration payment.
+  // The subscription document will be created by /api/complete-registration
+  // after the user creates their passkey account.
   if (!userId) {
-    const error = new Error('No userId found in checkout session');
-    Sentry.captureException(error, {
-      tags: { service: 'stripe', operation: 'checkout_completed' },
-      contexts: { stripe: { sessionId: session.id } },
+    logger.log('Checkout completed for pre-registration payment', {
+      sessionId: session.id,
+      customerId: session.customer,
+      isPreRegistration: session.metadata?.isPreRegistration === 'true',
     });
-    throw error;
+
+    // Track successful payment (but no user yet)
+    Sentry.addBreadcrumb({
+      category: 'payment',
+      message: 'Pre-registration payment completed',
+      level: 'info',
+      data: {
+        sessionId: session.id,
+        customerId: session.customer,
+      },
+    });
+
+    return; // Exit early - subscription will be linked later
   }
 
+  // EXISTING USER FLOW:
+  // If userId exists, this is an authenticated user upgrading/subscribing
   // Set Sentry user context
   Sentry.setUser({ id: userId });
 
-  logger.log('Processing checkout completion', { userId, sessionId: session.id });
+  logger.log('Processing checkout completion for existing user', {
+    userId,
+    sessionId: session.id,
+  });
 
   const subscriptionId = session.subscription as string;
-  const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(subscriptionId);
 
   // Extract subscription data from Response wrapper
   // Using any here because Stripe SDK types can vary between versions
@@ -157,7 +179,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const firestore = getAdminFirestore();
 
-  // Create subscription document in Firestore
+  // Create/update subscription document in Firestore
   await firestore
     .collection('subscriptions')
     .doc(userId)
@@ -166,7 +188,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId: subscription.id,
       stripePriceId: subscription.items.data[0]?.price.id,
-      tier: 'premium',
       status: subscription.status,
       currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
       currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
@@ -230,11 +251,12 @@ async function handleSubscriptionDeleted(subscription: any) {
 
   const firestore = getAdminFirestore();
 
+  // NO TIER FIELD: We only track subscription status
+  // No tier = no access (binary: active subscription or no access)
   await firestore
     .collection('subscriptions')
     .doc(userId)
     .update({
-      tier: 'free',
       status: 'canceled',
       canceledAt: new Date(),
       updatedAt: new Date(),
@@ -251,7 +273,7 @@ async function handlePaymentFailed(invoice: any) {
     return;
   }
 
-  const subscriptionResponse = await stripe.subscriptions.retrieve(
+  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
     invoice.subscription as string,
   );
   // Extract subscription data from Response wrapper
