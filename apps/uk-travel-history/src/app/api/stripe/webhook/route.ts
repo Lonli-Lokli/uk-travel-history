@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@uth/stripe';
 import { getAdminFirestore } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
+import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
+import * as Sentry from '@sentry/nextjs';
 import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
@@ -16,37 +18,66 @@ if (!webhookSecret) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.text();
-  const signature = request.headers.get('stripe-signature');
-
-  if (!signature) {
-    logger.error('Missing stripe-signature header');
-    return NextResponse.json(
-      { error: 'Missing signature' },
-      { status: 400 },
-    );
-  }
-
-  if (!webhookSecret) {
-    logger.error('STRIPE_WEBHOOK_SECRET not configured');
-    return NextResponse.json(
-      { error: 'Webhook secret not configured' },
-      { status: 500 },
-    );
-  }
-
-  let event: Stripe.Event;
-
   try {
-    // Verify webhook signature (CRITICAL for security)
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    logger.error('Webhook signature verification failed', { error: errorMessage });
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-  }
+    // Check if Stripe checkout is enabled via feature flags
+    const stripeEnabled = await isFeatureEnabled(
+      FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED,
+    );
+    if (!stripeEnabled) {
+      logger.warn('Stripe webhook received but feature is disabled');
+      return NextResponse.json(
+        { error: 'Stripe webhooks are not available' },
+        { status: 403 },
+      );
+    }
 
-  try {
+    const body = await request.text();
+    const signature = request.headers.get('stripe-signature');
+
+    if (!signature) {
+      logger.error('Missing stripe-signature header');
+      Sentry.captureMessage('Stripe webhook missing signature', {
+        level: 'warning',
+        tags: { service: 'stripe', operation: 'webhook' },
+      });
+      return NextResponse.json(
+        { error: 'Missing signature' },
+        { status: 400 },
+      );
+    }
+
+    if (!webhookSecret) {
+      logger.error('STRIPE_WEBHOOK_SECRET not configured');
+      Sentry.captureMessage('STRIPE_WEBHOOK_SECRET not configured', {
+        level: 'error',
+        tags: { service: 'stripe', operation: 'webhook' },
+      });
+      return NextResponse.json(
+        { error: 'Webhook secret not configured' },
+        { status: 500 },
+      );
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      // Verify webhook signature (CRITICAL for security)
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('Webhook signature verification failed', {
+        error: errorMessage,
+      });
+      Sentry.captureException(err, {
+        tags: {
+          service: 'stripe',
+          operation: 'webhook_verification',
+        },
+      });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    // Handle webhook events
     switch (event.type) {
       case 'checkout.session.completed':
         await handleCheckoutCompleted(
@@ -55,11 +86,15 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription,
+        );
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await handleSubscriptionDeleted(
+          event.data.object as Stripe.Subscription,
+        );
         break;
 
       case 'invoice.payment_failed':
@@ -74,9 +109,22 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Webhook handler error', {
-      type: event.type,
       error: errorMessage,
     });
+
+    // Track webhook handler errors in Sentry
+    Sentry.captureException(error, {
+      tags: {
+        service: 'stripe',
+        operation: 'webhook_handler',
+      },
+      contexts: {
+        stripe: {
+          endpoint: 'webhook',
+        },
+      },
+    });
+
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 },
@@ -87,8 +135,16 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId || session.client_reference_id;
   if (!userId) {
-    throw new Error('No userId found in checkout session');
+    const error = new Error('No userId found in checkout session');
+    Sentry.captureException(error, {
+      tags: { service: 'stripe', operation: 'checkout_completed' },
+      contexts: { stripe: { sessionId: session.id } },
+    });
+    throw error;
   }
+
+  // Set Sentry user context
+  Sentry.setUser({ id: userId });
 
   logger.log('Processing checkout completion', { userId, sessionId: session.id });
 
@@ -200,7 +256,11 @@ async function handlePaymentFailed(invoice: any) {
   );
   // Extract subscription data from Response wrapper
   // Using any here because Stripe SDK types can vary between versions
-  const subscription = ('data' in subscriptionResponse ? subscriptionResponse.data : subscriptionResponse) as any;
+  const subscription = (
+    'data' in subscriptionResponse
+      ? subscriptionResponse.data
+      : subscriptionResponse
+  ) as any;
   const userId = subscription.metadata.userId;
 
   if (!userId) {
@@ -209,6 +269,22 @@ async function handlePaymentFailed(invoice: any) {
     });
     return;
   }
+
+  // Set Sentry user context and track payment failure
+  Sentry.setUser({ id: userId });
+  Sentry.captureMessage('Stripe payment failed', {
+    level: 'warning',
+    tags: {
+      service: 'stripe',
+      operation: 'payment_failed',
+    },
+    contexts: {
+      stripe: {
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+      },
+    },
+  });
 
   logger.log('Processing payment failure', {
     userId,

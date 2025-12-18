@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, STRIPE_PRICES } from '@uth/stripe';
 import { getAdminAuth } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
+import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
+import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -13,6 +15,18 @@ interface CheckoutRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe checkout is enabled via feature flags
+    const stripeEnabled = await isFeatureEnabled(
+      FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED,
+    );
+    if (!stripeEnabled) {
+      logger.warn('Stripe checkout feature is disabled');
+      return NextResponse.json(
+        { error: 'Stripe checkout is not available' },
+        { status: 403 },
+      );
+    }
+
     // Verify Firebase authentication
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -21,9 +35,31 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.split('Bearer ')[1];
     const adminAuth = getAdminAuth();
-    const decodedToken = await adminAuth.verifyIdToken(token);
+
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (authError) {
+      // Track Firebase auth failures in Sentry
+      Sentry.captureException(authError, {
+        tags: {
+          service: 'firebase',
+          operation: 'verify_token',
+        },
+        level: 'warning',
+      });
+      logger.error('Firebase token verification failed:', authError);
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 },
+      );
+    }
+
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
+
+    // Set Sentry user context for error tracking
+    Sentry.setUser({ id: userId, email: userEmail ?? undefined });
 
     if (!userEmail) {
       return NextResponse.json(
@@ -88,6 +124,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     logger.error('Stripe checkout error:', error);
+
+    // Track error in Sentry with context
+    Sentry.captureException(error, {
+      tags: {
+        service: 'stripe',
+        operation: 'create_checkout',
+      },
+      contexts: {
+        stripe: {
+          endpoint: 'create-checkout',
+        },
+      },
+    });
 
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
