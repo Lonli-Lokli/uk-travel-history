@@ -32,6 +32,9 @@
     },
     {
       "path": "./packages/stores"
+    },
+    {
+      "path": "./packages/stripe"
     }
   ]
 }

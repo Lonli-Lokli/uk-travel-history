@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, STRIPE_PRICES } from '@/lib/stripe';
+import { stripe, STRIPE_PRICES } from '@uth/stripe';
 import { getAdminAuth } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
 
@@ -8,7 +8,7 @@ export const maxDuration = 30;
 
 interface CheckoutRequest {
   priceId: string;
-  billingPeriod: 'monthly' | 'annual';
+  billingPeriod: 'monthly' | 'annual'  |  'once';
 }
 
 export async function POST(request: NextRequest) {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate billing period
-    if (billingPeriod !== 'monthly' && billingPeriod !== 'annual') {
+    if (billingPeriod !== 'monthly' && billingPeriod !== 'annual' && billingPeriod !== 'once') {
       return NextResponse.json(
         { error: 'Invalid billing period' },
         { status: 400 },

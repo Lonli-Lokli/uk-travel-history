@@ -5,7 +5,8 @@ import Stripe from 'stripe';
 
 // Use a placeholder key during build time if STRIPE_SECRET_KEY is not set
 // This allows the build to succeed without requiring Stripe credentials
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build';
+const stripeSecretKey =
+  process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build';
 
 export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-12-15.clover',
@@ -19,4 +20,5 @@ export const STRIPE_PRICES = {
     process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 'price_premium_monthly',
   PREMIUM_ANNUAL:
     process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 'price_premium_annual',
+  PREMIUM_ONCE: process.env.STRIPE_PRICE_PREMIUM_ONCE || 'price_premium_once',
 };

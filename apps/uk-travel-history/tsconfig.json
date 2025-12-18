@@ -62,6 +62,12 @@
       "path": "../../packages/ui"
     },
     {
+      "path": "../../packages/firebase-server"
+    },
+    {
+      "path": "../../packages/stripe"
+    },
+    {
       "path": "../../packages/parser"
     },
     {
