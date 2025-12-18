@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { Toaster } from '@uth/ui';
+import { Toaster, FeatureFlagsProvider } from '@uth/ui';
+import { getAllFeatureFlags } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google'
@@ -102,16 +103,21 @@ const geist = Geist({
   subsets: ['latin'],
 })
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch feature flags from Vercel Edge Config
+  const flags = await getAllFeatureFlags();
+
   return (
     <html lang="en" className={`${geist.className} h-full`}>
       <body className="h-full bg-slate-50 overflow-y-scroll">
-        {children}
-        <Toaster />
+        <FeatureFlagsProvider flags={flags}>
+          {children}
+          <Toaster />
+        </FeatureFlagsProvider>
       </body>
     </html>
   );

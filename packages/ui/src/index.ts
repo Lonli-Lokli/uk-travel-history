@@ -17,5 +17,4 @@ export * from './radio-group';
 export { travelStore } from './stores/travelStore';
 export { authStore } from './stores/authStore';
 export { uiStore } from './stores/uiStore';
-export { FEATURE_FLAGS } from '@uth/features';
 export * from './lib/FeatureFlagsProvider';

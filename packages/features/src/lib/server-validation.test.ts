@@ -7,7 +7,7 @@ import {
   type UserTier,
 } from './server-validation';
 import { FEATURES } from './features';
-import type { EdgeConfigFlags } from './vercel-features';
+import type { EdgeConfigFlags } from './edgeConfigFlags';
 
 // Mock @vercel/edge-config
 vi.mock('@vercel/edge-config', () => ({
