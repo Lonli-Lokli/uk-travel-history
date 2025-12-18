@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@uth/stripe';
+import { stripe } from '@uth/stripe-server';
 import { getAdminFirestore } from '@uth/firebase-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';

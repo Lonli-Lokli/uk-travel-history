@@ -50,7 +50,9 @@ describe('Stripe Package', () => {
 
       // Re-import to get fresh values (in real scenario, this would need module reload)
       // For this test, we just verify the env var is being read
-      expect(process.env.STRIPE_PRICE_PREMIUM_MONTHLY).toBe('price_test_monthly');
+      expect(process.env.STRIPE_PRICE_PREMIUM_MONTHLY).toBe(
+        'price_test_monthly',
+      );
       expect(process.env.STRIPE_PRICE_PREMIUM_ANNUAL).toBe('price_test_annual');
       expect(process.env.STRIPE_PRICE_PREMIUM_ONCE).toBe('price_test_once');
     });

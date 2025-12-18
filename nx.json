@@ -34,7 +34,8 @@
         "packages/firebase-client/*",
         "packages/firebase-server/*",
         "packages/stores/*",
-        "packages/stripe/*"
+        "packages/stripe/*",
+        "packages/stripe-client/*"
       ]
     },
     {
@@ -64,7 +65,8 @@
         "packages/firebase-client/*",
         "packages/firebase-server/*",
         "packages/stores/*",
-        "packages/stripe/*"
+        "packages/stripe/*",
+        "packages/stripe-client/*"
       ],
       "options": {
         "typecheck": {
