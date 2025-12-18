@@ -177,6 +177,66 @@ class AuthStore {
   }
 
   /**
+   * Register a new passkey WITHOUT email (anonymous registration)
+   * Used for post-payment registration flow
+   * Uses the official @firebase-web-authn/browser SDK
+   */
+  async registerPasskeyAnonymous(): Promise<void> {
+    if (!this.isPasskeySupported) {
+      throw new Error('Passkeys are not supported in this browser');
+    }
+
+    this.isAuthenticating = true;
+    this.error = null;
+
+    try {
+      const auth = getAuthInstance();
+      const functions = getFunctionsInstance();
+
+      // Use the official SDK method with a generic display name
+      // Since no email is collected, use a generic identifier
+      const name = 'UK Travel History User';
+      await createUserWithPasskey(auth, functions, name);
+
+      runInAction(() => {
+        this.isAuthenticating = false;
+      });
+    } catch (error) {
+      // Track Firebase auth failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'register_passkey_anonymous',
+        },
+        contexts: {
+          auth: {
+            isPasskeySupported: this.isPasskeySupported,
+            errorType:
+              error instanceof FirebaseWebAuthnError
+                ? 'FirebaseWebAuthnError'
+                : 'Error',
+          },
+        },
+        level: 'error',
+      });
+
+      runInAction(() => {
+        // Handle FirebaseWebAuthnError with more detailed messages
+        if (error instanceof FirebaseWebAuthnError) {
+          this.error = error.message;
+        } else {
+          this.error =
+            error instanceof Error
+              ? error.message
+              : 'Failed to register passkey';
+        }
+        this.isAuthenticating = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Sign out the current user
    */
   async signOut(): Promise<void> {
