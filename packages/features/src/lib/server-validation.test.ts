@@ -7,7 +7,7 @@ import {
   type UserTier,
 } from './server-validation';
 import { FEATURES } from './features';
-import type { EdgeConfigFlags } from './vercel-features';
+import type { EdgeConfigFlags } from './edgeConfigFlags';
 
 // Mock @vercel/edge-config
 vi.mock('@vercel/edge-config', () => ({
@@ -42,7 +42,7 @@ describe('Server-Side Feature Validation', () => {
       it('should allow access to free features', async () => {
         const result = await validateFeatureAccess(
           FEATURES.BASIC_CALCULATION,
-          freeUser
+          freeUser,
         );
         expect(result.allowed).toBe(true);
         expect(result.reason).toBeUndefined();
@@ -51,7 +51,7 @@ describe('Server-Side Feature Validation', () => {
       it('should deny access to premium features', async () => {
         const result = await validateFeatureAccess(
           FEATURES.EXCEL_EXPORT,
-          freeUser
+          freeUser,
         );
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('tier_restriction');
@@ -113,7 +113,7 @@ describe('Server-Side Feature Validation', () => {
 
         const result = await validateFeatureAccess(
           FEATURES.EXCEL_EXPORT,
-          inactiveUser
+          inactiveUser,
         );
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('no_subscription');
@@ -128,7 +128,7 @@ describe('Server-Side Feature Validation', () => {
 
         const result = await validateFeatureAccess(
           FEATURES.BASIC_CALCULATION,
-          inactiveUser
+          inactiveUser,
         );
         // Free features don't require subscription
         expect(result.allowed).toBe(true);
@@ -149,7 +149,7 @@ describe('Server-Side Feature Validation', () => {
 
         const result = await validateFeatureAccess(
           FEATURES.EXCEL_EXPORT,
-          premiumUser
+          premiumUser,
         );
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('feature_disabled');
@@ -169,11 +169,11 @@ describe('Server-Side Feature Validation', () => {
 
         const freeResult = await validateFeatureAccess(
           FEATURES.BASIC_CALCULATION,
-          freeUser
+          freeUser,
         );
         const premiumResult = await validateFeatureAccess(
           FEATURES.BASIC_CALCULATION,
-          premiumUser
+          premiumUser,
         );
 
         expect(freeResult.allowed).toBe(false);
@@ -201,7 +201,7 @@ describe('Server-Side Feature Validation', () => {
 
         const result = await validateFeatureAccess(
           FEATURES.EXCEL_EXPORT,
-          betaUser
+          betaUser,
         );
         expect(result.allowed).toBe(true);
       });
@@ -222,7 +222,7 @@ describe('Server-Side Feature Validation', () => {
 
         const result = await validateFeatureAccess(
           FEATURES.EXCEL_EXPORT,
-          normalUser
+          normalUser,
         );
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('feature_disabled');
@@ -367,7 +367,7 @@ describe('Server-Side Feature Validation', () => {
 
       const result = await validateFeatureAccess(
         FEATURES.EXCEL_EXPORT,
-        expiredUser
+        expiredUser,
       );
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('no_subscription');

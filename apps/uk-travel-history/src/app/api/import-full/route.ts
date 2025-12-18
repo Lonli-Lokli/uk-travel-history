@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (!travelSheet) {
       return NextResponse.json(
         { error: 'Invalid file format - missing Travel History sheet' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -93,7 +93,10 @@ export async function POST(request: NextRequest) {
           visaStartDate = parseDate(value);
         } else if (field.includes('ILR Track') && value) {
           const trackNum = parseInt(value, 10);
-          if (!isNaN(trackNum) && (trackNum === 2 || trackNum === 5 || trackNum === 10)) {
+          if (
+            !isNaN(trackNum) &&
+            (trackNum === 2 || trackNum === 5 || trackNum === 10)
+          ) {
             ilrTrack = trackNum as 2 | 5 | 10;
           }
         }
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
     logger.error('Error importing full data:', error);
     return NextResponse.json(
       { error: 'Failed to import file' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

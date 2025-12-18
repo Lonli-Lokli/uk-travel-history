@@ -92,7 +92,10 @@ class TravelStore {
     const tripsWithCalcs = calculateTripDurations(this.trips);
     const complete = tripsWithCalcs.filter((t) => !t.isIncomplete);
     const incomplete = tripsWithCalcs.filter((t) => t.isIncomplete);
-    const totalFullDays = complete.reduce((sum, t) => sum + (t.fullDays || 0), 0);
+    const totalFullDays = complete.reduce(
+      (sum, t) => sum + (t.fullDays || 0),
+      0,
+    );
 
     return {
       totalTrips: this.trips.length,

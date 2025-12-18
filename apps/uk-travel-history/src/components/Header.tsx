@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
 import {
-  travelStore,
   Button,
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@uth/ui';
+import { FEATURE_KEYS } from '@uth/features';
 import {
   Upload,
   Download,
@@ -20,7 +20,13 @@ import {
   FileText,
   Clipboard,
   ChevronDown,
+  User,
+  LogOut,
+  Fingerprint,
 } from 'lucide-react';
+import { LoginModal } from './LoginModal';
+import { useFeatureFlags } from '@uth/widgets';
+import { authStore, travelStore, uiStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -36,8 +42,11 @@ export const Header = observer(
     onImportClipboardClick,
     onExportClick,
   }: HeaderProps) => {
+    const { isFeatureEnabled } = useFeatureFlags();
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
+    const user = authStore.user;
+    const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH_ENABLED);
 
     return (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -190,7 +199,11 @@ export const Header = observer(
               {/* Mobile: Export Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" className="sm:hidden" disabled={!hasTrips}>
+                  <Button
+                    size="icon"
+                    className="sm:hidden"
+                    disabled={!hasTrips}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -205,12 +218,63 @@ export const Header = observer(
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Auth UI - only show if feature flag is enabled */}
+              {isAuthEnabled && (
+                <>
+                  {user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <User className="h-4 w-4 mr-1.5" />
+                          <span className="hidden sm:inline">
+                            {user.displayName ||
+                              user.email?.split('@')[0] ||
+                              'Account'}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                              {user.displayName || 'User'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {user.email}
+                            </span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => uiStore.handleSignOut()}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => uiStore.openLoginModal()}
+                    >
+                      <Fingerprint className="h-4 w-4 mr-1.5" />
+                      <span className="hidden sm:inline">Sign In</span>
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Login Modal */}
+        {isAuthEnabled && <LoginModal />}
       </header>
     );
-  }
+  },
 );
 
 Header.displayName = 'Header';

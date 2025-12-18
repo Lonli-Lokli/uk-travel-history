@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@uth/ui';
+import { getAllFeatureFlags } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
-import { Geist } from 'next/font/google'
+import { Geist } from 'next/font/google';
+import { FeatureFlagsProvider } from '@uth/widgets';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -100,18 +102,23 @@ export const viewport: Viewport = {
 
 const geist = Geist({
   subsets: ['latin'],
-})
+});
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch feature flags from Vercel Edge Config
+  const flags = await getAllFeatureFlags();
+
   return (
     <html lang="en" className={`${geist.className} h-full`}>
       <body className="h-full bg-slate-50 overflow-y-scroll">
-        {children}
-        <Toaster />
+        <FeatureFlagsProvider flags={flags}>
+          {children}
+          <Toaster />
+        </FeatureFlagsProvider>
       </body>
     </html>
   );

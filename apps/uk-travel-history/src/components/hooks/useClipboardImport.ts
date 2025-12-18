@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { travelStore, useToast } from '@uth/ui';
+import { useToast } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 
 export const useClipboardImport = () => {
   const { toast } = useToast();
@@ -80,7 +81,7 @@ export const useClipboardImport = () => {
         });
       }
     },
-    [previewData, toast]
+    [previewData, toast],
   );
 
   const cancelImport = useCallback(() => {

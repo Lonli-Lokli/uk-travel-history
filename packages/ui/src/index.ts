@@ -11,7 +11,4 @@ export * from './select';
 export * from './calendar';
 export * from './date-picker';
 export * from './editable-cell';
-export * from './TravelTable';
 export * from './radio-group';
-
-export { travelStore } from './stores/travelStore';

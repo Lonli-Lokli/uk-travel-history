@@ -2,7 +2,6 @@
 
 import { observer } from 'mobx-react-lite';
 import {
-  travelStore,
   Card,
   CardContent,
   CardHeader,
@@ -19,6 +18,7 @@ import {
 import { formatDate } from '@uth/utils';
 import { FileText, X } from 'lucide-react';
 import { ILRTrack } from '@uth/calculators';
+import { travelStore } from '@uth/stores';
 
 export const VisaDetailsCard = observer(() => {
   return (

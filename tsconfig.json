@@ -20,6 +20,18 @@
     },
     {
       "path": "./packages/features"
+    },
+    {
+      "path": "./packages/firebase-client"
+    },
+    {
+      "path": "./packages/firebase-server"
+    },
+    {
+      "path": "./packages/widgets"
+    },
+    {
+      "path": "./packages/stores"
     }
   ]
 }

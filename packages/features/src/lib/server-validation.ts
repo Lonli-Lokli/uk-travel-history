@@ -2,7 +2,7 @@
 // CRITICAL: Always validate premium features on the server to prevent client-side bypass
 // Client-side checks are for UX only - server must be the source of truth
 
-import { isFeatureEnabledOnVercel } from './vercel-features';
+import { isFeatureEnabled as isFeatureEnabledEdgeConfig } from './edgeConfigFlags';
 import { TIER_CONFIG, TIERS, type FeatureId } from './features';
 
 /**
@@ -48,10 +48,14 @@ export interface FeatureAccessResult {
  */
 export async function validateFeatureAccess(
   featureId: FeatureId,
-  userTier: UserTier
+  userTier: UserTier,
 ): Promise<FeatureAccessResult> {
   // 1. Check if feature is enabled via feature flags
-  const isEnabled = await isFeatureEnabledOnVercel(featureId, userTier.userId);
+  // Note: featureId from FEATURES uses snake_case which matches FEATURE_KEYS
+  const isEnabled = await isFeatureEnabledEdgeConfig(
+    featureId as any,
+    userTier.userId,
+  );
   if (!isEnabled) {
     return {
       allowed: false,
@@ -108,14 +112,17 @@ export function isPremiumFeature(featureId: FeatureId): boolean {
  * return { features };
  */
 export async function getAccessibleFeatures(
-  userTier: UserTier
+  userTier: UserTier,
 ): Promise<FeatureId[]> {
   const tierFeatures = TIER_CONFIG[userTier.tier];
 
   // Filter by enabled feature flags
   const accessibleFeatures: FeatureId[] = [];
   for (const feature of tierFeatures) {
-    const isEnabled = await isFeatureEnabledOnVercel(feature, userTier.userId);
+    const isEnabled = await isFeatureEnabledEdgeConfig(
+      feature as any,
+      userTier.userId,
+    );
     if (isEnabled) {
       accessibleFeatures.push(feature);
     }
@@ -139,14 +146,14 @@ export async function getAccessibleFeatures(
  */
 export function withFeatureAccess(
   _featureId: FeatureId,
-  _handler: (request: Request) => Promise<Response>
+  _handler: (request: Request) => Promise<Response>,
 ) {
   return async (_request: Request): Promise<Response> => {
     // This is a placeholder - you'll need to implement your auth logic
     // For now, we'll throw an error to remind developers to implement this
     throw new Error(
       'withFeatureAccess requires authentication implementation. ' +
-      'Please implement getUserTier() in your app and update this middleware.'
+        'Please implement getUserTier() in your app and update this middleware.',
     );
 
     // Example implementation (uncomment and adapt to your auth system):

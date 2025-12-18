@@ -96,7 +96,7 @@ export function EditableCell({
       <div
         className={cn(
           'group cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 flex items-center justify-between transition-colors',
-          className
+          className,
         )}
         onClick={() => setIsEditing(true)}
       >

@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { travelStore } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 import { formatDate } from '@uth/utils';
 import {
   Card,

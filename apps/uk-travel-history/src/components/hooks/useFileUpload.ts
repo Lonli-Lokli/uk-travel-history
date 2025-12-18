@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import { travelStore, useToast } from '@uth/ui';
+import { useToast } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 
 export const useFileUpload = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +18,7 @@ export const useFileUpload = () => {
         toast({
           title: 'Import successful',
           description: `Imported ${travelStore.summary.totalTrips} trips from PDF`,
-          variant: 'success' as any,
+          variant: 'success' as const,
         });
       } catch (err) {
         toast({
@@ -32,7 +33,7 @@ export const useFileUpload = () => {
         fileInputRef.current.value = '';
       }
     },
-    [toast]
+    [toast],
   );
 
   const triggerFileInput = useCallback(() => {

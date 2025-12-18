@@ -50,6 +50,15 @@
       "path": "../../packages/calculators"
     },
     {
+      "path": "../../packages/stores"
+    },
+    {
+      "path": "../../packages/widgets"
+    },
+    {
+      "path": "../../packages/features"
+    },
+    {
       "path": "../../packages/ui"
     },
     {

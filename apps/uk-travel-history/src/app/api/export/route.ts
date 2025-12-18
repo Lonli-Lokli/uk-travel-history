@@ -94,9 +94,18 @@ export async function POST(request: NextRequest) {
         inRoute: trip.inRoute || '',
       });
 
-      row.getCell('num').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('outDate').alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell('inDate').alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell('num').alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      };
+      row.getCell('outDate').alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      };
+      row.getCell('inDate').alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      };
       row.getCell('outRoute').alignment = { vertical: 'middle' };
       row.getCell('inRoute').alignment = { vertical: 'middle' };
       row.height = 20;
@@ -161,8 +170,14 @@ export async function POST(request: NextRequest) {
         });
       };
 
-      addDetailRow('Vignette Entry Date', data.vignetteEntryDate ? formatDate(data.vignetteEntryDate) : '');
-      addDetailRow('Visa Start Date', data.visaStartDate ? formatDate(data.visaStartDate) : '');
+      addDetailRow(
+        'Vignette Entry Date',
+        data.vignetteEntryDate ? formatDate(data.vignetteEntryDate) : '',
+      );
+      addDetailRow(
+        'Visa Start Date',
+        data.visaStartDate ? formatDate(data.visaStartDate) : '',
+      );
       addDetailRow('ILR Track (Years)', data.ilrTrack?.toString() || '5');
 
       // Set column widths
@@ -194,7 +209,7 @@ export async function POST(request: NextRequest) {
     logger.error('Error generating Excel:', error);
     return NextResponse.json(
       { error: 'Failed to generate Excel file' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

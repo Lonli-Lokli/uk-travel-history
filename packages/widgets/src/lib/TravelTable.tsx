@@ -12,10 +12,9 @@ import {
   SortingState,
 } from '@tanstack/react-table';
 import { Trash2, Plus, ArrowUpDown, GripVertical } from 'lucide-react';
-import { Button } from './button';
-import { EditableCell } from './editable-cell';
-import { travelStore } from './stores/travelStore';
 import { formatDate } from '@uth/utils';
+import { travelStore } from '@uth/stores';
+import { Button, EditableCell } from '@uth/ui';
 import { TripWithCalculations } from '@uth/calculators';
 
 export const TravelTable = observer(() => {
@@ -173,7 +172,7 @@ export const TravelTable = observer(() => {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -317,7 +316,7 @@ export const TravelTable = observer(() => {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </th>
                 ))}
@@ -350,7 +349,7 @@ export const TravelTable = observer(() => {
                     <td key={cell.id} className="px-3 py-2">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </td>
                   ))}
