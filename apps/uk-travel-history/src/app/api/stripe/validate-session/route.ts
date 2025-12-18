@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@uth/stripe';
+import { stripe } from '@uth/stripe-client';
 import { logger } from '@uth/utils';
 import { getAdminFirestore } from '@uth/firebase-server';
 import * as Sentry from '@sentry/nextjs';
