@@ -48,13 +48,13 @@ export interface FeatureAccessResult {
  */
 export async function validateFeatureAccess(
   featureId: FeatureId,
-  userTier: UserTier
+  userTier: UserTier,
 ): Promise<FeatureAccessResult> {
   // 1. Check if feature is enabled via feature flags
   // Note: featureId from FEATURES uses snake_case which matches FEATURE_KEYS
   const isEnabled = await isFeatureEnabledEdgeConfig(
     featureId as any,
-    userTier.userId
+    userTier.userId,
   );
   if (!isEnabled) {
     return {
@@ -112,7 +112,7 @@ export function isPremiumFeature(featureId: FeatureId): boolean {
  * return { features };
  */
 export async function getAccessibleFeatures(
-  userTier: UserTier
+  userTier: UserTier,
 ): Promise<FeatureId[]> {
   const tierFeatures = TIER_CONFIG[userTier.tier];
 
@@ -121,7 +121,7 @@ export async function getAccessibleFeatures(
   for (const feature of tierFeatures) {
     const isEnabled = await isFeatureEnabledEdgeConfig(
       feature as any,
-      userTier.userId
+      userTier.userId,
     );
     if (isEnabled) {
       accessibleFeatures.push(feature);
@@ -146,14 +146,14 @@ export async function getAccessibleFeatures(
  */
 export function withFeatureAccess(
   _featureId: FeatureId,
-  _handler: (request: Request) => Promise<Response>
+  _handler: (request: Request) => Promise<Response>,
 ) {
   return async (_request: Request): Promise<Response> => {
     // This is a placeholder - you'll need to implement your auth logic
     // For now, we'll throw an error to remind developers to implement this
     throw new Error(
       'withFeatureAccess requires authentication implementation. ' +
-      'Please implement getUserTier() in your app and update this middleware.'
+        'Please implement getUserTier() in your app and update this middleware.',
     );
 
     // Example implementation (uncomment and adapt to your auth system):

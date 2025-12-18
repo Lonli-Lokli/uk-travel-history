@@ -112,6 +112,7 @@ vercel edge-config item create features --value '{
 ## Step 4: Environment Variables
 
 Set up environment variables for your feature flags. These serve as:
+
 1. **Compile-time defaults** when Edge Config is not available
 2. **Hard overrides** for emergency situations
 
@@ -318,9 +319,9 @@ export async function POST(request: Request) {
     return new Response(
       JSON.stringify({
         error: 'Feature not available',
-        reason: access.reason
+        reason: access.reason,
       }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
+      { status: 403, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
@@ -332,6 +333,7 @@ export async function POST(request: Request) {
 ### Why Server-Side Validation is Critical
 
 ❌ **Client-side only (INSECURE)**:
+
 ```typescript
 // Bad: Free users can bypass this by modifying JavaScript
 if (FEATURE_FLAGS.EXCEL_EXPORT_PREMIUM) {
@@ -340,6 +342,7 @@ if (FEATURE_FLAGS.EXCEL_EXPORT_PREMIUM) {
 ```
 
 ✅ **Server-side validation (SECURE)**:
+
 ```typescript
 // Good: Client checks are for UX only
 if (FEATURE_FLAGS.EXCEL_EXPORT_PREMIUM) {
@@ -483,6 +486,7 @@ Keep a changelog of feature flag changes in Edge Config:
 **Symptom**: Features always fall back to environment variables
 
 **Solutions**:
+
 1. Verify `EDGE_CONFIG` environment variable is set in Vercel
 2. Check Edge Config is linked to your project
 3. Verify Edge Config has `features` key with valid JSON
@@ -493,6 +497,7 @@ Keep a changelog of feature flag changes in Edge Config:
 **Symptom**: Changes in Edge Config don't take effect
 
 **Solutions**:
+
 1. Edge Config updates are near-instant (< 1 second)
 2. Clear your browser cache
 3. Check Edge Config version is latest (Dashboard → Edge Config → History)
@@ -503,6 +508,7 @@ Keep a changelog of feature flag changes in Edge Config:
 **Symptom**: All users get or don't get the feature
 
 **Solutions**:
+
 1. Verify `rolloutPercentage` is a number (not string)
 2. Ensure `userId` is passed to `isFeatureEnabledOnVercel(featureId, userId)`
 3. Check hash distribution is working (see tests)
@@ -512,6 +518,7 @@ Keep a changelog of feature flag changes in Edge Config:
 **Symptom**: Free users can use paid features
 
 **Solutions**:
+
 1. ✅ **CRITICAL**: Implement server-side validation (see Step 6)
 2. Never rely on client-side checks for access control
 3. Validate tier on every API request
@@ -545,6 +552,7 @@ Keep a changelog of feature flag changes in Edge Config:
 ## Support
 
 If you encounter issues:
+
 1. Check Vercel Edge Config status page
 2. Review Vercel project logs
 3. Test with `isEdgeConfigAvailable()` helper

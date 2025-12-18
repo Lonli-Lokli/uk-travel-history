@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { travelStore } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 import { Header } from './Header';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
@@ -50,7 +50,10 @@ export const HomePageClient = observer(() => {
 
   const handleAddManually = () => {
     // Scroll to the travel table and add a new trip
-    travelTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    travelTableRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
     // Add a new trip automatically
     setTimeout(() => {
       travelStore.addTrip();

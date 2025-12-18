@@ -54,7 +54,7 @@ let cachedFlags: Record<FeatureFlagKey, boolean> | null = null;
  * @param flags - The flags to cache (or null to clear cache)
  */
 export function setCachedFlags(
-  flags: Record<FeatureFlagKey, boolean> | null
+  flags: Record<FeatureFlagKey, boolean> | null,
 ): void {
   cachedFlags = flags;
 }
@@ -74,7 +74,7 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
       acc[key] = false;
       return acc;
     },
-    {} as Record<FeatureFlagKey, boolean>
+    {} as Record<FeatureFlagKey, boolean>,
   );
 }
 
@@ -99,7 +99,7 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
  */
 export async function isFeatureEnabled(
   featureKey: FeatureFlagKey,
-  userId?: string
+  userId?: string,
 ): Promise<boolean> {
   try {
     const flags = await get<EdgeConfigFlags>('features');
@@ -107,7 +107,7 @@ export async function isFeatureEnabled(
     if (!flags) {
       // Edge Config not configured, default to disabled for safety
       console.warn(
-        `Edge Config not configured, defaulting ${featureKey} to disabled`
+        `Edge Config not configured, defaulting ${featureKey} to disabled`,
       );
       return false;
     }
@@ -170,7 +170,7 @@ function hashUserId(userId: string, featureKey: string): number {
  * return <ClientComponent flags={flags} />;
  */
 export async function getAllFeatureFlags(
-  userId?: string
+  userId?: string,
 ): Promise<Record<FeatureFlagKey, boolean>> {
   const result: Record<FeatureFlagKey, boolean> = {} as Record<
     FeatureFlagKey,

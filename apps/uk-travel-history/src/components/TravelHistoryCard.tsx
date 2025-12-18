@@ -2,7 +2,6 @@
 
 import { observer } from 'mobx-react-lite';
 import {
-  travelStore,
   Button,
   Card,
   CardContent,
@@ -14,10 +13,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  TravelTable,
+  DialogTrigger
 } from '@uth/ui';
 import { Trash2, FileSpreadsheet } from 'lucide-react';
+import { travelStore } from '@uth/stores';
+import { TravelTable } from '@uth/widgets';
 
 interface TravelHistoryCardProps {
   onClearAll: () => void;

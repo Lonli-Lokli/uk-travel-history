@@ -12,8 +12,11 @@ import {
   signInWithPasskey as sdkSignInWithPasskey,
   FirebaseWebAuthnError,
 } from '@firebase-web-authn/browser';
-import { getAuthInstance, getFunctionsInstance } from '../lib/firebase';
-import { auth } from '../lib/firebase';
+import {
+  auth,
+  getAuthInstance,
+  getFunctionsInstance,
+} from '@uth/firebase-client';
 
 class AuthStore {
   user: User | null = null;
@@ -77,7 +80,10 @@ class AuthStore {
         if (error instanceof FirebaseWebAuthnError) {
           this.error = error.message;
         } else {
-          this.error = error instanceof Error ? error.message : 'Failed to sign in with passkey';
+          this.error =
+            error instanceof Error
+              ? error.message
+              : 'Failed to sign in with passkey';
         }
         this.isAuthenticating = false;
       });
@@ -120,7 +126,10 @@ class AuthStore {
         if (error instanceof FirebaseWebAuthnError) {
           this.error = error.message;
         } else {
-          this.error = error instanceof Error ? error.message : 'Failed to register passkey';
+          this.error =
+            error instanceof Error
+              ? error.message
+              : 'Failed to register passkey';
         }
         this.isAuthenticating = false;
       });

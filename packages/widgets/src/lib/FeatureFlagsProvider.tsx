@@ -16,7 +16,7 @@ interface FeatureFlagsContextValue {
 }
 
 const FeatureFlagsContext = createContext<FeatureFlagsContextValue | null>(
-  null
+  null,
 );
 
 /**
@@ -82,7 +82,7 @@ export function useFeatureFlags(): FeatureFlagsContextValue {
   if (!context) {
     // Fallback: return a safe default that disables all features
     console.warn(
-      'useFeatureFlags called outside FeatureFlagsProvider, defaulting all flags to false'
+      'useFeatureFlags called outside FeatureFlagsProvider, defaulting all flags to false',
     );
     return {
       isFeatureEnabled: () => false,
@@ -110,7 +110,7 @@ export function useFeatureFlags(): FeatureFlagsContextValue {
 export function withFeatureFlag<P extends object>(
   featureKey: FeatureFlagKey,
   Component: React.ComponentType<P>,
-  Fallback?: React.ComponentType<P>
+  Fallback?: React.ComponentType<P>,
 ) {
   return function FeatureFlaggedComponent(props: P) {
     const { isFeatureEnabled } = useFeatureFlags();

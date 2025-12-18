@@ -39,12 +39,12 @@ The Firebase Web Authn extension requires the following services to be enabled:
 
 ```javascript
 const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
+  apiKey: 'AIza...',
+  authDomain: 'your-project.firebaseapp.com',
+  projectId: 'your-project-id',
+  storageBucket: 'your-project.appspot.com',
+  messagingSenderId: '123456789',
+  appId: '1:123456789:web:abc123',
 };
 ```
 
@@ -107,21 +107,25 @@ The Firebase Web Authn extension requires a **separate** Firestore database to s
 ### Using Firebase CLI (Recommended)
 
 1. Install Firebase CLI if not already installed:
+
    ```bash
    npm install -g firebase-tools
    ```
 
 2. Login to Firebase:
+
    ```bash
    firebase login
    ```
 
 3. Initialize Firebase in your project (if not already done):
+
    ```bash
    firebase init
    ```
 
 4. Create the extension database:
+
    ```bash
    firebase firestore:databases:create ext-firebase-web-authn --location nam5 --delete-protection ENABLED
    ```
@@ -161,6 +165,7 @@ This extension enables passkey authentication.
 8. Wait for installation to complete (2-3 minutes)
 
 **The extension will be available at**:
+
 ```
 https://ext-firebase-web-authn-api-{project-id}.cloudfunctions.net
 ```
@@ -225,6 +230,7 @@ NEXT_PUBLIC_FF_FIREBASE_AUTH=true
 ```
 
 2. Restart your development server:
+
 ```bash
 npm run start
 ```
@@ -292,6 +298,7 @@ npm run start
 ### "Passkeys are not supported in this browser"
 
 **Solution**: Passkeys require a modern browser:
+
 - Chrome 108+
 - Safari 16+
 - Edge 108+
@@ -300,11 +307,13 @@ npm run start
 ### "Failed to start passkey registration"
 
 **Possible causes**:
+
 1. Extension not installed correctly
 2. Allowed origins not configured
 3. HTTPS required (localhost is exception)
 
 **Solutions**:
+
 - Check Firebase Console → Extensions → firebase-web-authn → Configuration
 - Add your domain to allowed origins
 - Ensure you're using HTTPS in production
@@ -312,10 +321,12 @@ npm run start
 ### "Firebase Admin SDK not initialized"
 
 **Possible causes**:
+
 1. Service account credentials not set
 2. Private key format incorrect
 
 **Solutions**:
+
 - Verify all `FIREBASE_ADMIN_*` environment variables are set
 - Ensure `FIREBASE_ADMIN_PRIVATE_KEY` includes newlines (`\n`)
 - Check Vercel logs for specific error messages
@@ -323,11 +334,13 @@ npm run start
 ### "No credential received"
 
 **Possible causes**:
+
 1. User cancelled the passkey prompt
 2. No passkey registered for this device
 3. Browser security settings blocking WebAuthn
 
 **Solutions**:
+
 - Try again and complete the passkey prompt
 - For sign-in, ensure you've registered a passkey first
 - Check browser settings for security/privacy restrictions
@@ -335,10 +348,12 @@ npm run start
 ### Extension endpoint 404
 
 **Possible causes**:
+
 1. Extension not fully deployed
 2. Wrong project ID in URL
 
 **Solutions**:
+
 - Wait 5 minutes after installation
 - Verify the extension URL in Firebase Console → Extensions
 - Check that `NEXT_PUBLIC_FIREBASE_PROJECT_ID` matches your project
@@ -379,11 +394,11 @@ To allow users to delete their accounts:
 
 Firebase Authentication is **free** for up to 50,000 monthly active users.
 
-| Service | Free Tier | Estimated Cost |
-|---------|-----------|----------------|
-| Firebase Authentication | 50,000 MAU | $0/month |
+| Service                     | Free Tier      | Estimated Cost              |
+| --------------------------- | -------------- | --------------------------- |
+| Firebase Authentication     | 50,000 MAU     | $0/month                    |
 | Cloud Functions (extension) | 2M invocations | $0/month (within free tier) |
-| **Total** | | **$0/month** |
+| **Total**                   |                | **$0/month**                |
 
 ## Next Steps
 

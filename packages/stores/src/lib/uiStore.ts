@@ -90,7 +90,8 @@ class UIStore {
       this.closeLoginModal();
     } catch (err) {
       runInAction(() => {
-        this.loginError = err instanceof Error ? err.message : 'Failed to sign in';
+        this.loginError =
+          err instanceof Error ? err.message : 'Failed to sign in';
       });
       throw err;
     }
@@ -109,12 +110,13 @@ class UIStore {
     try {
       await authStore.registerPasskey(
         this.loginEmail,
-        this.loginDisplayName || undefined
+        this.loginDisplayName || undefined,
       );
       this.closeLoginModal();
     } catch (err) {
       runInAction(() => {
-        this.loginError = err instanceof Error ? err.message : 'Failed to register';
+        this.loginError =
+          err instanceof Error ? err.message : 'Failed to register';
       });
       throw err;
     }

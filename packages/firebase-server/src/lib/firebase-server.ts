@@ -27,7 +27,7 @@ function initializeFirebaseAdmin() {
   if (!projectId || !clientEmail || !privateKey) {
     console.warn(
       'Firebase Admin SDK credentials not configured. ' +
-      'Server-side authentication will not work.'
+        'Server-side authentication will not work.',
     );
     // Don't throw - allow app to run without auth in development
     return;

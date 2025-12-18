@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, travelStore } from '@uth/ui';
+import { Button, Card, CardContent } from '@uth/ui';
 import {
   FileText,
   Plus,
@@ -18,6 +18,7 @@ import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
+import { travelStore } from '@uth/stores';
 
 export const LandingPage = () => {
   const router = useRouter();

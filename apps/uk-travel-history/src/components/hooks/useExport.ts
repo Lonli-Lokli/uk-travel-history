@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { travelStore, useToast } from '@uth/ui';
+import { useToast } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 
 export const useExport = () => {
   const { toast } = useToast();
@@ -47,7 +48,7 @@ export const useExport = () => {
         });
       }
     },
-    [toast]
+    [toast],
   );
 
   return { handleExport };

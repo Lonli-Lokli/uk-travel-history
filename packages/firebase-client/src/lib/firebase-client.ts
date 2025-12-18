@@ -19,12 +19,14 @@ const firebaseConfig = {
 // Validate that required config is present
 function validateConfig() {
   const required = ['apiKey', 'authDomain', 'projectId'];
-  const missing = required.filter((key) => !firebaseConfig[key as keyof typeof firebaseConfig]);
+  const missing = required.filter(
+    (key) => !firebaseConfig[key as keyof typeof firebaseConfig],
+  );
 
   if (missing.length > 0) {
     console.warn(
       `Firebase config missing: ${missing.join(', ')}. ` +
-      'Authentication will not work until these are configured.'
+        'Authentication will not work until these are configured.',
     );
   }
 }
@@ -102,7 +104,9 @@ export function getAuthInstance(): Auth {
   }
 
   if (!auth) {
-    throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
+    throw new Error(
+      'Firebase Auth is not initialized. Check your Firebase configuration.',
+    );
   }
 
   return auth;
@@ -118,7 +122,9 @@ export function getFunctionsInstance(): Functions {
   }
 
   if (!functions) {
-    throw new Error('Firebase Functions is not initialized. Check your Firebase configuration.');
+    throw new Error(
+      'Firebase Functions is not initialized. Check your Firebase configuration.',
+    );
   }
 
   return functions;

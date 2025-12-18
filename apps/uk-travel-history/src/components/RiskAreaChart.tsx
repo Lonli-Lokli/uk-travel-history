@@ -10,7 +10,6 @@ import type { AxisSetExtremesEventObject } from 'highcharts';
 import { parseISO } from 'date-fns';
 
 import {
-  travelStore,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -18,6 +17,7 @@ import {
   DialogDescription,
 } from '@uth/ui';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
+import { travelStore } from '@uth/stores';
 
 type TimelinePoint = {
   id: string;

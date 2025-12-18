@@ -107,23 +107,27 @@ uk-travel-history/
 ## Usage
 
 ### Step 1: Enter Visa Details
+
 1. Enter your **Vignette Entry Date** or **Visa Start Date**
 2. Select your **ILR Track** (2, 3, 5, or 10 years)
 3. Optionally override the **Application Date** (auto-calculated by default)
 
 ### Step 2: Add Travel History
+
 - **Import from PDF**: Upload a Home Office SAR travel history document
 - **Manual Entry**: Click "Add Trip" to add entries manually
 - **Edit**: Click any cell in the table to edit
 - **Delete**: Click the trash icon to remove a trip
 
 ### Step 3: Review Compliance
+
 - **Summary Cards**: View continuous days in UK, total absences, and rolling 12-month absence
 - **180-Day Warning**: Visual alerts if any rolling period exceeds 180 days
 - **Rolling Absence Chart**: Timeline showing absence patterns over time
 - **Validation Card**: See eligibility status and reasons for ineligibility
 
 ### Step 4: Export
+
 Click "Export Excel" to download a formatted spreadsheet with all data and calculations.
 
 ## Routes
@@ -142,6 +146,7 @@ Click "Export Excel" to download a formatted spreadsheet with all data and calcu
 - This is the official UK Home Office method for residency calculations
 
 **Example:**
+
 - Departure: 15 January 2020
 - Return: 20 January 2020
 - Calculation: (20 Jan - 15 Jan) - 1 = **4 full days outside UK**

@@ -20,8 +20,10 @@ The UK Travel History app uses **Vercel Edge Config** for runtime feature flags 
 See [Vercel Edge Config Setup Guide](./vercel-edge-config-setup.md) for detailed instructions.
 
 **TL;DR:**
+
 1. Create Edge Config in Vercel Dashboard
 2. Add initial configuration:
+
 ```json
 {
   "features": {
@@ -36,6 +38,7 @@ See [Vercel Edge Config Setup Guide](./vercel-edge-config-setup.md) for detailed
   }
 }
 ```
+
 3. Connect to your project (set `EDGE_CONFIG` environment variable)
 
 ### 2. Add FeatureFlagsProvider to Your App
@@ -69,6 +72,7 @@ export default async function RootLayout({
 ### 3. Use Feature Flags in Components
 
 **Client Components:**
+
 ```typescript
 'use client';
 import { useFeatureFlags, FEATURE_KEYS } from '@uth/features';
@@ -85,6 +89,7 @@ export function LoginButton() {
 ```
 
 **Server Components:**
+
 ```typescript
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 
@@ -103,6 +108,7 @@ export default async function DashboardPage() {
 ```
 
 **API Routes:**
+
 ```typescript
 // app/api/export/route.ts
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
@@ -112,16 +118,10 @@ export async function POST(request: Request) {
   const { userId } = await auth(request);
 
   // Check if feature is enabled for this user
-  const isEnabled = await isFeatureEnabled(
-    FEATURE_KEYS.EXCEL_EXPORT_PREMIUM,
-    userId
-  );
+  const isEnabled = await isFeatureEnabled(FEATURE_KEYS.EXCEL_EXPORT_PREMIUM, userId);
 
   if (!isEnabled) {
-    return NextResponse.json(
-      { error: 'Feature not available' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Feature not available' }, { status: 403 });
   }
 
   // Proceed with export
@@ -131,16 +131,16 @@ export async function POST(request: Request) {
 
 ## Available Feature Flags
 
-| Flag Key | Default | Description |
-|----------|---------|-------------|
-| `FEATURE_KEYS.MONETIZATION_ENABLED` | `false` | Master switch for all monetization features |
-| `FEATURE_KEYS.FIREBASE_AUTH_ENABLED` | `false` | Enable Firebase authentication with passkeys |
-| `FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED` | `false` | Enable Stripe payment checkout |
-| `FEATURE_KEYS.EXCEL_EXPORT_PREMIUM` | `false` | Require subscription for Excel export |
-| `FEATURE_KEYS.PDF_EXPORT_ENABLED` | `false` | Enable PDF export feature |
-| `FEATURE_KEYS.CLOUD_SYNC_ENABLED` | `false` | Enable cloud sync feature |
-| `FEATURE_KEYS.UPGRADE_MODAL_ENABLED` | `false` | Show upgrade prompts for premium features |
-| `FEATURE_KEYS.PREMIUM_BADGE_ENABLED` | `false` | Show premium badges in UI |
+| Flag Key                               | Default | Description                                  |
+| -------------------------------------- | ------- | -------------------------------------------- |
+| `FEATURE_KEYS.MONETIZATION_ENABLED`    | `false` | Master switch for all monetization features  |
+| `FEATURE_KEYS.FIREBASE_AUTH_ENABLED`   | `false` | Enable Firebase authentication with passkeys |
+| `FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED` | `false` | Enable Stripe payment checkout               |
+| `FEATURE_KEYS.EXCEL_EXPORT_PREMIUM`    | `false` | Require subscription for Excel export        |
+| `FEATURE_KEYS.PDF_EXPORT_ENABLED`      | `false` | Enable PDF export feature                    |
+| `FEATURE_KEYS.CLOUD_SYNC_ENABLED`      | `false` | Enable cloud sync feature                    |
+| `FEATURE_KEYS.UPGRADE_MODAL_ENABLED`   | `false` | Show upgrade prompts for premium features    |
+| `FEATURE_KEYS.PREMIUM_BADGE_ENABLED`   | `false` | Show premium badges in UI                    |
 
 ## Advanced Usage
 
@@ -160,6 +160,7 @@ Enable a feature for a percentage of users:
 ```
 
 **Rollout Strategy:**
+
 1. Start with 10% → Monitor metrics
 2. Increase to 50% → Monitor for issues
 3. Roll out to 100% → Full launch
@@ -174,10 +175,7 @@ Enable for specific users only:
     "cloud_sync_enabled": {
       "enabled": true,
       "rolloutPercentage": 0,
-      "betaUsers": [
-        "firebase_uid_abc123",
-        "firebase_uid_def456"
-      ]
+      "betaUsers": ["firebase_uid_abc123", "firebase_uid_def456"]
     }
   }
 }
@@ -205,22 +203,22 @@ Enable for specific users only:
 ### Server-Side API
 
 #### `isFeatureEnabled(featureKey, userId?)`
+
 Check if a feature is enabled for a specific user.
 
 ```typescript
-const isEnabled = await isFeatureEnabled(
-  FEATURE_KEYS.FIREBASE_AUTH_ENABLED,
-  userId
-);
+const isEnabled = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH_ENABLED, userId);
 ```
 
 **Parameters:**
+
 - `featureKey: FeatureFlagKey` - The feature to check
 - `userId?: string` - Optional user ID for rollout/beta logic
 
 **Returns:** `Promise<boolean>`
 
 #### `getAllFeatureFlags(userId?)`
+
 Fetch all feature flags evaluated for a user.
 
 ```typescript
@@ -229,6 +227,7 @@ const flags = await getAllFeatureFlags(userId);
 ```
 
 Useful for passing to `FeatureFlagsProvider`:
+
 ```typescript
 const flags = await getAllFeatureFlags();
 return <FeatureFlagsProvider flags={flags}>{children}</FeatureFlagsProvider>;
@@ -237,6 +236,7 @@ return <FeatureFlagsProvider flags={flags}>{children}</FeatureFlagsProvider>;
 ### Client-Side API
 
 #### `useFeatureFlags()`
+
 React hook to access feature flags in client components.
 
 ```typescript
@@ -248,6 +248,7 @@ if (isFeatureEnabled(FEATURE_KEYS.MONETIZATION_ENABLED)) {
 ```
 
 **Returns:**
+
 ```typescript
 {
   isFeatureEnabled: (key: FeatureFlagKey) => boolean;
@@ -256,6 +257,7 @@ if (isFeatureEnabled(FEATURE_KEYS.MONETIZATION_ENABLED)) {
 ```
 
 #### `withFeatureFlag(featureKey, Component, Fallback?)`
+
 Higher-order component to conditionally render based on feature flag.
 
 ```typescript
@@ -269,13 +271,14 @@ const PremiumExportButton = withFeatureFlag(
 ### Constants
 
 #### `FEATURE_KEYS`
+
 Typed constants for all feature flags (prevents typos).
 
 ```typescript
 import { FEATURE_KEYS } from '@uth/features';
 
-FEATURE_KEYS.MONETIZATION_ENABLED // 'monetization_enabled'
-FEATURE_KEYS.FIREBASE_AUTH_ENABLED // 'firebase_auth_enabled'
+FEATURE_KEYS.MONETIZATION_ENABLED; // 'monetization_enabled'
+FEATURE_KEYS.FIREBASE_AUTH_ENABLED; // 'firebase_auth_enabled'
 // etc.
 ```
 
@@ -291,11 +294,12 @@ If a critical bug is discovered:
 4. **Changes take effect in ~1 second globally**
 
 Example:
+
 ```json
 {
   "features": {
     "excel_export_premium": {
-      "enabled": false  // ← Changed from true
+      "enabled": false // ← Changed from true
     }
   }
 }
@@ -312,7 +316,7 @@ If you're doing a gradual rollout and see issues:
   "features": {
     "new_feature": {
       "enabled": true,
-      "rolloutPercentage": 10  // ← Reduce from 50 to 10
+      "rolloutPercentage": 10 // ← Reduce from 50 to 10
     }
   }
 }
@@ -347,13 +351,13 @@ if (isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH_ENABLED)) { ... }
 
 ### What's Different
 
-| Old System (Env Vars) | New System (Edge Config) |
-|----------------------|--------------------------|
+| Old System (Env Vars)                     | New System (Edge Config)            |
+| ----------------------------------------- | ----------------------------------- |
 | `process.env.NEXT_PUBLIC_FF_MONETIZATION` | `FEATURE_KEYS.MONETIZATION_ENABLED` |
-| Requires redeploy | Instant updates |
-| Boolean only | Percentage rollouts + beta users |
-| Client-side only | Server + client |
-| Type-unsafe strings | Type-safe constants |
+| Requires redeploy                         | Instant updates                     |
+| Boolean only                              | Percentage rollouts + beta users    |
+| Client-side only                          | Server + client                     |
+| Type-unsafe strings                       | Type-safe constants                 |
 
 ## Best Practices
 
@@ -369,10 +373,7 @@ if (FEATURE_FLAGS.EXCEL_EXPORT_PREMIUM) {
 
 // ✅ Good: Server-side validation
 export async function POST(request: Request) {
-  const isEnabled = await isFeatureEnabled(
-    FEATURE_KEYS.EXCEL_EXPORT_PREMIUM,
-    userId
-  );
+  const isEnabled = await isFeatureEnabled(FEATURE_KEYS.EXCEL_EXPORT_PREMIUM, userId);
   if (!isEnabled) {
     return new Response('Unauthorized', { status: 403 });
   }
@@ -436,10 +437,12 @@ setCachedFlags({
 ### Flag changes not taking effect
 
 **Edge Config updates:**
+
 - Wait ~5 seconds for cache to clear globally
 - Check Vercel Edge Config dashboard for syntax errors
 
 **Client-side:**
+
 - Hard refresh browser (Cmd+Shift+R / Ctrl+Shift+R)
 - Clear browser cache
 
@@ -457,11 +460,13 @@ console.log('Edge Config available:', available);
 ### TypeScript errors
 
 Make sure to import from the package:
+
 ```typescript
 import { FEATURE_KEYS, useFeatureFlags } from '@uth/features';
 ```
 
 Not from internal paths:
+
 ```typescript
 // ❌ Don't do this
 import { FEATURE_KEYS } from '@uth/features/src/lib/edgeConfigFlags';
@@ -469,10 +474,10 @@ import { FEATURE_KEYS } from '@uth/features/src/lib/edgeConfigFlags';
 
 ## Cost Analysis
 
-| Service | Cost | Limits |
-|---------|------|--------|
-| Vercel Edge Config | **Free** | 512KB storage, unlimited reads |
-| Alternative (LaunchDarkly) | $100+/month | Similar features |
+| Service                    | Cost        | Limits                         |
+| -------------------------- | ----------- | ------------------------------ |
+| Vercel Edge Config         | **Free**    | 512KB storage, unlimited reads |
+| Alternative (LaunchDarkly) | $100+/month | Similar features               |
 
 **Total: $0/month**
 

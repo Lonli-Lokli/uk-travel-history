@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { authStore, uiStore } from '@uth/ui';
+import { authStore, uiStore } from '@uth/stores';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,10 @@ export const LoginModal = observer(() => {
   const error = uiStore.loginError;
 
   return (
-    <Dialog open={open} onOpenChange={(open) => uiStore.setLoginModalOpen(open)}>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => uiStore.setLoginModalOpen(open)}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -41,8 +44,8 @@ export const LoginModal = observer(() => {
           <div className="flex flex-col items-center gap-4 py-6">
             <AlertCircle className="h-12 w-12 text-destructive" />
             <p className="text-sm text-muted-foreground text-center">
-              Passkeys are not supported in your browser. Please use a modern browser
-              like Chrome, Safari, or Edge.
+              Passkeys are not supported in your browser. Please use a modern
+              browser like Chrome, Safari, or Edge.
             </p>
           </div>
         ) : (
@@ -75,7 +78,9 @@ export const LoginModal = observer(() => {
                     type="text"
                     placeholder="Your Name"
                     value={displayName}
-                    onChange={(e) => uiStore.setLoginDisplayName(e.target.value)}
+                    onChange={(e) =>
+                      uiStore.setLoginDisplayName(e.target.value)
+                    }
                     disabled={isAuthenticating}
                   />
                 </div>
@@ -83,7 +88,11 @@ export const LoginModal = observer(() => {
             )}
 
             <Button
-              onClick={() => mode === 'signin' ? uiStore.handleSignIn() : uiStore.handleRegister()}
+              onClick={() =>
+                mode === 'signin'
+                  ? uiStore.handleSignIn()
+                  : uiStore.handleRegister()
+              }
               disabled={isAuthenticating || (mode === 'register' && !email)}
               className="w-full"
             >
@@ -108,7 +117,9 @@ export const LoginModal = observer(() => {
 
             <Button
               variant="ghost"
-              onClick={() => uiStore.setLoginMode(mode === 'signin' ? 'register' : 'signin')}
+              onClick={() =>
+                uiStore.setLoginMode(mode === 'signin' ? 'register' : 'signin')
+              }
               disabled={isAuthenticating}
               className="w-full"
             >
@@ -118,9 +129,9 @@ export const LoginModal = observer(() => {
             <div className="text-xs text-muted-foreground space-y-2 pt-2">
               <p className="font-medium">What is a passkey?</p>
               <p>
-                A passkey is a secure, passwordless way to sign in using your device's
-                biometric authentication (fingerprint, face recognition) or PIN. Your
-                credentials never leave your device.
+                A passkey is a secure, passwordless way to sign in using your
+                device's biometric authentication (fingerprint, face
+                recognition) or PIN. Your credentials never leave your device.
               </p>
             </div>
           </div>

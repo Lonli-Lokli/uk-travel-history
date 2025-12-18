@@ -3,10 +3,6 @@
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
 import {
-  travelStore,
-  authStore,
-  uiStore,
-  useFeatureFlags,
   Button,
   DropdownMenu,
   DropdownMenuTrigger,
@@ -29,6 +25,8 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { LoginModal } from './LoginModal';
+import { useFeatureFlags } from '@uth/widgets';
+import { authStore, travelStore, uiStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -201,7 +199,11 @@ export const Header = observer(
               {/* Mobile: Export Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" className="sm:hidden" disabled={!hasTrips}>
+                  <Button
+                    size="icon"
+                    className="sm:hidden"
+                    disabled={!hasTrips}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -226,19 +228,27 @@ export const Header = observer(
                         <Button variant="outline" size="sm">
                           <User className="h-4 w-4 mr-1.5" />
                           <span className="hidden sm:inline">
-                            {user.displayName || user.email?.split('@')[0] || 'Account'}
+                            {user.displayName ||
+                              user.email?.split('@')[0] ||
+                              'Account'}
                           </span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem disabled>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{user.displayName || 'User'}</span>
-                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                            <span className="text-sm font-medium">
+                              {user.displayName || 'User'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {user.email}
+                            </span>
                           </div>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => uiStore.handleSignOut()}>
+                        <DropdownMenuItem
+                          onClick={() => uiStore.handleSignOut()}
+                        >
                           <LogOut className="h-4 w-4 mr-2" />
                           Sign Out
                         </DropdownMenuItem>
@@ -264,7 +274,7 @@ export const Header = observer(
         {isAuthEnabled && <LoginModal />}
       </header>
     );
-  }
+  },
 );
 
 Header.displayName = 'Header';

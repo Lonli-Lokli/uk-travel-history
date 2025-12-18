@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { travelStore, useToast } from '@uth/ui';
+import { useToast } from '@uth/ui';
+import { travelStore } from '@uth/stores';
 
 export const useFullDataImport = () => {
   const { toast } = useToast();
@@ -59,7 +60,7 @@ export const useFullDataImport = () => {
         });
       }
     },
-    [toast]
+    [toast],
   );
 
   const confirmImport = useCallback(
@@ -87,7 +88,7 @@ export const useFullDataImport = () => {
         });
       }
     },
-    [pendingFile, toast]
+    [pendingFile, toast],
   );
 
   const cancelImport = useCallback(() => {

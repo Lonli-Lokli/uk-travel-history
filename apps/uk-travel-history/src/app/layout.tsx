@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Toaster, FeatureFlagsProvider } from '@uth/ui';
+import { Toaster } from '@uth/ui';
 import { getAllFeatureFlags } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
-import { Geist } from 'next/font/google'
+import { Geist } from 'next/font/google';
+import { FeatureFlagsProvider } from '@uth/widgets';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -101,7 +102,7 @@ export const viewport: Viewport = {
 
 const geist = Geist({
   subsets: ['latin'],
-})
+});
 
 export default async function RootLayout({
   children,
