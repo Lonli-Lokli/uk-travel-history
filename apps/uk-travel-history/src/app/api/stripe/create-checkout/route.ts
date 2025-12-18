@@ -45,8 +45,15 @@ export async function POST(request: NextRequest) {
         tags: {
           service: 'firebase',
           operation: 'verify_token',
+          endpoint: 'create-checkout',
         },
-        level: 'warning',
+        contexts: {
+          auth: {
+            hasAuthHeader: !!authHeader,
+            tokenLength: token?.length,
+          },
+        },
+        level: 'error',
       });
       logger.error('Firebase token verification failed:', authError);
       return NextResponse.json(
