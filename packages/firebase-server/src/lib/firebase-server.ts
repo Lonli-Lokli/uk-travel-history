@@ -4,8 +4,10 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
-let adminApp: App;
-let adminAuth: Auth;
+let adminApp: App | undefined;
+let adminAuth: Auth | undefined;
+let initializationError: Error | undefined;
+let isConfigured = false;
 
 /**
  * Initialize Firebase Admin SDK
@@ -16,6 +18,7 @@ function initializeFirebaseAdmin() {
   if (getApps().length > 0) {
     adminApp = getApps()[0];
     adminAuth = getAuth(adminApp);
+    isConfigured = true;
     return;
   }
 
@@ -25,10 +28,12 @@ function initializeFirebaseAdmin() {
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !privateKey) {
-    console.warn(
+    const error = new Error(
       'Firebase Admin SDK credentials not configured. ' +
-        'Server-side authentication will not work.',
+        'Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY environment variables.',
     );
+    initializationError = error;
+    console.warn(error.message);
     // Don't throw - allow app to run without auth in development
     return;
   }
@@ -44,7 +49,9 @@ function initializeFirebaseAdmin() {
     });
 
     adminAuth = getAuth(adminApp);
+    isConfigured = true;
   } catch (error) {
+    initializationError = error as Error;
     console.error('Failed to initialize Firebase Admin SDK:', error);
     // Don't throw - allow app to run without auth in development
   }
@@ -54,42 +61,76 @@ function initializeFirebaseAdmin() {
 initializeFirebaseAdmin();
 
 /**
+ * Check if Firebase Admin SDK is initialized and configured
+ * @returns boolean indicating if Firebase Admin is ready to use
+ */
+export function isFirebaseAdminConfigured(): boolean {
+  return isConfigured;
+}
+
+/**
+ * Get initialization error if Firebase Admin SDK failed to initialize
+ * @returns Error object or undefined if no error occurred
+ */
+export function getInitializationError(): Error | undefined {
+  return initializationError;
+}
+
+/**
+ * Get Firebase Admin Auth instance
+ * Throws if not initialized
+ * @returns Auth instance
+ */
+export function getAdminAuth(): Auth {
+  if (!adminAuth) {
+    if (initializationError) {
+      throw new Error(
+        `Firebase Admin SDK not initialized: ${initializationError.message}`,
+      );
+    }
+    throw new Error(
+      'Firebase Admin SDK not initialized. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY environment variables.',
+    );
+  }
+  return adminAuth;
+}
+
+/**
  * Verify a Firebase ID token
  * @param token - The Firebase ID token to verify
  * @param checkRevoked - Whether to check if the token has been revoked
  * @returns Decoded token with user information
+ * @throws Error if Firebase Admin SDK is not initialized or token verification fails
  */
 export async function verifyIdToken(token: string, checkRevoked = true) {
-  if (!adminAuth) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  return adminAuth.verifyIdToken(token, checkRevoked);
+  const auth = getAdminAuth();
+  return auth.verifyIdToken(token, checkRevoked);
 }
 
 /**
  * Get user by UID
  * @param uid - The user's Firebase UID
+ * @returns User record
+ * @throws Error if Firebase Admin SDK is not initialized or user is not found
  */
 export async function getUser(uid: string) {
-  if (!adminAuth) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  return adminAuth.getUser(uid);
+  const auth = getAdminAuth();
+  return auth.getUser(uid);
 }
 
 /**
  * Delete a user account
  * @param uid - The user's Firebase UID
+ * @throws Error if Firebase Admin SDK is not initialized or deletion fails
  */
 export async function deleteUser(uid: string) {
-  if (!adminAuth) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  return adminAuth.deleteUser(uid);
+  const auth = getAdminAuth();
+  return auth.deleteUser(uid);
 }
 
-export { adminAuth };
+// Export types
 export type { Auth };
+
+// Export the auth instance (may be undefined if not initialized)
+// For advanced users who want to handle initialization themselves
+export { adminAuth };
