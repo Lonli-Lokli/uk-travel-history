@@ -32,6 +32,12 @@
     },
     {
       "path": "./packages/stores"
+    },
+    {
+      "path": "./packages/stripe-client"
+    },
+    {
+      "path": "./packages/stripe-server"
     }
   ]
 }

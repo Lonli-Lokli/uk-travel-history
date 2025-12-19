@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { StripeAPI } from '@uth/stripe-server';
+import { logger } from '@uth/utils';
+import { getAdminFirestore } from '@uth/firebase-server';
+import * as Sentry from '@sentry/nextjs';
+
+export const runtime = 'nodejs';
+export const maxDuration = 30;
+
+interface ValidateSessionRequest {
+  session_id: string;
+}
+
+/**
+ * Validates a Stripe Checkout session ID.
+ *
+ * SECURITY: This endpoint does NOT require authentication (pre-registration).
+ * However, it only provides session validation - no sensitive data.
+ *
+ * Used by /registration page to verify payment before allowing account creation.
+ *
+ * Returns:
+ * - paymentStatus: 'paid' | 'unpaid'
+ * - alreadyUsed: boolean (prevents session reuse)
+ * - subscriptionId: string (for linking)
+ * - customerId: string (for linking)
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = (await request.json()) as ValidateSessionRequest;
+    const { session_id } = body;
+
+    if (!session_id || !session_id.startsWith('cs_')) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format' },
+        { status: 400 },
+      );
+    }
+
+    // Retrieve session from Stripe
+    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
+
+    // Check if session is for new subscription
+    if (session.metadata?.checkoutType !== 'new_subscription') {
+      logger.warn('[Validate Session] Session is not for new subscription', {
+        sessionId: session_id,
+      });
+      return NextResponse.json(
+        { error: 'Invalid session type' },
+        { status: 400 },
+      );
+    }
+
+    // Check payment status
+    const paymentStatus = session.payment_status; // 'paid' | 'unpaid'
+
+    if (paymentStatus !== 'paid') {
+      logger.warn('[Validate Session] Payment not completed', {
+        sessionId: session_id,
+        paymentStatus,
+      });
+      return NextResponse.json({
+        paymentStatus,
+        alreadyUsed: false,
+      });
+    }
+
+    // Check if session has already been used (linked to a Firebase user)
+    const adminFirestore = getAdminFirestore();
+
+    // Query subscriptions collection for this session_id
+    const existingSubscription = await adminFirestore
+      .collection('subscriptions')
+      .where('stripeSessionId', '==', session_id)
+      .limit(1)
+      .get();
+
+    const alreadyUsed = !existingSubscription.empty;
+
+    if (alreadyUsed) {
+      logger.warn('[Validate Session] Session already used', {
+        sessionId: session_id,
+      });
+    }
+
+    // Return validation result
+    return NextResponse.json({
+      paymentStatus,
+      alreadyUsed,
+      subscriptionId: session.subscription as string,
+      customerId: session.customer as string,
+    });
+  } catch (error) {
+    logger.error('[Validate Session] Error:', error);
+
+    Sentry.captureException(error, {
+      tags: {
+        service: 'stripe',
+        operation: 'validate_session',
+      },
+    });
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to validate session' },
+      { status: 500 },
+    );
+  }
+}

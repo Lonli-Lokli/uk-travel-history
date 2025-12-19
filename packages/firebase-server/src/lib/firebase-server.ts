@@ -3,9 +3,12 @@
 
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { logger } from '@uth/utils';
 
 let adminApp: App | undefined;
 let adminAuth: Auth | undefined;
+let adminFirestore: Firestore | undefined;
 let initializationError: Error | undefined;
 let isConfigured = false;
 
@@ -18,6 +21,7 @@ function initializeFirebaseAdmin() {
   if (getApps().length > 0) {
     adminApp = getApps()[0];
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
     isConfigured = true;
     return;
   }
@@ -49,10 +53,11 @@ function initializeFirebaseAdmin() {
     });
 
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
     isConfigured = true;
   } catch (error) {
     initializationError = error as Error;
-    console.error('Failed to initialize Firebase Admin SDK:', error);
+    logger.error('Failed to initialize Firebase Admin SDK:', error);
     // Don't throw - allow app to run without auth in development
   }
 }
@@ -128,9 +133,28 @@ export async function deleteUser(uid: string) {
   return auth.deleteUser(uid);
 }
 
-// Export types
-export type { Auth };
+/**
+ * Get Firebase Admin Firestore instance
+ * Throws if not initialized
+ * @returns Firestore instance
+ */
+export function getAdminFirestore(): Firestore {
+  if (!adminFirestore) {
+    if (initializationError) {
+      throw new Error(
+        `Firebase Admin SDK not initialized: ${initializationError.message}`,
+      );
+    }
+    throw new Error(
+      'Firebase Admin SDK not initialized. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY environment variables.',
+    );
+  }
+  return adminFirestore;
+}
 
-// Export the auth instance (may be undefined if not initialized)
+// Export types
+export type { Auth, Firestore };
+
+// Export the auth and firestore instances (may be undefined if not initialized)
 // For advanced users who want to handle initialization themselves
-export { adminAuth };
+export { adminAuth, adminFirestore };

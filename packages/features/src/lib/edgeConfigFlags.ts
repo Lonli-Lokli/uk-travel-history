@@ -3,7 +3,7 @@
 // Supports both client-side and server-side usage
 
 import { get } from '@vercel/edge-config';
-
+import { logger } from '@uth/utils';
 /**
  * Feature flag identifiers (typed constants)
  * These match the keys in Vercel Edge Config
@@ -132,8 +132,9 @@ export async function isFeatureEnabled(
     // Feature is enabled without restrictions
     return flag.enabled;
   } catch (error) {
-    // Fail closed: if Edge Config is down, default to disabled for safety
-    console.error('Feature flag check failed:', error);
+    logger.error('[Feature Flags] Error checking feature flag', error, {
+      featureKey,
+    });
     return false;
   }
 }

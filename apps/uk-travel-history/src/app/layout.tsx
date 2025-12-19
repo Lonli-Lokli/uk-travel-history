@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
 import { FeatureFlagsProvider } from '@uth/widgets';
+import { PaymentModal } from '../components/PaymentModal';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -117,6 +118,7 @@ export default async function RootLayout({
       <body className="h-full bg-slate-50 overflow-y-scroll">
         <FeatureFlagsProvider flags={flags}>
           {children}
+          <PaymentModal />
           <Toaster />
         </FeatureFlagsProvider>
       </body>

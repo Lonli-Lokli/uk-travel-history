@@ -17,6 +17,7 @@ import {
   getAuthInstance,
   getFunctionsInstance,
 } from '@uth/firebase-client';
+import * as Sentry from '@sentry/nextjs';
 
 class AuthStore {
   user: User | null = null;
@@ -75,6 +76,24 @@ class AuthStore {
         this.isAuthenticating = false;
       });
     } catch (error) {
+      // Track Firebase auth failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'sign_in_with_passkey',
+        },
+        contexts: {
+          auth: {
+            isPasskeySupported: this.isPasskeySupported,
+            errorType:
+              error instanceof FirebaseWebAuthnError
+                ? 'FirebaseWebAuthnError'
+                : 'Error',
+          },
+        },
+        level: 'error',
+      });
+
       runInAction(() => {
         // Handle FirebaseWebAuthnError with more detailed messages
         if (error instanceof FirebaseWebAuthnError) {
@@ -121,6 +140,86 @@ class AuthStore {
         this.isAuthenticating = false;
       });
     } catch (error) {
+      // Track Firebase auth failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'register_passkey',
+        },
+        contexts: {
+          auth: {
+            isPasskeySupported: this.isPasskeySupported,
+            errorType:
+              error instanceof FirebaseWebAuthnError
+                ? 'FirebaseWebAuthnError'
+                : 'Error',
+            hasEmail: !!email,
+            hasDisplayName: !!displayName,
+          },
+        },
+        level: 'error',
+      });
+
+      runInAction(() => {
+        // Handle FirebaseWebAuthnError with more detailed messages
+        if (error instanceof FirebaseWebAuthnError) {
+          this.error = error.message;
+        } else {
+          this.error =
+            error instanceof Error
+              ? error.message
+              : 'Failed to register passkey';
+        }
+        this.isAuthenticating = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Register a new passkey WITHOUT email (anonymous registration)
+   * Used for post-payment registration flow
+   * Uses the official @firebase-web-authn/browser SDK
+   */
+  async registerPasskeyAnonymous(): Promise<void> {
+    if (!this.isPasskeySupported) {
+      throw new Error('Passkeys are not supported in this browser');
+    }
+
+    this.isAuthenticating = true;
+    this.error = null;
+
+    try {
+      const auth = getAuthInstance();
+      const functions = getFunctionsInstance();
+
+      // Use the official SDK method with a generic display name
+      // Since no email is collected, use a generic identifier
+      const name = 'UK Travel History User';
+      await createUserWithPasskey(auth, functions, name);
+
+      runInAction(() => {
+        this.isAuthenticating = false;
+      });
+    } catch (error) {
+      // Track Firebase auth failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'register_passkey_anonymous',
+        },
+        contexts: {
+          auth: {
+            isPasskeySupported: this.isPasskeySupported,
+            errorType:
+              error instanceof FirebaseWebAuthnError
+                ? 'FirebaseWebAuthnError'
+                : 'Error',
+          },
+        },
+        level: 'error',
+      });
+
       runInAction(() => {
         // Handle FirebaseWebAuthnError with more detailed messages
         if (error instanceof FirebaseWebAuthnError) {
@@ -141,10 +240,22 @@ class AuthStore {
    * Sign out the current user
    */
   async signOut(): Promise<void> {
-    if (!auth) {
-      throw new Error('Firebase Auth is not initialized');
+    try {
+      if (!auth) {
+        throw new Error('Firebase Auth is not initialized');
+      }
+      await firebaseSignOut(auth);
+    } catch (error) {
+      // Track Firebase signout failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'sign_out',
+        },
+        level: 'error',
+      });
+      throw error;
     }
-    await firebaseSignOut(auth);
   }
 
   /**
@@ -152,8 +263,26 @@ class AuthStore {
    * Used for authenticated API requests
    */
   async getIdToken(): Promise<string | null> {
-    if (!this.user) return null;
-    return this.user.getIdToken();
+    try {
+      if (!this.user) return null;
+      return this.user.getIdToken();
+    } catch (error) {
+      // Track ID token retrieval failures in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'firebase',
+          operation: 'get_id_token',
+        },
+        contexts: {
+          auth: {
+            hasUser: !!this.user,
+            userEmail: this.user?.email,
+          },
+        },
+        level: 'error',
+      });
+      throw error;
+    }
   }
 }
 

@@ -5,6 +5,7 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFunctions, type Functions } from 'firebase/functions';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { logger } from '@uth/utils';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -51,7 +52,7 @@ function initializeFirebase() {
     try {
       app = initializeApp(firebaseConfig);
     } catch (error) {
-      console.error('Failed to initialize Firebase:', error);
+      logger.error('Failed to initialize Firebase:', error);
       // Allow app to continue without auth
       return;
     }
@@ -62,14 +63,14 @@ function initializeFirebase() {
     try {
       auth = getAuth(app);
     } catch (error) {
-      console.error('Failed to get Firebase Auth:', error);
+      logger.error('Failed to get Firebase Auth:', error);
       // Allow app to continue without auth
     }
 
     try {
       functions = getFunctions(app);
     } catch (error) {
-      console.error('Failed to get Firebase Functions:', error);
+      logger.error('Failed to get Firebase Functions:', error);
       // Allow app to continue without functions
     }
 
@@ -82,7 +83,7 @@ function initializeFirebase() {
           isTokenAutoRefreshEnabled: true,
         });
       } catch (error) {
-        console.error('Failed to initialize App Check:', error);
+        logger.error('Failed to initialize App Check:', error);
         // Allow app to continue without App Check
       }
     }
