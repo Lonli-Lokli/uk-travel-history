@@ -342,8 +342,11 @@ describe('Edge Config Feature Flags', () => {
       await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH_ENABLED);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Feature flag check failed:',
+        '[Feature Flags] Error checking feature flag',
         expect.any(Error),
+        expect.objectContaining({
+          featureKey: FEATURE_KEYS.FIREBASE_AUTH_ENABLED,
+        }),
       );
 
       consoleSpy.mockRestore();
