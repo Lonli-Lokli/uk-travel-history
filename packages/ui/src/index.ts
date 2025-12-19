@@ -12,3 +12,4 @@ export * from './calendar';
 export * from './date-picker';
 export * from './editable-cell';
 export * from './radio-group';
+export * from './feature-gate';
