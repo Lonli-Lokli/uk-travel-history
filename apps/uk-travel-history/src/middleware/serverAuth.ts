@@ -3,6 +3,7 @@ import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
+import { isFeatureEnabled } from '@uth/features';
 
 export interface AuthContext {
   userId: string;
@@ -147,10 +148,11 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
  * This is the primary security control for feature gating.
  *
  * Flow:
- * 1. Verifies user is authenticated with active subscription
- * 2. Checks if feature requires payment (via Edge Config)
- * 3. If feature is free, allows access
- * 4. If feature is premium, allows access (subscription already verified)
+ * 1. Checks if feature is enabled (via Edge Config feature flags)
+ * 2. Verifies user is authenticated with active subscription
+ * 3. Checks if feature requires payment (via Edge Config premium_features list)
+ * 4. If feature is free, allows access
+ * 5. If feature is premium, allows access (subscription already verified)
  *
  * @param request - Next.js request object
  * @param featureId - Feature ID to check (e.g., "excel_export")
@@ -175,10 +177,21 @@ export async function requirePaidFeature(
   request: NextRequest,
   featureId: string
 ): Promise<AuthContext> {
-  // Step 1: Verify user is authenticated with active subscription
+  // Step 1: Check if the feature is enabled via feature flags
+  // This allows us to disable features at runtime without code changes
+  const enabled = await isFeatureEnabled(featureId as any);
+
+  if (!enabled) {
+    logger.warn('[Paid Feature] Feature is disabled', {
+      featureId,
+    });
+    throw new AuthError('This feature is currently disabled', 403);
+  }
+
+  // Step 2: Verify user is authenticated with active subscription
   const authContext = await verifyAuth(request);
 
-  // Step 2: Check if this specific feature requires payment
+  // Step 3: Check if this specific feature requires payment
   const isPremium = await isFeaturePremium(featureId);
 
   if (!isPremium) {
