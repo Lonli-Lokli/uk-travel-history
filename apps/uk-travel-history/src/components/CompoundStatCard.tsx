@@ -1,10 +1,8 @@
 'use client';
 
-import { Card, CardContent } from '@uth/ui';
+import { Card, CardContent, IconName, UIIcon } from '@uth/ui';
 import { ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
-import { InformationCircleIcon } from '@hugeicons/core-free-icons';
 
 interface StatItem {
   value: string | number;
@@ -14,11 +12,17 @@ interface StatItem {
 }
 
 interface CompoundStatCardProps {
-  icon: IconSvgElement;
+  icon: IconName;
   title: string;
   stats: StatItem[];
   subtitle?: ReactNode;
-  variant?: 'default' | 'primary' | 'warning' | 'success' | 'purple' | 'neutral';
+  variant?:
+    | 'default'
+    | 'primary'
+    | 'warning'
+    | 'success'
+    | 'purple'
+    | 'neutral';
   className?: string;
 }
 
@@ -74,7 +78,7 @@ const statVariantStyles = {
 };
 
 export const CompoundStatCard = ({
-  icon: Icon,
+  icon,
   title,
   stats,
   subtitle,
@@ -98,10 +102,12 @@ export const CompoundStatCard = ({
           <div
             className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
           >
-            <HugeiconsIcon icon={Icon} className={`w-4 h-4 ${styles.iconColor}`} />
+            <UIIcon iconName={icon} className={`w-4 h-4 ${styles.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
+            <p
+              className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}
+            >
               {title}
             </p>
           </div>
@@ -109,11 +115,12 @@ export const CompoundStatCard = ({
 
         <div className={`grid ${getGridCols()} gap-3`}>
           {stats.map((stat, index) => {
-            const statColor = variant !== 'default' && variant !== 'neutral'
-              ? styles.titleColor
-              : stat.variant
-                ? statVariantStyles[stat.variant]
-                : styles.titleColor;
+            const statColor =
+              variant !== 'default' && variant !== 'neutral'
+                ? styles.titleColor
+                : stat.variant
+                  ? statVariantStyles[stat.variant]
+                  : styles.titleColor;
 
             return (
               <div key={index} className="text-center">
@@ -132,7 +139,10 @@ export const CompoundStatCard = ({
                           type="button"
                           aria-label={`Info about ${stat.label}`}
                         >
-                          <HugeiconsIcon icon={InformationCircleIcon} className={`w-3 h-3 ${styles.labelColor}`} />
+                          <UIIcon
+                            iconName="info-circle"
+                            className={`w-3 h-3 ${styles.labelColor}`}
+                          />
                         </button>
                       </Popover.Trigger>
                       <Popover.Portal>

@@ -13,12 +13,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  UIIcon,
 } from '@uth/ui';
 import { travelStore } from '@uth/stores';
 import { TravelTable } from '@uth/widgets';
-import { Delete02Icon, TransactionHistoryIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
 
 interface TravelHistoryCardProps {
   onClearAll: () => void;
@@ -34,7 +33,10 @@ export const TravelHistoryCard = observer(
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <HugeiconsIcon icon={TransactionHistoryIcon} className="w-4 h-4 text-muted-foreground" />
+              <UIIcon
+                iconName="history"
+                className="w-4 h-4 text-muted-foreground"
+              />
               Travel History
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
@@ -50,7 +52,7 @@ export const TravelHistoryCard = observer(
                   size="sm"
                   className="text-muted-foreground hover:text-destructive"
                 >
-                  <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4 sm:mr-1.5" />
+                  <UIIcon iconName="trash" className="h-4 w-4 sm:mr-1.5" />
                   <span className="hidden sm:inline">Clear All</span>
                 </Button>
               </DialogTrigger>
@@ -84,7 +86,7 @@ export const TravelHistoryCard = observer(
         </CardContent>
       </Card>
     );
-  }
+  },
 );
 
 TravelHistoryCard.displayName = 'TravelHistoryCard';

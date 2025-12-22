@@ -14,20 +14,19 @@ import {
   SelectTrigger,
   SelectValue,
   Button,
+  UIIcon,
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
 import { ILRTrack } from '@uth/calculators';
 import { travelStore } from '@uth/stores';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { PassportIcon, X } from '@hugeicons/core-free-icons';
 
 export const VisaDetailsCard = observer(() => {
   return (
     <Card className="bg-white mb-3">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <HugeiconsIcon
-            icon={PassportIcon}
+
+          <UIIcon iconName='passport'
             className="w-4 h-4 text-muted-foreground"
           />
           Visa & Vignette Details
@@ -109,7 +108,7 @@ export const VisaDetailsCard = observer(() => {
                   className="h-5 px-1 text-xs text-muted-foreground hover:text-destructive"
                   onClick={() => travelStore.setApplicationDate('')}
                 >
-                  <HugeiconsIcon icon={X} className="h-3 w-3 mr-1" />
+                  <UIIcon iconName='x' className="h-3 w-3 mr-1" />
                   Clear
                 </Button>
               )}

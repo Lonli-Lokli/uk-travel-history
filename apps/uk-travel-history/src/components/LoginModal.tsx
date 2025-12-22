@@ -11,9 +11,8 @@ import {
   Button,
   Input,
   Label,
+  UIIcon,
 } from '@uth/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { AlertCircle, FingerPrintScanIcon, Loading03Icon } from '@hugeicons/core-free-icons';
 
 export const LoginModal = observer(() => {
   const isAuthenticating = authStore.isAuthenticating;
@@ -42,7 +41,10 @@ export const LoginModal = observer(() => {
 
         {!isPasskeySupported ? (
           <div className="flex flex-col items-center gap-4 py-6">
-            <HugeiconsIcon icon={AlertCircle} className="h-12 w-12 text-destructive" />
+            <UIIcon
+              iconName="alert-circle"
+              className="h-12 w-12 text-destructive"
+            />
             <p className="text-sm text-muted-foreground text-center">
               Passkeys are not supported in your browser. Please use a modern
               browser like Chrome, Safari, or Edge.
@@ -52,7 +54,10 @@ export const LoginModal = observer(() => {
           <div className="space-y-4">
             {error && (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-start gap-2">
-                <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <UIIcon
+                  iconName="alert-circle"
+                  className="h-4 w-4 mt-0.5 flex-shrink-0"
+                />
                 <p>{error}</p>
               </div>
             )}
@@ -81,13 +86,18 @@ export const LoginModal = observer(() => {
                   ? uiStore.handleSignIn()
                   : uiStore.handleRegister()
               }
-              disabled={isAuthenticating || (mode === 'register' && !displayName)}
+              disabled={
+                isAuthenticating || (mode === 'register' && !displayName)
+              }
               className="w-full"
             >
               {isAuthenticating ? (
-                <HugeiconsIcon icon={Loading03Icon} className="h-4 w-4 mr-2 animate-spin" />
+                <UIIcon
+                  iconName="loading"
+                  className="h-4 w-4 mr-2 animate-spin"
+                />
               ) : (
-                <HugeiconsIcon icon={FingerPrintScanIcon} className="h-4 w-4 mr-2" />
+                <UIIcon iconName="fingerprint" className="h-4 w-4 mr-2" />
               )}
               {mode === 'signin' ? 'Sign In with Passkey' : 'Create Passkey'}
             </Button>

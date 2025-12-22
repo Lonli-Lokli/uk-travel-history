@@ -4,9 +4,7 @@ import { useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
 import { authStore, paymentStore } from '@uth/stores';
-import { Button } from '@uth/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { FingerprintScanIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { Button, UIIcon } from '@uth/ui';
 
 // Separate component for content that uses useSearchParams
 const RegistrationContent = observer(() => {
@@ -75,7 +73,10 @@ const RegistrationContent = observer(() => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <UIIcon
+            iconName="loading"
+            className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4"
+          />
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
             Validating your payment...
           </h1>
@@ -91,7 +92,10 @@ const RegistrationContent = observer(() => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <AlertCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+            <UIIcon
+              iconName="alert-circle"
+              className="h-16 w-16 text-red-600 mx-auto mb-4"
+            />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Payment Issue
             </h1>
@@ -115,7 +119,10 @@ const RegistrationContent = observer(() => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <AlertCircle className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
+            <UIIcon
+              iconName="alert-circle"
+              className="h-16 w-16 text-yellow-600 mx-auto mb-4"
+            />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Browser Not Supported
             </h1>
@@ -144,7 +151,10 @@ const RegistrationContent = observer(() => {
           {/* Success Icon */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
+              <UIIcon
+                iconName="check-circle"
+                className="h-10 w-10 text-green-600"
+              />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Payment Successful!
@@ -157,7 +167,10 @@ const RegistrationContent = observer(() => {
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
-              <HugeiconsIcon icon={FingerprintScanIcon}  className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <UIIcon
+                iconName="fingerprint"
+                className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5"
+              />
               <div className="text-sm text-blue-900">
                 <p className="font-medium mb-1">Passkey Authentication</p>
                 <p>
@@ -172,7 +185,10 @@ const RegistrationContent = observer(() => {
           {authError && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <UIIcon
+                  iconName="alert-circle"
+                  className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
+                />
                 <div className="text-sm text-red-900">
                   <p className="font-medium mb-1">Authentication Error</p>
                   <p>{authError}</p>
@@ -184,7 +200,10 @@ const RegistrationContent = observer(() => {
           {registrationError && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <UIIcon
+                  iconName="alert-circle"
+                  className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
+                />
                 <div className="text-sm text-red-900">
                   <p className="font-medium mb-1">Registration Error</p>
                   <p>{registrationError}</p>
@@ -201,16 +220,19 @@ const RegistrationContent = observer(() => {
           >
             {isAuthenticating || isCompletingRegistration ? (
               <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                <UIIcon
+                  iconName="loading"
+                  className="h-5 w-5 mr-2 animate-spin"
+                />
                 {isAuthenticating
                   ? 'Creating passkey...'
                   : 'Completing registration...'}
               </>
             ) : (
               <>
-                <Fingerprint className="h-5 w-5 mr-2" />
+                <UIIcon iconName="fingerprint" className="h-5 w-5 mr-2" />
                 Create Account with Passkey
-                <ArrowRight className="h-5 w-5 ml-2" />
+                <UIIcon iconName="arrow-right" className="h-5 w-5 ml-2" />
               </>
             )}
           </Button>
@@ -240,7 +262,10 @@ export default function RegistrationPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+          <UIIcon
+            iconName="loading"
+            className="h-12 w-12 text-blue-600 animate-spin"
+          />
         </div>
       }
     >

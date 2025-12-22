@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, toast } from '@uth/ui';
+import { Button, Card, CardContent, toast, UIIcon } from '@uth/ui';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
@@ -9,19 +9,6 @@ import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
-import { HugeiconsIcon } from '@hugeicons/react';
-import {
-  Airplane01Icon,
-  CheckmarkCircle02Icon,
-  ClipboardIcon,
-  Coffee02Icon,
-  DocumentValidationIcon,
-  HandPointingRight01Icon,
-  Loading03Icon,
-  Pdf01Icon,
-  TowTruckIcon,
-  Xls01Icon,
-} from '@hugeicons/core-free-icons';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -211,10 +198,7 @@ export const LandingPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <HugeiconsIcon
-                    icon={Airplane01Icon}
-                    className="w-4 h-4 text-white"
-                  />
+                  <UIIcon iconName="airplane" className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <h1 className="font-semibold text-slate-900 text-sm sm:text-base">
@@ -238,10 +222,7 @@ export const LandingPage = () => {
                   size="sm"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <HugeiconsIcon
-                    icon={Coffee02Icon}
-                    className="h-4 w-4 mr-1.5"
-                  />
+                  <UIIcon iconName="coffee" className="h-4 w-4 mr-1.5" />
                   Buy Me a Coffee
                 </Button>
               </a>
@@ -257,7 +238,7 @@ export const LandingPage = () => {
                   size="icon"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <HugeiconsIcon icon={Coffee02Icon} className="h-4 w-4" />
+                  <UIIcon iconName="coffee" className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -271,8 +252,8 @@ export const LandingPage = () => {
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <HugeiconsIcon
-                    icon={Airplane01Icon}
+                  <UIIcon
+                    iconName="airplane"
                     className="w-8 h-8 text-primary"
                   />
                 </div>
@@ -298,15 +279,12 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'pdf' ? (
-                      <HugeiconsIcon
-                        icon={Loading03Icon}
+                      <UIIcon
+                        iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
                       />
                     ) : (
-                      <HugeiconsIcon
-                        icon={Pdf01Icon}
-                        className="h-4 w-4 mr-2"
-                      />
+                      <UIIcon iconName="pdf" className="h-4 w-4 mr-2" />
                     )}
                     Import from PDF
                     {activeAction === 'pdf' && (
@@ -322,15 +300,12 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'csv' ? (
-                      <HugeiconsIcon
-                        icon={Loading03Icon}
+                      <UIIcon
+                        iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
                       />
                     ) : (
-                      <HugeiconsIcon
-                        icon={Xls01Icon}
-                        className="h-4 w-4 mr-2"
-                      />
+                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
                     )}
                     Import from Excel
                     {activeAction === 'csv' && (
@@ -346,15 +321,12 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'clipboard' ? (
-                      <HugeiconsIcon
-                        icon={Loading03Icon}
+                      <UIIcon
+                        iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
                       />
                     ) : (
-                      <HugeiconsIcon
-                        icon={ClipboardIcon}
-                        className="h-4 w-4 mr-2"
-                      />
+                      <UIIcon iconName="clipboard" className="h-4 w-4 mr-2" />
                     )}
                     Import from Clipboard
                     {activeAction === 'clipboard' && (
@@ -370,10 +342,7 @@ export const LandingPage = () => {
                       onClick={handleAddManually}
                       disabled={isImporting || activeAction !== null}
                     >
-                      <HugeiconsIcon
-                        icon={TowTruckIcon}
-                        className="h-4 w-4 mr-2"
-                      />
+                      <UIIcon iconName="note-add" className="h-4 w-4 mr-2" />
                       Or add travel dates manually
                     </Button>
                   </div>
@@ -383,8 +352,8 @@ export const LandingPage = () => {
               {/* How to Get Your PDF */}
               <div className="bg-slate-50 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <HugeiconsIcon
-                    icon={DocumentValidationIcon}
+                  <UIIcon
+                    iconName="info-circle"
                     className="w-5 h-5 text-primary"
                   />
                   How to Get Your Travel History PDF
@@ -442,10 +411,7 @@ export const LandingPage = () => {
                   className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 mt-4 font-medium"
                 >
                   Request your travel history document
-                  <HugeiconsIcon
-                    icon={HandPointingRight01Icon}
-                    className="w-3 h-3"
-                  />
+                  <UIIcon iconName="hand-right" className="w-3 h-3" />
                 </a>
               </div>
 
@@ -456,8 +422,8 @@ export const LandingPage = () => {
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">
@@ -465,8 +431,8 @@ export const LandingPage = () => {
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">
@@ -474,8 +440,8 @@ export const LandingPage = () => {
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">
@@ -483,8 +449,8 @@ export const LandingPage = () => {
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">
@@ -492,8 +458,8 @@ export const LandingPage = () => {
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">
@@ -501,8 +467,8 @@ export const LandingPage = () => {
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
+                    <UIIcon
+                      iconName="check-circle"
                       className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
                     />
                     <span className="text-slate-700">

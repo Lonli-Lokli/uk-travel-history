@@ -13,3 +13,9 @@ export function formatDate(dateString: string): string {
   if (!dateString) return '';
   return dateString.split('-').reverse().join('/');
 }
+
+export class NeverError extends Error {
+  constructor(value: never) {
+    super(`Unexpected value: ${JSON.stringify(value)}`);
+  }
+}

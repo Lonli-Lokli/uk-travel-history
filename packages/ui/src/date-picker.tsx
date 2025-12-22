@@ -6,8 +6,7 @@ import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { cn } from '@uth/utils';
 import { Input } from './input';
 import { Calendar } from './calendar';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { Calendar01Icon } from '@hugeicons/core-free-icons';
+import { UIIcon } from './icon';
 
 interface DatePickerProps {
   value: string; // ISO date string (YYYY-MM-DD)
@@ -107,7 +106,7 @@ export function DatePicker({
             )}
             type="button"
           >
-            <HugeiconsIcon icon={Calendar01Icon} className="h-4 w-4" /> 
+            <UIIcon iconName="calendar" className="h-4 w-4" />
           </button>
         </PopoverPrimitive.Trigger>
         <PopoverPrimitive.Portal>

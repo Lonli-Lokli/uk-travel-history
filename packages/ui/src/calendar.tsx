@@ -4,15 +4,9 @@ import * as React from 'react';
 import 'react-day-picker/style.css';
 
 import { DayFlag, DayPicker } from 'react-day-picker';
-import { HugeiconsIcon } from '@hugeicons/react';
-import {
-  ArrowDown01Icon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  ArrowUp01Icon,
-} from '@hugeicons/core-free-icons';
 
 import { cn } from '@uth/utils';
+import { UIIcon } from './icon';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -51,13 +45,13 @@ export const Calendar = ({
 const Chevron = ({ orientation = 'left' }) => {
   switch (orientation) {
     case 'left':
-      return <HugeiconsIcon icon={ArrowLeft01Icon} className="h-6 w-6" />;
+      return <UIIcon iconName="arrow-left" className="h-6 w-6" />;
     case 'right':
-      return <HugeiconsIcon icon={ArrowRight01Icon} className="h-6 w-6" />;
+      return <UIIcon iconName="arrow-right" className="h-6 w-6" />;
     case 'up':
-      return <HugeiconsIcon icon={ArrowUp01Icon} className="h-6 w-6" />;
+      return <UIIcon iconName="arrow-up" className="h-6 w-6" />;
     case 'down':
-      return <HugeiconsIcon icon={ArrowDown01Icon} className="h-6 w-6" />;
+      return <UIIcon iconName="arrow-down" className="h-6 w-6" />;
     default:
       return null;
   }

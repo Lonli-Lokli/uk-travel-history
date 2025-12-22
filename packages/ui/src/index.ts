@@ -10,5 +10,5 @@ export * from './use-toast';
 export * from './select';
 export * from './calendar';
 export * from './date-picker';
-export * from './editable-cell';
 export * from './radio-group';
+export * from './icon';

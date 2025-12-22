@@ -3,15 +3,7 @@
 import { observer } from 'mobx-react-lite';
 import { travelStore } from '@uth/stores';
 import { formatDate } from '@uth/utils';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@uth/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { AlertTriangle, CheckCircle, MultiplicationSignCircleIcon } from '@hugeicons/core-free-icons';
-
+import { Card, CardContent, CardHeader, CardTitle, UIIcon } from '@uth/ui';
 
 export const ValidationStatusCard = observer(() => {
   const validation = travelStore.validation;
@@ -20,11 +12,12 @@ export const ValidationStatusCard = observer(() => {
   // Case 1: Required fields missing (gating)
   if (!hasRequiredFields) {
     const missingFields: string[] = [];
-    if (!travelStore.vignetteEntryDate) missingFields.push('Vignette Entry Date');
+    if (!travelStore.vignetteEntryDate)
+      missingFields.push('Vignette Entry Date');
     if (!travelStore.visaStartDate) missingFields.push('Visa Start Date');
     if (!travelStore.ilrTrack) missingFields.push('ILR Track');
     const incompleteTrips = travelStore.trips.filter(
-      (t) => !t.outDate || !t.inDate
+      (t) => !t.outDate || !t.inDate,
     );
     if (incompleteTrips.length > 0) {
       missingFields.push(`${incompleteTrips.length} incomplete trip(s)`);
@@ -34,7 +27,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-amber-50 border-amber-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-amber-900">
-            <HugeiconsIcon icon={AlertTriangle} className="w-4 h-4" />
+            <UIIcon iconName="alert" className="w-4 h-4" />
             Required Information Missing
           </CardTitle>
         </CardHeader>
@@ -64,7 +57,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-green-50 border-green-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-green-900">
-            <HugeiconsIcon icon={CheckCircle} className="w-4 h-4" />
+            <UIIcon iconName="check-circle" className="w-4 h-4" />
             ILR Eligible
           </CardTitle>
         </CardHeader>
@@ -86,18 +79,21 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-red-50 border-red-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-red-900">
-            <HugeiconsIcon icon={MultiplicationSignCircleIcon} className="w-4 h-4" />
+            <UIIcon iconName="circle-x" className="w-4 h-4" />
             NOT ELIGIBLE - Application Date Too Early
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-red-800 mb-2 font-semibold">{reason.message}</p>
+          <p className="text-sm text-red-800 mb-2 font-semibold">
+            {reason.message}
+          </p>
           <p className="text-sm text-red-800">
             <strong>Earliest allowed date:</strong>{' '}
             {formatDate(reason.earliestAllowedDate)}
           </p>
           <p className="text-xs text-red-700 mt-2">
-            You cannot apply for ILR before completing the required continuous residence period.
+            You cannot apply for ILR before completing the required continuous
+            residence period.
           </p>
         </CardContent>
       </Card>
@@ -109,7 +105,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-red-50 border-red-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-red-900">
-            <HugeiconsIcon icon={AlertTriangle} className="w-4 h-4" />
+            <UIIcon iconName="alert-triangle" className="w-4 h-4" />
             Excessive Absence Detected
           </CardTitle>
         </CardHeader>
@@ -149,7 +145,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-orange-50 border-orange-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-orange-900">
-            <HugeiconsIcon icon={AlertCircle} className="w-4 h-4" />
+            <UIIcon iconName="alert-circle" className="w-4 h-4" />
             Input Error
           </CardTitle>
         </CardHeader>
@@ -165,7 +161,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-yellow-50 border-yellow-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-yellow-900">
-            <XCircle className="w-4 h-4" />
+            <UIIcon iconName="x" className="w-4 h-4" />
             Incomplete Trips
           </CardTitle>
         </CardHeader>

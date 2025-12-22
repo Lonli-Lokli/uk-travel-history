@@ -1,11 +1,10 @@
 'use client';
 
-import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
-import { Card, CardContent } from '@uth/ui';
+import { Card, CardContent, IconName, UIIcon } from '@uth/ui';
 import { ReactNode } from 'react';
 
 interface StatCardProps {
-  icon: IconSvgElement;
+  icon: IconName;
   value: string | number;
   label: string;
   subtitle?: ReactNode;
@@ -54,7 +53,7 @@ const variantStyles = {
 };
 
 export const StatCard = ({
-  icon: Icon,
+  icon,
   value,
   label,
   subtitle,
@@ -70,7 +69,7 @@ export const StatCard = ({
           <div
             className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
           >
-            <HugeiconsIcon icon={Icon} className={`w-4 h-4 ${styles.iconColor}`} />
+            <UIIcon iconName={icon} className={`w-4 h-4 ${styles.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
             <p

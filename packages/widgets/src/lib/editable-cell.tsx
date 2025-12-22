@@ -3,11 +3,7 @@
 import * as React from 'react';
 import { parse } from 'date-fns';
 import { cn } from '@uth/utils';
-import { Input } from './input';
-import { DatePicker } from './date-picker';
-import { Button } from './button';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { PencilEdit01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Button, DatePicker, Input, UIIcon } from '@uth/ui';
 
 interface EditableCellProps {
   value: string;
@@ -102,7 +98,10 @@ export function EditableCell({
         onClick={() => setIsEditing(true)}
       >
         <span className="truncate">{displayValue || value || placeholder}</span>
-        <HugeiconsIcon icon={PencilEdit01Icon} className="w-3 h-3 opacity-0 group-hover:opacity-50 ml-1 flex-shrink-0" />
+        <UIIcon
+          iconName="pencil"
+          className="w-3 h-3 opacity-0 group-hover:opacity-50 ml-1 flex-shrink-0"
+        />
       </div>
     );
   }
@@ -124,7 +123,7 @@ export function EditableCell({
         onClick={handleSave}
         type="button"
       >
-        <HugeiconsIcon icon={Tick02Icon} className="h-3 w-3 text-green-600" />
+        <UIIcon iconName="check" className="h-3 w-3 text-green-600" />
       </Button>
       <Button
         size="icon"
@@ -133,7 +132,7 @@ export function EditableCell({
         onClick={handleCancel}
         type="button"
       >
-        <X className="h-3 w-3 text-red-600" />
+        <UIIcon iconName="x" className="h-3 w-3 text-red-600" />
       </Button>
     </div>
   );
