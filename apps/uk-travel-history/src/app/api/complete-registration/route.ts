@@ -48,7 +48,10 @@ export async function POST(request: NextRequest) {
           endpoint: 'complete-registration',
         },
       });
-      logger.error('[Complete Registration] Token verification failed:', authError);
+      logger.error(
+        '[Complete Registration] Token verification failed:',
+        authError,
+      );
       return NextResponse.json(
         { error: 'Invalid authentication token' },
         { status: 401 },
@@ -67,10 +70,7 @@ export async function POST(request: NextRequest) {
         providedUserId: userId,
         authenticatedUserId,
       });
-      return NextResponse.json(
-        { error: 'User ID mismatch' },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: 'User ID mismatch' }, { status: 403 });
     }
 
     // Validate session_id format
@@ -128,11 +128,14 @@ export async function POST(request: NextRequest) {
     const customerId = session.customer as string;
 
     if (!subscriptionId || !customerId) {
-      logger.error('[Complete Registration] Missing subscription or customer ID', {
-        sessionId: session_id,
-        subscriptionId,
-        customerId,
-      });
+      logger.error(
+        '[Complete Registration] Missing subscription or customer ID',
+        {
+          sessionId: session_id,
+          subscriptionId,
+          customerId,
+        },
+      );
       return NextResponse.json(
         { error: 'Invalid session data' },
         { status: 400 },
@@ -140,9 +143,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch subscription details
-    const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
-      subscriptionId,
-    );
+    const subscriptionResponse =
+      await StripeAPI.subscriptions.retrieve(subscriptionId);
 
     // Extract subscription data from Response wrapper
     // Using any here because Stripe SDK types can vary between versions

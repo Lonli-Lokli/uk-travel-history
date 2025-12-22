@@ -216,7 +216,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     // Handle authentication/authorization errors
-    if (error && typeof error === 'object' && 'name' in error && error.name === 'AuthError') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'name' in error &&
+      error.name === 'AuthError'
+    ) {
       return createAuthErrorResponse(error);
     }
 

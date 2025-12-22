@@ -26,7 +26,7 @@ export const FEATURE_KEYS = {
 
 export type FeatureFlagKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
 
-const DEFAULT_FEATURE_STATES: Record<FeatureFlagKey, boolean> = {
+export const DEFAULT_FEATURE_STATES: Record<FeatureFlagKey, boolean> = {
   // Master switches
   [FEATURE_KEYS.MONETIZATION]: false,
   [FEATURE_KEYS.FIREBASE_AUTH]: false,

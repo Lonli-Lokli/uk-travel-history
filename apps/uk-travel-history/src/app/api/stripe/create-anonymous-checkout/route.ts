@@ -60,8 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the app URL for success/cancel redirects
-    const appUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     // Create Stripe Checkout session (anonymous - no customer_email preset)
     const session = await StripeAPI.checkout.sessions.create({

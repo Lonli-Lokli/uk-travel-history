@@ -19,8 +19,9 @@ export interface AuthContext {
  *
  * @throws {AuthError} If authentication fails or subscription is not active
  */
-export async function verifyAuth(request: NextRequest): Promise<AuthContext | null> {
-
+export async function verifyAuth(
+  request: NextRequest,
+): Promise<AuthContext | null> {
   const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
   if (isAuthEnabled === false) {
     return Promise.resolve(null);
@@ -61,7 +62,10 @@ export async function verifyAuth(request: NextRequest): Promise<AuthContext | nu
         userId: decodedToken.uid,
         status: subscriptionStatus,
       });
-      throw new AuthError('Subscription not active. Please update payment method.', 403);
+      throw new AuthError(
+        'Subscription not active. Please update payment method.',
+        403,
+      );
     }
 
     return {
@@ -112,9 +116,12 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
 
     // Fail-closed: if no config, assume all features are premium
     if (!premiumFeatures || premiumFeatures.length === 0) {
-      logger.warn('[Feature Check] Edge Config unavailable or empty - blocking all features', {
-        featureId,
-      });
+      logger.warn(
+        '[Feature Check] Edge Config unavailable or empty - blocking all features',
+        {
+          featureId,
+        },
+      );
       return true; // Block access
     }
 
@@ -181,7 +188,7 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
  */
 export async function requirePaidFeature(
   request: NextRequest,
-  featureId: string
+  featureId: string,
 ): Promise<AuthContext | null> {
   // Step 1: Check if the feature is enabled via feature flags
   // This allows us to disable features at runtime without code changes
@@ -225,7 +232,7 @@ export async function requirePaidFeature(
 export class AuthError extends Error {
   constructor(
     message: string,
-    public statusCode: number
+    public statusCode: number,
   ) {
     super(message);
     this.name = 'AuthError';
@@ -242,7 +249,7 @@ export function createAuthErrorResponse(error: unknown): NextResponse {
         error: error.message,
         code: error.name,
       },
-      { status: error.statusCode }
+      { status: error.statusCode },
     );
   }
 
@@ -255,8 +262,5 @@ export function createAuthErrorResponse(error: unknown): NextResponse {
     },
   });
 
-  return NextResponse.json(
-    { error: 'Internal server error' },
-    { status: 500 }
-  );
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }

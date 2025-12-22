@@ -56,7 +56,7 @@ describe('Server Auth Middleware', () => {
 
       await expect(verifyAuth(request)).rejects.toThrow(AuthError);
       await expect(verifyAuth(request)).rejects.toThrow(
-        'Missing or invalid Authorization header'
+        'Missing or invalid Authorization header',
       );
     });
 
@@ -133,7 +133,7 @@ describe('Server Auth Middleware', () => {
 
       await expect(verifyAuth(request)).rejects.toThrow(AuthError);
       await expect(verifyAuth(request)).rejects.toThrow(
-        'No active subscription found'
+        'No active subscription found',
       );
     });
 
@@ -165,7 +165,7 @@ describe('Server Auth Middleware', () => {
 
       await expect(verifyAuth(request)).rejects.toThrow(AuthError);
       await expect(verifyAuth(request)).rejects.toThrow(
-        'Subscription not active'
+        'Subscription not active',
       );
     });
   });
@@ -211,7 +211,7 @@ describe('Server Auth Middleware', () => {
     const setupMocks = (
       subscriptionStatus = 'active',
       featureEnabled = true,
-      isPremiumFeature = true
+      isPremiumFeature = true,
     ) => {
       const mockAuth = {
         verifyIdToken: vi.fn().mockResolvedValue({
@@ -251,12 +251,12 @@ describe('Server Auth Middleware', () => {
 
       const request = createMockRequest('valid-token');
 
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow(AuthError);
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow('This feature is currently disabled');
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        AuthError,
+      );
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        'This feature is currently disabled',
+      );
     });
 
     it('should allow access when feature is enabled and user has active subscription', async () => {
@@ -291,12 +291,12 @@ describe('Server Auth Middleware', () => {
 
       const request = createMockRequest('valid-token');
 
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow(AuthError);
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow('Subscription not active');
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        AuthError,
+      );
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        'Subscription not active',
+      );
     });
 
     it('should check feature enablement before authentication', async () => {
@@ -304,9 +304,9 @@ describe('Server Auth Middleware', () => {
 
       const request = createMockRequest('valid-token');
 
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow('This feature is currently disabled');
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        'This feature is currently disabled',
+      );
 
       // Verify authentication was NOT called since feature is disabled
       expect(getAdminAuth).not.toHaveBeenCalled();
@@ -317,9 +317,9 @@ describe('Server Auth Middleware', () => {
 
       const request = createMockRequest(); // No auth token
 
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow('This feature is currently disabled');
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        'This feature is currently disabled',
+      );
 
       // Should fail on feature check, not auth
       expect(getAdminAuth).not.toHaveBeenCalled();
@@ -385,9 +385,9 @@ describe('Server Auth Middleware', () => {
 
       const request = createMockRequest('valid-token');
 
-      await expect(
-        requirePaidFeature(request, 'excel_export')
-      ).rejects.toThrow('This feature is currently disabled');
+      await expect(requirePaidFeature(request, 'excel_export')).rejects.toThrow(
+        'This feature is currently disabled',
+      );
 
       // Now enable the feature - should succeed
       vi.mocked(isFeatureEnabled).mockResolvedValue(true);

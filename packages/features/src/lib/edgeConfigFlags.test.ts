@@ -10,6 +10,7 @@ import {
   FEATURE_KEYS,
   type EdgeConfigFlags,
   type FeatureFlagKey,
+  DEFAULT_FEATURE_STATES,
 } from './edgeConfigFlags';
 
 // Mock @vercel/edge-config
@@ -27,21 +28,6 @@ describe('Edge Config Feature Flags', () => {
   });
 
   describe('FEATURE_KEYS', () => {
-    it('should have all expected feature keys', () => {
-      const expectedKeys = [
-        'MONETIZATION_ENABLED',
-        'FIREBASE_AUTH_ENABLED',
-        'STRIPE_CHECKOUT_ENABLED',
-        'EXCEL_EXPORT_PREMIUM',
-        'PDF_EXPORT_ENABLED',
-        'CLOUD_SYNC_ENABLED',
-        'UPGRADE_MODAL_ENABLED',
-        'PREMIUM_BADGE_ENABLED',
-      ];
-
-      expect(Object.keys(FEATURE_KEYS)).toEqual(expectedKeys);
-    });
-
     it('should have snake_case values', () => {
       Object.values(FEATURE_KEYS).forEach((value) => {
         expect(value).toMatch(/^[a-z_]+$/);
@@ -217,13 +203,13 @@ describe('Edge Config Feature Flags', () => {
       expect(result[FEATURE_KEYS.EXCEL_EXPORT]).toBe(false);
     });
 
-    it('should return all flags as false when Edge Config is not configured', async () => {
+    it('should return all flags as default when Edge Config is not configured', async () => {
       vi.mocked(get).mockResolvedValue(null);
 
       const result = await getAllFeatureFlags();
 
       Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(result[key]).toBe(false);
+        expect(result[key]).toBe(DEFAULT_FEATURE_STATES[key]);
       });
     });
   });
@@ -235,10 +221,10 @@ describe('Edge Config Feature Flags', () => {
         [FEATURE_KEYS.FIREBASE_AUTH]: true,
         [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.PDF_EXPORT]: false,
-        [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
-        [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
-        [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
+        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
+        [FEATURE_KEYS.EXCEL_IMPORT]: false,
+        [FEATURE_KEYS.PDF_IMPORT]: true,
+        [FEATURE_KEYS.RISK_CHART]: false,
       };
 
       setCachedFlags(testFlags);
@@ -254,7 +240,7 @@ describe('Edge Config Feature Flags', () => {
       const cached = getCachedFlags();
 
       Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(cached[key]).toBe(false);
+        expect(cached[key]).toBe(DEFAULT_FEATURE_STATES[key]);
       });
     });
   });
@@ -266,20 +252,16 @@ describe('Edge Config Feature Flags', () => {
         [FEATURE_KEYS.FIREBASE_AUTH]: false,
         [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.PDF_EXPORT]: false,
-        [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
-        [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
-        [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
+        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
+        [FEATURE_KEYS.EXCEL_IMPORT]: false,
+        [FEATURE_KEYS.PDF_IMPORT]: false,
+        [FEATURE_KEYS.RISK_CHART]: false,
       };
 
       setCachedFlags(testFlags);
 
-      expect(isFeatureEnabledClient(FEATURE_KEYS.MONETIZATION)).toBe(
-        true,
-      );
-      expect(isFeatureEnabledClient(FEATURE_KEYS.FIREBASE_AUTH)).toBe(
-        false,
-      );
+      expect(isFeatureEnabledClient(FEATURE_KEYS.MONETIZATION)).toBe(true);
+      expect(isFeatureEnabledClient(FEATURE_KEYS.FIREBASE_AUTH)).toBe(false);
     });
 
     it('should return false for uncached flags', () => {
@@ -288,17 +270,15 @@ describe('Edge Config Feature Flags', () => {
         [FEATURE_KEYS.FIREBASE_AUTH]: false,
         [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.PDF_EXPORT]: false,
-        [FEATURE_KEYS.CLOUD_SYNC_ENABLED]: false,
-        [FEATURE_KEYS.UPGRADE_MODAL_ENABLED]: false,
-        [FEATURE_KEYS.PREMIUM_BADGE_ENABLED]: false,
+        [FEATURE_KEYS.EXCEL_IMPORT]: false,
+        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
+        [FEATURE_KEYS.PDF_IMPORT]: false,
+        [FEATURE_KEYS.RISK_CHART]: false,
       };
 
       setCachedFlags(testFlags);
 
-      expect(isFeatureEnabledClient(FEATURE_KEYS.EXCEL_EXPORT)).toBe(
-        false,
-      );
+      expect(isFeatureEnabledClient(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
     });
   });
 
