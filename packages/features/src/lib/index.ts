@@ -3,6 +3,9 @@ export {
   isFeatureEnabled,
   FEATURE_KEYS,
   getAllFeatureFlags,
+  isFeatureEnabledClient,
+  setCachedFlags,
+  type FeatureFlagKey,
 } from './edgeConfigFlags';
 
 // Feature tier system

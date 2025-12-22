@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check if Stripe checkout is enabled via feature flags
     const stripeEnabled = await isFeatureEnabled(
-      FEATURE_KEYS.STRIPE_CHECKOUT_ENABLED,
+      FEATURE_KEYS.STRIPE_CHECKOUT,
     );
     if (!stripeEnabled) {
       logger.warn('Stripe checkout feature is disabled');
