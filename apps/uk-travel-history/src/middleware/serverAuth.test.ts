@@ -209,9 +209,9 @@ describe('Server Auth Middleware', () => {
 
   describe('requirePaidFeature', () => {
     const setupMocks = (
-      subscriptionStatus: string = 'active',
-      featureEnabled: boolean = true,
-      isPremiumFeature: boolean = true
+      subscriptionStatus = 'active',
+      featureEnabled = true,
+      isPremiumFeature = true
     ) => {
       const mockAuth = {
         verifyIdToken: vi.fn().mockResolvedValue({

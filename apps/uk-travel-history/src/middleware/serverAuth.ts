@@ -3,7 +3,7 @@ import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
-import { isFeatureEnabled } from '@uth/features';
+import { FEATURE_KEYS, isFeatureEnabled } from '@uth/features';
 
 export interface AuthContext {
   userId: string;
@@ -19,7 +19,13 @@ export interface AuthContext {
  *
  * @throws {AuthError} If authentication fails or subscription is not active
  */
-export async function verifyAuth(request: NextRequest): Promise<AuthContext> {
+export async function verifyAuth(request: NextRequest): Promise<AuthContext | null> {
+
+  const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+  if (isAuthEnabled === false) {
+    return Promise.resolve(null);
+  }
+
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -176,7 +182,7 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
 export async function requirePaidFeature(
   request: NextRequest,
   featureId: string
-): Promise<AuthContext> {
+): Promise<AuthContext | null> {
   // Step 1: Check if the feature is enabled via feature flags
   // This allows us to disable features at runtime without code changes
   const enabled = await isFeatureEnabled(featureId as any);
@@ -197,7 +203,7 @@ export async function requirePaidFeature(
   if (!isPremium) {
     // Feature is not premium - allow access without subscription check
     logger.log('[Paid Feature] Free feature accessed', {
-      userId: authContext.userId,
+      userId: authContext?.userId,
       featureId,
     });
     return authContext;
@@ -206,7 +212,7 @@ export async function requirePaidFeature(
   // Feature IS premium - subscription already verified in verifyAuth()
   // If we're here, user has active subscription, so they can access it
   logger.log('[Paid Feature] Premium feature accessed', {
-    userId: authContext.userId,
+    userId: authContext?.userId,
     featureId,
   });
 
