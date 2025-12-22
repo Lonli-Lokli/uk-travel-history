@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/stripe-server';
+import { StripeAPI } from '@uth/payments-server';
 import { logger } from '@uth/utils';
-import { getAdminFirestore } from '@uth/firebase-server';
+import { getAdminFirestore } from '@uth/auth-server';
 import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';

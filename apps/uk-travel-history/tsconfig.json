@@ -59,19 +59,19 @@
       "path": "../../packages/ui"
     },
     {
-      "path": "../../packages/features"
+      "path": "../../packages/parser"
     },
     {
-      "path": "../../packages/parser"
+      "path": "../../packages/features"
     },
     {
       "path": "../../packages/utils"
     },
     {
-      "path": "../../packages/firebase-server"
+      "path": "../../packages/auth-server"
     },
     {
-      "path": "../../packages/stripe-server"
+      "path": "../../packages/payments-server"
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@uth/firebase-client",
+  "name": "@uth/auth-server",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "./package.json": "./package.json"
   },
   "nx": {
-    "name": "firebase-client"
+    "name": "auth-server"
   },
   "dependencies": {}
 }

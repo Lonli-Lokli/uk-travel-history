@@ -16,7 +16,7 @@ import {
   auth,
   getAuthInstance,
   getFunctionsInstance,
-} from '@uth/firebase-client';
+} from '@uth/auth-client';
 import * as Sentry from '@sentry/nextjs';
 
 class AuthStore {

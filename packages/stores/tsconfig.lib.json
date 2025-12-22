@@ -23,7 +23,7 @@
       "path": "../calculators/tsconfig.lib.json"
     },
     {
-      "path": "../firebase-client/tsconfig.lib.json"
+      "path": "../auth-client/tsconfig.lib.json"
     }
   ],
   "exclude": [

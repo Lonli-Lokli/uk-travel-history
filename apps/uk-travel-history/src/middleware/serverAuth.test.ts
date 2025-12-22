@@ -8,7 +8,7 @@ import {
   AuthError,
   createAuthErrorResponse,
 } from './serverAuth';
-import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
+import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
 import { isFeatureEnabled } from '@uth/features';
 
 // Mock dependencies
@@ -16,7 +16,7 @@ vi.mock('@vercel/edge-config', () => ({
   get: vi.fn(),
 }));
 
-vi.mock('@uth/firebase-server', () => ({
+vi.mock('@uth/auth-server', () => ({
   getAdminAuth: vi.fn(),
   getAdminFirestore: vi.fn(),
 }));

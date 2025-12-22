@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI, STRIPE_PRICES } from '@uth/stripe-server';
+import { StripeAPI, STRIPE_PRICES } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';

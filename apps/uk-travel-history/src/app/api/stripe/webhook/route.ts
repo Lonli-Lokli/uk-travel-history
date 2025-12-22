@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/stripe-server';
-import { getAdminFirestore } from '@uth/firebase-server';
+import { StripeAPI } from '@uth/payments-server';
+import { getAdminFirestore } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';

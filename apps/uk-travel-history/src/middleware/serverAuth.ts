@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
+import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';

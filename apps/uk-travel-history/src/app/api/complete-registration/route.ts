@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/stripe-server';
-import { getAdminAuth, getAdminFirestore } from '@uth/firebase-server';
+import { StripeAPI } from '@uth/payments-server';
+import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
-import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;

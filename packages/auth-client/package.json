@@ -1,5 +1,5 @@
 {
-  "name": "@uth/stripe-server",
+  "name": "@uth/auth-client",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "./package.json": "./package.json"
   },
   "nx": {
-    "name": "stripe-server"
+    "name": "auth-client"
   },
   "dependencies": {}
 }

@@ -22,22 +22,22 @@
       "path": "./packages/features"
     },
     {
-      "path": "./packages/firebase-client"
-    },
-    {
-      "path": "./packages/firebase-server"
-    },
-    {
       "path": "./packages/widgets"
     },
     {
       "path": "./packages/stores"
     },
     {
-      "path": "./packages/stripe-client"
+      "path": "./packages/payments-client"
     },
     {
-      "path": "./packages/stripe-server"
+      "path": "./packages/payments-server"
+    },
+    {
+      "path": "./packages/auth-client"
+    },
+    {
+      "path": "./packages/auth-server"
     }
   ]
 }
