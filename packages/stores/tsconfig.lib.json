@@ -23,6 +23,9 @@
       "path": "../calculators/tsconfig.lib.json"
     },
     {
+      "path": "../features/tsconfig.lib.json"
+    },
+    {
       "path": "../firebase-client/tsconfig.lib.json"
     }
   ],
