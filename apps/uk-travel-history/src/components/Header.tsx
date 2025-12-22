@@ -23,6 +23,7 @@ import {
   User,
   LogOut,
   Fingerprint,
+  Sheet,
 } from 'lucide-react';
 import { LoginModal } from './LoginModal';
 import { useFeatureFlags } from '@uth/widgets';
@@ -127,7 +128,7 @@ export const Header = observer(
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <Sheet className="h-4 w-4 mr-2" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -160,7 +161,7 @@ export const Header = observer(
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <Sheet className="h-4 w-4 mr-2" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

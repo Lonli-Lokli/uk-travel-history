@@ -1,7 +1,14 @@
 'use client';
 
 import { Button, Card, CardContent } from '@uth/ui';
-import { FileText, Plus, Upload, ArrowRight, CheckCircle, Clipboard } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  ArrowRight,
+  CheckCircle,
+  Clipboard,
+  Sheet,
+} from 'lucide-react';
 
 interface EmptyStateProps {
   onImportClick: () => void;
@@ -14,7 +21,7 @@ export const EmptyState = ({
   onImportClick,
   onImportCsvClick,
   onImportClipboardClick,
-  onAddManuallyClick
+  onAddManuallyClick,
 }: EmptyStateProps) => {
   return (
     <div className="max-w-4xl mx-auto py-8 sm:py-12">
@@ -29,19 +36,19 @@ export const EmptyState = ({
               Welcome to UK Travel Parser
             </h2>
             <p className="text-slate-600 text-sm sm:text-base">
-              Track your UK travel history and calculate continuous residence for settlement applications
+              Track your UK travel history and calculate continuous residence
+              for settlement applications
             </p>
           </div>
 
           {/* Quick Start Options */}
           <div className="bg-slate-50 rounded-lg p-5 mb-8">
-            <h3 className="font-semibold text-slate-900 mb-3 text-sm">Get Started</h3>
+            <h3 className="font-semibold text-slate-900 mb-3 text-sm">
+              Get Started
+            </h3>
             <div className="space-y-2">
-              <Button
-                className="w-full justify-start"
-                onClick={onImportClick}
-              >
-                <Upload className="h-4 w-4 mr-2" />
+              <Button className="w-full justify-start" onClick={onImportClick}>
+                <FileText className="h-4 w-4 mr-2" />
                 Import from PDF
               </Button>
               <Button
@@ -49,8 +56,8 @@ export const EmptyState = ({
                 className="w-full justify-start"
                 onClick={onImportCsvClick}
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Import from CSV/Xlsx
+                <Sheet className="h-4 w-4 mr-2" />
+                Import from Excel
               </Button>
               <Button
                 variant="outline"
@@ -85,9 +92,12 @@ export const EmptyState = ({
                   <span className="text-xs font-semibold text-primary">1</span>
                 </div>
                 <div>
-                  <span className="font-medium">Request your travel history document</span>
+                  <span className="font-medium">
+                    Request your travel history document
+                  </span>
                   <p className="text-xs text-slate-600 mt-1">
-                    Use the official UK Visas and Immigration Subject Access Request portal to request your travel document
+                    Use the official UK Visas and Immigration Subject Access
+                    Request portal to request your travel document
                   </p>
                 </div>
               </li>
@@ -98,7 +108,8 @@ export const EmptyState = ({
                 <div>
                   <span className="font-medium">Wait for processing</span>
                   <p className="text-xs text-slate-600 mt-1">
-                    The Home Office typically responds within 40 days with your travel history PDF
+                    The Home Office typically responds within 40 days with your
+                    travel history PDF
                   </p>
                 </div>
               </li>
@@ -127,31 +138,45 @@ export const EmptyState = ({
 
           {/* What This Tool Does */}
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="font-semibold text-slate-900 mb-4">What This Tool Does</h3>
+            <h3 className="font-semibold text-slate-900 mb-4">
+              What This Tool Does
+            </h3>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Calculate days outside the UK</span>
+                <span className="text-slate-700">
+                  Calculate days outside the UK
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Track continuous residence period</span>
+                <span className="text-slate-700">
+                  Track continuous residence period
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Verify 180-day absence limit</span>
+                <span className="text-slate-700">
+                  Verify 180-day absence limit
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Export formatted Excel reports</span>
+                <span className="text-slate-700">
+                  Export formatted Excel reports
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Track vignette & visa dates</span>
+                <span className="text-slate-700">
+                  Track vignette & visa dates
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-700">Follows Home Office guidance</span>
+                <span className="text-slate-700">
+                  Follows Home Office guidance
+                </span>
               </div>
             </div>
           </div>

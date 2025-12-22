@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, toast } from '@uth/ui';
 import {
   FileText,
-  Plus,
-  Upload,
   ArrowRight,
   CheckCircle,
   Plane,
   Coffee,
   Clipboard,
   Loader2,
+  Sheet,
+  Hammer,
 } from 'lucide-react';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
@@ -289,7 +289,7 @@ export const LandingPage = () => {
                     {activeAction === 'pdf' ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <Upload className="h-4 w-4 mr-2" />
+                      <FileText className="h-4 w-4 mr-2" />
                     )}
                     Import from PDF
                     {activeAction === 'pdf' && (
@@ -307,7 +307,7 @@ export const LandingPage = () => {
                     {activeAction === 'csv' ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <FileText className="h-4 w-4 mr-2" />
+                      <Sheet className="h-4 w-4 mr-2" />
                     )}
                     Import from Excel
                     {activeAction === 'csv' && (
@@ -341,8 +341,8 @@ export const LandingPage = () => {
                       onClick={handleAddManually}
                       disabled={isImporting || activeAction !== null}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Travel Dates Manually
+                      <Hammer className="h-4 w-4 mr-2" />
+                      Or add travel dates manually
                     </Button>
                   </div>
                 </div>
