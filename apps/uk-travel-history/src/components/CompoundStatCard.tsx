@@ -31,7 +31,7 @@ const variantStyles = {
   },
   neutral: {
     card: 'bg-slate-100 border border-slate-200',
-    iconBg: 'bg-slate-300',
+    iconBg: 'bg-white/20',
     iconColor: 'text-slate-700',
     titleColor: 'text-slate-900',
     labelColor: 'text-slate-600',
