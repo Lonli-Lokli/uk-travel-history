@@ -10,22 +10,36 @@ import { logger } from '@uth/utils';
  */
 export const FEATURE_KEYS = {
   // Master switches
-  MONETIZATION_ENABLED: 'monetization_enabled',
-  FIREBASE_AUTH_ENABLED: 'firebase_auth_enabled',
-  STRIPE_CHECKOUT_ENABLED: 'stripe_checkout_enabled',
+  MONETIZATION: 'monetization',
+  FIREBASE_AUTH: 'firebase_auth',
+  STRIPE_CHECKOUT: 'stripe_checkout',
 
   // Premium features
-  EXCEL_EXPORT_PREMIUM: 'excel_export_premium',
-  PDF_EXPORT_ENABLED: 'pdf_export_enabled',
-  CLOUD_SYNC_ENABLED: 'cloud_sync_enabled',
+  EXCEL_EXPORT: 'excel_export',
+  EXCEL_IMPORT: 'excel_import',
+  PDF_IMPORT: 'pdf_import',
+  CLIPBOARD_IMPORT: 'clipboard_import',
 
   // UI features
-  UPGRADE_MODAL_ENABLED: 'upgrade_modal_enabled',
-  PREMIUM_BADGE_ENABLED: 'premium_badge_enabled',
+  RISK_CHART: 'risk_chart',
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
 
+const DEFAULT_FEATURE_STATES: Record<FeatureFlagKey, boolean> = {
+  // Master switches
+  [FEATURE_KEYS.MONETIZATION]: false,
+  [FEATURE_KEYS.FIREBASE_AUTH]: false,
+  [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
+
+  // Premium features
+  [FEATURE_KEYS.EXCEL_EXPORT]: true,
+  [FEATURE_KEYS.EXCEL_IMPORT]: true,
+  [FEATURE_KEYS.PDF_IMPORT]: false,
+  [FEATURE_KEYS.CLIPBOARD_IMPORT]: true,
+  // UI features
+  [FEATURE_KEYS.RISK_CHART]: false,
+};
 /**
  * Feature flag configuration from Vercel Edge Config
  */
@@ -71,7 +85,7 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
   // Default all flags to false if not cached
   return Object.values(FEATURE_KEYS).reduce(
     (acc, key) => {
-      acc[key] = false;
+      acc[key] = DEFAULT_FEATURE_STATES[key];
       return acc;
     },
     {} as Record<FeatureFlagKey, boolean>,
@@ -109,7 +123,7 @@ export async function isFeatureEnabled(
       console.warn(
         `Edge Config not configured, defaulting ${featureKey} to disabled`,
       );
-      return false;
+      return DEFAULT_FEATURE_STATES[featureKey];
     }
 
     const flag = flags[featureKey];
@@ -135,7 +149,7 @@ export async function isFeatureEnabled(
     logger.error('[Feature Flags] Error checking feature flag', error, {
       featureKey,
     });
-    return false;
+    return DEFAULT_FEATURE_STATES[featureKey];
   }
 }
 
