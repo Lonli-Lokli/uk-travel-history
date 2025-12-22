@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import { format, parse, isValid } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { cn } from '@uth/utils';
 import { Input } from './input';
 import { Calendar } from './calendar';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Calendar01Icon } from '@hugeicons/core-free-icons';
 
 interface DatePickerProps {
   value: string; // ISO date string (YYYY-MM-DD)
@@ -106,7 +107,7 @@ export function DatePicker({
             )}
             type="button"
           >
-            <CalendarIcon className="h-4 w-4" />
+            <HugeiconsIcon icon={Calendar01Icon} className="h-4 w-4" /> 
           </button>
         </PopoverPrimitive.Trigger>
         <PopoverPrimitive.Portal>

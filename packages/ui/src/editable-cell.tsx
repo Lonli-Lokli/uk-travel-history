@@ -6,7 +6,8 @@ import { cn } from '@uth/utils';
 import { Input } from './input';
 import { DatePicker } from './date-picker';
 import { Button } from './button';
-import { Check, X, Pencil } from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { PencilEdit01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 
 interface EditableCellProps {
   value: string;
@@ -101,7 +102,7 @@ export function EditableCell({
         onClick={() => setIsEditing(true)}
       >
         <span className="truncate">{displayValue || value || placeholder}</span>
-        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 ml-1 flex-shrink-0" />
+        <HugeiconsIcon icon={PencilEdit01Icon} className="w-3 h-3 opacity-0 group-hover:opacity-50 ml-1 flex-shrink-0" />
       </div>
     );
   }
@@ -123,7 +124,7 @@ export function EditableCell({
         onClick={handleSave}
         type="button"
       >
-        <Check className="h-3 w-3 text-green-600" />
+        <HugeiconsIcon icon={Tick02Icon} className="h-3 w-3 text-green-600" />
       </Button>
       <Button
         size="icon"

@@ -1,14 +1,15 @@
 'use client';
 
 import { Button, Card, CardContent } from '@uth/ui';
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  FileText,
-  Plus,
-  ArrowRight,
-  CheckCircle,
+  ArrowRight02Icon,
+  CheckmarkCircle02Icon,
   Clipboard,
-  Sheet,
-} from 'lucide-react';
+  NoteAddIcon,
+  Pdf01Icon,
+  Xls01Icon,
+} from '@hugeicons/core-free-icons';
 
 interface EmptyStateProps {
   onImportClick: () => void;
@@ -30,7 +31,10 @@ export const EmptyState = ({
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-primary" />
+              <HugeiconsIcon
+                icon={Pdf01Icon}
+                className="w-8 h-8 text-primary"
+              />
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
               Welcome to UK Travel Parser
@@ -48,7 +52,7 @@ export const EmptyState = ({
             </h3>
             <div className="space-y-2">
               <Button className="w-full justify-start" onClick={onImportClick}>
-                <FileText className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={Pdf01Icon} className="h-4 w-4 mr-2" />
                 Import from PDF
               </Button>
               <Button
@@ -56,7 +60,7 @@ export const EmptyState = ({
                 className="w-full justify-start"
                 onClick={onImportCsvClick}
               >
-                <Sheet className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                 Import from Excel
               </Button>
               <Button
@@ -64,7 +68,7 @@ export const EmptyState = ({
                 className="w-full justify-start"
                 onClick={onImportClipboardClick}
               >
-                <Clipboard className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={Clipboard} className="h-4 w-4 mr-2" />
                 Import from Clipboard
               </Button>
               <div className="border-t border-slate-200 my-2 pt-2">
@@ -73,7 +77,7 @@ export const EmptyState = ({
                   className="w-full justify-start text-slate-600"
                   onClick={onAddManuallyClick}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <HugeiconsIcon icon={NoteAddIcon} className="h-4 w-4 mr-2" />
                   Add Travel Dates Manually
                 </Button>
               </div>
@@ -83,7 +87,10 @@ export const EmptyState = ({
           {/* How to Get Your PDF */}
           <div className="bg-slate-50 rounded-lg p-6 mb-6">
             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
+              <HugeiconsIcon
+                icon={Pdf01Icon}
+                className="w-5 h-5 text-primary"
+              />
               How to Get Your Travel History PDF
             </h3>
             <ol className="space-y-3 text-sm text-slate-700">
@@ -132,7 +139,7 @@ export const EmptyState = ({
               className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 mt-4 font-medium"
             >
               Request your travel history document
-              <ArrowRight className="w-3 h-3" />
+              <HugeiconsIcon icon={ArrowRight02Icon} className="w-3 h-3" />
             </a>
           </div>
 
@@ -143,37 +150,37 @@ export const EmptyState = ({
             </h3>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Calculate days outside the UK
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon}  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Track continuous residence period
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon}  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Verify 180-day absence limit
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon}  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Export formatted Excel reports
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon}  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Track vignette & visa dates
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon}  className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                 <span className="text-slate-700">
                   Follows Home Office guidance
                 </span>

@@ -11,23 +11,23 @@ import {
   DropdownMenuSeparator,
 } from '@uth/ui';
 import { FEATURE_KEYS } from '@uth/features';
-import {
-  Upload,
-  Download,
-  Plane,
-  Loader2,
-  Coffee,
-  FileText,
-  Clipboard,
-  ChevronDown,
-  User,
-  LogOut,
-  Fingerprint,
-  Sheet,
-} from 'lucide-react';
 import { LoginModal } from './LoginModal';
 import { useFeatureFlags } from '@uth/widgets';
 import { authStore, travelStore, uiStore } from '@uth/stores';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  Airplane01Icon,
+  ClipboardIcon,
+  Coffee02Icon,
+  Download01Icon,
+  FingerPrintScanIcon,
+  Happy01Icon,
+  Loading03Icon,
+  Logout05Icon,
+  Pdf01Icon,
+  Upload01Icon,
+  Xls01Icon,
+} from '@hugeicons/core-free-icons';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -58,7 +58,10 @@ export const Header = observer(
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-                <Plane className="w-3.5 h-3.5 text-white" />
+                <HugeiconsIcon
+                  icon={Airplane01Icon}
+                  className="w-3.5 h-3.5 text-white"
+                />
               </div>
               <div>
                 <h1 className="font-semibold text-slate-900 text-sm">
@@ -83,7 +86,10 @@ export const Header = observer(
                   size="sm"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <Coffee className="h-4 w-4 mr-1.5" />
+                  <HugeiconsIcon
+                    icon={Coffee02Icon}
+                    className="h-4 w-4 mr-1.5"
+                  />
                   Buy Me a Coffee
                 </Button>
               </a>
@@ -100,7 +106,7 @@ export const Header = observer(
                   size="icon"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <Coffee className="h-4 w-4" />
+                  <HugeiconsIcon icon={Coffee02Icon} className="h-4 w-4" />
                 </Button>
               </a>
 
@@ -114,26 +120,38 @@ export const Header = observer(
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="h-4 w-4 mr-1.5 animate-spin"
+                      />
                     ) : (
-                      <Upload className="h-4 w-4 mr-1.5" />
+                      <HugeiconsIcon
+                        icon={Upload01Icon}
+                        className="h-4 w-4 mr-1.5"
+                      />
                     )}
                     Import
-                    <ChevronDown className="h-3 w-3 ml-1" />
+                    <HugeiconsIcon
+                      icon={Upload01Icon}
+                      className="h-3 w-3 ml-1"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={onImportPdfClick}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Pdf01Icon} className="h-4 w-4 mr-2" />
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <Sheet className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
-                    <Clipboard className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon
+                      icon={ClipboardIcon}
+                      className="h-4 w-4 mr-2"
+                    />
                     From Clipboard
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -149,24 +167,24 @@ export const Header = observer(
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <HugeiconsIcon icon={Loading03Icon} className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Upload className="h-4 w-4" />
+                      <HugeiconsIcon icon={Upload01Icon} className="h-4 w-4" />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={onImportPdfClick}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Pdf01Icon} className="h-4 w-4 mr-2" />
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <Sheet className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
-                    <Clipboard className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={ClipboardIcon} className="h-4 w-4 mr-2" />
                     From Clipboard
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -180,18 +198,18 @@ export const Header = observer(
                     className="hidden sm:flex"
                     disabled={!hasTrips}
                   >
-                    <Download className="h-4 w-4 mr-1.5" />
+                    <HugeiconsIcon icon={Download01Icon} className="h-4 w-4 mr-1.5" />
                     Export
-                    <ChevronDown className="h-3 w-3 ml-1" />
+                    <HugeiconsIcon icon={Upload01Icon} className="h-3 w-3 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     Travel history only
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onExportClick('full')}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     Full backup
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -205,16 +223,16 @@ export const Header = observer(
                     className="sm:hidden"
                     disabled={!hasTrips}
                   >
-                    <Download className="h-4 w-4" />
+                    <HugeiconsIcon icon={Download01Icon} className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     Travel history only
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onExportClick('full')}>
-                    <FileText className="h-4 w-4 mr-2" />
+                    <HugeiconsIcon icon={Xls01Icon} className="h-4 w-4 mr-2" />
                     Full backup
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -227,7 +245,7 @@ export const Header = observer(
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
-                          <User className="h-4 w-4 mr-1.5" />
+                          <HugeiconsIcon icon={Happy01Icon} className="h-4 w-4 mr-1.5" />
                           <span className="hidden sm:inline">
                             {user.displayName ||
                               user.email?.split('@')[0] ||
@@ -250,7 +268,7 @@ export const Header = observer(
                         <DropdownMenuItem
                           onClick={() => uiStore.handleSignOut()}
                         >
-                          <LogOut className="h-4 w-4 mr-2" />
+                          <HugeiconsIcon icon={Logout05Icon} className="h-4 w-4 mr-2" />
                           Sign Out
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -261,7 +279,7 @@ export const Header = observer(
                       size="sm"
                       onClick={() => uiStore.openLoginModal()}
                     >
-                      <Fingerprint className="h-4 w-4 mr-1.5" />
+                      <HugeiconsIcon icon={FingerPrintScanIcon} className="h-4 w-4 mr-1.5" />
                       <span className="hidden sm:inline">Sign In</span>
                     </Button>
                   )}

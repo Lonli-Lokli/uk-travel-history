@@ -3,12 +3,8 @@
 import { observer } from 'mobx-react-lite';
 import { travelStore } from '@uth/stores';
 import { formatDate } from '@uth/utils';
-import {
-  Plane,
-  AlertTriangle,
-  Target,
-} from 'lucide-react';
 import { CompoundStatCard } from './CompoundStatCard';
+import { Airplane01Icon, Alert02Icon, Target02Icon } from '@hugeicons/core-free-icons';
 
 export const SummaryCards = observer(() => {
   const summary = travelStore.summary;
@@ -26,7 +22,7 @@ export const SummaryCards = observer(() => {
       {/* Combined Travel History & Time Tracking Card */}
       {hasContinuousLeave ? (
         <CompoundStatCard
-          icon={summary.hasExceededAllowedAbsense ? AlertTriangle : Plane}
+          icon={summary.hasExceededAllowedAbsense ? Alert02Icon : Airplane01Icon}
           title="Travel History & Time Tracking"
           stats={[
             {
@@ -75,7 +71,7 @@ export const SummaryCards = observer(() => {
         />
       ) : (
         <CompoundStatCard
-          icon={Plane}
+          icon={Airplane01Icon}
           title="Travel History"
           stats={[
             {
@@ -108,7 +104,7 @@ export const SummaryCards = observer(() => {
       {/* Combined ILR Status Card */}
       {hasILRStatus && validation && (
         <CompoundStatCard
-          icon={isEligible ? Target : AlertTriangle}
+          icon={isEligible ? Target02Icon : Alert02Icon}
           title="ILR Status & 180-Day Tracking"
           stats={
             isEligible && summary.ilrEligibilityDate

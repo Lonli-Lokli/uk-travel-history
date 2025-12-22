@@ -5,13 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
 import { authStore, paymentStore } from '@uth/stores';
 import { Button } from '@uth/ui';
-import {
-  Fingerprint,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  ArrowRight,
-} from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { FingerprintScanIcon } from '@hugeicons-pro/core-stroke-rounded';
 
 // Separate component for content that uses useSearchParams
 const RegistrationContent = observer(() => {
@@ -162,7 +157,7 @@ const RegistrationContent = observer(() => {
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
-              <Fingerprint className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <HugeiconsIcon icon={FingerprintScanIcon}  className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-900">
                 <p className="font-medium mb-1">Passkey Authentication</p>
                 <p>

@@ -12,7 +12,8 @@ import {
   Input,
   Label,
 } from '@uth/ui';
-import { Fingerprint, Loader2, AlertCircle } from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { AlertCircle, FingerPrintScanIcon, Loading03Icon } from '@hugeicons/core-free-icons';
 
 export const LoginModal = observer(() => {
   const isAuthenticating = authStore.isAuthenticating;
@@ -41,7 +42,7 @@ export const LoginModal = observer(() => {
 
         {!isPasskeySupported ? (
           <div className="flex flex-col items-center gap-4 py-6">
-            <AlertCircle className="h-12 w-12 text-destructive" />
+            <HugeiconsIcon icon={AlertCircle} className="h-12 w-12 text-destructive" />
             <p className="text-sm text-muted-foreground text-center">
               Passkeys are not supported in your browser. Please use a modern
               browser like Chrome, Safari, or Edge.
@@ -51,7 +52,7 @@ export const LoginModal = observer(() => {
           <div className="space-y-4">
             {error && (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <p>{error}</p>
               </div>
             )}
@@ -84,9 +85,9 @@ export const LoginModal = observer(() => {
               className="w-full"
             >
               {isAuthenticating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Fingerprint className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={FingerPrintScanIcon} className="h-4 w-4 mr-2" />
               )}
               {mode === 'signin' ? 'Sign In with Passkey' : 'Create Passkey'}
             </Button>

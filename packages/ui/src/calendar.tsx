@@ -1,15 +1,16 @@
 'use client';
 
-import {
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-} from 'lucide-react';
 import * as React from 'react';
-import "react-day-picker/style.css";
+import 'react-day-picker/style.css';
 
 import { DayFlag, DayPicker } from 'react-day-picker';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  ArrowDown01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  ArrowUp01Icon,
+} from '@hugeicons/core-free-icons';
 
 import { cn } from '@uth/utils';
 
@@ -50,13 +51,13 @@ export const Calendar = ({
 const Chevron = ({ orientation = 'left' }) => {
   switch (orientation) {
     case 'left':
-      return <ChevronLeftIcon className="h-6 w-6" />;
+      return <HugeiconsIcon icon={ArrowLeft01Icon} className="h-6 w-6" />;
     case 'right':
-      return <ChevronRightIcon className="h-6 w-6" />;
+      return <HugeiconsIcon icon={ArrowRight01Icon} className="h-6 w-6" />;
     case 'up':
-      return <ChevronUpIcon className="h-6 w-6" />;
+      return <HugeiconsIcon icon={ArrowUp01Icon} className="h-6 w-6" />;
     case 'down':
-      return <ChevronDownIcon className="h-6 w-6" />;
+      return <HugeiconsIcon icon={ArrowDown01Icon} className="h-6 w-6" />;
     default:
       return null;
   }

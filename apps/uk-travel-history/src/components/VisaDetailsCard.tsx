@@ -16,16 +16,20 @@ import {
   Button,
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
-import { FileText, X } from 'lucide-react';
 import { ILRTrack } from '@uth/calculators';
 import { travelStore } from '@uth/stores';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { PassportIcon, X } from '@hugeicons/core-free-icons';
 
 export const VisaDetailsCard = observer(() => {
   return (
     <Card className="bg-white mb-3">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <FileText className="w-4 h-4 text-muted-foreground" />
+          <HugeiconsIcon
+            icon={PassportIcon}
+            className="w-4 h-4 text-muted-foreground"
+          />
           Visa & Vignette Details
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
@@ -105,7 +109,7 @@ export const VisaDetailsCard = observer(() => {
                   className="h-5 px-1 text-xs text-muted-foreground hover:text-destructive"
                   onClick={() => travelStore.setApplicationDate('')}
                 >
-                  <X className="h-3 w-3 mr-1" />
+                  <HugeiconsIcon icon={X} className="h-3 w-3 mr-1" />
                   Clear
                 </Button>
               )}
@@ -123,7 +127,9 @@ export const VisaDetailsCard = observer(() => {
             <p className="text-xs text-muted-foreground leading-tight">
               {travelStore.effectiveApplicationDate && (
                 <>
-                  {travelStore.autoDateUsed ? 'Auto-calculated: ' : 'Overridden '}
+                  {travelStore.autoDateUsed
+                    ? 'Auto-calculated: '
+                    : 'Overridden '}
                   <strong>
                     {formatDate(travelStore.effectiveApplicationDate)}
                   </strong>

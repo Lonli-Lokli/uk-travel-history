@@ -2,17 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, toast } from '@uth/ui';
-import {
-  FileText,
-  ArrowRight,
-  CheckCircle,
-  Plane,
-  Coffee,
-  Clipboard,
-  Loader2,
-  Sheet,
-  Hammer,
-} from 'lucide-react';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
@@ -20,6 +9,19 @@ import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  Airplane01Icon,
+  CheckmarkCircle02Icon,
+  ClipboardIcon,
+  Coffee02Icon,
+  DocumentValidationIcon,
+  HandPointingRight01Icon,
+  Loading03Icon,
+  Pdf01Icon,
+  TowTruckIcon,
+  Xls01Icon,
+} from '@hugeicons/core-free-icons';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -209,7 +211,10 @@ export const LandingPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Plane className="w-4 h-4 text-white" />
+                  <HugeiconsIcon
+                    icon={Airplane01Icon}
+                    className="w-4 h-4 text-white"
+                  />
                 </div>
                 <div>
                   <h1 className="font-semibold text-slate-900 text-sm sm:text-base">
@@ -233,7 +238,10 @@ export const LandingPage = () => {
                   size="sm"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <Coffee className="h-4 w-4 mr-1.5" />
+                  <HugeiconsIcon
+                    icon={Coffee02Icon}
+                    className="h-4 w-4 mr-1.5"
+                  />
                   Buy Me a Coffee
                 </Button>
               </a>
@@ -249,7 +257,7 @@ export const LandingPage = () => {
                   size="icon"
                   className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
                 >
-                  <Coffee className="h-4 w-4" />
+                  <HugeiconsIcon icon={Coffee02Icon} className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -263,7 +271,10 @@ export const LandingPage = () => {
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-primary" />
+                  <HugeiconsIcon
+                    icon={Airplane01Icon}
+                    className="w-8 h-8 text-primary"
+                  />
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
                   Welcome to UK Travel Parser
@@ -287,9 +298,15 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'pdf' ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="h-4 w-4 mr-2 animate-spin"
+                      />
                     ) : (
-                      <FileText className="h-4 w-4 mr-2" />
+                      <HugeiconsIcon
+                        icon={Pdf01Icon}
+                        className="h-4 w-4 mr-2"
+                      />
                     )}
                     Import from PDF
                     {activeAction === 'pdf' && (
@@ -305,9 +322,15 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'csv' ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="h-4 w-4 mr-2 animate-spin"
+                      />
                     ) : (
-                      <Sheet className="h-4 w-4 mr-2" />
+                      <HugeiconsIcon
+                        icon={Xls01Icon}
+                        className="h-4 w-4 mr-2"
+                      />
                     )}
                     Import from Excel
                     {activeAction === 'csv' && (
@@ -323,9 +346,15 @@ export const LandingPage = () => {
                     disabled={isImporting || activeAction !== null}
                   >
                     {activeAction === 'clipboard' ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="h-4 w-4 mr-2 animate-spin"
+                      />
                     ) : (
-                      <Clipboard className="h-4 w-4 mr-2" />
+                      <HugeiconsIcon
+                        icon={ClipboardIcon}
+                        className="h-4 w-4 mr-2"
+                      />
                     )}
                     Import from Clipboard
                     {activeAction === 'clipboard' && (
@@ -341,7 +370,10 @@ export const LandingPage = () => {
                       onClick={handleAddManually}
                       disabled={isImporting || activeAction !== null}
                     >
-                      <Hammer className="h-4 w-4 mr-2" />
+                      <HugeiconsIcon
+                        icon={TowTruckIcon}
+                        className="h-4 w-4 mr-2"
+                      />
                       Or add travel dates manually
                     </Button>
                   </div>
@@ -351,7 +383,10 @@ export const LandingPage = () => {
               {/* How to Get Your PDF */}
               <div className="bg-slate-50 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
+                  <HugeiconsIcon
+                    icon={DocumentValidationIcon}
+                    className="w-5 h-5 text-primary"
+                  />
                   How to Get Your Travel History PDF
                 </h3>
                 <ol className="space-y-3 text-sm text-slate-700">
@@ -407,7 +442,10 @@ export const LandingPage = () => {
                   className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 mt-4 font-medium"
                 >
                   Request your travel history document
-                  <ArrowRight className="w-3 h-3" />
+                  <HugeiconsIcon
+                    icon={HandPointingRight01Icon}
+                    className="w-3 h-3"
+                  />
                 </a>
               </div>
 
@@ -418,37 +456,55 @@ export const LandingPage = () => {
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Calculate days outside the UK
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Track continuous residence period
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Verify 180-day absence limit
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Export formatted Excel reports
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Track vignette & visa dates
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle02Icon}
+                      className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-slate-700">
                       Follows Home Office guidance
                     </span>

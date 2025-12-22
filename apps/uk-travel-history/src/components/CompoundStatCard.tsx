@@ -1,9 +1,10 @@
 'use client';
 
 import { Card, CardContent } from '@uth/ui';
-import { LucideIcon, Info } from 'lucide-react';
 import { ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
+import { InformationCircleIcon } from '@hugeicons/core-free-icons';
 
 interface StatItem {
   value: string | number;
@@ -13,7 +14,7 @@ interface StatItem {
 }
 
 interface CompoundStatCardProps {
-  icon: LucideIcon;
+  icon: IconSvgElement;
   title: string;
   stats: StatItem[];
   subtitle?: ReactNode;
@@ -97,7 +98,7 @@ export const CompoundStatCard = ({
           <div
             className={`w-8 h-8 rounded-full ${styles.iconBg} flex items-center justify-center flex-shrink-0`}
           >
-            <Icon className={`w-4 h-4 ${styles.iconColor}`} />
+            <HugeiconsIcon icon={Icon} className={`w-4 h-4 ${styles.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
             <p className={`text-xs font-semibold ${styles.titleColor} leading-tight uppercase tracking-wide`}>
@@ -131,7 +132,7 @@ export const CompoundStatCard = ({
                           type="button"
                           aria-label={`Info about ${stat.label}`}
                         >
-                          <Info className={`w-3 h-3 ${styles.labelColor}`} />
+                          <HugeiconsIcon icon={InformationCircleIcon} className={`w-3 h-3 ${styles.labelColor}`} />
                         </button>
                       </Popover.Trigger>
                       <Popover.Portal>

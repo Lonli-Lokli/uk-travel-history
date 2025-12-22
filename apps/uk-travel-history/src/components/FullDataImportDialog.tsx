@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertCircleIcon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,6 @@ import {
   Label,
 } from '@uth/ui';
 import { useState } from 'react';
-import { Info, Check } from 'lucide-react';
 
 interface FullDataImportDialogProps {
   isOpen: boolean;
@@ -54,7 +55,10 @@ export const FullDataImportDialog = ({
           {/* Preview Information */}
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
             <div className="flex items-start gap-2">
-              <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <HugeiconsIcon
+                icon={AlertCircleIcon}
+                className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0"
+              />
               <div className="space-y-2 text-sm">
                 <p className="font-medium text-blue-900">
                   File contains {tripCount} trip{tripCount !== 1 ? 's' : ''}
@@ -62,7 +66,10 @@ export const FullDataImportDialog = ({
                 <div className="space-y-1 text-blue-700">
                   <div className="flex items-center gap-2">
                     {hasVignetteDate && (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
+                        className="h-4 w-4 text-green-600"
+                      />
                     )}
                     <span>
                       Vignette Entry Date{' '}
@@ -71,7 +78,10 @@ export const FullDataImportDialog = ({
                   </div>
                   <div className="flex items-center gap-2">
                     {hasVisaStartDate && (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
+                        className="h-4 w-4 text-green-600"
+                      />
                     )}
                     <span>
                       Visa Start Date{' '}
@@ -80,7 +90,10 @@ export const FullDataImportDialog = ({
                   </div>
                   <div className="flex items-center gap-2">
                     {hasIlrTrack && (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
+                        className="h-4 w-4 text-green-600"
+                      />
                     )}
                     <span>
                       ILR Track {hasIlrTrack ? '(included)' : '(not set)'}

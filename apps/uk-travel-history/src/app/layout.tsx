@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
 import { FeatureFlagsProvider } from '@uth/widgets';
-import { PaymentModal } from '../components/PaymentModal';
 import { ClerkProvider } from '@clerk/nextjs';
 
 const siteUrl =
@@ -120,7 +119,6 @@ export default async function RootLayout({
         <body className="h-full bg-slate-50 overflow-y-scroll">
           <FeatureFlagsProvider flags={flags}>
             {children}
-            <PaymentModal />
             <Toaster />
           </FeatureFlagsProvider>
         </body>

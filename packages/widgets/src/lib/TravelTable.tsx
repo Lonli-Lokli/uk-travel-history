@@ -11,11 +11,12 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
-import { Trash2, Plus, ArrowUpDown, GripVertical } from 'lucide-react';
 import { formatDate } from '@uth/utils';
 import { travelStore } from '@uth/stores';
 import { Button, EditableCell } from '@uth/ui';
 import { TripWithCalculations } from '@uth/calculators';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowDown01Icon, ArrowUp01Icon, Delete02Icon, DragDropVerticalIcon, PlusSignIcon } from '@hugeicons/core-free-icons';
 
 export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -48,7 +49,7 @@ export const TravelTable = observer(() => {
             draggable
             onDragStart={() => handleDragStart(row.index)}
           >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <HugeiconsIcon  icon={DragDropVerticalIcon} className="h-4 w-4 text-muted-foreground" />
           </div>
         ),
         size: 30,
@@ -63,7 +64,7 @@ export const TravelTable = observer(() => {
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             Date Out
-            <ArrowUpDown className="ml-1 h-3 w-3" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 h-3 w-3" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -92,7 +93,7 @@ export const TravelTable = observer(() => {
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             Date In
-            <ArrowUpDown className="ml-1 h-3 w-3" />
+            <HugeiconsIcon icon={ArrowUp01Icon} className="ml-1 h-3 w-3" />
           </Button>
         ),
         cell: ({ row }) => (
@@ -167,7 +168,7 @@ export const TravelTable = observer(() => {
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
             onClick={() => travelStore.deleteTrip(row.original.id)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <HugeiconsIcon icon={Delete02Icon} className="h-3.5 w-3.5" />
           </Button>
         ),
       },
@@ -195,7 +196,7 @@ export const TravelTable = observer(() => {
           className="w-full md:w-auto"
           onClick={() => travelStore.addTrip()}
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4 mr-1" />
           Add Trip
         </Button>
       </div>
@@ -221,7 +222,7 @@ export const TravelTable = observer(() => {
                 className="cursor-move flex-shrink-0"
                 onTouchStart={() => handleDragStart(index)}
               >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <HugeiconsIcon icon={DragDropVerticalIcon} className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-center flex-1">
                 <div className="text-xl font-bold text-primary">
@@ -237,7 +238,7 @@ export const TravelTable = observer(() => {
                 className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
                 onClick={() => travelStore.deleteTrip(row.original.id)}
               >
-                <Trash2 className="h-3 w-3" />
+                <HugeiconsIcon icon={Delete02Icon} className="h-3 w-3" />
               </Button>
             </div>
 

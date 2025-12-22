@@ -9,13 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@uth/ui';
-import {
-  AlertCircle,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  XCircle,
-} from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { AlertTriangle, CheckCircle, MultiplicationSignCircleIcon } from '@hugeicons/core-free-icons';
+
 
 export const ValidationStatusCard = observer(() => {
   const validation = travelStore.validation;
@@ -38,7 +34,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-amber-50 border-amber-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-amber-900">
-            <Info className="w-4 h-4" />
+            <HugeiconsIcon icon={AlertTriangle} className="w-4 h-4" />
             Required Information Missing
           </CardTitle>
         </CardHeader>
@@ -68,7 +64,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-green-50 border-green-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-green-900">
-            <CheckCircle className="w-4 h-4" />
+            <HugeiconsIcon icon={CheckCircle} className="w-4 h-4" />
             ILR Eligible
           </CardTitle>
         </CardHeader>
@@ -90,7 +86,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-red-50 border-red-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-red-900">
-            <XCircle className="w-4 h-4" />
+            <HugeiconsIcon icon={MultiplicationSignCircleIcon} className="w-4 h-4" />
             NOT ELIGIBLE - Application Date Too Early
           </CardTitle>
         </CardHeader>
@@ -113,7 +109,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-red-50 border-red-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-red-900">
-            <AlertTriangle className="w-4 h-4" />
+            <HugeiconsIcon icon={AlertTriangle} className="w-4 h-4" />
             Excessive Absence Detected
           </CardTitle>
         </CardHeader>
@@ -153,7 +149,7 @@ export const ValidationStatusCard = observer(() => {
       <Card className="bg-orange-50 border-orange-300 mb-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-orange-900">
-            <AlertCircle className="w-4 h-4" />
+            <HugeiconsIcon icon={AlertCircle} className="w-4 h-4" />
             Input Error
           </CardTitle>
         </CardHeader>
