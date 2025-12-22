@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+          "source":   "/firebase-web-authn-api",
+          "function": "ext-firebase-web-authn-api"
+        }
+    ]
+  },
+  "extensions": {
+    "firebase-web-authn": "./node_modules/@firebase-web-authn/extension"
+  }
+}

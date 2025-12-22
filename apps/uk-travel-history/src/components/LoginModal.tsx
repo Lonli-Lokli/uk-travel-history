@@ -18,7 +18,6 @@ export const LoginModal = observer(() => {
   const isAuthenticating = authStore.isAuthenticating;
   const isPasskeySupported = authStore.isPasskeySupported;
   const open = uiStore.isLoginModalOpen;
-  const email = uiStore.loginEmail;
   const displayName = uiStore.loginDisplayName;
   const mode = uiStore.loginMode;
   const error = uiStore.loginError;
@@ -60,19 +59,7 @@ export const LoginModal = observer(() => {
             {mode === 'register' && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => uiStore.setLoginEmail(e.target.value)}
-                    disabled={isAuthenticating}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name (Optional)</Label>
+                  <Label htmlFor="displayName">Display Name</Label>
                   <Input
                     id="displayName"
                     type="text"
@@ -93,7 +80,7 @@ export const LoginModal = observer(() => {
                   ? uiStore.handleSignIn()
                   : uiStore.handleRegister()
               }
-              disabled={isAuthenticating || (mode === 'register' && !email)}
+              disabled={isAuthenticating || (mode === 'register' && !displayName)}
               className="w-full"
             >
               {isAuthenticating ? (

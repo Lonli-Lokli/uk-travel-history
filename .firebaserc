@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "uk-travel-history"
+  },
+  "targets": {},
+  "etags": {
+    "uk-travel-history": {
+      "extensionInstances": {
+        "firebase-web-authn": "26d7d18fea00712ea524682dddc0563ac37c516d91a45e4290a3a1e723f37273"
+      }
+    }
+  }
+}

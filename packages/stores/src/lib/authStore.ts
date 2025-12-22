@@ -114,14 +114,9 @@ class AuthStore {
    * Register a new passkey
    * Uses the official @firebase-web-authn/browser SDK
    */
-  async registerPasskey(email: string, displayName?: string): Promise<void> {
+  async registerPasskey(displayName: string): Promise<void> {
     if (!this.isPasskeySupported) {
       throw new Error('Passkeys are not supported in this browser');
-    }
-
-    // Validate email format
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error('Please enter a valid email address');
     }
 
     this.isAuthenticating = true;
@@ -133,7 +128,7 @@ class AuthStore {
 
       // Use the official SDK method
       // The 'name' parameter is what the passkey manager will display
-      const name = displayName || email;
+      const name = displayName;
       await createUserWithPasskey(auth, functions, name);
 
       runInAction(() => {
@@ -153,7 +148,6 @@ class AuthStore {
               error instanceof FirebaseWebAuthnError
                 ? 'FirebaseWebAuthnError'
                 : 'Error',
-            hasEmail: !!email,
             hasDisplayName: !!displayName,
           },
         },

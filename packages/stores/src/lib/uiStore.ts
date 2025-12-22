@@ -8,7 +8,6 @@ import { logger } from '@uth/utils';
 class UIStore {
   // Login Modal State
   isLoginModalOpen = false;
-  loginEmail = '';
   loginDisplayName = '';
   loginMode: 'signin' | 'register' = 'signin';
   loginError: string | null = null;
@@ -42,12 +41,6 @@ class UIStore {
     }
   }
 
-  /**
-   * Set login email
-   */
-  setLoginEmail(email: string): void {
-    this.loginEmail = email;
-  }
 
   /**
    * Set login display name
@@ -75,7 +68,6 @@ class UIStore {
    * Reset login form to initial state
    */
   resetLoginForm(): void {
-    this.loginEmail = '';
     this.loginDisplayName = '';
     this.loginMode = 'signin';
     this.loginError = null;
@@ -102,16 +94,15 @@ class UIStore {
    * Handle register with passkey
    */
   async handleRegister(): Promise<void> {
-    if (!this.loginEmail) {
-      this.loginError = 'Email is required';
+    if (!this.loginDisplayName) {
+      this.loginError = 'Display name is required';
       return;
     }
 
     this.loginError = null;
     try {
       await authStore.registerPasskey(
-        this.loginEmail,
-        this.loginDisplayName || undefined,
+        this.loginDisplayName
       );
       this.closeLoginModal();
     } catch (err) {
