@@ -40,10 +40,7 @@ export async function POST(request: NextRequest) {
         level: 'warning',
         tags: { service: 'stripe', operation: 'webhook' },
       });
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
     if (!webhookSecret) {
@@ -107,7 +104,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
     logger.error('Webhook handler error', {
       error: errorMessage,
     });
@@ -171,11 +169,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   const subscriptionId = session.subscription as string;
-  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(subscriptionId);
+  const subscriptionResponse =
+    await StripeAPI.subscriptions.retrieve(subscriptionId);
 
   // Extract subscription data from Response wrapper
   // Using any here because Stripe SDK types can vary between versions
-  const subscription = ('data' in subscriptionResponse ? subscriptionResponse.data : subscriptionResponse) as any;
+  const subscription = (
+    'data' in subscriptionResponse
+      ? subscriptionResponse.data
+      : subscriptionResponse
+  ) as any;
 
   const firestore = getAdminFirestore();
 
@@ -189,7 +192,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripeSubscriptionId: subscription.id,
       stripePriceId: subscription.items.data[0]?.price.id,
       status: subscription.status,
-      currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
+      currentPeriodStart: new Date(
+        (subscription.current_period_start ?? 0) * 1000,
+      ),
       currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
       createdAt: new Date(),
@@ -253,14 +258,11 @@ async function handleSubscriptionDeleted(subscription: any) {
 
   // NO TIER FIELD: We only track subscription status
   // No tier = no access (binary: active subscription or no access)
-  await firestore
-    .collection('subscriptions')
-    .doc(userId)
-    .update({
-      status: 'canceled',
-      canceledAt: new Date(),
-      updatedAt: new Date(),
-    });
+  await firestore.collection('subscriptions').doc(userId).update({
+    status: 'canceled',
+    canceledAt: new Date(),
+    updatedAt: new Date(),
+  });
 
   logger.log('Subscription canceled in Firestore', { userId });
 }
@@ -316,14 +318,11 @@ async function handlePaymentFailed(invoice: any) {
 
   const firestore = getAdminFirestore();
 
-  await firestore
-    .collection('subscriptions')
-    .doc(userId)
-    .update({
-      status: 'past_due',
-      lastPaymentError: new Date(),
-      updatedAt: new Date(),
-    });
+  await firestore.collection('subscriptions').doc(userId).update({
+    status: 'past_due',
+    lastPaymentError: new Date(),
+    updatedAt: new Date(),
+  });
 
   logger.log('Payment failure recorded in Firestore', {
     userId,

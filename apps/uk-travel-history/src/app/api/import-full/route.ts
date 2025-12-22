@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
 import { parse, format } from 'date-fns';
+import {
+  requirePaidFeature,
+  createAuthErrorResponse,
+} from '@/middleware/serverAuth';
+import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Verify authentication and check feature access
+    // Full Excel import with visa details is a premium feature
+    await requirePaidFeature(request, FEATURES.EXCEL_EXPORT);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -118,6 +127,16 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    // Handle authentication/authorization errors
+    if (
+      error &&
+      typeof error === 'object' &&
+      'name' in error &&
+      error.name === 'AuthError'
+    ) {
+      return createAuthErrorResponse(error);
+    }
+
     logger.error('Error importing full data:', error);
     return NextResponse.json(
       { error: 'Failed to import file' },

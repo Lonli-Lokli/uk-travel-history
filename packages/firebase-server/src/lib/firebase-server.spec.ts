@@ -88,7 +88,9 @@ describe('Firebase Server Package', () => {
   describe('Error Messages', () => {
     it('should provide helpful error message when getting auth without initialization', () => {
       if (!isFirebaseAdminConfigured()) {
-        expect(() => getAdminAuth()).toThrow(/Firebase Admin SDK not initialized/);
+        expect(() => getAdminAuth()).toThrow(
+          /Firebase Admin SDK not initialized/,
+        );
       }
     });
 

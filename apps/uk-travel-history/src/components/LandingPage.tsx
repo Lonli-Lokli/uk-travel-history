@@ -87,7 +87,7 @@ export const LandingPage = () => {
         description:
           'Failed to import Excel file. Please try again or add trips manually.',
         variant: 'destructive',
-      })
+      });
     } finally {
       setIsImporting(false);
       setActiveAction(null);

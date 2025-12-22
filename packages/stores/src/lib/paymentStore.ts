@@ -85,8 +85,7 @@ class PaymentStore {
    */
   get annualSavings(): number {
     return Math.round(
-      ((this.monthlyPrice * 12 - this.annualPrice) /
-        (this.monthlyPrice * 12)) *
+      ((this.monthlyPrice * 12 - this.annualPrice) / (this.monthlyPrice * 12)) *
         100,
     );
   }
@@ -225,10 +224,9 @@ class PaymentStore {
       if (data.paymentStatus !== 'paid' || data.alreadyUsed) {
         runInAction(() => {
           this.isValidatingSession = false;
-          this.sessionValidationError =
-            data.alreadyUsed
-              ? 'This payment link has already been used'
-              : 'Payment not completed';
+          this.sessionValidationError = data.alreadyUsed
+            ? 'This payment link has already been used'
+            : 'Payment not completed';
         });
 
         return { isValid: false };
@@ -320,7 +318,9 @@ class PaymentStore {
     } catch (err) {
       runInAction(() => {
         this.registrationError =
-          err instanceof Error ? err.message : 'Failed to complete registration';
+          err instanceof Error
+            ? err.message
+            : 'Failed to complete registration';
         this.isCompletingRegistration = false;
       });
 
