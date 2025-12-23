@@ -9,6 +9,9 @@ import type {
   WebhookHandlerInput,
   WebhookEventResult,
   Entitlement,
+  PriceIds,
+  CheckoutSessionDetails,
+  SubscriptionDetails,
 } from '../types/domain';
 import { PaymentPlan } from '../types/domain';
 import { getPaymentsProvider } from '../internal/provider-resolver';
@@ -65,6 +68,59 @@ export function isPaymentsConfigured(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Get all configured price IDs
+ * @returns Object with all price IDs for different plans
+ */
+export function getPriceIds(): PriceIds {
+  const provider = getPaymentsProvider();
+  return provider.getPriceIds();
+}
+
+/**
+ * Retrieve checkout session details
+ * @param sessionId - The session ID to retrieve
+ * @returns Session details
+ * @throws PaymentsError if session not found
+ */
+export async function retrieveCheckoutSession(
+  sessionId: string,
+): Promise<CheckoutSessionDetails> {
+  const provider = getPaymentsProvider();
+  return provider.retrieveCheckoutSession(sessionId);
+}
+
+/**
+ * Retrieve subscription details
+ * @param subscriptionId - The subscription ID to retrieve
+ * @returns Subscription details
+ * @throws PaymentsError if subscription not found
+ */
+export async function retrieveSubscription(
+  subscriptionId: string,
+): Promise<SubscriptionDetails> {
+  const provider = getPaymentsProvider();
+  return provider.retrieveSubscription(subscriptionId);
+}
+
+/**
+ * Construct and verify webhook event
+ * Low-level method for webhook signature verification
+ * @param body - Raw webhook body
+ * @param signature - Webhook signature
+ * @param secret - Webhook secret
+ * @returns Provider-specific event object (e.g., Stripe.Event)
+ * @throws PaymentsError if verification fails
+ */
+export function constructWebhookEvent(
+  body: string | Buffer,
+  signature: string,
+  secret: string,
+): any {
+  const provider = getPaymentsProvider();
+  return provider.constructWebhookEvent(body, signature, secret);
 }
 
 // Re-export PaymentPlan enum for convenience

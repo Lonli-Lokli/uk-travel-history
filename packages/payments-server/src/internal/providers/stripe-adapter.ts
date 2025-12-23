@@ -14,6 +14,9 @@ import type {
   WebhookEventResult,
   WebhookEvent,
   Entitlement,
+  PriceIds,
+  CheckoutSessionDetails,
+  SubscriptionDetails,
 } from '../../types/domain';
 import {
   PaymentsError,
@@ -90,6 +93,100 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
 
   getPriceId(plan: string): string {
     return this.priceIds[plan] || plan;
+  }
+
+  getPriceIds(): PriceIds {
+    return {
+      PREMIUM_MONTHLY: this.priceIds[PaymentPlan.PREMIUM_MONTHLY] || '',
+      PREMIUM_ANNUAL: this.priceIds[PaymentPlan.PREMIUM_ANNUAL] || '',
+      PREMIUM_ONCE: this.priceIds[PaymentPlan.PREMIUM_ONCE] || '',
+    };
+  }
+
+  async retrieveCheckoutSession(
+    sessionId: string,
+  ): Promise<CheckoutSessionDetails> {
+    const stripe = this.ensureConfigured();
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      return {
+        id: session.id,
+        paymentStatus: session.payment_status,
+        customerId: session.customer as string | undefined,
+        subscriptionId: session.subscription as string | undefined,
+        metadata: session.metadata || undefined,
+        customerEmail: session.customer_email || session.customer_details?.email || undefined,
+      };
+    } catch (error: any) {
+      if (error.code === 'resource_missing') {
+        throw new PaymentsError(
+          PaymentsErrorCode.NOT_FOUND,
+          `Checkout session not found: ${sessionId}`,
+          error,
+        );
+      }
+
+      throw new PaymentsError(
+        PaymentsErrorCode.PROVIDER_ERROR,
+        `Failed to retrieve checkout session: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async retrieveSubscription(
+    subscriptionId: string,
+  ): Promise<SubscriptionDetails> {
+    const stripe = this.ensureConfigured();
+
+    try {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+      return {
+        id: subscription.id,
+        customerId: subscription.customer as string,
+        status: subscription.status,
+        currentPeriodStart: subscription.current_period_start,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        priceId: subscription.items.data[0]?.price.id,
+        metadata: subscription.metadata || undefined,
+      };
+    } catch (error: any) {
+      if (error.code === 'resource_missing') {
+        throw new PaymentsError(
+          PaymentsErrorCode.NOT_FOUND,
+          `Subscription not found: ${subscriptionId}`,
+          error,
+        );
+      }
+
+      throw new PaymentsError(
+        PaymentsErrorCode.PROVIDER_ERROR,
+        `Failed to retrieve subscription: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  constructWebhookEvent(
+    body: string | Buffer,
+    signature: string,
+    secret: string,
+  ): Stripe.Event {
+    const stripe = this.ensureConfigured();
+
+    try {
+      return stripe.webhooks.constructEvent(body, signature, secret);
+    } catch (error: any) {
+      throw new PaymentsError(
+        PaymentsErrorCode.INVALID_SIGNATURE,
+        `Webhook signature verification failed: ${error.message}`,
+        error,
+      );
+    }
   }
 
   async createCheckoutSession(

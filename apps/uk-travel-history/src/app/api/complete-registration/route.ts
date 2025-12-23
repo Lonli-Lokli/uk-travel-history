@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
+import {
+  retrieveCheckoutSession,
+  retrieveSubscription,
+} from '@uth/payments-server';
 import {
   verifyToken,
   createSubscription,
@@ -84,14 +87,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve session from Stripe
-    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
+    // Retrieve session from Stripe using SDK
+    const session = await retrieveCheckoutSession(session_id);
 
     // Verify payment was completed
-    if (session.payment_status !== 'paid') {
+    if (session.paymentStatus !== 'paid') {
       logger.warn('[Complete Registration] Payment not completed', {
         sessionId: session_id,
-        paymentStatus: session.payment_status,
+        paymentStatus: session.paymentStatus,
       });
       return NextResponse.json(
         { error: 'Payment not completed' },
@@ -121,8 +124,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Retrieve subscription details from Stripe
-    const subscriptionId = session.subscription as string;
-    const customerId = session.customer as string;
+    const subscriptionId = session.subscriptionId;
+    const customerId = session.customerId;
 
     if (!subscriptionId || !customerId) {
       logger.error(
@@ -139,15 +142,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch subscription details from Stripe
-    const subscriptionResponse =
-      await StripeAPI.subscriptions.retrieve(subscriptionId);
-    // Extract subscription data from Response wrapper
-    const subscription = (
-      'data' in subscriptionResponse
-        ? subscriptionResponse.data
-        : subscriptionResponse
-    ) as any;
+    // Fetch subscription details from Stripe using SDK
+    const subscription = await retrieveSubscription(subscriptionId);
 
     // Create subscription document using SDK
     await createSubscription({
@@ -156,12 +152,10 @@ export async function POST(request: NextRequest) {
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId,
       stripeSessionId: session_id, // Mark session as consumed
-      stripePriceId: subscription.items.data[0]?.price.id,
-      currentPeriodStart: new Date(
-        (subscription.current_period_start ?? 0) * 1000,
-      ),
-      currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+      stripePriceId: subscription.priceId,
+      currentPeriodStart: new Date(subscription.currentPeriodStart * 1000),
+      currentPeriodEnd: new Date(subscription.currentPeriodEnd * 1000),
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     });
 
     logger.log('[Complete Registration] Subscription linked successfully', {

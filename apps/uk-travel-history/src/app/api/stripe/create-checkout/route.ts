@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI, STRIPE_PRICES } from '@uth/payments-server';
+import { getPriceIds } from '@uth/payments-server';
 import { verifyToken } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
+import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CheckoutRequest;
     const { priceId, billingPeriod } = body;
 
+    // Get price IDs from SDK
+    const STRIPE_PRICES = getPriceIds();
+
     // Validate price ID
     if (
       priceId !== STRIPE_PRICES.PREMIUM_MONTHLY &&
@@ -98,8 +102,17 @@ export async function POST(request: NextRequest) {
     // Get the app URL for success/cancel redirects
     const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+    // Create local Stripe instance for direct API call
+    const stripe = new Stripe(
+      process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build',
+      {
+        apiVersion: '2025-02-24.acacia',
+        typescript: true,
+      },
+    );
+
     // Create Stripe Checkout session
-    const session = await StripeAPI.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       customer_email: userEmail,
       client_reference_id: userId, // Link to Firebase user
       metadata: {

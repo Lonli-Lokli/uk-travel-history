@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
+import { retrieveCheckoutSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { getSubscriptionBySessionId } from '@uth/auth-server';
 import * as Sentry from '@sentry/nextjs';
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve session from Stripe
-    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
+    // Retrieve session from Stripe using SDK
+    const session = await retrieveCheckoutSession(session_id);
 
     // Check if session is for new subscription
     if (session.metadata?.checkoutType !== 'new_subscription') {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check payment status
-    const paymentStatus = session.payment_status; // 'paid' | 'unpaid'
+    const paymentStatus = session.paymentStatus; // 'paid' | 'unpaid'
 
     if (paymentStatus !== 'paid') {
       logger.warn('[Validate Session] Payment not completed', {
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       paymentStatus,
       alreadyUsed,
-      subscriptionId: session.subscription as string,
-      customerId: session.customer as string,
+      subscriptionId: session.subscriptionId || '',
+      customerId: session.customerId || '',
     });
   } catch (error) {
     logger.error('[Validate Session] Error:', error);

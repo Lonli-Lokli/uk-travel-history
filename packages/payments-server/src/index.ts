@@ -14,6 +14,9 @@ export type {
   WebhookEvent,
   WebhookEventResult,
   WebhookHandlerInput,
+  PriceIds,
+  CheckoutSessionDetails,
+  SubscriptionDetails,
 } from './types/domain';
 export {
   PaymentsError,
@@ -29,16 +32,14 @@ export {
   verifyCheckoutSession,
   handleWebhook,
   isPaymentsConfigured,
+  getPriceIds,
+  retrieveCheckoutSession,
+  retrieveSubscription,
+  constructWebhookEvent,
 } from './public/payments-operations';
-
-// Export Stripe interop (escape hatches for direct Stripe access)
-export {
-  getStripeInstance,
-  StripeAPI,
-  STRIPE_PRICES,
-} from './public/stripe-interop';
 
 // DO NOT export:
 // - Internal provider interfaces (PaymentsServerProvider)
 // - Provider adapters (StripePaymentsServerAdapter)
 // - Provider resolver functions
+// - Stripe interop (removed to maintain abstraction)

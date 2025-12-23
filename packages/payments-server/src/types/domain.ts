@@ -198,3 +198,52 @@ export interface WebhookHandlerInput {
   /** Additional headers (if needed) */
   headers?: Record<string, string>;
 }
+
+/**
+ * Price IDs for different payment plans
+ */
+export interface PriceIds {
+  PREMIUM_MONTHLY: string;
+  PREMIUM_ANNUAL: string;
+  PREMIUM_ONCE: string;
+}
+
+/**
+ * Checkout session details (provider-agnostic)
+ */
+export interface CheckoutSessionDetails {
+  /** Session ID */
+  id: string;
+  /** Payment status */
+  paymentStatus: 'paid' | 'unpaid' | 'no_payment_required';
+  /** Customer ID (Stripe customer ID, etc.) */
+  customerId?: string;
+  /** Subscription ID (if subscription mode) */
+  subscriptionId?: string;
+  /** Session metadata */
+  metadata?: Record<string, string | null>;
+  /** Customer email */
+  customerEmail?: string;
+}
+
+/**
+ * Subscription details (provider-agnostic)
+ */
+export interface SubscriptionDetails {
+  /** Subscription ID */
+  id: string;
+  /** Customer ID */
+  customerId: string;
+  /** Subscription status */
+  status: string;
+  /** Current period start timestamp (seconds) */
+  currentPeriodStart: number;
+  /** Current period end timestamp (seconds) */
+  currentPeriodEnd: number;
+  /** Cancel at period end flag */
+  cancelAtPeriodEnd: boolean;
+  /** Price ID */
+  priceId?: string;
+  /** Subscription metadata */
+  metadata?: Record<string, string | null>;
+}

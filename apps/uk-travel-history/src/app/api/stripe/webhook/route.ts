@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
+import {
+  constructWebhookEvent,
+  retrieveSubscription,
+} from '@uth/payments-server';
 import {
   createSubscription,
   updateSubscription,
@@ -60,8 +63,8 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
 
     try {
-      // Verify webhook signature (CRITICAL for security)
-      event = StripeAPI.webhooks.constructEvent(body, signature, webhookSecret);
+      // Verify webhook signature using SDK (CRITICAL for security)
+      event = constructWebhookEvent(body, signature, webhookSecret);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       logger.error('Webhook signature verification failed', {
@@ -171,28 +174,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   const subscriptionId = session.subscription as string;
-  const subscriptionResponse =
-    await StripeAPI.subscriptions.retrieve(subscriptionId);
-
-  // Extract subscription data from Response wrapper
-  const subscription = (
-    'data' in subscriptionResponse
-      ? subscriptionResponse.data
-      : subscriptionResponse
-  ) as any;
+  const subscription = await retrieveSubscription(subscriptionId);
 
   // Create/update subscription document using SDK
   await createSubscription({
     userId,
     stripeCustomerId: session.customer as string,
     stripeSubscriptionId: subscription.id,
-    stripePriceId: subscription.items.data[0]?.price.id,
+    stripePriceId: subscription.priceId,
     status: subscription.status as SubscriptionStatus,
-    currentPeriodStart: new Date(
-      (subscription.current_period_start ?? 0) * 1000,
-    ),
-    currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
-    cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+    currentPeriodStart: new Date(subscription.currentPeriodStart * 1000),
+    currentPeriodEnd: new Date(subscription.currentPeriodEnd * 1000),
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
   });
 
   logger.log('Subscription created via SDK', {
@@ -260,16 +253,8 @@ async function handlePaymentFailed(invoice: any) {
     return;
   }
 
-  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
-    invoice.subscription as string,
-  );
-  // Extract subscription data from Response wrapper
-  const subscription = (
-    'data' in subscriptionResponse
-      ? subscriptionResponse.data
-      : subscriptionResponse
-  ) as any;
-  const userId = subscription.metadata.userId;
+  const subscription = await retrieveSubscription(invoice.subscription as string);
+  const userId = subscription.metadata?.userId;
 
   if (!userId) {
     logger.warn('No userId in subscription metadata', {

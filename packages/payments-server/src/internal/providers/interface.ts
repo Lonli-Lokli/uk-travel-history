@@ -8,6 +8,9 @@ import type {
   WebhookHandlerInput,
   WebhookEventResult,
   Entitlement,
+  PriceIds,
+  CheckoutSessionDetails,
+  SubscriptionDetails,
 } from '../../types/domain';
 
 /**
@@ -67,4 +70,41 @@ export interface PaymentsServerProvider {
    * @returns Provider-specific price ID
    */
   getPriceId(plan: string): string;
+
+  /**
+   * Get all configured price IDs
+   * @returns Object with all price IDs
+   */
+  getPriceIds(): PriceIds;
+
+  /**
+   * Retrieve checkout session details
+   * @param sessionId - The session ID to retrieve
+   * @returns Session details
+   * @throws PaymentsError if session not found
+   */
+  retrieveCheckoutSession(sessionId: string): Promise<CheckoutSessionDetails>;
+
+  /**
+   * Retrieve subscription details
+   * @param subscriptionId - The subscription ID to retrieve
+   * @returns Subscription details
+   * @throws PaymentsError if subscription not found
+   */
+  retrieveSubscription(subscriptionId: string): Promise<SubscriptionDetails>;
+
+  /**
+   * Construct and verify webhook event
+   * Low-level method for webhook signature verification
+   * @param body - Raw webhook body
+   * @param signature - Webhook signature
+   * @param secret - Webhook secret
+   * @returns Provider-specific event object
+   * @throws PaymentsError if verification fails
+   */
+  constructWebhookEvent(
+    body: string | Buffer,
+    signature: string,
+    secret: string,
+  ): any;
 }
