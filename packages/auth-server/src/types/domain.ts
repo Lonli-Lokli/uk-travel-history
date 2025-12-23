@@ -121,3 +121,95 @@ export class AuthError extends Error {
     };
   }
 }
+
+/**
+ * Subscription status values
+ */
+export enum SubscriptionStatus {
+  /** Subscription is active and valid */
+  ACTIVE = 'active',
+  /** Subscription payment is past due */
+  PAST_DUE = 'past_due',
+  /** Subscription has been canceled */
+  CANCELED = 'canceled',
+  /** Subscription is in trial period */
+  TRIALING = 'trialing',
+  /** Subscription is incomplete (payment failed) */
+  INCOMPLETE = 'incomplete',
+  /** Subscription is incomplete and payment is still being processed */
+  INCOMPLETE_EXPIRED = 'incomplete_expired',
+  /** Subscription is unpaid */
+  UNPAID = 'unpaid',
+}
+
+/**
+ * Represents a user subscription
+ */
+export interface Subscription {
+  /** User ID this subscription belongs to */
+  userId: string;
+  /** Subscription status */
+  status: SubscriptionStatus | string;
+  /** Stripe customer ID */
+  stripeCustomerId: string;
+  /** Stripe subscription ID */
+  stripeSubscriptionId: string;
+  /** Stripe checkout session ID (if created via checkout) */
+  stripeSessionId?: string;
+  /** Stripe price ID */
+  stripePriceId?: string;
+  /** Current billing period start date */
+  currentPeriodStart: Date;
+  /** Current billing period end date */
+  currentPeriodEnd: Date;
+  /** Whether subscription will cancel at period end */
+  cancelAtPeriodEnd: boolean;
+  /** When subscription was created */
+  createdAt: Date;
+  /** When subscription was last updated */
+  updatedAt: Date;
+  /** When subscription was canceled (if applicable) */
+  canceledAt?: Date;
+  /** Last payment error timestamp (if applicable) */
+  lastPaymentError?: Date;
+}
+
+/**
+ * Data required to create a new subscription
+ */
+export interface CreateSubscriptionData {
+  /** User ID */
+  userId: string;
+  /** Subscription status */
+  status: SubscriptionStatus | string;
+  /** Stripe customer ID */
+  stripeCustomerId: string;
+  /** Stripe subscription ID */
+  stripeSubscriptionId: string;
+  /** Stripe checkout session ID (optional) */
+  stripeSessionId?: string;
+  /** Stripe price ID (optional) */
+  stripePriceId?: string;
+  /** Current billing period start date */
+  currentPeriodStart: Date;
+  /** Current billing period end date */
+  currentPeriodEnd: Date;
+  /** Whether subscription will cancel at period end */
+  cancelAtPeriodEnd: boolean;
+}
+
+/**
+ * Data for updating a subscription
+ */
+export interface UpdateSubscriptionData {
+  /** Subscription status */
+  status?: SubscriptionStatus | string;
+  /** Current billing period end date */
+  currentPeriodEnd?: Date;
+  /** Whether subscription will cancel at period end */
+  cancelAtPeriodEnd?: boolean;
+  /** When subscription was canceled */
+  canceledAt?: Date;
+  /** Last payment error timestamp */
+  lastPaymentError?: Date;
+}

@@ -12,8 +12,11 @@ export type {
   AuthSession,
   AuthTokenClaims,
   AuthResult,
+  Subscription,
+  CreateSubscriptionData,
+  UpdateSubscriptionData,
 } from './types/domain';
-export { AuthError, AuthErrorCode } from './types/domain';
+export { AuthError, AuthErrorCode, SubscriptionStatus } from './types/domain';
 
 // Export public operations
 export {
@@ -26,13 +29,15 @@ export {
   getCustomClaims,
   createCustomToken,
   isAuthConfigured,
+  // Subscription operations
+  getSubscription,
+  getSubscriptionBySessionId,
+  createSubscription,
+  updateSubscription,
 } from './public/auth-operations';
-
-// Export Firebase interop (escape hatches for direct Firebase access)
-export { getAdminAuth, getAdminFirestore } from './public/firebase-interop';
-export type { Auth, Firestore } from './public/firebase-interop';
 
 // DO NOT export:
 // - Internal provider interfaces (AuthServerProvider)
 // - Provider adapters (FirebaseAuthServerAdapter)
 // - Provider resolver functions
+// - Firebase interop (removed - use SDK operations instead)

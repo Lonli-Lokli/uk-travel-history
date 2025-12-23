@@ -3,7 +3,13 @@
  * Implementations provide the actual auth logic (Firebase, Clerk, etc.)
  */
 
-import type { AuthUser, AuthTokenClaims } from '../../types/domain';
+import type {
+  AuthUser,
+  AuthTokenClaims,
+  Subscription,
+  CreateSubscriptionData,
+  UpdateSubscriptionData,
+} from '../../types/domain';
 
 /**
  * Configuration for the auth provider
@@ -73,4 +79,41 @@ export interface AuthServerProvider {
     uid: string,
     claims?: Record<string, unknown>,
   ): Promise<string>;
+
+  // Subscription Management
+  /**
+   * Get a user's subscription by user ID
+   * @param userId - The user's unique identifier
+   * @returns The user's subscription, or null if not found
+   * @throws AuthError if operation fails
+   */
+  getSubscription(userId: string): Promise<Subscription | null>;
+
+  /**
+   * Get a subscription by Stripe checkout session ID
+   * @param sessionId - The Stripe checkout session ID
+   * @returns The subscription associated with the session, or null if not found
+   * @throws AuthError if operation fails
+   */
+  getSubscriptionBySessionId(sessionId: string): Promise<Subscription | null>;
+
+  /**
+   * Create a new subscription for a user
+   * @param data - Subscription data
+   * @returns The created subscription
+   * @throws AuthError if operation fails
+   */
+  createSubscription(data: CreateSubscriptionData): Promise<Subscription>;
+
+  /**
+   * Update an existing subscription
+   * @param userId - The user's unique identifier
+   * @param updates - Subscription fields to update
+   * @returns The updated subscription
+   * @throws AuthError if operation fails
+   */
+  updateSubscription(
+    userId: string,
+    updates: UpdateSubscriptionData,
+  ): Promise<Subscription>;
 }

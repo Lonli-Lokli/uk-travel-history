@@ -68,3 +68,10 @@ export function getAuthProvider(): AuthServerProvider {
 export function clearAuthProviderCache(): void {
   cachedProvider = undefined;
 }
+
+/**
+ * Set a custom provider (useful for testing)
+ */
+export function setAuthProvider(provider: AuthServerProvider): void {
+  cachedProvider = provider;
+}

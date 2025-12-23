@@ -5,12 +5,19 @@
 
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { logger } from '@uth/utils';
 import type {
   AuthServerProvider,
   AuthServerProviderConfig,
 } from './interface';
-import type { AuthUser, AuthTokenClaims } from '../../types/domain';
+import type {
+  AuthUser,
+  AuthTokenClaims,
+  Subscription,
+  CreateSubscriptionData,
+  UpdateSubscriptionData,
+} from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
 /**
@@ -28,6 +35,7 @@ interface FirebaseAdminConfig {
 export class FirebaseAuthServerAdapter implements AuthServerProvider {
   private app?: App;
   private auth?: Auth;
+  private firestore?: Firestore;
   private configured = false;
   private initError?: Error;
 
@@ -36,6 +44,7 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
     if (getApps().length > 0) {
       this.app = getApps()[0];
       this.auth = getAuth(this.app);
+      this.firestore = getFirestore(this.app);
       this.configured = true;
       return;
     }
@@ -67,6 +76,7 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       });
 
       this.auth = getAuth(this.app);
+      this.firestore = getFirestore(this.app);
       this.configured = true;
     } catch (error) {
       this.initError = error as Error;
@@ -94,6 +104,23 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       );
     }
     return this.auth;
+  }
+
+  private getFirestore(): Firestore {
+    if (!this.firestore) {
+      if (this.initError) {
+        throw new AuthError(
+          AuthErrorCode.CONFIG_ERROR,
+          `Firebase Admin SDK not initialized: ${this.initError.message}`,
+          this.initError,
+        );
+      }
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Firebase Admin SDK not initialized.',
+      );
+    }
+    return this.firestore;
   }
 
   async verifyToken(
@@ -250,6 +277,168 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
         `Failed to create custom token: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  // ============================================================================
+  // Subscription Management
+  // ============================================================================
+
+  async getSubscription(userId: string): Promise<Subscription | null> {
+    const firestore = this.getFirestore();
+
+    try {
+      const doc = await firestore.collection('subscriptions').doc(userId).get();
+
+      if (!doc.exists) {
+        return null;
+      }
+
+      const data = doc.data();
+      if (!data) {
+        return null;
+      }
+
+      // Convert Firestore Timestamps to Dates
+      return {
+        userId: data.userId,
+        status: data.status,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        stripeSessionId: data.stripeSessionId,
+        stripePriceId: data.stripePriceId,
+        currentPeriodStart: data.currentPeriodStart?.toDate() || new Date(),
+        currentPeriodEnd: data.currentPeriodEnd?.toDate() || new Date(),
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        canceledAt: data.canceledAt?.toDate(),
+        lastPaymentError: data.lastPaymentError?.toDate(),
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get subscription: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async getSubscriptionBySessionId(
+    sessionId: string,
+  ): Promise<Subscription | null> {
+    const firestore = this.getFirestore();
+
+    try {
+      const querySnapshot = await firestore
+        .collection('subscriptions')
+        .where('stripeSessionId', '==', sessionId)
+        .limit(1)
+        .get();
+
+      if (querySnapshot.empty) {
+        return null;
+      }
+
+      const doc = querySnapshot.docs[0];
+      const data = doc.data();
+
+      // Convert Firestore Timestamps to Dates
+      return {
+        userId: data.userId,
+        status: data.status,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        stripeSessionId: data.stripeSessionId,
+        stripePriceId: data.stripePriceId,
+        currentPeriodStart: data.currentPeriodStart?.toDate() || new Date(),
+        currentPeriodEnd: data.currentPeriodEnd?.toDate() || new Date(),
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        canceledAt: data.canceledAt?.toDate(),
+        lastPaymentError: data.lastPaymentError?.toDate(),
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get subscription by session ID: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async createSubscription(
+    data: CreateSubscriptionData,
+  ): Promise<Subscription> {
+    const firestore = this.getFirestore();
+
+    try {
+      const now = new Date();
+      const subscriptionData = {
+        userId: data.userId,
+        status: data.status,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        stripeSessionId: data.stripeSessionId,
+        stripePriceId: data.stripePriceId,
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await firestore
+        .collection('subscriptions')
+        .doc(data.userId)
+        .set(subscriptionData);
+
+      return {
+        ...subscriptionData,
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to create subscription: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async updateSubscription(
+    userId: string,
+    updates: UpdateSubscriptionData,
+  ): Promise<Subscription> {
+    const firestore = this.getFirestore();
+
+    try {
+      const updateData: any = {
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      await firestore
+        .collection('subscriptions')
+        .doc(userId)
+        .update(updateData);
+
+      // Fetch and return the updated subscription
+      const subscription = await this.getSubscription(userId);
+      if (!subscription) {
+        throw new AuthError(
+          AuthErrorCode.PROVIDER_ERROR,
+          'Subscription not found after update',
+        );
+      }
+
+      return subscription;
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to update subscription: ${error.message}`,
         error,
       );
     }

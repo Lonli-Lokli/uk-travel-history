@@ -3,7 +3,14 @@
  * Provider-agnostic interface for auth functionality
  */
 
-import type { AuthUser, AuthTokenClaims, AuthSession } from '../types/domain';
+import type {
+  AuthUser,
+  AuthTokenClaims,
+  AuthSession,
+  Subscription,
+  CreateSubscriptionData,
+  UpdateSubscriptionData,
+} from '../types/domain';
 import { AuthError, AuthErrorCode } from '../types/domain';
 import { getAuthProvider } from '../internal/provider-resolver';
 import type { IncomingHttpHeaders } from 'http';
@@ -170,4 +177,63 @@ export function isAuthConfigured(): boolean {
   } catch {
     return false;
   }
+}
+
+// ============================================================================
+// Subscription Management Operations
+// ============================================================================
+
+/**
+ * Get a user's subscription by user ID
+ * @param userId - The user's unique identifier
+ * @returns The user's subscription, or null if not found
+ * @throws AuthError if operation fails
+ */
+export async function getSubscription(
+  userId: string,
+): Promise<Subscription | null> {
+  const provider = getAuthProvider();
+  return provider.getSubscription(userId);
+}
+
+/**
+ * Get a subscription by Stripe checkout session ID
+ * Used to check if a checkout session has already been used
+ * @param sessionId - The Stripe checkout session ID
+ * @returns The subscription associated with the session, or null if not found
+ * @throws AuthError if operation fails
+ */
+export async function getSubscriptionBySessionId(
+  sessionId: string,
+): Promise<Subscription | null> {
+  const provider = getAuthProvider();
+  return provider.getSubscriptionBySessionId(sessionId);
+}
+
+/**
+ * Create a new subscription for a user
+ * @param data - Subscription data
+ * @returns The created subscription
+ * @throws AuthError if operation fails
+ */
+export async function createSubscription(
+  data: CreateSubscriptionData,
+): Promise<Subscription> {
+  const provider = getAuthProvider();
+  return provider.createSubscription(data);
+}
+
+/**
+ * Update an existing subscription
+ * @param userId - The user's unique identifier
+ * @param updates - Subscription fields to update
+ * @returns The updated subscription
+ * @throws AuthError if operation fails
+ */
+export async function updateSubscription(
+  userId: string,
+  updates: UpdateSubscriptionData,
+): Promise<Subscription> {
+  const provider = getAuthProvider();
+  return provider.updateSubscription(userId, updates);
 }

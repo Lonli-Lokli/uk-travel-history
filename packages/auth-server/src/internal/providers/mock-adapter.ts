@@ -6,7 +6,13 @@ import type {
   AuthServerProvider,
   AuthServerProviderConfig,
 } from './interface';
-import type { AuthUser, AuthTokenClaims } from '../../types/domain';
+import type {
+  AuthUser,
+  AuthTokenClaims,
+  Subscription,
+  CreateSubscriptionData,
+  UpdateSubscriptionData,
+} from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
 /**
@@ -16,6 +22,8 @@ export class MockAuthServerAdapter implements AuthServerProvider {
   private configured = true;
   private users: Map<string, AuthUser> = new Map();
   private tokens: Map<string, { uid: string; exp: number }> = new Map();
+  private subscriptions: Map<string, Subscription> = new Map();
+  private subscriptionsBySessionId: Map<string, Subscription> = new Map();
 
   initialize(config: AuthServerProviderConfig): void {
     this.configured = true;
@@ -117,5 +125,66 @@ export class MockAuthServerAdapter implements AuthServerProvider {
   clearMockData(): void {
     this.users.clear();
     this.tokens.clear();
+    this.subscriptions.clear();
+    this.subscriptionsBySessionId.clear();
+  }
+
+  // ============================================================================
+  // Subscription Management
+  // ============================================================================
+
+  async getSubscription(userId: string): Promise<Subscription | null> {
+    return this.subscriptions.get(userId) || null;
+  }
+
+  async getSubscriptionBySessionId(
+    sessionId: string,
+  ): Promise<Subscription | null> {
+    return this.subscriptionsBySessionId.get(sessionId) || null;
+  }
+
+  async createSubscription(
+    data: CreateSubscriptionData,
+  ): Promise<Subscription> {
+    const now = new Date();
+    const subscription: Subscription = {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.subscriptions.set(data.userId, subscription);
+    if (data.stripeSessionId) {
+      this.subscriptionsBySessionId.set(data.stripeSessionId, subscription);
+    }
+
+    return subscription;
+  }
+
+  async updateSubscription(
+    userId: string,
+    updates: UpdateSubscriptionData,
+  ): Promise<Subscription> {
+    const existing = this.subscriptions.get(userId);
+
+    if (!existing) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Subscription not found: ${userId}`,
+      );
+    }
+
+    const updated: Subscription = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.subscriptions.set(userId, updated);
+    if (updated.stripeSessionId) {
+      this.subscriptionsBySessionId.set(updated.stripeSessionId, updated);
+    }
+
+    return updated;
   }
 }

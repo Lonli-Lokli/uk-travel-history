@@ -2,11 +2,18 @@
  * Tests for auth-server public API
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   AuthError,
   AuthErrorCode,
+  SubscriptionStatus,
+  getSubscription,
+  getSubscriptionBySessionId,
+  createSubscription,
+  updateSubscription,
 } from '../index.js';
+import { MockAuthServerAdapter } from '../internal/providers/mock-adapter';
+import { setAuthProvider } from '../internal/provider-resolver';
 
 describe('Auth Server - Domain Types', () => {
   describe('AuthError', () => {
@@ -58,6 +65,305 @@ describe('Auth Server - Domain Types', () => {
       expect(AuthErrorCode.INVALID_TOKEN).toBe('INVALID_TOKEN');
       expect(AuthErrorCode.USER_NOT_FOUND).toBe('USER_NOT_FOUND');
       expect(AuthErrorCode.UNKNOWN).toBe('UNKNOWN');
+    });
+  });
+
+  describe('SubscriptionStatus enum', () => {
+    it('should have all expected subscription statuses', () => {
+      expect(SubscriptionStatus.ACTIVE).toBe('active');
+      expect(SubscriptionStatus.PAST_DUE).toBe('past_due');
+      expect(SubscriptionStatus.CANCELED).toBe('canceled');
+      expect(SubscriptionStatus.TRIALING).toBe('trialing');
+      expect(SubscriptionStatus.INCOMPLETE).toBe('incomplete');
+      expect(SubscriptionStatus.INCOMPLETE_EXPIRED).toBe('incomplete_expired');
+      expect(SubscriptionStatus.UNPAID).toBe('unpaid');
+    });
+  });
+});
+
+describe('Auth Server - Subscription Operations', () => {
+  let mockProvider: MockAuthServerAdapter;
+
+  beforeEach(() => {
+    mockProvider = new MockAuthServerAdapter();
+    mockProvider.initialize({});
+    mockProvider.clearMockData();
+    setAuthProvider(mockProvider);
+  });
+
+  describe('createSubscription', () => {
+    it('should create a new subscription with all fields', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripeSessionId: 'cs_123',
+        stripePriceId: 'price_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      const subscription = await createSubscription(subscriptionData);
+
+      expect(subscription.userId).toBe('user123');
+      expect(subscription.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(subscription.stripeCustomerId).toBe('cus_123');
+      expect(subscription.stripeSubscriptionId).toBe('sub_123');
+      expect(subscription.stripeSessionId).toBe('cs_123');
+      expect(subscription.stripePriceId).toBe('price_123');
+      expect(subscription.cancelAtPeriodEnd).toBe(false);
+      expect(subscription.createdAt).toBeInstanceOf(Date);
+      expect(subscription.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should create subscription without optional fields', async () => {
+      const subscriptionData = {
+        userId: 'user456',
+        status: SubscriptionStatus.TRIALING,
+        stripeCustomerId: 'cus_456',
+        stripeSubscriptionId: 'sub_456',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      const subscription = await createSubscription(subscriptionData);
+
+      expect(subscription.userId).toBe('user456');
+      expect(subscription.status).toBe(SubscriptionStatus.TRIALING);
+      expect(subscription.stripeSessionId).toBeUndefined();
+      expect(subscription.stripePriceId).toBeUndefined();
+    });
+  });
+
+  describe('getSubscription', () => {
+    it('should return subscription for existing user', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+      const subscription = await getSubscription('user123');
+
+      expect(subscription).not.toBeNull();
+      expect(subscription?.userId).toBe('user123');
+      expect(subscription?.status).toBe(SubscriptionStatus.ACTIVE);
+    });
+
+    it('should return null for non-existent subscription', async () => {
+      const subscription = await getSubscription('nonexistent');
+      expect(subscription).toBeNull();
+    });
+  });
+
+  describe('getSubscriptionBySessionId', () => {
+    it('should return subscription for existing session', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripeSessionId: 'cs_test_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+      const subscription = await getSubscriptionBySessionId('cs_test_123');
+
+      expect(subscription).not.toBeNull();
+      expect(subscription?.userId).toBe('user123');
+      expect(subscription?.stripeSessionId).toBe('cs_test_123');
+    });
+
+    it('should return null for non-existent session', async () => {
+      const subscription = await getSubscriptionBySessionId('cs_nonexistent');
+      expect(subscription).toBeNull();
+    });
+
+    it('should detect session reuse (already used check)', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripeSessionId: 'cs_test_session',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+
+      // Check if session is already used
+      const existingSubscription = await getSubscriptionBySessionId('cs_test_session');
+      expect(existingSubscription).not.toBeNull();
+
+      // This would be the "already used" check in the application
+      const alreadyUsed = existingSubscription !== null;
+      expect(alreadyUsed).toBe(true);
+    });
+  });
+
+  describe('updateSubscription', () => {
+    it('should update subscription status to past_due', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+
+      const updated = await updateSubscription('user123', {
+        status: SubscriptionStatus.PAST_DUE,
+        lastPaymentError: new Date(),
+      });
+
+      expect(updated.status).toBe(SubscriptionStatus.PAST_DUE);
+      expect(updated.lastPaymentError).toBeInstanceOf(Date);
+      expect(updated.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should update cancelAtPeriodEnd flag', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+
+      const updated = await updateSubscription('user123', {
+        status: SubscriptionStatus.CANCELED,
+        cancelAtPeriodEnd: true,
+        canceledAt: new Date(),
+      });
+
+      expect(updated.status).toBe(SubscriptionStatus.CANCELED);
+      expect(updated.cancelAtPeriodEnd).toBe(true);
+      expect(updated.canceledAt).toBeInstanceOf(Date);
+    });
+
+    it('should update subscription period end date', async () => {
+      const subscriptionData = {
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      };
+
+      await createSubscription(subscriptionData);
+
+      const newPeriodEnd = new Date('2024-03-01');
+      const updated = await updateSubscription('user123', {
+        currentPeriodEnd: newPeriodEnd,
+      });
+
+      expect(updated.currentPeriodEnd).toEqual(newPeriodEnd);
+    });
+
+    it('should throw error for non-existent subscription', async () => {
+      await expect(
+        updateSubscription('nonexistent', {
+          status: SubscriptionStatus.CANCELED,
+        }),
+      ).rejects.toThrow(AuthError);
+    });
+  });
+
+  describe('Subscription workflow scenarios', () => {
+    it('should handle complete new subscription flow', async () => {
+      // 1. Check session not already used
+      const existingBeforeCreate = await getSubscriptionBySessionId('cs_new_session');
+      expect(existingBeforeCreate).toBeNull();
+
+      // 2. Create subscription after successful payment
+      const subscription = await createSubscription({
+        userId: 'new_user',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_new',
+        stripeSubscriptionId: 'sub_new',
+        stripeSessionId: 'cs_new_session',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      });
+
+      expect(subscription.status).toBe(SubscriptionStatus.ACTIVE);
+
+      // 3. Verify session is now used
+      const existingAfterCreate = await getSubscriptionBySessionId('cs_new_session');
+      expect(existingAfterCreate).not.toBeNull();
+
+      // 4. Retrieve by user ID
+      const retrieved = await getSubscription('new_user');
+      expect(retrieved?.stripeSessionId).toBe('cs_new_session');
+    });
+
+    it('should handle subscription cancellation flow', async () => {
+      // Create active subscription
+      await createSubscription({
+        userId: 'cancel_user',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_cancel',
+        stripeSubscriptionId: 'sub_cancel',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      });
+
+      // Update to canceled
+      const updated = await updateSubscription('cancel_user', {
+        status: SubscriptionStatus.CANCELED,
+        cancelAtPeriodEnd: true,
+        canceledAt: new Date(),
+      });
+
+      expect(updated.status).toBe(SubscriptionStatus.CANCELED);
+      expect(updated.canceledAt).toBeInstanceOf(Date);
+    });
+
+    it('should handle payment failure flow', async () => {
+      // Create active subscription
+      await createSubscription({
+        userId: 'payment_fail_user',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_fail',
+        stripeSubscriptionId: 'sub_fail',
+        currentPeriodStart: new Date('2024-01-01'),
+        currentPeriodEnd: new Date('2024-02-01'),
+        cancelAtPeriodEnd: false,
+      });
+
+      // Update to past_due after payment failure
+      const updated = await updateSubscription('payment_fail_user', {
+        status: SubscriptionStatus.PAST_DUE,
+        lastPaymentError: new Date(),
+      });
+
+      expect(updated.status).toBe(SubscriptionStatus.PAST_DUE);
+      expect(updated.lastPaymentError).toBeInstanceOf(Date);
     });
   });
 });
