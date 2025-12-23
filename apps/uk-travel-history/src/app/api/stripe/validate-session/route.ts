@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeAPI } from '@uth/payments-server';
 import { logger } from '@uth/utils';
-import { getAdminFirestore } from '@uth/auth-server';
+import { getSubscriptionBySessionId } from '@uth/auth-server';
 import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
@@ -65,17 +65,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if session has already been used (linked to a Firebase user)
-    const adminFirestore = getAdminFirestore();
-
-    // Query subscriptions collection for this session_id
-    const existingSubscription = await adminFirestore
-      .collection('subscriptions')
-      .where('stripeSessionId', '==', session_id)
-      .limit(1)
-      .get();
-
-    const alreadyUsed = !existingSubscription.empty;
+    // Check if session has already been used using SDK
+    const existingSubscription = await getSubscriptionBySessionId(session_id);
+    const alreadyUsed = existingSubscription !== null;
 
     if (alreadyUsed) {
       logger.warn('[Validate Session] Session already used', {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeAPI, STRIPE_PRICES } from '@uth/payments-server';
-import { getAdminAuth } from '@uth/auth-server';
+import { verifyToken } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
@@ -27,23 +27,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify Firebase authentication
+    // Verify authentication using SDK
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const adminAuth = getAdminAuth();
 
-    let decodedToken;
+    let tokenClaims;
     try {
-      decodedToken = await adminAuth.verifyIdToken(token);
+      tokenClaims = await verifyToken(token);
     } catch (authError) {
-      // Track Firebase auth failures in Sentry
+      // Track auth failures in Sentry
       Sentry.captureException(authError, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'verify_token',
           endpoint: 'create-checkout',
         },
@@ -55,15 +54,15 @@ export async function POST(request: NextRequest) {
         },
         level: 'error',
       });
-      logger.error('Firebase token verification failed:', authError);
+      logger.error('Token verification failed:', authError);
       return NextResponse.json(
         { error: 'Invalid authentication token' },
         { status: 401 },
       );
     }
 
-    const userId = decodedToken.uid;
-    const userEmail = decodedToken.email;
+    const userId = tokenClaims.uid;
+    const userEmail = tokenClaims.email;
 
     // Set Sentry user context for error tracking
     Sentry.setUser({ id: userId, email: userEmail ?? undefined });

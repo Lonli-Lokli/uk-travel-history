@@ -7,6 +7,13 @@ import {
   AuthError,
   AuthErrorCode,
   SubscriptionStatus,
+  verifyToken,
+  getUser,
+  deleteUser,
+  setCustomClaims,
+  getCustomClaims,
+  createCustomToken,
+  isAuthConfigured,
   getSubscription,
   getSubscriptionBySessionId,
   createSubscription,
@@ -77,6 +84,114 @@ describe('Auth Server - Domain Types', () => {
       expect(SubscriptionStatus.INCOMPLETE).toBe('incomplete');
       expect(SubscriptionStatus.INCOMPLETE_EXPIRED).toBe('incomplete_expired');
       expect(SubscriptionStatus.UNPAID).toBe('unpaid');
+    });
+  });
+});
+
+describe('Auth Server - Authentication Operations', () => {
+  let mockProvider: MockAuthServerAdapter;
+
+  beforeEach(() => {
+    mockProvider = new MockAuthServerAdapter();
+    mockProvider.initialize({});
+    mockProvider.clearMockData();
+
+    // Add a test user for operations that need an existing user
+    mockProvider.addMockUser({
+      uid: 'test-uid',
+      email: 'test@example.com',
+      emailVerified: true,
+    });
+
+    // Add a valid token for the test user
+    mockProvider.addMockToken('valid-token', 'test-uid');
+
+    setAuthProvider(mockProvider);
+  });
+
+  describe('isAuthConfigured', () => {
+    it('should return true when provider is configured', () => {
+      expect(isAuthConfigured()).toBe(true);
+    });
+  });
+
+  describe('verifyToken', () => {
+    it('should verify a valid token', async () => {
+      const result = await verifyToken('valid-token');
+
+      expect(result).toBeDefined();
+      expect(result.uid).toBe('test-uid');
+      expect(result.email).toBe('test@example.com');
+      expect(result.emailVerified).toBe(true);
+    });
+
+    it('should throw AuthError for invalid token', async () => {
+      await expect(verifyToken('invalid')).rejects.toThrow(AuthError);
+    });
+  });
+
+  describe('getUser', () => {
+    it('should retrieve user by ID', async () => {
+      const user = await getUser('test-uid');
+
+      expect(user.uid).toBe('test-uid');
+      expect(user.email).toBe('test@example.com');
+      expect(user.emailVerified).toBe(true);
+    });
+
+    it('should throw error for non-existent user', async () => {
+      await expect(getUser('nonexistent')).rejects.toThrow(AuthError);
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('should delete an existing user', async () => {
+      await deleteUser('test-uid');
+      // After deletion, getUser should throw
+      await expect(getUser('test-uid')).rejects.toThrow(AuthError);
+    });
+
+    it('should throw error when trying to delete non-existent user', async () => {
+      await expect(deleteUser('nonexistent')).rejects.toThrow(AuthError);
+    });
+  });
+
+  describe('setCustomClaims', () => {
+    it('should set custom claims for an existing user', async () => {
+      const claims = { role: 'admin', premium: true };
+      await setCustomClaims('test-uid', claims);
+
+      const retrievedClaims = await getCustomClaims('test-uid');
+      expect(retrievedClaims).toEqual(claims);
+    });
+  });
+
+  describe('getCustomClaims', () => {
+    it('should retrieve custom claims', async () => {
+      const claims = { role: 'user' };
+      await setCustomClaims('test-uid', claims);
+
+      const retrievedClaims = await getCustomClaims('test-uid');
+      expect(retrievedClaims).toEqual(claims);
+    });
+
+    it('should throw error for non-existent user', async () => {
+      await expect(getCustomClaims('nonexistent')).rejects.toThrow(AuthError);
+    });
+  });
+
+  describe('createCustomToken', () => {
+    it('should create a custom token', async () => {
+      const token = await createCustomToken('test-uid');
+      expect(token).toBeDefined();
+      expect(typeof token).toBe('string');
+      expect(token.length).toBeGreaterThan(0);
+    });
+
+    it('should create a custom token with custom claims', async () => {
+      const token = await createCustomToken('test-uid', { premium: true });
+      expect(token).toBeDefined();
+      expect(typeof token).toBe('string');
     });
   });
 });
