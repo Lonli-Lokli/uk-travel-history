@@ -16,5 +16,8 @@
   "nx": {
     "name": "auth-server"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@uth/utils": "*",
+    "firebase-admin": "^13.0.2"
+  }
 }

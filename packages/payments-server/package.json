@@ -16,5 +16,7 @@
   "nx": {
     "name": "payments-server"
   },
-  "dependencies": {}
+  "dependencies": {
+    "stripe": "^17.5.0"
+  }
 }

@@ -3,14 +3,14 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
-  cacheDir: '../../node_modules/.vite/packages/stripe-client',
+  cacheDir: '../../node_modules/.vite/packages/payments-client',
   plugins: [],
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],
   // },
   test: {
-    name: 'stripe-client',
+    name: 'payments-client',
     watch: false,
     globals: true,
     environment: 'node',
