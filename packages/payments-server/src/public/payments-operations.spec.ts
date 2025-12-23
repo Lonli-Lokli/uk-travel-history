@@ -13,6 +13,7 @@ import {
   retrieveCheckoutSession,
   retrieveSubscription,
   constructWebhookEvent,
+  createCheckoutSession,
 } from '../index.js';
 import { getPaymentsProvider } from '../internal/provider-resolver.js';
 import { StripePaymentsServerAdapter } from '../internal/providers/stripe-adapter.js';
@@ -263,6 +264,74 @@ describe('Payments Server - SDK Operations', () => {
     });
   });
 
+  describe('createCheckoutSession', () => {
+    it('should create authenticated checkout session with userId and email', async () => {
+      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
+      if (!provider.isConfigured()) {
+        // Skip test if Stripe is not configured
+        return;
+      }
+
+      const session = await createCheckoutSession({
+        plan: PaymentPlan.PREMIUM_MONTHLY,
+        userId: 'test-user-123',
+        customerEmail: 'test@example.com',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+        metadata: {
+          testMode: 'true',
+        },
+      });
+
+      expect(session).toBeDefined();
+      expect(session.id).toBeDefined();
+      expect(session.url).toBeDefined();
+      expect(session.expiresAt).toBeInstanceOf(Date);
+    });
+
+    it('should create anonymous checkout session without userId', async () => {
+      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
+      if (!provider.isConfigured()) {
+        // Skip test if Stripe is not configured
+        return;
+      }
+
+      const session = await createCheckoutSession({
+        plan: PaymentPlan.PREMIUM_ANNUAL,
+        successUrl: 'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://example.com/cancel',
+        metadata: {
+          isPreRegistration: 'true',
+        },
+      });
+
+      expect(session).toBeDefined();
+      expect(session.id).toBeDefined();
+      expect(session.url).toBeDefined();
+      expect(session.expiresAt).toBeInstanceOf(Date);
+    });
+
+    it('should handle one-time payment plan', async () => {
+      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
+      if (!provider.isConfigured()) {
+        // Skip test if Stripe is not configured
+        return;
+      }
+
+      const session = await createCheckoutSession({
+        plan: PaymentPlan.PREMIUM_ONCE,
+        userId: 'test-user-456',
+        customerEmail: 'test@example.com',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      });
+
+      expect(session).toBeDefined();
+      expect(session.id).toBeDefined();
+      expect(session.url).toBeDefined();
+    });
+  });
+
   describe('Integration scenarios', () => {
     it('should handle full checkout flow types', () => {
       // Verify all types are exported correctly
@@ -278,6 +347,31 @@ describe('Payments Server - SDK Operations', () => {
       // PriceIds should be provider-agnostic
       expect(priceIds).not.toHaveProperty('stripe');
       expect(priceIds).not.toHaveProperty('stripeInstance');
+    });
+
+    it('should support both authenticated and anonymous checkout flows', async () => {
+      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
+      if (!provider.isConfigured()) {
+        return;
+      }
+
+      // Authenticated flow
+      const authenticatedSession = await createCheckoutSession({
+        plan: PaymentPlan.PREMIUM_MONTHLY,
+        userId: 'user-123',
+        customerEmail: 'user@example.com',
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      });
+      expect(authenticatedSession.id).toBeDefined();
+
+      // Anonymous flow
+      const anonymousSession = await createCheckoutSession({
+        plan: PaymentPlan.PREMIUM_ANNUAL,
+        successUrl: 'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://example.com/cancel',
+      });
+      expect(anonymousSession.id).toBeDefined();
     });
   });
 });

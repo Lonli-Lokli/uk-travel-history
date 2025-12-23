@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPriceIds } from '@uth/payments-server';
+import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { verifyToken } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
-import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -74,25 +73,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as CheckoutRequest;
-    const { priceId, billingPeriod } = body;
+    const { billingPeriod } = body;
 
-    // Get price IDs from SDK
-    const STRIPE_PRICES = getPriceIds();
-
-    // Validate price ID
-    if (
-      priceId !== STRIPE_PRICES.PREMIUM_MONTHLY &&
-      priceId !== STRIPE_PRICES.PREMIUM_ANNUAL
-    ) {
-      return NextResponse.json({ error: 'Invalid price ID' }, { status: 400 });
-    }
-
-    // Validate billing period
-    if (
-      billingPeriod !== 'monthly' &&
-      billingPeriod !== 'annual' &&
-      billingPeriod !== 'once'
-    ) {
+    // Map billing period to PaymentPlan
+    let plan: PaymentPlan;
+    if (billingPeriod === 'monthly') {
+      plan = PaymentPlan.PREMIUM_MONTHLY;
+    } else if (billingPeriod === 'annual') {
+      plan = PaymentPlan.PREMIUM_ANNUAL;
+    } else if (billingPeriod === 'once') {
+      plan = PaymentPlan.PREMIUM_ONCE;
+    } else {
       return NextResponse.json(
         { error: 'Invalid billing period' },
         { status: 400 },
@@ -102,36 +93,15 @@ export async function POST(request: NextRequest) {
     // Get the app URL for success/cancel redirects
     const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Create local Stripe instance for direct API call
-    const stripe = new Stripe(
-      process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build',
-      {
-        apiVersion: '2025-02-24.acacia',
-        typescript: true,
-      },
-    );
-
-    // Create Stripe Checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer_email: userEmail,
-      client_reference_id: userId, // Link to Firebase user
+    // Create checkout session using SDK
+    const session = await createCheckoutSession({
+      plan,
+      userId,
+      customerEmail: userEmail,
+      successUrl: `${appUrl}/travel?checkout=success`,
+      cancelUrl: `${appUrl}/travel?checkout=canceled`,
       metadata: {
-        userId,
         billingPeriod,
-      },
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${appUrl}/travel?checkout=success`,
-      cancel_url: `${appUrl}/travel?checkout=canceled`,
-      subscription_data: {
-        metadata: {
-          userId,
-        },
       },
     });
 

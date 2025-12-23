@@ -73,8 +73,10 @@ export enum PaymentPlan {
 export interface CheckoutIntent {
   /** The payment plan to purchase */
   plan: PaymentPlan;
-  /** User ID purchasing the plan */
-  userId: string;
+  /** User ID purchasing the plan (optional for anonymous checkout) */
+  userId?: string;
+  /** Customer email (for authenticated users) */
+  customerEmail?: string;
   /** URL to redirect to on success */
   successUrl: string;
   /** URL to redirect to on cancellation */

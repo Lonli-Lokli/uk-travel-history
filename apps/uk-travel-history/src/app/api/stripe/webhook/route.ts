@@ -194,7 +194,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 }
 
-async function handleSubscriptionUpdated(subscription: any) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata.userId;
   if (!userId) {
     logger.warn('No userId in subscription metadata', {
@@ -222,7 +222,7 @@ async function handleSubscriptionUpdated(subscription: any) {
   });
 }
 
-async function handleSubscriptionDeleted(subscription: any) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const userId = subscription.metadata.userId;
   if (!userId) {
     logger.warn('No userId in subscription metadata', {
@@ -245,7 +245,7 @@ async function handleSubscriptionDeleted(subscription: any) {
   logger.log('Subscription canceled via SDK', { userId });
 }
 
-async function handlePaymentFailed(invoice: any) {
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
   if (!invoice.subscription) {
     logger.warn('Payment failed for invoice without subscription', {
       invoiceId: invoice.id,

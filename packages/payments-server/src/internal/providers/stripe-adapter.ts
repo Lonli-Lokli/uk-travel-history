@@ -119,8 +119,9 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         metadata: session.metadata || undefined,
         customerEmail: session.customer_email || session.customer_details?.email || undefined,
       };
-    } catch (error: any) {
-      if (error.code === 'resource_missing') {
+    } catch (error: unknown) {
+      const stripeError = error as Stripe.StripeRawError;
+      if (stripeError.code === 'resource_missing') {
         throw new PaymentsError(
           PaymentsErrorCode.NOT_FOUND,
           `Checkout session not found: ${sessionId}`,
@@ -128,9 +129,10 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
-        `Failed to retrieve checkout session: ${error.message}`,
+        `Failed to retrieve checkout session: ${errorMessage}`,
         error,
       );
     }
@@ -154,8 +156,9 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         priceId: subscription.items.data[0]?.price.id,
         metadata: subscription.metadata || undefined,
       };
-    } catch (error: any) {
-      if (error.code === 'resource_missing') {
+    } catch (error: unknown) {
+      const stripeError = error as Stripe.StripeRawError;
+      if (stripeError.code === 'resource_missing') {
         throw new PaymentsError(
           PaymentsErrorCode.NOT_FOUND,
           `Subscription not found: ${subscriptionId}`,
@@ -163,9 +166,10 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
-        `Failed to retrieve subscription: ${error.message}`,
+        `Failed to retrieve subscription: ${errorMessage}`,
         error,
       );
     }
@@ -180,10 +184,11 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
 
     try {
       return stripe.webhooks.constructEvent(body, signature, secret);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.INVALID_SIGNATURE,
-        `Webhook signature verification failed: ${error.message}`,
+        `Webhook signature verification failed: ${errorMessage}`,
         error,
       );
     }
@@ -197,7 +202,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     try {
       const priceId = this.getPriceId(intent.plan);
 
-      const session = await stripe.checkout.sessions.create({
+      // Build session parameters based on whether this is authenticated or anonymous
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode:
           intent.plan === PaymentPlan.PREMIUM_ONCE ? 'payment' : 'subscription',
         line_items: [
@@ -208,13 +214,39 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         ],
         success_url: intent.successUrl,
         cancel_url: intent.cancelUrl,
-        client_reference_id: intent.userId,
         metadata: {
-          userId: intent.userId,
           plan: intent.plan,
           ...intent.metadata,
         },
-      });
+      };
+
+      // Authenticated user: set customer_email and client_reference_id
+      if (intent.userId) {
+        sessionParams.client_reference_id = intent.userId;
+        sessionParams.metadata!.userId = intent.userId;
+
+        if (intent.customerEmail) {
+          sessionParams.customer_email = intent.customerEmail;
+        }
+      }
+
+      // Add subscription metadata if subscription mode
+      if (intent.plan !== PaymentPlan.PREMIUM_ONCE && intent.userId) {
+        sessionParams.subscription_data = {
+          metadata: {
+            userId: intent.userId,
+          },
+        };
+      } else if (intent.plan !== PaymentPlan.PREMIUM_ONCE) {
+        // Anonymous subscription
+        sessionParams.subscription_data = {
+          metadata: {
+            isPreRegistration: 'true',
+          },
+        };
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
 
       if (!session.url) {
         throw new PaymentsError(
@@ -228,14 +260,15 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         url: session.url,
         expiresAt: new Date(session.expires_at * 1000),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof PaymentsError) {
         throw error;
       }
 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
-        `Failed to create checkout session: ${error.message}`,
+        `Failed to create checkout session: ${errorMessage}`,
         error,
       );
     }
@@ -278,8 +311,9 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       }
 
       return entitlement;
-    } catch (error: any) {
-      if (error.code === 'resource_missing') {
+    } catch (error: unknown) {
+      const stripeError = error as Stripe.StripeRawError;
+      if (stripeError.code === 'resource_missing') {
         throw new PaymentsError(
           PaymentsErrorCode.NOT_FOUND,
           `Checkout session not found: ${sessionId}`,
@@ -287,9 +321,10 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
-        `Failed to verify checkout session: ${error.message}`,
+        `Failed to verify checkout session: ${errorMessage}`,
         error,
       );
     }
@@ -327,26 +362,27 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       timestamp: new Date(stripeEvent.created * 1000),
     };
 
-    // Extract data based on event type
-    const data = stripeEvent.data.object as any;
-
+    // Extract data based on event type with proper typing
     if (stripeEvent.type === 'checkout.session.completed') {
-      event.userId = data.client_reference_id || data.metadata?.userId;
-      event.plan = data.metadata?.plan;
-      event.sessionId = data.id;
-      event.subscriptionId = data.subscription;
+      const session = stripeEvent.data.object as Stripe.Checkout.Session;
+      event.userId = session.client_reference_id || session.metadata?.userId || undefined;
+      event.plan = session.metadata?.plan as PaymentPlan | undefined;
+      event.sessionId = session.id;
+      event.subscriptionId = session.subscription as string | undefined;
       event.status = PaymentStatus.SUCCEEDED;
     } else if (stripeEvent.type.startsWith('payment_intent')) {
+      const paymentIntent = stripeEvent.data.object as Stripe.PaymentIntent;
       event.status =
         stripeEvent.type === 'payment_intent.succeeded'
           ? PaymentStatus.SUCCEEDED
           : PaymentStatus.FAILED;
-      event.metadata = data.metadata;
+      event.metadata = paymentIntent.metadata as Record<string, unknown> | undefined;
     } else if (stripeEvent.type.startsWith('customer.subscription')) {
-      event.subscriptionId = data.id;
-      event.userId = data.metadata?.userId;
-      event.plan = data.metadata?.plan;
-      event.metadata = data.metadata;
+      const subscription = stripeEvent.data.object as Stripe.Subscription;
+      event.subscriptionId = subscription.id;
+      event.userId = subscription.metadata?.userId || undefined;
+      event.plan = subscription.metadata?.plan as PaymentPlan | undefined;
+      event.metadata = subscription.metadata as Record<string, unknown> | undefined;
     }
 
     return event;
@@ -365,10 +401,11 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           input.signature,
           this.webhookSecret,
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new PaymentsError(
           PaymentsErrorCode.INVALID_SIGNATURE,
-          `Webhook signature verification failed: ${error.message}`,
+          `Webhook signature verification failed: ${errorMessage}`,
           error,
         );
       }
@@ -379,7 +416,7 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           typeof input.body === 'string'
             ? JSON.parse(input.body)
             : JSON.parse(input.body.toString());
-      } catch (error: any) {
+      } catch (error: unknown) {
         throw new PaymentsError(
           PaymentsErrorCode.INVALID_INPUT,
           'Invalid webhook payload',
