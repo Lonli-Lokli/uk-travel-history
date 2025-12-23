@@ -28,8 +28,11 @@ export {
   isAuthConfigured,
 } from './public/auth-operations';
 
+// Export Firebase interop (escape hatches for direct Firebase access)
+export { getAdminAuth, getAdminFirestore } from './public/firebase-interop';
+export type { Auth, Firestore } from './public/firebase-interop';
+
 // DO NOT export:
 // - Internal provider interfaces (AuthServerProvider)
 // - Provider adapters (FirebaseAuthServerAdapter)
 // - Provider resolver functions
-// - Firebase/Stripe types or SDK instances

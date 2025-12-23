@@ -31,8 +31,14 @@ export {
   isPaymentsConfigured,
 } from './public/payments-operations';
 
+// Export Stripe interop (escape hatches for direct Stripe access)
+export {
+  getStripeInstance,
+  StripeAPI,
+  STRIPE_PRICES,
+} from './public/stripe-interop';
+
 // DO NOT export:
 // - Internal provider interfaces (PaymentsServerProvider)
 // - Provider adapters (StripePaymentsServerAdapter)
 // - Provider resolver functions
-// - Stripe/Paddle types or SDK instances
