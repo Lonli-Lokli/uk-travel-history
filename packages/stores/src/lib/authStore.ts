@@ -2,34 +2,23 @@
 // Manages user authentication state using the auth SDK
 
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { User } from 'firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
 import {
   signOut as sdkSignOut,
   isPasskeySupported as sdkIsPasskeySupported,
   signInWithPasskey as sdkSignInWithPasskey,
   registerPasskey as sdkRegisterPasskey,
   registerPasskeyAnonymous as sdkRegisterPasskeyAnonymous,
+  getIdToken as sdkGetIdToken,
+  onAuthStateChanged as sdkOnAuthStateChanged,
   AuthError,
   AuthErrorCode,
+  type AuthUser,
+  type AuthState,
 } from '@uth/auth-client';
 import * as Sentry from '@sentry/nextjs';
 
-// Helper to get auth instance for Firebase-specific operations
-// This is a temporary workaround until we fully migrate to SDK
-import { getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-
-function getAuthInstance() {
-  const apps = getApps();
-  if (apps.length === 0) {
-    throw new Error('Firebase is not initialized');
-  }
-  return getAuth(apps[0]);
-}
-
 class AuthStore {
-  user: User | null = null;
+  user: AuthUser | null = null;
   isLoading = true;
   isAuthenticating = false;
   error: string | null = null;
@@ -37,14 +26,16 @@ class AuthStore {
   constructor() {
     makeAutoObservable(this);
 
-    // Listen for auth state changes
+    // Listen for auth state changes using SDK
     if (typeof window !== 'undefined') {
       try {
-        const auth = getAuthInstance();
-        onAuthStateChanged(auth, (user) => {
+        sdkOnAuthStateChanged((authState: AuthState) => {
           runInAction(() => {
-            this.user = user;
-            this.isLoading = false;
+            this.user = authState.user;
+            this.isLoading = authState.loading;
+            if (authState.error) {
+              this.error = authState.error.message;
+            }
           });
         });
       } catch {
@@ -214,12 +205,12 @@ class AuthStore {
   async getIdToken(): Promise<string | null> {
     try {
       if (!this.user) return null;
-      return this.user.getIdToken();
+      return await sdkGetIdToken();
     } catch (error) {
       // Track ID token retrieval failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'get_id_token',
         },
         contexts: {
