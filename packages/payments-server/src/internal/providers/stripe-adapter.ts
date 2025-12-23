@@ -117,7 +117,10 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         customerId: session.customer as string | undefined,
         subscriptionId: session.subscription as string | undefined,
         metadata: session.metadata || undefined,
-        customerEmail: session.customer_email || session.customer_details?.email || undefined,
+        customerEmail:
+          session.customer_email ||
+          session.customer_details?.email ||
+          undefined,
       };
     } catch (error: unknown) {
       const stripeError = error as Stripe.StripeRawError;
@@ -129,7 +132,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
         `Failed to retrieve checkout session: ${errorMessage}`,
@@ -166,7 +170,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
         `Failed to retrieve subscription: ${errorMessage}`,
@@ -185,7 +190,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     try {
       return stripe.webhooks.constructEvent(body, signature, secret);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.INVALID_SIGNATURE,
         `Webhook signature verification failed: ${errorMessage}`,
@@ -265,7 +271,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         throw error;
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
         `Failed to create checkout session: ${errorMessage}`,
@@ -321,7 +328,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new PaymentsError(
         PaymentsErrorCode.PROVIDER_ERROR,
         `Failed to verify checkout session: ${errorMessage}`,
@@ -365,7 +373,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     // Extract data based on event type with proper typing
     if (stripeEvent.type === 'checkout.session.completed') {
       const session = stripeEvent.data.object as Stripe.Checkout.Session;
-      event.userId = session.client_reference_id || session.metadata?.userId || undefined;
+      event.userId =
+        session.client_reference_id || session.metadata?.userId || undefined;
       event.plan = session.metadata?.plan as PaymentPlan | undefined;
       event.sessionId = session.id;
       event.subscriptionId = session.subscription as string | undefined;
@@ -376,13 +385,17 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         stripeEvent.type === 'payment_intent.succeeded'
           ? PaymentStatus.SUCCEEDED
           : PaymentStatus.FAILED;
-      event.metadata = paymentIntent.metadata as Record<string, unknown> | undefined;
+      event.metadata = paymentIntent.metadata as
+        | Record<string, unknown>
+        | undefined;
     } else if (stripeEvent.type.startsWith('customer.subscription')) {
       const subscription = stripeEvent.data.object as Stripe.Subscription;
       event.subscriptionId = subscription.id;
       event.userId = subscription.metadata?.userId || undefined;
       event.plan = subscription.metadata?.plan as PaymentPlan | undefined;
-      event.metadata = subscription.metadata as Record<string, unknown> | undefined;
+      event.metadata = subscription.metadata as
+        | Record<string, unknown>
+        | undefined;
     }
 
     return event;
@@ -402,7 +415,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           this.webhookSecret,
         );
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         throw new PaymentsError(
           PaymentsErrorCode.INVALID_SIGNATURE,
           `Webhook signature verification failed: ${errorMessage}`,

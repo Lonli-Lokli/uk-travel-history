@@ -228,9 +228,9 @@ describe('Payments Server - SDK Operations', () => {
       const signature = 'invalid_signature';
       const secret = 'whsec_test_secret';
 
-      expect(() =>
-        constructWebhookEvent(body, signature, secret),
-      ).toThrow(PaymentsError);
+      expect(() => constructWebhookEvent(body, signature, secret)).toThrow(
+        PaymentsError,
+      );
 
       try {
         constructWebhookEvent(body, signature, secret);
@@ -249,7 +249,9 @@ describe('Payments Server - SDK Operations', () => {
         return;
       }
 
-      const body = Buffer.from(JSON.stringify({ type: 'test.event', data: {} }));
+      const body = Buffer.from(
+        JSON.stringify({ type: 'test.event', data: {} }),
+      );
       const signature = 'invalid_signature';
       const secret = 'whsec_test_secret';
 
@@ -298,7 +300,8 @@ describe('Payments Server - SDK Operations', () => {
 
       const session = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ANNUAL,
-        successUrl: 'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+        successUrl:
+          'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://example.com/cancel',
         metadata: {
           isPreRegistration: 'true',
@@ -368,7 +371,8 @@ describe('Payments Server - SDK Operations', () => {
       // Anonymous flow
       const anonymousSession = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ANNUAL,
-        successUrl: 'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+        successUrl:
+          'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://example.com/cancel',
       });
       expect(anonymousSession.id).toBeDefined();

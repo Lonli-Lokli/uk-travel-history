@@ -27,7 +27,7 @@ if (!webhookSecret) {
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.STRIPE_CHECKOUT);
+    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
     if (!stripeEnabled) {
       logger.warn('Stripe webhook received but feature is disabled');
       return NextResponse.json(
@@ -253,7 +253,9 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     return;
   }
 
-  const subscription = await retrieveSubscription(invoice.subscription as string);
+  const subscription = await retrieveSubscription(
+    invoice.subscription as string,
+  );
   const userId = subscription.metadata?.userId;
 
   if (!userId) {

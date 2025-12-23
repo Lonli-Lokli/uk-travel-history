@@ -26,7 +26,7 @@ export interface AuthContext {
 export async function verifyAuth(
   request: NextRequest,
 ): Promise<AuthContext | null> {
-  const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+  const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.AUTH);
   if (isAuthEnabled === false) {
     return Promise.resolve(null);
   }

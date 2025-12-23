@@ -3,13 +3,13 @@
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
-  signOut as sdkSignOut,
-  isPasskeySupported as sdkIsPasskeySupported,
-  signInWithPasskey as sdkSignInWithPasskey,
-  registerPasskey as sdkRegisterPasskey,
-  registerPasskeyAnonymous as sdkRegisterPasskeyAnonymous,
-  getIdToken as sdkGetIdToken,
-  onAuthStateChanged as sdkOnAuthStateChanged,
+  signOut,
+  isPasskeySupported,
+  signInWithPasskey,
+  registerPasskey,
+  registerPasskeyAnonymous,
+  getIdToken,
+  onAuthStateChanged,
   AuthError,
   AuthErrorCode,
   type AuthUser,
@@ -29,7 +29,7 @@ class AuthStore {
     // Listen for auth state changes using SDK
     if (typeof window !== 'undefined') {
       try {
-        sdkOnAuthStateChanged((authState: AuthState) => {
+        onAuthStateChanged((authState: AuthState) => {
           runInAction(() => {
             this.user = authState.user;
             this.isLoading = authState.loading;
@@ -52,7 +52,7 @@ class AuthStore {
    * Check if passkey/WebAuthn is supported in the browser
    */
   get isPasskeySupported(): boolean {
-    return sdkIsPasskeySupported();
+    return isPasskeySupported();
   }
 
   /**
@@ -64,7 +64,7 @@ class AuthStore {
     this.error = null;
 
     try {
-      await sdkSignInWithPasskey();
+      await signInWithPasskey();
 
       runInAction(() => {
         this.isAuthenticating = false;
@@ -106,7 +106,7 @@ class AuthStore {
     this.error = null;
 
     try {
-      await sdkRegisterPasskey(displayName);
+      await registerPasskey(displayName);
 
       runInAction(() => {
         this.isAuthenticating = false;
@@ -148,7 +148,7 @@ class AuthStore {
     this.error = null;
 
     try {
-      await sdkRegisterPasskeyAnonymous();
+      await registerPasskeyAnonymous();
 
       runInAction(() => {
         this.isAuthenticating = false;
@@ -184,7 +184,7 @@ class AuthStore {
    */
   async signOut(): Promise<void> {
     try {
-      await sdkSignOut();
+      await signOut();
     } catch (error) {
       // Track signout failures in Sentry
       Sentry.captureException(error, {
@@ -205,7 +205,7 @@ class AuthStore {
   async getIdToken(): Promise<string | null> {
     try {
       if (!this.user) return null;
-      return await sdkGetIdToken();
+      return await getIdToken();
     } catch (error) {
       // Track ID token retrieval failures in Sentry
       Sentry.captureException(error, {
