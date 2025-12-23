@@ -3,6 +3,18 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '@uth/utils';
 
+/**
+ * Determine the auth provider from environment
+ * Defaults to 'clerk' if not specified
+ */
+function getAuthProvider(): 'clerk' | 'firebase' {
+  const provider = process.env.UTH_AUTH_PROVIDER;
+  if (provider === 'firebase') {
+    return 'firebase';
+  }
+  return 'clerk';
+}
+
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -21,7 +33,11 @@ const requiresPasskeyRoute = createRouteMatcher([
   '/api/export',
 ]);
 
-export default clerkMiddleware(async (auth, req: NextRequest) => {
+/**
+ * Middleware handler for Clerk-based auth
+ * Checks passkey enrollment and redirects if needed
+ */
+async function handleClerkMiddleware(auth: any, req: NextRequest) {
   const { userId } = await auth();
 
   // Allow public routes
@@ -86,7 +102,62 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   return NextResponse.next();
-});
+}
+
+/**
+ * Main middleware function
+ * Respects UTH_AUTH_PROVIDER setting:
+ * - 'clerk' (default): Runs Clerk middleware with passkey enforcement
+ * - 'firebase': Skips middleware (Firebase auth handles it separately)
+ */
+function middleware(req: NextRequest) {
+  const authProvider = getAuthProvider();
+
+  // Firebase mode: Skip all middleware (legacy auth flow)
+  if (authProvider === 'firebase') {
+    return NextResponse.next();
+  }
+
+  // Clerk mode: Allow request to proceed
+  // The clerkMiddleware wrapper below handles Clerk auth
+  return NextResponse.next();
+}
+
+/**
+ * Wrap middleware with Clerk when in Clerk mode
+ * Gracefully handles missing credentials
+ */
+function createMiddleware() {
+  const authProvider = getAuthProvider();
+
+  // Firebase mode: Use plain middleware (no Clerk)
+  if (authProvider === 'firebase') {
+    return middleware;
+  }
+
+  // Clerk mode: Wrap with Clerk middleware
+  try {
+    return clerkMiddleware(handleClerkMiddleware);
+  } catch (error) {
+    // Log error but don't block the request
+    // This prevents 500 errors when Clerk credentials are missing
+    console.error('Clerk middleware initialization error:', error);
+
+    // For development: show helpful error message
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        '\n⚠️  Clerk credentials missing!\n' +
+        'Set CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env.local\n' +
+        'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n'
+      );
+    }
+
+    // Fall back to plain middleware
+    return middleware;
+  }
+}
+
+export default createMiddleware();
 
 export const config = {
   matcher: [
