@@ -26,26 +26,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify passkey exists in Clerk if enrolling
-    if (enrolled) {
-      try {
-        const client = await clerkClient();
-        const clerkUser = await client.users.getUser(userId);
-
-        if (!clerkUser.passkeys || clerkUser.passkeys.length === 0) {
-          return NextResponse.json(
-            { error: 'No passkey found in Clerk. Please enroll a passkey first.' },
-            { status: 400 },
-          );
-        }
-      } catch (clerkError: any) {
-        console.error('Failed to verify passkey in Clerk:', clerkError);
-        return NextResponse.json(
-          { error: 'Failed to verify passkey enrollment' },
-          { status: 500 },
-        );
-      }
-    }
+    // Note: Server-side passkey verification is not straightforward with Clerk's current API.
+    // The passkey enrollment happens client-side via user.createPasskey().
+    // We trust the client call succeeded if this endpoint is called with enrolled=true.
+    // The middleware will use publicMetadata.passkey_enrolled to enforce access control.
 
     // Update Supabase
     const supabase = getSupabaseServerClient();

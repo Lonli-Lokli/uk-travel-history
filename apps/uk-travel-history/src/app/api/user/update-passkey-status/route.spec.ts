@@ -8,16 +8,18 @@ import { NextRequest } from 'next/server';
 // Mock dependencies
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(),
+  clerkClient: vi.fn(),
 }));
 
 vi.mock('@uth/utils', () => ({
   getSupabaseServerClient: vi.fn(),
 }));
 
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { getSupabaseServerClient } from '@uth/utils';
 
 const mockAuth = vi.mocked(auth);
+const mockClerkClient = vi.mocked(clerkClient);
 const mockGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
 describe('POST /api/user/update-passkey-status', () => {
@@ -34,6 +36,18 @@ describe('POST /api/user/update-passkey-status', () => {
     };
 
     mockGetSupabaseServerClient.mockReturnValue(mockSupabaseClient);
+
+    // Setup mock Clerk client
+    const mockClerkClientInstance = {
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          id: 'user_123',
+          publicMetadata: {},
+        }),
+        updateUser: vi.fn().mockResolvedValue({}),
+      },
+    };
+    mockClerkClient.mockResolvedValue(mockClerkClientInstance as any);
   });
 
   afterEach(() => {

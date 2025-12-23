@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create Clerk user (idempotent - check if user already exists)
-      let clerkUserId: string;
+      let clerkUserId: string | undefined;
 
       try {
         const client = await clerkClient();
@@ -199,6 +199,11 @@ export async function POST(request: NextRequest) {
               }
             }
           }
+        }
+
+        // Ensure clerkUserId was assigned
+        if (!clerkUserId) {
+          throw new Error('Failed to create or retrieve Clerk user ID');
         }
 
         // Update purchase intent with Clerk user ID
