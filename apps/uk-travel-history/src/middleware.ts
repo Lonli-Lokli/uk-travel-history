@@ -1,4 +1,3 @@
-import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '@uth/utils';
@@ -15,29 +14,42 @@ function getAuthProvider(): 'clerk' | 'firebase' {
   return 'clerk';
 }
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/travel',
-  '/api/billing/checkout',
-  '/api/stripe/webhook',
-  '/api/cron/supabase-keepalive',
-  '/api/parse',
-  '/api/export',
-]);
-
-// Define routes that require passkey enrollment
-const requiresPasskeyRoute = createRouteMatcher([
-  '/travel',
-  '/api/parse',
-  '/api/export',
-]);
+/**
+ * Check if Clerk credentials are configured
+ */
+function hasClerkCredentials(): boolean {
+  return !!(
+    process.env.CLERK_SECRET_KEY &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  );
+}
 
 /**
  * Middleware handler for Clerk-based auth
  * Checks passkey enrollment and redirects if needed
  */
 async function handleClerkMiddleware(auth: any, req: NextRequest) {
+  // Dynamically import Clerk functions only when needed
+  const { clerkClient, createRouteMatcher } = await import('@clerk/nextjs/server');
+
+  // Define public routes that don't require authentication
+  const isPublicRoute = createRouteMatcher([
+    '/',
+    '/travel',
+    '/api/billing/checkout',
+    '/api/stripe/webhook',
+    '/api/cron/supabase-keepalive',
+    '/api/parse',
+    '/api/export',
+  ]);
+
+  // Define routes that require passkey enrollment
+  const requiresPasskeyRoute = createRouteMatcher([
+    '/travel',
+    '/api/parse',
+    '/api/export',
+  ]);
+
   const { userId } = await auth();
 
   // Allow public routes
@@ -110,7 +122,7 @@ async function handleClerkMiddleware(auth: any, req: NextRequest) {
  * - 'clerk' (default): Runs Clerk middleware with passkey enforcement
  * - 'firebase': Skips middleware (Firebase auth handles it separately)
  */
-function middleware(req: NextRequest) {
+async function middleware(req: NextRequest) {
   const authProvider = getAuthProvider();
 
   // Firebase mode: Skip all middleware (legacy auth flow)
@@ -118,32 +130,9 @@ function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Clerk mode: Allow request to proceed
-  // The clerkMiddleware wrapper below handles Clerk auth
-  return NextResponse.next();
-}
-
-/**
- * Wrap middleware with Clerk when in Clerk mode
- * Gracefully handles missing credentials
- */
-function createMiddleware() {
-  const authProvider = getAuthProvider();
-
-  // Firebase mode: Use plain middleware (no Clerk)
-  if (authProvider === 'firebase') {
-    return middleware;
-  }
-
-  // Clerk mode: Wrap with Clerk middleware
-  try {
-    return clerkMiddleware(handleClerkMiddleware);
-  } catch (error) {
-    // Log error but don't block the request
-    // This prevents 500 errors when Clerk credentials are missing
-    console.error('Clerk middleware initialization error:', error);
-
-    // For development: show helpful error message
+  // Clerk mode: Check if credentials are configured
+  if (!hasClerkCredentials()) {
+    // Log error in development
     if (process.env.NODE_ENV === 'development') {
       console.error(
         '\n⚠️  Clerk credentials missing!\n' +
@@ -151,13 +140,18 @@ function createMiddleware() {
         'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n'
       );
     }
-
-    // Fall back to plain middleware
-    return middleware;
+    // Allow request through without auth (app will show appropriate UI)
+    return NextResponse.next();
   }
+
+  // Clerk mode with credentials: Use Clerk middleware
+  // Dynamic import to avoid module-load-time errors
+  const { clerkMiddleware } = await import('@clerk/nextjs/server');
+  const wrappedMiddleware = clerkMiddleware(handleClerkMiddleware);
+  return wrappedMiddleware(req, {} as any);
 }
 
-export default createMiddleware();
+export default middleware;
 
 export const config = {
   matcher: [
