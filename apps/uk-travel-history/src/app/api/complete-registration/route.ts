@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
-import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
+import {
+  retrieveCheckoutSession,
+  retrieveSubscription,
+} from '@uth/payments-server';
+import {
+  verifyToken,
+  createSubscription,
+  getSubscriptionBySessionId,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
 
@@ -27,22 +35,21 @@ interface CompleteRegistrationRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    // SECURITY: Verify Firebase authentication
+    // SECURITY: Verify Firebase authentication using SDK
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const adminAuth = getAdminAuth();
 
-    let decodedToken;
+    let tokenClaims;
     try {
-      decodedToken = await adminAuth.verifyIdToken(token);
+      tokenClaims = await verifyToken(token);
     } catch (authError) {
       Sentry.captureException(authError, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'verify_token',
           endpoint: 'complete-registration',
         },
@@ -57,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const authenticatedUserId = decodedToken.uid;
+    const authenticatedUserId = tokenClaims.uid;
 
     // Parse request body
     const body = (await request.json()) as CompleteRegistrationRequest;
@@ -80,14 +87,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve session from Stripe
-    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
+    // Retrieve session from Stripe using SDK
+    const session = await retrieveCheckoutSession(session_id);
 
     // Verify payment was completed
-    if (session.payment_status !== 'paid') {
+    if (session.paymentStatus !== 'paid') {
       logger.warn('[Complete Registration] Payment not completed', {
         sessionId: session_id,
-        paymentStatus: session.payment_status,
+        paymentStatus: session.paymentStatus,
       });
       return NextResponse.json(
         { error: 'Payment not completed' },
@@ -103,16 +110,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const adminFirestore = getAdminFirestore();
+    // Check if session already used using SDK (prevent duplicate registrations)
+    const existingSubscription = await getSubscriptionBySessionId(session_id);
 
-    // Check if session already used (prevent duplicate registrations)
-    const existingSubscription = await adminFirestore
-      .collection('subscriptions')
-      .where('stripeSessionId', '==', session_id)
-      .limit(1)
-      .get();
-
-    if (!existingSubscription.empty) {
+    if (existingSubscription) {
       logger.warn('[Complete Registration] Session already used', {
         sessionId: session_id,
       });
@@ -123,8 +124,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Retrieve subscription details from Stripe
-    const subscriptionId = session.subscription as string;
-    const customerId = session.customer as string;
+    const subscriptionId = session.subscriptionId;
+    const customerId = session.customerId;
 
     if (!subscriptionId || !customerId) {
       logger.error(
@@ -141,37 +142,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch subscription details
-    const subscriptionResponse =
-      await StripeAPI.subscriptions.retrieve(subscriptionId);
+    // Fetch subscription details from Stripe using SDK
+    const subscription = await retrieveSubscription(subscriptionId);
 
-    // Extract subscription data from Response wrapper
-    // Using any here because Stripe SDK types can vary between versions
-    const subscription =
-      'data' in subscriptionResponse
-        ? (subscriptionResponse as any).data
-        : (subscriptionResponse as any);
-
-    // Create subscription document in Firestore
-    const subscriptionData = {
+    // Create subscription document using SDK
+    await createSubscription({
       userId,
-      status: subscription.status, // 'active' | 'past_due' | 'canceled', etc.
+      status: subscription.status as SubscriptionStatus,
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId,
       stripeSessionId: session_id, // Mark session as consumed
-      currentPeriodStart: new Date(
-        (subscription.current_period_start ?? 0) * 1000,
-      ),
-      currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await adminFirestore
-      .collection('subscriptions')
-      .doc(userId)
-      .set(subscriptionData);
+      stripePriceId: subscription.priceId,
+      currentPeriodStart: new Date(subscription.currentPeriodStart * 1000),
+      currentPeriodEnd: new Date(subscription.currentPeriodEnd * 1000),
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    });
 
     logger.log('[Complete Registration] Subscription linked successfully', {
       userId,

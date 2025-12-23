@@ -16,5 +16,8 @@
   "nx": {
     "name": "payments-client"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@uth/utils": "*",
+    "@stripe/stripe-js": "^5.4.0"
+  }
 }

@@ -11,8 +11,8 @@ import { logger } from '@uth/utils';
 export const FEATURE_KEYS = {
   // Master switches
   MONETIZATION: 'monetization',
-  FIREBASE_AUTH: 'firebase_auth',
-  STRIPE_CHECKOUT: 'stripe_checkout',
+  AUTH: 'firebase_auth',
+  PAYMENTS: 'stripe_checkout',
 
   // Premium features
   EXCEL_EXPORT: 'excel_export',
@@ -29,8 +29,8 @@ export type FeatureFlagKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
 export const DEFAULT_FEATURE_STATES: Record<FeatureFlagKey, boolean> = {
   // Master switches
   [FEATURE_KEYS.MONETIZATION]: false,
-  [FEATURE_KEYS.FIREBASE_AUTH]: false,
-  [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
+  [FEATURE_KEYS.AUTH]: false,
+  [FEATURE_KEYS.PAYMENTS]: false,
 
   // Premium features
   [FEATURE_KEYS.EXCEL_EXPORT]: true,

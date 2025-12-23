@@ -3,14 +3,14 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
-  cacheDir: '../../node_modules/.vite/packages/firebase-client',
+  cacheDir: '../../node_modules/.vite/packages/auth-client',
   plugins: [],
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],
   // },
   test: {
-    name: 'firebase-client',
+    name: 'auth-client',
     watch: false,
     globals: true,
     environment: 'node',

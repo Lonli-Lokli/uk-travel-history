@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
+import {
+  verifyToken,
+  getSubscription,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
@@ -22,7 +26,7 @@ export interface AuthContext {
 export async function verifyAuth(
   request: NextRequest,
 ): Promise<AuthContext | null> {
-  const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+  const isAuthEnabled = await isFeatureEnabled(FEATURE_KEYS.AUTH);
   if (isAuthEnabled === false) {
     return Promise.resolve(null);
   }
@@ -36,31 +40,24 @@ export async function verifyAuth(
   const token = authHeader.split('Bearer ')[1];
 
   try {
-    const adminAuth = getAdminAuth();
-    const decodedToken = await adminAuth.verifyIdToken(token, true);
+    // Verify token using SDK
+    const tokenClaims = await verifyToken(token);
 
-    // Check subscription status in Firestore
-    const adminFirestore = getAdminFirestore();
-    const subscriptionDoc = await adminFirestore
-      .collection('subscriptions')
-      .doc(decodedToken.uid)
-      .get();
+    // Check subscription status using SDK
+    const subscription = await getSubscription(tokenClaims.uid);
 
-    if (!subscriptionDoc.exists) {
+    if (!subscription) {
       logger.warn('[Auth] User has no subscription', {
-        userId: decodedToken.uid,
+        userId: tokenClaims.uid,
       });
       throw new AuthError('No active subscription found', 403);
     }
 
-    const subscriptionData = subscriptionDoc.data();
-    const subscriptionStatus = subscriptionData?.status;
-
     // Only active subscriptions allowed
-    if (subscriptionStatus !== 'active') {
+    if (subscription.status !== SubscriptionStatus.ACTIVE) {
       logger.warn('[Auth] Subscription not active', {
-        userId: decodedToken.uid,
-        status: subscriptionStatus,
+        userId: tokenClaims.uid,
+        status: subscription.status,
       });
       throw new AuthError(
         'Subscription not active. Please update payment method.',
@@ -69,9 +66,9 @@ export async function verifyAuth(
     }
 
     return {
-      userId: decodedToken.uid,
-      email: decodedToken.email || null,
-      emailVerified: decodedToken.email_verified || false,
+      userId: tokenClaims.uid,
+      email: tokenClaims.email || null,
+      emailVerified: tokenClaims.emailVerified || false,
     };
   } catch (error) {
     if (error instanceof AuthError) {

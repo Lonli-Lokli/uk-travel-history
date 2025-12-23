@@ -35,7 +35,7 @@ export const Header = observer(
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
     const user = authStore.user;
-    const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+    const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.AUTH);
 
     return (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">

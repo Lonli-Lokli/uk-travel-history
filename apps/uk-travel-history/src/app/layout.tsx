@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
 import { FeatureFlagsProvider } from '@uth/widgets';
-import { ClerkProvider } from '@clerk/nextjs';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -105,6 +104,8 @@ const geist = Geist({
   subsets: ['latin'],
 });
 
+export const dynamic = 'force-dynamic';
+
 export default async function RootLayout({
   children,
 }: {
@@ -114,15 +115,13 @@ export default async function RootLayout({
   const flags = await getAllFeatureFlags();
 
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${geist.className} h-full`}>
-        <body className="h-full bg-slate-50 overflow-y-scroll">
-          <FeatureFlagsProvider flags={flags}>
-            {children}
-            <Toaster />
-          </FeatureFlagsProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`${geist.className} h-full`}>
+      <body className="h-full bg-slate-50 overflow-y-scroll">
+        <FeatureFlagsProvider flags={flags}>
+          {children}
+          <Toaster />
+        </FeatureFlagsProvider>
+      </body>
+    </html>
   );
 }

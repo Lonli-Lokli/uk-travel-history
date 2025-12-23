@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI, STRIPE_PRICES } from '@uth/payments-server';
+import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
@@ -29,9 +29,7 @@ interface AnonymousCheckoutRequest {
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(
-      FEATURE_KEYS.STRIPE_CHECKOUT,
-    );
+    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
     if (!stripeEnabled) {
       logger.warn('[Anonymous Checkout] Stripe checkout feature is disabled');
       return NextResponse.json(
@@ -41,18 +39,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as AnonymousCheckoutRequest;
-    const { priceId, billingPeriod } = body;
+    const { billingPeriod } = body;
 
-    // Validate price ID
-    if (
-      priceId !== STRIPE_PRICES.PREMIUM_MONTHLY &&
-      priceId !== STRIPE_PRICES.PREMIUM_ANNUAL
-    ) {
-      return NextResponse.json({ error: 'Invalid price ID' }, { status: 400 });
-    }
+    // Map billing period to PaymentPlan
+    const plan =
+      billingPeriod === 'monthly'
+        ? PaymentPlan.PREMIUM_MONTHLY
+        : billingPeriod === 'annual'
+          ? PaymentPlan.PREMIUM_ANNUAL
+          : null;
 
-    // Validate billing period
-    if (billingPeriod !== 'monthly' && billingPeriod !== 'annual') {
+    if (!plan) {
       return NextResponse.json(
         { error: 'Invalid billing period' },
         { status: 400 },
@@ -62,32 +59,18 @@ export async function POST(request: NextRequest) {
     // Get the app URL for success/cancel redirects
     const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Create Stripe Checkout session (anonymous - no customer_email preset)
-    const session = await StripeAPI.checkout.sessions.create({
-      // No customer_email - Stripe will collect it
-      // No client_reference_id - user doesn't exist yet
+    // Create anonymous checkout session using SDK
+    // Note: No userId - this is pre-registration flow
+    const session = await createCheckoutSession({
+      plan,
+      // CRITICAL: Redirect to registration page with session_id
+      // {CHECKOUT_SESSION_ID} is Stripe template variable
+      successUrl: `${appUrl}/registration?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${appUrl}/?checkout=canceled`,
       metadata: {
         billingPeriod,
         checkoutType: 'new_subscription',
-        // Flag that this is pre-registration payment
         isPreRegistration: 'true',
-      },
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      // CRITICAL: Redirect to registration page with session_id
-      // {CHECKOUT_SESSION_ID} is Stripe template variable
-      success_url: `${appUrl}/registration?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/?checkout=canceled`,
-      // Subscription metadata (for webhook)
-      subscription_data: {
-        metadata: {
-          isPreRegistration: 'true',
-        },
       },
     });
 

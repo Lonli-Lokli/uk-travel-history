@@ -2,9 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/packages/firebase-server',
+  cacheDir: '../../node_modules/.vite/packages/auth-server',
   test: {
-    name: 'firebase-server',
+    name: 'auth-server',
     watch: false,
     globals: true,
     environment: 'node',

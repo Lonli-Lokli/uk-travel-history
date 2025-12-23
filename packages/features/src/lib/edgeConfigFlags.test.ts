@@ -39,7 +39,7 @@ describe('Edge Config Feature Flags', () => {
     it('should return false when Edge Config is not configured', async () => {
       vi.mocked(get).mockResolvedValue(null);
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
     });
 
@@ -49,27 +49,27 @@ describe('Edge Config Feature Flags', () => {
       };
       vi.mocked(get).mockResolvedValue(flags);
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
     });
 
     it('should return false when feature is disabled in Edge Config', async () => {
       const flags: EdgeConfigFlags = {
-        [FEATURE_KEYS.FIREBASE_AUTH]: { enabled: false },
+        [FEATURE_KEYS.AUTH]: { enabled: false },
       };
       vi.mocked(get).mockResolvedValue(flags);
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
     });
 
     it('should return true when feature is enabled without restrictions', async () => {
       const flags: EdgeConfigFlags = {
-        [FEATURE_KEYS.FIREBASE_AUTH]: { enabled: true },
+        [FEATURE_KEYS.AUTH]: { enabled: true },
       };
       vi.mocked(get).mockResolvedValue(flags);
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(true);
     });
 
@@ -147,7 +147,7 @@ describe('Edge Config Feature Flags', () => {
     it('should return false on Edge Config error (fail closed)', async () => {
       vi.mocked(get).mockRejectedValue(new Error('Edge Config unavailable'));
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
     });
 
@@ -190,14 +190,14 @@ describe('Edge Config Feature Flags', () => {
   describe('getAllFeatureFlags', () => {
     it('should return all flags evaluated for a user', async () => {
       const flags: EdgeConfigFlags = {
-        [FEATURE_KEYS.FIREBASE_AUTH]: { enabled: true },
+        [FEATURE_KEYS.AUTH]: { enabled: true },
         [FEATURE_KEYS.MONETIZATION]: { enabled: false },
       };
       vi.mocked(get).mockResolvedValue(flags);
 
       const result = await getAllFeatureFlags('user123');
 
-      expect(result[FEATURE_KEYS.FIREBASE_AUTH]).toBe(true);
+      expect(result[FEATURE_KEYS.AUTH]).toBe(true);
       expect(result[FEATURE_KEYS.MONETIZATION]).toBe(false);
       // Other flags should default to false
       expect(result[FEATURE_KEYS.EXCEL_EXPORT]).toBe(false);
@@ -218,8 +218,8 @@ describe('Edge Config Feature Flags', () => {
     it('should cache and retrieve flags', () => {
       const testFlags: Record<FeatureFlagKey, boolean> = {
         [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.FIREBASE_AUTH]: true,
-        [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
+        [FEATURE_KEYS.AUTH]: true,
+        [FEATURE_KEYS.PAYMENTS]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
         [FEATURE_KEYS.EXCEL_IMPORT]: false,
@@ -249,8 +249,8 @@ describe('Edge Config Feature Flags', () => {
     it('should return cached flag value', () => {
       const testFlags: Record<FeatureFlagKey, boolean> = {
         [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.FIREBASE_AUTH]: false,
-        [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
+        [FEATURE_KEYS.AUTH]: false,
+        [FEATURE_KEYS.PAYMENTS]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
         [FEATURE_KEYS.EXCEL_IMPORT]: false,
@@ -261,14 +261,14 @@ describe('Edge Config Feature Flags', () => {
       setCachedFlags(testFlags);
 
       expect(isFeatureEnabledClient(FEATURE_KEYS.MONETIZATION)).toBe(true);
-      expect(isFeatureEnabledClient(FEATURE_KEYS.FIREBASE_AUTH)).toBe(false);
+      expect(isFeatureEnabledClient(FEATURE_KEYS.AUTH)).toBe(false);
     });
 
     it('should return false for uncached flags', () => {
       const testFlags: Record<FeatureFlagKey, boolean> = {
         [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.FIREBASE_AUTH]: false,
-        [FEATURE_KEYS.STRIPE_CHECKOUT]: false,
+        [FEATURE_KEYS.AUTH]: false,
+        [FEATURE_KEYS.PAYMENTS]: false,
         [FEATURE_KEYS.EXCEL_EXPORT]: false,
         [FEATURE_KEYS.EXCEL_IMPORT]: false,
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
@@ -319,13 +319,13 @@ describe('Edge Config Feature Flags', () => {
       });
       vi.mocked(get).mockRejectedValue(new Error('Test error'));
 
-      await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         '[Feature Flags] Error checking feature flag',
         expect.any(Error),
         expect.objectContaining({
-          featureKey: FEATURE_KEYS.FIREBASE_AUTH,
+          featureKey: FEATURE_KEYS.AUTH,
         }),
       );
 
@@ -336,7 +336,7 @@ describe('Edge Config Feature Flags', () => {
       vi.mocked(get).mockRejectedValue(new Error('Network error'));
 
       await expect(
-        isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH),
+        isFeatureEnabled(FEATURE_KEYS.AUTH),
       ).resolves.toBeDefined();
     });
 
@@ -346,7 +346,7 @@ describe('Edge Config Feature Flags', () => {
       });
       vi.mocked(get).mockResolvedValue(null);
 
-      await isFeatureEnabled(FEATURE_KEYS.FIREBASE_AUTH);
+      await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Edge Config not configured'),

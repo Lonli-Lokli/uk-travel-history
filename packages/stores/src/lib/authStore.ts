@@ -1,26 +1,24 @@
 // Authentication Store with Passkey Support
-// Manages user authentication state using Firebase + WebAuthn (Passkeys)
+// Manages user authentication state using the auth SDK
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
-  signOut as firebaseSignOut,
+  signOut,
+  isPasskeySupported,
+  signInWithPasskey,
+  registerPasskey,
+  registerPasskeyAnonymous,
+  getIdToken,
   onAuthStateChanged,
-  type User,
-} from 'firebase/auth';
-import {
-  createUserWithPasskey,
-  signInWithPasskey as sdkSignInWithPasskey,
-  FirebaseWebAuthnError,
-} from '@firebase-web-authn/browser';
-import {
-  auth,
-  getAuthInstance,
-  getFunctionsInstance,
+  AuthError,
+  AuthErrorCode,
+  type AuthUser,
+  type AuthState,
 } from '@uth/auth-client';
 import * as Sentry from '@sentry/nextjs';
 
 class AuthStore {
-  user: User | null = null;
+  user: AuthUser | null = null;
   isLoading = true;
   isAuthenticating = false;
   error: string | null = null;
@@ -28,16 +26,24 @@ class AuthStore {
   constructor() {
     makeAutoObservable(this);
 
-    // Listen for auth state changes
-    if (typeof window !== 'undefined' && auth) {
-      onAuthStateChanged(auth, (user) => {
-        runInAction(() => {
-          this.user = user;
-          this.isLoading = false;
+    // Listen for auth state changes using SDK
+    if (typeof window !== 'undefined') {
+      try {
+        onAuthStateChanged((authState: AuthState) => {
+          runInAction(() => {
+            this.user = authState.user;
+            this.isLoading = authState.loading;
+            if (authState.error) {
+              this.error = authState.error.message;
+            }
+          });
         });
-      });
+      } catch {
+        // If auth is not available, set loading to false immediately
+        this.isLoading = false;
+      }
     } else {
-      // If auth is not available, set loading to false immediately
+      // Server-side, set loading to false immediately
       this.isLoading = false;
     }
   }
@@ -46,64 +52,45 @@ class AuthStore {
    * Check if passkey/WebAuthn is supported in the browser
    */
   get isPasskeySupported(): boolean {
-    return (
-      typeof window !== 'undefined' &&
-      window.PublicKeyCredential !== undefined &&
-      typeof window.PublicKeyCredential === 'function'
-    );
+    return isPasskeySupported();
   }
 
   /**
    * Sign in with passkey
-   * Uses the official @firebase-web-authn/browser SDK
+   * Uses the auth SDK passkey operations
    */
   async signInWithPasskey(): Promise<void> {
-    if (!this.isPasskeySupported) {
-      throw new Error('Passkeys are not supported in this browser');
-    }
-
     this.isAuthenticating = true;
     this.error = null;
 
     try {
-      const auth = getAuthInstance();
-      const functions = getFunctionsInstance();
-
-      // Use the official SDK method
-      await sdkSignInWithPasskey(auth, functions);
+      await signInWithPasskey();
 
       runInAction(() => {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track Firebase auth failures in Sentry
+      // Track auth failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'sign_in_with_passkey',
         },
         contexts: {
           auth: {
             isPasskeySupported: this.isPasskeySupported,
-            errorType:
-              error instanceof FirebaseWebAuthnError
-                ? 'FirebaseWebAuthnError'
-                : 'Error',
+            errorType: error instanceof AuthError ? 'AuthError' : 'Error',
+            errorCode: error instanceof AuthError ? error.code : undefined,
           },
         },
         level: 'error',
       });
 
       runInAction(() => {
-        // Handle FirebaseWebAuthnError with more detailed messages
-        if (error instanceof FirebaseWebAuthnError) {
-          this.error = error.message;
-        } else {
-          this.error =
-            error instanceof Error
-              ? error.message
-              : 'Failed to sign in with passkey';
-        }
+        this.error =
+          error instanceof Error
+            ? error.message
+            : 'Failed to sign in with passkey';
         this.isAuthenticating = false;
       });
       throw error;
@@ -112,42 +99,30 @@ class AuthStore {
 
   /**
    * Register a new passkey
-   * Uses the official @firebase-web-authn/browser SDK
+   * Uses the auth SDK passkey operations
    */
   async registerPasskey(displayName: string): Promise<void> {
-    if (!this.isPasskeySupported) {
-      throw new Error('Passkeys are not supported in this browser');
-    }
-
     this.isAuthenticating = true;
     this.error = null;
 
     try {
-      const auth = getAuthInstance();
-      const functions = getFunctionsInstance();
-
-      // Use the official SDK method
-      // The 'name' parameter is what the passkey manager will display
-      const name = displayName;
-      await createUserWithPasskey(auth, functions, name);
+      await registerPasskey(displayName);
 
       runInAction(() => {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track Firebase auth failures in Sentry
+      // Track auth failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'register_passkey',
         },
         contexts: {
           auth: {
             isPasskeySupported: this.isPasskeySupported,
-            errorType:
-              error instanceof FirebaseWebAuthnError
-                ? 'FirebaseWebAuthnError'
-                : 'Error',
+            errorType: error instanceof AuthError ? 'AuthError' : 'Error',
+            errorCode: error instanceof AuthError ? error.code : undefined,
             hasDisplayName: !!displayName,
           },
         },
@@ -155,15 +130,8 @@ class AuthStore {
       });
 
       runInAction(() => {
-        // Handle FirebaseWebAuthnError with more detailed messages
-        if (error instanceof FirebaseWebAuthnError) {
-          this.error = error.message;
-        } else {
-          this.error =
-            error instanceof Error
-              ? error.message
-              : 'Failed to register passkey';
-        }
+        this.error =
+          error instanceof Error ? error.message : 'Failed to register passkey';
         this.isAuthenticating = false;
       });
       throw error;
@@ -173,57 +141,38 @@ class AuthStore {
   /**
    * Register a new passkey WITHOUT email (anonymous registration)
    * Used for post-payment registration flow
-   * Uses the official @firebase-web-authn/browser SDK
+   * Uses the auth SDK passkey operations
    */
   async registerPasskeyAnonymous(): Promise<void> {
-    if (!this.isPasskeySupported) {
-      throw new Error('Passkeys are not supported in this browser');
-    }
-
     this.isAuthenticating = true;
     this.error = null;
 
     try {
-      const auth = getAuthInstance();
-      const functions = getFunctionsInstance();
-
-      // Use the official SDK method with a generic display name
-      // Since no email is collected, use a generic identifier
-      const name = 'UK Travel History User';
-      await createUserWithPasskey(auth, functions, name);
+      await registerPasskeyAnonymous();
 
       runInAction(() => {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track Firebase auth failures in Sentry
+      // Track auth failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'register_passkey_anonymous',
         },
         contexts: {
           auth: {
             isPasskeySupported: this.isPasskeySupported,
-            errorType:
-              error instanceof FirebaseWebAuthnError
-                ? 'FirebaseWebAuthnError'
-                : 'Error',
+            errorType: error instanceof AuthError ? 'AuthError' : 'Error',
+            errorCode: error instanceof AuthError ? error.code : undefined,
           },
         },
         level: 'error',
       });
 
       runInAction(() => {
-        // Handle FirebaseWebAuthnError with more detailed messages
-        if (error instanceof FirebaseWebAuthnError) {
-          this.error = error.message;
-        } else {
-          this.error =
-            error instanceof Error
-              ? error.message
-              : 'Failed to register passkey';
-        }
+        this.error =
+          error instanceof Error ? error.message : 'Failed to register passkey';
         this.isAuthenticating = false;
       });
       throw error;
@@ -235,15 +184,12 @@ class AuthStore {
    */
   async signOut(): Promise<void> {
     try {
-      if (!auth) {
-        throw new Error('Firebase Auth is not initialized');
-      }
-      await firebaseSignOut(auth);
+      await signOut();
     } catch (error) {
-      // Track Firebase signout failures in Sentry
+      // Track signout failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'sign_out',
         },
         level: 'error',
@@ -259,12 +205,12 @@ class AuthStore {
   async getIdToken(): Promise<string | null> {
     try {
       if (!this.user) return null;
-      return this.user.getIdToken();
+      return await getIdToken();
     } catch (error) {
       // Track ID token retrieval failures in Sentry
       Sentry.captureException(error, {
         tags: {
-          service: 'firebase',
+          service: 'auth',
           operation: 'get_id_token',
         },
         contexts: {

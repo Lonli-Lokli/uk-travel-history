@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
+import { retrieveCheckoutSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
-import { getAdminFirestore } from '@uth/auth-server';
+import { getSubscriptionBySessionId } from '@uth/auth-server';
 import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve session from Stripe
-    const session = await StripeAPI.checkout.sessions.retrieve(session_id);
+    // Retrieve session from Stripe using SDK
+    const session = await retrieveCheckoutSession(session_id);
 
     // Check if session is for new subscription
     if (session.metadata?.checkoutType !== 'new_subscription') {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check payment status
-    const paymentStatus = session.payment_status; // 'paid' | 'unpaid'
+    const paymentStatus = session.paymentStatus; // 'paid' | 'unpaid'
 
     if (paymentStatus !== 'paid') {
       logger.warn('[Validate Session] Payment not completed', {
@@ -65,17 +65,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if session has already been used (linked to a Firebase user)
-    const adminFirestore = getAdminFirestore();
-
-    // Query subscriptions collection for this session_id
-    const existingSubscription = await adminFirestore
-      .collection('subscriptions')
-      .where('stripeSessionId', '==', session_id)
-      .limit(1)
-      .get();
-
-    const alreadyUsed = !existingSubscription.empty;
+    // Check if session has already been used using SDK
+    const existingSubscription = await getSubscriptionBySessionId(session_id);
+    const alreadyUsed = existingSubscription !== null;
 
     if (alreadyUsed) {
       logger.warn('[Validate Session] Session already used', {
@@ -87,8 +79,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       paymentStatus,
       alreadyUsed,
-      subscriptionId: session.subscription as string,
-      customerId: session.customer as string,
+      subscriptionId: session.subscriptionId || '',
+      customerId: session.customerId || '',
     });
   } catch (error) {
     logger.error('[Validate Session] Error:', error);

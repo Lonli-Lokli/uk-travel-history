@@ -31,11 +31,11 @@
         "packages/utils/*",
         "packages/calculators/*",
         "packages/features/*",
-        "packages/firebase-client/*",
-        "packages/firebase-server/*",
+        "packages/auth-client/*",
+        "packages/auth-server/*",
         "packages/stores/*",
-        "packages/stripe/*",
-        "packages/stripe-client/*"
+        "packages/payments-server/*",
+        "packages/payments-client/*"
       ]
     },
     {
@@ -62,11 +62,11 @@
         "packages/utils/*",
         "packages/calculators/*",
         "packages/features/*",
-        "packages/firebase-client/*",
-        "packages/firebase-server/*",
+        "packages/auth-client/*",
+        "packages/auth-server/*",
         "packages/stores/*",
-        "packages/stripe/*",
-        "packages/stripe-client/*"
+        "packages/paymments-client/*",
+        "packages/paymments-server/*"
       ],
       "options": {
         "typecheck": {

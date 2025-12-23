@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StripeAPI } from '@uth/payments-server';
-import { getAdminFirestore } from '@uth/auth-server';
+import {
+  constructWebhookEvent,
+  retrieveSubscription,
+} from '@uth/payments-server';
+import {
+  createSubscription,
+  updateSubscription,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
@@ -20,9 +27,7 @@ if (!webhookSecret) {
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(
-      FEATURE_KEYS.STRIPE_CHECKOUT,
-    );
+    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
     if (!stripeEnabled) {
       logger.warn('Stripe webhook received but feature is disabled');
       return NextResponse.json(
@@ -58,8 +63,8 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
 
     try {
-      // Verify webhook signature (CRITICAL for security)
-      event = StripeAPI.webhooks.constructEvent(body, signature, webhookSecret);
+      // Verify webhook signature using SDK (CRITICAL for security)
+      event = constructWebhookEvent(body, signature, webhookSecret);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       logger.error('Webhook signature verification failed', {
@@ -169,45 +174,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   const subscriptionId = session.subscription as string;
-  const subscriptionResponse =
-    await StripeAPI.subscriptions.retrieve(subscriptionId);
+  const subscription = await retrieveSubscription(subscriptionId);
 
-  // Extract subscription data from Response wrapper
-  // Using any here because Stripe SDK types can vary between versions
-  const subscription = (
-    'data' in subscriptionResponse
-      ? subscriptionResponse.data
-      : subscriptionResponse
-  ) as any;
+  // Create/update subscription document using SDK
+  await createSubscription({
+    userId,
+    stripeCustomerId: session.customer as string,
+    stripeSubscriptionId: subscription.id,
+    stripePriceId: subscription.priceId,
+    status: subscription.status as SubscriptionStatus,
+    currentPeriodStart: new Date(subscription.currentPeriodStart * 1000),
+    currentPeriodEnd: new Date(subscription.currentPeriodEnd * 1000),
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+  });
 
-  const firestore = getAdminFirestore();
-
-  // Create/update subscription document in Firestore
-  await firestore
-    .collection('subscriptions')
-    .doc(userId)
-    .set({
-      userId,
-      stripeCustomerId: session.customer as string,
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: subscription.items.data[0]?.price.id,
-      status: subscription.status,
-      currentPeriodStart: new Date(
-        (subscription.current_period_start ?? 0) * 1000,
-      ),
-      currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-  logger.log('Subscription created in Firestore', {
+  logger.log('Subscription created via SDK', {
     userId,
     subscriptionId: subscription.id,
   });
 }
 
-async function handleSubscriptionUpdated(subscription: any) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata.userId;
   if (!userId) {
     logger.warn('No userId in subscription metadata', {
@@ -222,25 +209,20 @@ async function handleSubscriptionUpdated(subscription: any) {
     status: subscription.status,
   });
 
-  const firestore = getAdminFirestore();
+  // Update subscription using SDK
+  await updateSubscription(userId, {
+    status: subscription.status as SubscriptionStatus,
+    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+  });
 
-  await firestore
-    .collection('subscriptions')
-    .doc(userId)
-    .update({
-      status: subscription.status,
-      currentPeriodEnd: new Date((subscription.current_period_end || 0) * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-      updatedAt: new Date(),
-    });
-
-  logger.log('Subscription updated in Firestore', {
+  logger.log('Subscription updated via SDK', {
     userId,
     status: subscription.status,
   });
 }
 
-async function handleSubscriptionDeleted(subscription: any) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const userId = subscription.metadata.userId;
   if (!userId) {
     logger.warn('No userId in subscription metadata', {
@@ -254,20 +236,16 @@ async function handleSubscriptionDeleted(subscription: any) {
     subscriptionId: subscription.id,
   });
 
-  const firestore = getAdminFirestore();
-
-  // NO TIER FIELD: We only track subscription status
-  // No tier = no access (binary: active subscription or no access)
-  await firestore.collection('subscriptions').doc(userId).update({
-    status: 'canceled',
+  // Update subscription to canceled using SDK
+  await updateSubscription(userId, {
+    status: SubscriptionStatus.CANCELED,
     canceledAt: new Date(),
-    updatedAt: new Date(),
   });
 
-  logger.log('Subscription canceled in Firestore', { userId });
+  logger.log('Subscription canceled via SDK', { userId });
 }
 
-async function handlePaymentFailed(invoice: any) {
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
   if (!invoice.subscription) {
     logger.warn('Payment failed for invoice without subscription', {
       invoiceId: invoice.id,
@@ -275,17 +253,10 @@ async function handlePaymentFailed(invoice: any) {
     return;
   }
 
-  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
+  const subscription = await retrieveSubscription(
     invoice.subscription as string,
   );
-  // Extract subscription data from Response wrapper
-  // Using any here because Stripe SDK types can vary between versions
-  const subscription = (
-    'data' in subscriptionResponse
-      ? subscriptionResponse.data
-      : subscriptionResponse
-  ) as any;
-  const userId = subscription.metadata.userId;
+  const userId = subscription.metadata?.userId;
 
   if (!userId) {
     logger.warn('No userId in subscription metadata', {
@@ -316,15 +287,13 @@ async function handlePaymentFailed(invoice: any) {
     subscriptionId: subscription.id,
   });
 
-  const firestore = getAdminFirestore();
-
-  await firestore.collection('subscriptions').doc(userId).update({
-    status: 'past_due',
+  // Update subscription to past_due using SDK
+  await updateSubscription(userId, {
+    status: SubscriptionStatus.PAST_DUE,
     lastPaymentError: new Date(),
-    updatedAt: new Date(),
   });
 
-  logger.log('Payment failure recorded in Firestore', {
+  logger.log('Payment failure recorded via SDK', {
     userId,
     invoiceId: invoice.id,
   });

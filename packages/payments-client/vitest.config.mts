@@ -2,9 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/packages/stripe-client',
+  cacheDir: '../../node_modules/.vite/packages/payments-client',
   test: {
-    name: 'stripe-client',
+    name: 'payments-client',
     watch: false,
     globals: true,
     environment: 'node',
