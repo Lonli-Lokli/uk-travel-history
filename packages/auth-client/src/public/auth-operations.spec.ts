@@ -25,7 +25,7 @@ describe('Auth Client - Passkey Operations', () => {
       signInWithEmailPassword: vi.fn(),
       signOut: vi.fn(),
       getIdToken: vi.fn(),
-      onAuthStateChanged: vi.fn(() => () => {}),
+      onAuthStateChanged: vi.fn(() => () => { /* empty */ }),
       createUserWithEmailPassword: vi.fn(),
       sendPasswordResetEmail: vi.fn(),
       updateProfile: vi.fn(),

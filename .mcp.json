@@ -1,15 +1,12 @@
 {
   "mcpServers": {
-    "Sentry": {
-      "url": "https://mcp.sentry.dev/mcp/echo-xl/uk-travel-history"
-    },
     "hugeicons": {
       "command": "npx",
       "args": ["-y", "@hugeicons/mcp-server"]
     },
     "nx-mcp": {
       "command": "npx",
-      "args": ["nx-mcp"]
+      "args": ["-y", "nx-mcp"]
     }
   }
 }
