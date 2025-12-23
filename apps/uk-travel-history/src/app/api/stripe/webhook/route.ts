@@ -16,6 +16,14 @@ function getStripeClient() {
   });
 }
 
+/**
+ * Validate email format
+ */
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
@@ -129,6 +137,15 @@ export async function POST(request: NextRequest) {
       // Extract customer email
       const customerEmail = session.customer_email || purchaseIntent.email;
 
+      // Validate email format
+      if (!customerEmail || !isValidEmail(customerEmail)) {
+        logger.error('Invalid customer email', { email: customerEmail });
+        return NextResponse.json(
+          { error: 'Invalid customer email' },
+          { status: 400 },
+        );
+      }
+
       // Create Clerk user (idempotent - check if user already exists)
       let clerkUserId: string;
 
@@ -144,14 +161,44 @@ export async function POST(request: NextRequest) {
           clerkUserId = existingUsers.data[0].id;
           logger.log(`Clerk user already exists: ${clerkUserId}`);
         } else {
-          // Create new Clerk user
-          const clerkUser = await client.users.createUser({
-            emailAddress: [customerEmail],
-            skipPasswordRequirement: true,
-            skipPasswordChecks: true,
-          });
-          clerkUserId = clerkUser.id;
-          logger.log(`Created Clerk user: ${clerkUserId}`);
+          // Create new Clerk user with retry logic
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          while (retryCount < maxRetries) {
+            try {
+              const clerkUser = await client.users.createUser({
+                emailAddress: [customerEmail],
+                skipPasswordRequirement: true,
+                skipPasswordChecks: true,
+              });
+              clerkUserId = clerkUser.id;
+              logger.log(`Created Clerk user: ${clerkUserId}`);
+              break;
+            } catch (createError: any) {
+              retryCount++;
+
+              // Don't retry for permanent errors
+              if (createError.status === 400 || createError.status === 422) {
+                logger.error('Clerk user creation failed (permanent error):', {
+                  email: customerEmail,
+                  error: createError.message,
+                  clerkErrors: createError.errors,
+                });
+                throw createError;
+              }
+
+              // Retry for transient errors
+              if (retryCount < maxRetries) {
+                logger.warn(`Clerk user creation failed, retrying (${retryCount}/${maxRetries})`, {
+                  error: createError.message,
+                });
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              } else {
+                throw createError;
+              }
+            }
+          }
         }
 
         // Update purchase intent with Clerk user ID

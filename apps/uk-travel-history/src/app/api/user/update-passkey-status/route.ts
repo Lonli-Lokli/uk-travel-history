@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { getSupabaseServerClient } from '@uth/utils';
 
 /**
@@ -26,6 +26,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify passkey exists in Clerk if enrolling
+    if (enrolled) {
+      try {
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(userId);
+
+        if (!clerkUser.passkeys || clerkUser.passkeys.length === 0) {
+          return NextResponse.json(
+            { error: 'No passkey found in Clerk. Please enroll a passkey first.' },
+            { status: 400 },
+          );
+        }
+      } catch (clerkError: any) {
+        console.error('Failed to verify passkey in Clerk:', clerkError);
+        return NextResponse.json(
+          { error: 'Failed to verify passkey enrollment' },
+          { status: 500 },
+        );
+      }
+    }
+
     // Update Supabase
     const supabase = getSupabaseServerClient();
 
@@ -40,6 +61,21 @@ export async function POST(req: NextRequest) {
         { error: 'Failed to update passkey status' },
         { status: 500 },
       );
+    }
+
+    // Sync to Clerk public metadata for caching
+    try {
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(userId);
+      await client.users.updateUser(userId, {
+        publicMetadata: {
+          ...clerkUser.publicMetadata,
+          passkey_enrolled: enrolled,
+        },
+      });
+    } catch (metadataError) {
+      // Log but don't fail the request - Supabase is source of truth
+      console.error('Failed to sync passkey metadata to Clerk:', metadataError);
     }
 
     return NextResponse.json({ success: true });

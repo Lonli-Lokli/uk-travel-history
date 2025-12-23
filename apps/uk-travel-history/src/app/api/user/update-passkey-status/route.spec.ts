@@ -14,10 +14,11 @@ vi.mock('@uth/utils', () => ({
   getSupabaseServerClient: vi.fn(),
 }));
 
-const mockAuth = vi.mocked(await import('@clerk/nextjs/server')).auth;
-const mockGetSupabaseServerClient = vi.mocked(
-  await import('@uth/utils')
-).getSupabaseServerClient;
+import { auth } from '@clerk/nextjs/server';
+import { getSupabaseServerClient } from '@uth/utils';
+
+const mockAuth = vi.mocked(auth);
+const mockGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
 
 describe('POST /api/user/update-passkey-status', () => {
   let mockSupabaseClient: any;

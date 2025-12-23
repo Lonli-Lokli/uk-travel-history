@@ -2,14 +2,12 @@
  * Clerk implementation of AuthClientProvider
  */
 
-import { useUser, useAuth, useClerk } from '@clerk/nextjs';
 import { logger } from '@uth/utils';
 import type { AuthClientProvider, AuthClientProviderConfig } from './interface';
 import type {
   AuthUser,
   EmailPasswordCredentials,
   SignInResult,
-  AuthState,
   AuthStateChangeCallback,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
@@ -27,7 +25,7 @@ import { AuthError, AuthErrorCode } from '../../types/domain';
 export class ClerkAuthClientAdapter implements AuthClientProvider {
   private configured = false;
 
-  initialize(config: AuthClientProviderConfig): void {
+  initialize(_config: AuthClientProviderConfig): void {
     // Clerk is initialized via ClerkProvider at app level
     // This is just a configuration check
     if (typeof window === 'undefined') {
@@ -65,7 +63,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
    * Sign in with email/password - Note: In Clerk architecture, use Clerk UI components
    */
   async signInWithEmailPassword(
-    credentials: EmailPasswordCredentials,
+    _credentials: EmailPasswordCredentials,
   ): Promise<SignInResult> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
@@ -86,7 +84,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Get ID token - Note: In Clerk architecture, use getToken from useAuth() hook
    */
-  async getIdToken(forceRefresh = false): Promise<string> {
+  async getIdToken(_forceRefresh = false): Promise<string> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
       'getIdToken is not available with Clerk. Use the getToken method from useAuth() hook instead.',
@@ -96,7 +94,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Subscribe to auth state changes - Note: Clerk handles this via React hooks
    */
-  onAuthStateChanged(callback: AuthStateChangeCallback): () => void {
+  onAuthStateChanged(_callback: AuthStateChangeCallback): () => void {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
       'onAuthStateChanged is not available with Clerk. Use the useAuth() hook which provides reactive state.',
@@ -107,7 +105,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
    * Create user with email/password - Note: Use Clerk UI components
    */
   async createUserWithEmailPassword(
-    credentials: EmailPasswordCredentials,
+    _credentials: EmailPasswordCredentials,
   ): Promise<SignInResult> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
@@ -118,7 +116,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Send password reset email - Note: Handled by Clerk UI
    */
-  async sendPasswordResetEmail(email: string): Promise<void> {
+  async sendPasswordResetEmail(_email: string): Promise<void> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
       'sendPasswordResetEmail is not available with Clerk. Use Clerk UI components which handle password reset.',
@@ -128,7 +126,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Update profile - Note: Use Clerk's user.update() method
    */
-  async updateProfile(profile: {
+  async updateProfile(_profile: {
     displayName?: string;
     photoURL?: string;
   }): Promise<void> {
@@ -163,7 +161,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Register passkey - Note: Handled by Clerk's passkey enrollment
    */
-  async registerPasskey(displayName: string): Promise<SignInResult> {
+  async registerPasskey(_displayName: string): Promise<SignInResult> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
       'registerPasskey is not available with Clerk adapter. Use Clerk\'s passkey enrollment flow in user settings.',
@@ -173,7 +171,7 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Register passkey anonymously - Note: Not supported, users must pay first
    */
-  async registerPasskeyAnonymous(displayName?: string): Promise<SignInResult> {
+  async registerPasskeyAnonymous(_displayName?: string): Promise<SignInResult> {
     throw new AuthError(
       AuthErrorCode.CONFIG_ERROR,
       'registerPasskeyAnonymous is not available with Clerk. Users must complete payment before account creation.',

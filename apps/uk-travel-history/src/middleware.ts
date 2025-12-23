@@ -1,6 +1,7 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getSupabaseServerClient } from '@uth/utils';
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -27,21 +28,52 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   if (isPublicRoute(req)) {
     // For authenticated users on public routes that require passkey
     if (userId && requiresPasskeyRoute(req)) {
-      // Check if user has enrolled passkey
-      // We'll need to check Supabase for this
-      // For now, redirect to onboarding if needed
-      const { getSupabaseServerClient } = await import('@uth/utils');
-      const supabase = getSupabaseServerClient();
+      try {
+        // First check Clerk public metadata (cached)
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
 
-      const { data: user } = await supabase
-        .from('users')
-        .select('passkey_enrolled')
-        .eq('clerk_user_id', userId)
-        .single();
+        // Check metadata cache first
+        const passkeyEnrolled = user.publicMetadata?.passkey_enrolled as boolean | undefined;
 
-      if (user && !user.passkey_enrolled) {
-        // User is authenticated but hasn't enrolled passkey
-        return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
+        if (passkeyEnrolled === true) {
+          // Fast path: metadata confirms enrollment
+          return NextResponse.next();
+        }
+
+        // Fallback to Supabase if metadata not set or false
+        const supabase = getSupabaseServerClient();
+        const { data: dbUser, error } = await supabase
+          .from('users')
+          .select('passkey_enrolled')
+          .eq('clerk_user_id', userId)
+          .single();
+
+        if (error || !dbUser) {
+          // User not found in database yet - redirect to onboarding
+          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
+        }
+
+        if (!dbUser.passkey_enrolled) {
+          // User hasn't enrolled passkey
+          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
+        }
+
+        // If we get here, Supabase says enrolled but metadata doesn't
+        // Sync metadata in background (fire and forget)
+        client.users.updateUser(userId, {
+          publicMetadata: {
+            ...user.publicMetadata,
+            passkey_enrolled: true,
+          },
+        }).catch((err) => {
+          console.error('Failed to sync passkey metadata:', err);
+        });
+      } catch (error) {
+        console.error('Error checking passkey enrollment:', error);
+        // On error, allow through to avoid blocking legitimate users
+        // The actual protected resources will handle auth
+        return NextResponse.next();
       }
     }
 

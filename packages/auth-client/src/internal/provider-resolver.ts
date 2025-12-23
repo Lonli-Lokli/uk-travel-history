@@ -26,9 +26,9 @@ export function resolveAuthProvider(
 
   // Determine provider type from config or environment
   // Default changed to 'clerk' (was 'firebase' pre-migration)
-  const providerType =
+  const providerType: string =
     config?.type ||
-    (process.env.NEXT_PUBLIC_UTH_AUTH_PROVIDER as any) ||
+    (process.env.NEXT_PUBLIC_UTH_AUTH_PROVIDER as string) ||
     'clerk';
 
   let provider: AuthClientProvider;
