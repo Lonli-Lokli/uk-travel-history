@@ -7,6 +7,7 @@ import type {
   PaymentsServerProviderConfig,
 } from './providers/interface';
 import { StripePaymentsServerAdapter } from './providers/stripe-adapter';
+import { MockPaymentsServerAdapter } from './providers/mock-adapter';
 import { PaymentsError, PaymentsErrorCode } from '../types/domain';
 
 let cachedProvider: PaymentsServerProvider | undefined;
@@ -33,6 +34,9 @@ export function resolvePaymentsProvider(
     case 'stripe':
       provider = new StripePaymentsServerAdapter();
       break;
+    case 'mock':
+      provider = new MockPaymentsServerAdapter();
+      break;
     // Future providers can be added here
     // case 'paddle':
     //   provider = new PaddlePaymentsServerAdapter();
@@ -40,7 +44,7 @@ export function resolvePaymentsProvider(
     default:
       throw new PaymentsError(
         PaymentsErrorCode.CONFIG_ERROR,
-        `Unknown payments provider: ${providerType}. Supported providers: stripe`,
+        `Unknown payments provider: ${providerType}. Supported providers: stripe, mock`,
       );
   }
 

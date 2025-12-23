@@ -15,8 +15,12 @@ import {
   constructWebhookEvent,
   createCheckoutSession,
 } from '../index.js';
-import { getPaymentsProvider } from '../internal/provider-resolver.js';
-import { StripePaymentsServerAdapter } from '../internal/providers/stripe-adapter.js';
+import {
+  getPaymentsProvider,
+  resolvePaymentsProvider,
+  clearPaymentsProviderCache,
+} from '../internal/provider-resolver.js';
+import { MockPaymentsServerAdapter } from '../internal/providers/mock-adapter.js';
 
 describe('Payments Server - Domain Types', () => {
   describe('PaymentsError', () => {
@@ -110,9 +114,12 @@ describe('Payments Server - Domain Types', () => {
 
 describe('Payments Server - SDK Operations', () => {
   beforeEach(() => {
-    // Ensure provider is initialized
-    const provider = getPaymentsProvider();
-    provider.initialize({});
+    // Clear cached provider and use mock for tests
+    clearPaymentsProviderCache();
+    const provider = resolvePaymentsProvider({ type: 'mock' });
+    if (provider instanceof MockPaymentsServerAdapter) {
+      provider.clearMockData();
+    }
   });
 
   describe('getPriceIds', () => {
@@ -136,12 +143,6 @@ describe('Payments Server - SDK Operations', () => {
 
   describe('retrieveCheckoutSession', () => {
     it('should throw NOT_FOUND error for invalid session ID', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       await expect(
         retrieveCheckoutSession('cs_invalid_session_id'),
       ).rejects.toThrow(PaymentsError);
@@ -154,12 +155,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should return session details structure', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       // Test with mock session ID to verify error structure
       try {
         await retrieveCheckoutSession('cs_test_123');
@@ -177,12 +172,6 @@ describe('Payments Server - SDK Operations', () => {
 
   describe('retrieveSubscription', () => {
     it('should throw NOT_FOUND error for invalid subscription ID', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       await expect(
         retrieveSubscription('sub_invalid_subscription_id'),
       ).rejects.toThrow(PaymentsError);
@@ -195,12 +184,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should return subscription details structure', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       // Test with mock subscription ID to verify error structure
       try {
         await retrieveSubscription('sub_test_123');
@@ -218,12 +201,6 @@ describe('Payments Server - SDK Operations', () => {
 
   describe('constructWebhookEvent', () => {
     it('should throw INVALID_SIGNATURE error for invalid signature', () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       const body = JSON.stringify({ type: 'test.event', data: {} });
       const signature = 'invalid_signature';
       const secret = 'whsec_test_secret';
@@ -243,12 +220,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should accept Buffer as body', () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       const body = Buffer.from(
         JSON.stringify({ type: 'test.event', data: {} }),
       );
@@ -268,12 +239,6 @@ describe('Payments Server - SDK Operations', () => {
 
   describe('createCheckoutSession', () => {
     it('should create authenticated checkout session with userId and email', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       const session = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_MONTHLY,
         userId: 'test-user-123',
@@ -292,12 +257,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should create anonymous checkout session without userId', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       const session = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ANNUAL,
         successUrl:
@@ -315,12 +274,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should handle one-time payment plan', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        // Skip test if Stripe is not configured
-        return;
-      }
-
       const session = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ONCE,
         userId: 'test-user-456',
@@ -353,11 +306,6 @@ describe('Payments Server - SDK Operations', () => {
     });
 
     it('should support both authenticated and anonymous checkout flows', async () => {
-      const provider = getPaymentsProvider() as StripePaymentsServerAdapter;
-      if (!provider.isConfigured()) {
-        return;
-      }
-
       // Authenticated flow
       const authenticatedSession = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_MONTHLY,
