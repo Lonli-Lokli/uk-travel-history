@@ -320,7 +320,8 @@ describe('Auth Server - Subscription Operations', () => {
       await createSubscription(subscriptionData);
 
       // Check if session is already used
-      const existingSubscription = await getSubscriptionBySessionId('cs_test_session');
+      const existingSubscription =
+        await getSubscriptionBySessionId('cs_test_session');
       expect(existingSubscription).not.toBeNull();
 
       // This would be the "already used" check in the application
@@ -410,7 +411,8 @@ describe('Auth Server - Subscription Operations', () => {
   describe('Subscription workflow scenarios', () => {
     it('should handle complete new subscription flow', async () => {
       // 1. Check session not already used
-      const existingBeforeCreate = await getSubscriptionBySessionId('cs_new_session');
+      const existingBeforeCreate =
+        await getSubscriptionBySessionId('cs_new_session');
       expect(existingBeforeCreate).toBeNull();
 
       // 2. Create subscription after successful payment
@@ -428,7 +430,8 @@ describe('Auth Server - Subscription Operations', () => {
       expect(subscription.status).toBe(SubscriptionStatus.ACTIVE);
 
       // 3. Verify session is now used
-      const existingAfterCreate = await getSubscriptionBySessionId('cs_new_session');
+      const existingAfterCreate =
+        await getSubscriptionBySessionId('cs_new_session');
       expect(existingAfterCreate).not.toBeNull();
 
       // 4. Retrieve by user ID

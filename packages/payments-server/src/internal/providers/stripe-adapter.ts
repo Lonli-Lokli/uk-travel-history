@@ -158,7 +158,8 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
 
       const userId =
         session.client_reference_id || session.metadata?.userId || '';
-      const plan = (session.metadata?.plan as PaymentPlan) || PaymentPlan.PREMIUM_MONTHLY;
+      const plan =
+        (session.metadata?.plan as PaymentPlan) || PaymentPlan.PREMIUM_MONTHLY;
 
       const entitlement: Entitlement = {
         userId,

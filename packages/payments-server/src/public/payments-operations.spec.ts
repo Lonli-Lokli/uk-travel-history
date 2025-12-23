@@ -74,9 +74,15 @@ describe('Payments Server - Domain Types', () => {
       expect(WebhookEventType.CHECKOUT_COMPLETED).toBe('CHECKOUT_COMPLETED');
       expect(WebhookEventType.PAYMENT_SUCCEEDED).toBe('PAYMENT_SUCCEEDED');
       expect(WebhookEventType.PAYMENT_FAILED).toBe('PAYMENT_FAILED');
-      expect(WebhookEventType.SUBSCRIPTION_CREATED).toBe('SUBSCRIPTION_CREATED');
-      expect(WebhookEventType.SUBSCRIPTION_UPDATED).toBe('SUBSCRIPTION_UPDATED');
-      expect(WebhookEventType.SUBSCRIPTION_CANCELLED).toBe('SUBSCRIPTION_CANCELLED');
+      expect(WebhookEventType.SUBSCRIPTION_CREATED).toBe(
+        'SUBSCRIPTION_CREATED',
+      );
+      expect(WebhookEventType.SUBSCRIPTION_UPDATED).toBe(
+        'SUBSCRIPTION_UPDATED',
+      );
+      expect(WebhookEventType.SUBSCRIPTION_CANCELLED).toBe(
+        'SUBSCRIPTION_CANCELLED',
+      );
       expect(WebhookEventType.UNKNOWN).toBe('UNKNOWN');
     });
   });

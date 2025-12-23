@@ -7,10 +7,7 @@ import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { logger } from '@uth/utils';
-import type {
-  AuthServerProvider,
-  AuthServerProviderConfig,
-} from './interface';
+import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,
   AuthTokenClaims,
@@ -133,7 +130,8 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       const decodedToken = await auth.verifyIdToken(token, checkRevoked);
 
       // Normalize Firebase token to domain type
-      const { email, email_verified, iat, exp, uid, ...customClaims } = decodedToken;
+      const { email, email_verified, iat, exp, uid, ...customClaims } =
+        decodedToken;
 
       return {
         uid,

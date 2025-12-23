@@ -22,10 +22,7 @@ import {
   FirebaseWebAuthnError,
 } from '@firebase-web-authn/browser';
 import { logger } from '@uth/utils';
-import type {
-  AuthClientProvider,
-  AuthClientProviderConfig,
-} from './interface';
+import type { AuthClientProvider, AuthClientProviderConfig } from './interface';
 import type {
   AuthUser,
   EmailPasswordCredentials,
@@ -62,7 +59,9 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
 
     // Validate that required config is present
     const required = ['apiKey', 'authDomain', 'projectId'];
-    const missing = required.filter((key) => !firebaseConfig[key as keyof typeof firebaseConfig]);
+    const missing = required.filter(
+      (key) => !firebaseConfig[key as keyof typeof firebaseConfig],
+    );
 
     if (missing.length > 0) {
       logger.warn(
@@ -355,7 +354,10 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     }
 
     try {
-      const userCredential = await firebaseSignInWithPasskey(auth, this.functions);
+      const userCredential = await firebaseSignInWithPasskey(
+        auth,
+        this.functions,
+      );
       const token = await userCredential.user.getIdToken();
 
       return {
@@ -365,11 +367,7 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     } catch (error) {
       // Handle Firebase WebAuthn specific errors
       if (error instanceof FirebaseWebAuthnError) {
-        throw new AuthError(
-          AuthErrorCode.PASSKEY_ERROR,
-          error.message,
-          error,
-        );
+        throw new AuthError(AuthErrorCode.PASSKEY_ERROR, error.message, error);
       }
       throw this.mapFirebaseError(error);
     }
@@ -393,7 +391,11 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     }
 
     try {
-      const userCredential = await createUserWithPasskey(auth, this.functions, displayName);
+      const userCredential = await createUserWithPasskey(
+        auth,
+        this.functions,
+        displayName,
+      );
       const token = await userCredential.user.getIdToken();
 
       return {
@@ -403,17 +405,15 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     } catch (error) {
       // Handle Firebase WebAuthn specific errors
       if (error instanceof FirebaseWebAuthnError) {
-        throw new AuthError(
-          AuthErrorCode.PASSKEY_ERROR,
-          error.message,
-          error,
-        );
+        throw new AuthError(AuthErrorCode.PASSKEY_ERROR, error.message, error);
       }
       throw this.mapFirebaseError(error);
     }
   }
 
-  async registerPasskeyAnonymous(displayName = 'UK Travel History User'): Promise<SignInResult> {
+  async registerPasskeyAnonymous(
+    displayName = 'UK Travel History User',
+  ): Promise<SignInResult> {
     if (!this.isPasskeySupported()) {
       throw new AuthError(
         AuthErrorCode.PASSKEY_NOT_SUPPORTED,
@@ -431,7 +431,11 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     }
 
     try {
-      const userCredential = await createUserWithPasskey(auth, this.functions, displayName);
+      const userCredential = await createUserWithPasskey(
+        auth,
+        this.functions,
+        displayName,
+      );
       const token = await userCredential.user.getIdToken();
 
       return {
@@ -441,11 +445,7 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     } catch (error) {
       // Handle Firebase WebAuthn specific errors
       if (error instanceof FirebaseWebAuthnError) {
-        throw new AuthError(
-          AuthErrorCode.PASSKEY_ERROR,
-          error.message,
-          error,
-        );
+        throw new AuthError(AuthErrorCode.PASSKEY_ERROR, error.message, error);
       }
       throw this.mapFirebaseError(error);
     }

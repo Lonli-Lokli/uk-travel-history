@@ -2,10 +2,7 @@
  * Mock implementation of AuthServerProvider for testing
  */
 
-import type {
-  AuthServerProvider,
-  AuthServerProviderConfig,
-} from './interface';
+import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,
   AuthTokenClaims,
@@ -83,7 +80,10 @@ export class MockAuthServerAdapter implements AuthServerProvider {
     const user = this.users.get(uid);
 
     if (!user) {
-      throw new AuthError(AuthErrorCode.USER_NOT_FOUND, `User not found: ${uid}`);
+      throw new AuthError(
+        AuthErrorCode.USER_NOT_FOUND,
+        `User not found: ${uid}`,
+      );
     }
 
     return user;
@@ -91,7 +91,10 @@ export class MockAuthServerAdapter implements AuthServerProvider {
 
   async deleteUser(uid: string): Promise<void> {
     if (!this.users.has(uid)) {
-      throw new AuthError(AuthErrorCode.USER_NOT_FOUND, `User not found: ${uid}`);
+      throw new AuthError(
+        AuthErrorCode.USER_NOT_FOUND,
+        `User not found: ${uid}`,
+      );
     }
 
     this.users.delete(uid);
@@ -104,7 +107,10 @@ export class MockAuthServerAdapter implements AuthServerProvider {
     const user = this.users.get(uid);
 
     if (!user) {
-      throw new AuthError(AuthErrorCode.USER_NOT_FOUND, `User not found: ${uid}`);
+      throw new AuthError(
+        AuthErrorCode.USER_NOT_FOUND,
+        `User not found: ${uid}`,
+      );
     }
 
     user.customClaims = claims;

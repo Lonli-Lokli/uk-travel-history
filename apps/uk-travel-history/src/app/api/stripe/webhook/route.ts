@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeAPI } from '@uth/payments-server';
-import { createSubscription, updateSubscription, SubscriptionStatus } from '@uth/auth-server';
+import {
+  createSubscription,
+  updateSubscription,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
@@ -20,9 +24,7 @@ if (!webhookSecret) {
 export async function POST(request: NextRequest) {
   try {
     // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(
-      FEATURE_KEYS.STRIPE_CHECKOUT,
-    );
+    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.STRIPE_CHECKOUT);
     if (!stripeEnabled) {
       logger.warn('Stripe webhook received but feature is disabled');
       return NextResponse.json(
@@ -169,10 +171,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   const subscriptionId = session.subscription as string;
-  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(subscriptionId);
+  const subscriptionResponse =
+    await StripeAPI.subscriptions.retrieve(subscriptionId);
 
   // Extract subscription data from Response wrapper
-  const subscription = ('data' in subscriptionResponse ? subscriptionResponse.data : subscriptionResponse) as any;
+  const subscription = (
+    'data' in subscriptionResponse
+      ? subscriptionResponse.data
+      : subscriptionResponse
+  ) as any;
 
   // Create/update subscription document using SDK
   await createSubscription({
@@ -181,7 +188,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     stripeSubscriptionId: subscription.id,
     stripePriceId: subscription.items.data[0]?.price.id,
     status: subscription.status as SubscriptionStatus,
-    currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
+    currentPeriodStart: new Date(
+      (subscription.current_period_start ?? 0) * 1000,
+    ),
     currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
     cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
   });
@@ -251,9 +260,15 @@ async function handlePaymentFailed(invoice: any) {
     return;
   }
 
-  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(invoice.subscription as string);
+  const subscriptionResponse = await StripeAPI.subscriptions.retrieve(
+    invoice.subscription as string,
+  );
   // Extract subscription data from Response wrapper
-  const subscription = ('data' in subscriptionResponse ? subscriptionResponse.data : subscriptionResponse) as any;
+  const subscription = (
+    'data' in subscriptionResponse
+      ? subscriptionResponse.data
+      : subscriptionResponse
+  ) as any;
   const userId = subscription.metadata.userId;
 
   if (!userId) {

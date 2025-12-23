@@ -85,7 +85,9 @@ export async function getSessionFromRequest(
   return {
     user,
     token,
-    expiresAt: claims.exp ? new Date(claims.exp * 1000) : new Date(Date.now() + 3600000), // Default 1 hour
+    expiresAt: claims.exp
+      ? new Date(claims.exp * 1000)
+      : new Date(Date.now() + 3600000), // Default 1 hour
   };
 }
 

@@ -20,7 +20,10 @@ export {
 } from './types/domain';
 
 // Export public operations
-export { startCheckout, isPaymentsConfigured } from './public/payments-operations';
+export {
+  startCheckout,
+  isPaymentsConfigured,
+} from './public/payments-operations';
 
 // DO NOT export:
 // - Internal provider interfaces (PaymentsClientProvider)

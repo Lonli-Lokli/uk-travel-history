@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, getSubscription, SubscriptionStatus } from '@uth/auth-server';
+import {
+  verifyToken,
+  getSubscription,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';

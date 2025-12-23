@@ -140,9 +140,7 @@ class AuthStore {
 
       runInAction(() => {
         this.error =
-          error instanceof Error
-            ? error.message
-            : 'Failed to register passkey';
+          error instanceof Error ? error.message : 'Failed to register passkey';
         this.isAuthenticating = false;
       });
       throw error;
@@ -183,9 +181,7 @@ class AuthStore {
 
       runInAction(() => {
         this.error =
-          error instanceof Error
-            ? error.message
-            : 'Failed to register passkey';
+          error instanceof Error ? error.message : 'Failed to register passkey';
         this.isAuthenticating = false;
       });
       throw error;

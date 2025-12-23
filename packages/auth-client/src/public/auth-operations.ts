@@ -146,7 +146,9 @@ export async function signInWithPasskey(): Promise<SignInResult> {
  * @returns Sign-in result with new user and token
  * @throws AuthError if registration fails or passkeys not supported
  */
-export async function registerPasskey(displayName: string): Promise<SignInResult> {
+export async function registerPasskey(
+  displayName: string,
+): Promise<SignInResult> {
   const provider = getAuthProvider();
   return provider.registerPasskey(displayName);
 }
@@ -158,7 +160,9 @@ export async function registerPasskey(displayName: string): Promise<SignInResult
  * @returns Sign-in result with new user and token
  * @throws AuthError if registration fails or passkeys not supported
  */
-export async function registerPasskeyAnonymous(displayName?: string): Promise<SignInResult> {
+export async function registerPasskeyAnonymous(
+  displayName?: string,
+): Promise<SignInResult> {
   const provider = getAuthProvider();
   return provider.registerPasskeyAnonymous(displayName);
 }

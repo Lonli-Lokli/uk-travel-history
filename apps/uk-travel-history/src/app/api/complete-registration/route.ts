@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeAPI } from '@uth/payments-server';
-import { verifyToken, createSubscription, getSubscriptionBySessionId, SubscriptionStatus } from '@uth/auth-server';
+import {
+  verifyToken,
+  createSubscription,
+  getSubscriptionBySessionId,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import * as Sentry from '@sentry/nextjs';
 
@@ -135,9 +140,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch subscription details from Stripe
-    const subscriptionResponse = await StripeAPI.subscriptions.retrieve(subscriptionId);
+    const subscriptionResponse =
+      await StripeAPI.subscriptions.retrieve(subscriptionId);
     // Extract subscription data from Response wrapper
-    const subscription = ('data' in subscriptionResponse ? subscriptionResponse.data : subscriptionResponse) as any;
+    const subscription = (
+      'data' in subscriptionResponse
+        ? subscriptionResponse.data
+        : subscriptionResponse
+    ) as any;
 
     // Create subscription document using SDK
     await createSubscription({
@@ -147,7 +157,9 @@ export async function POST(request: NextRequest) {
       stripeSubscriptionId: subscriptionId,
       stripeSessionId: session_id, // Mark session as consumed
       stripePriceId: subscription.items.data[0]?.price.id,
-      currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
+      currentPeriodStart: new Date(
+        (subscription.current_period_start ?? 0) * 1000,
+      ),
       currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
     });
