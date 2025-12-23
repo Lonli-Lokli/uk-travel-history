@@ -29,6 +29,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.32.1",
     "@stripe/stripe-js": "^8.6.0",
+    "@supabase/supabase-js": "^2.89.0",
     "@tanstack/react-table": "^8.21.3",
     "@types/papaparse": "^5.5.2",
     "@vercel/edge-config": "^1.4.3",

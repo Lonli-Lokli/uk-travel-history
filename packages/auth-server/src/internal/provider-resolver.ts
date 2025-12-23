@@ -8,13 +8,14 @@ import type {
   AuthServerProviderConfig,
 } from './providers/interface';
 import { FirebaseAuthServerAdapter } from './providers/firebase-adapter';
+import { ClerkAuthServerAdapter } from './providers/clerk-adapter';
 import { AuthError, AuthErrorCode } from '../types/domain';
 
 let cachedProvider: AuthServerProvider | undefined;
 
 /**
  * Resolve and initialize the appropriate auth provider
- * Uses environment variable UTH_AUTH_PROVIDER to determine provider (defaults to 'firebase')
+ * Uses environment variable UTH_AUTH_PROVIDER to determine provider (defaults to 'clerk')
  */
 export function resolveAuthProvider(
   config?: AuthServerProviderConfig,
@@ -25,23 +26,24 @@ export function resolveAuthProvider(
   }
 
   // Determine provider type from config or environment
+  // Default changed to 'clerk' (was 'firebase' pre-migration)
   const providerType =
-    config?.type || (process.env.UTH_AUTH_PROVIDER as any) || 'firebase';
+    config?.type || (process.env.UTH_AUTH_PROVIDER as any) || 'clerk';
 
   let provider: AuthServerProvider;
 
   switch (providerType) {
+    case 'clerk':
+      provider = new ClerkAuthServerAdapter();
+      break;
     case 'firebase':
+      // Legacy provider - maintained for backward compatibility
       provider = new FirebaseAuthServerAdapter();
       break;
-    // Future providers can be added here
-    // case 'clerk':
-    //   provider = new ClerkAuthServerAdapter();
-    //   break;
     default:
       throw new AuthError(
         AuthErrorCode.CONFIG_ERROR,
-        `Unknown auth provider: ${providerType}. Supported providers: firebase`,
+        `Unknown auth provider: ${providerType}. Supported providers: clerk, firebase`,
       );
   }
 
