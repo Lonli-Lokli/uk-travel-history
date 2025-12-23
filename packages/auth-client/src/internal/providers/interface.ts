@@ -97,4 +97,31 @@ export interface AuthClientProvider {
     displayName?: string;
     photoURL?: string;
   }): Promise<void>;
+
+  /**
+   * Check if passkey/WebAuthn is supported in the browser
+   * @returns true if passkeys are supported
+   */
+  isPasskeySupported(): boolean;
+
+  /**
+   * Sign in with passkey
+   * @throws AuthError if sign-in fails or passkeys not supported
+   */
+  signInWithPasskey(): Promise<SignInResult>;
+
+  /**
+   * Register a new passkey for the current user or create new user
+   * @param displayName - Display name for the passkey
+   * @throws AuthError if registration fails or passkeys not supported
+   */
+  registerPasskey(displayName: string): Promise<SignInResult>;
+
+  /**
+   * Register a new passkey anonymously (without email)
+   * Creates a new user with passkey authentication
+   * @param displayName - Display name for the passkey (optional, defaults to generic name)
+   * @throws AuthError if registration fails or passkeys not supported
+   */
+  registerPasskeyAnonymous(displayName?: string): Promise<SignInResult>;
 }

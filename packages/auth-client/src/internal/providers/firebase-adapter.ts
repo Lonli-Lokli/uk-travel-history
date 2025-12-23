@@ -16,6 +16,11 @@ import {
 } from 'firebase/auth';
 import { getFunctions, type Functions } from 'firebase/functions';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import {
+  createUserWithPasskey,
+  signInWithPasskey as firebaseSignInWithPasskey,
+  FirebaseWebAuthnError,
+} from '@firebase-web-authn/browser';
 import { logger } from '@uth/utils';
 import type {
   AuthClientProvider,
@@ -320,6 +325,128 @@ export class FirebaseAuthClientAdapter implements AuthClientProvider {
     try {
       await firebaseUpdateProfile(user, profile);
     } catch (error) {
+      throw this.mapFirebaseError(error);
+    }
+  }
+
+  isPasskeySupported(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      window.PublicKeyCredential !== undefined &&
+      typeof window.PublicKeyCredential === 'function'
+    );
+  }
+
+  async signInWithPasskey(): Promise<SignInResult> {
+    if (!this.isPasskeySupported()) {
+      throw new AuthError(
+        AuthErrorCode.PASSKEY_NOT_SUPPORTED,
+        'Passkeys are not supported in this browser',
+      );
+    }
+
+    const auth = this.ensureConfigured();
+
+    if (!this.functions) {
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Firebase Functions is not initialized',
+      );
+    }
+
+    try {
+      const userCredential = await firebaseSignInWithPasskey(auth, this.functions);
+      const token = await userCredential.user.getIdToken();
+
+      return {
+        user: this.normalizeUser(userCredential.user),
+        token,
+      };
+    } catch (error) {
+      // Handle Firebase WebAuthn specific errors
+      if (error instanceof FirebaseWebAuthnError) {
+        throw new AuthError(
+          AuthErrorCode.PASSKEY_ERROR,
+          error.message,
+          error,
+        );
+      }
+      throw this.mapFirebaseError(error);
+    }
+  }
+
+  async registerPasskey(displayName: string): Promise<SignInResult> {
+    if (!this.isPasskeySupported()) {
+      throw new AuthError(
+        AuthErrorCode.PASSKEY_NOT_SUPPORTED,
+        'Passkeys are not supported in this browser',
+      );
+    }
+
+    const auth = this.ensureConfigured();
+
+    if (!this.functions) {
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Firebase Functions is not initialized',
+      );
+    }
+
+    try {
+      const userCredential = await createUserWithPasskey(auth, this.functions, displayName);
+      const token = await userCredential.user.getIdToken();
+
+      return {
+        user: this.normalizeUser(userCredential.user),
+        token,
+      };
+    } catch (error) {
+      // Handle Firebase WebAuthn specific errors
+      if (error instanceof FirebaseWebAuthnError) {
+        throw new AuthError(
+          AuthErrorCode.PASSKEY_ERROR,
+          error.message,
+          error,
+        );
+      }
+      throw this.mapFirebaseError(error);
+    }
+  }
+
+  async registerPasskeyAnonymous(displayName = 'UK Travel History User'): Promise<SignInResult> {
+    if (!this.isPasskeySupported()) {
+      throw new AuthError(
+        AuthErrorCode.PASSKEY_NOT_SUPPORTED,
+        'Passkeys are not supported in this browser',
+      );
+    }
+
+    const auth = this.ensureConfigured();
+
+    if (!this.functions) {
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Firebase Functions is not initialized',
+      );
+    }
+
+    try {
+      const userCredential = await createUserWithPasskey(auth, this.functions, displayName);
+      const token = await userCredential.user.getIdToken();
+
+      return {
+        user: this.normalizeUser(userCredential.user),
+        token,
+      };
+    } catch (error) {
+      // Handle Firebase WebAuthn specific errors
+      if (error instanceof FirebaseWebAuthnError) {
+        throw new AuthError(
+          AuthErrorCode.PASSKEY_ERROR,
+          error.message,
+          error,
+        );
+      }
       throw this.mapFirebaseError(error);
     }
   }

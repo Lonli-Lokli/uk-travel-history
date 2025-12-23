@@ -118,3 +118,47 @@ export function isAuthConfigured(): boolean {
     return false;
   }
 }
+
+/**
+ * Check if passkey/WebAuthn is supported in the browser
+ * @returns true if passkeys are supported
+ */
+export function isPasskeySupported(): boolean {
+  const provider = getAuthProvider();
+  return provider.isPasskeySupported();
+}
+
+/**
+ * Sign in with passkey
+ * Uses WebAuthn/passkey authentication for secure, passwordless login
+ * @returns Sign-in result with user and token
+ * @throws AuthError if sign-in fails or passkeys not supported
+ */
+export async function signInWithPasskey(): Promise<SignInResult> {
+  const provider = getAuthProvider();
+  return provider.signInWithPasskey();
+}
+
+/**
+ * Register a new passkey
+ * Creates a new user account with passkey authentication
+ * @param displayName - Display name for the passkey (shown in passkey manager)
+ * @returns Sign-in result with new user and token
+ * @throws AuthError if registration fails or passkeys not supported
+ */
+export async function registerPasskey(displayName: string): Promise<SignInResult> {
+  const provider = getAuthProvider();
+  return provider.registerPasskey(displayName);
+}
+
+/**
+ * Register a new passkey anonymously (without email)
+ * Creates a new user with passkey authentication, useful for post-payment flows
+ * @param displayName - Optional display name for the passkey (defaults to generic name)
+ * @returns Sign-in result with new user and token
+ * @throws AuthError if registration fails or passkeys not supported
+ */
+export async function registerPasskeyAnonymous(displayName?: string): Promise<SignInResult> {
+  const provider = getAuthProvider();
+  return provider.registerPasskeyAnonymous(displayName);
+}

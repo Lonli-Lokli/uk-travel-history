@@ -27,20 +27,17 @@ export {
   sendPasswordResetEmail,
   updateProfile,
   isAuthConfigured,
+  isPasskeySupported,
+  signInWithPasskey,
+  registerPasskey,
+  registerPasskeyAnonymous,
 } from './public/auth-operations';
 
 // Export React hook
 export { useAuth } from './public/use-auth';
 
-// Export Firebase interop (escape hatches for direct Firebase access)
-export {
-  getAuthInstance,
-  getFunctionsInstance,
-  auth,
-} from './public/firebase-interop';
-export type { Auth, Functions } from './public/firebase-interop';
-
 // DO NOT export:
 // - Internal provider interfaces (AuthClientProvider)
 // - Provider adapters (FirebaseAuthClientAdapter)
 // - Provider resolver functions
+// - Firebase interop (removed to maintain SDK abstraction)

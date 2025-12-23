@@ -22,6 +22,10 @@ export enum AuthErrorCode {
   ACCOUNT_EXISTS = 'ACCOUNT_EXISTS',
   /** Too many attempts, temporarily blocked */
   TOO_MANY_ATTEMPTS = 'TOO_MANY_ATTEMPTS',
+  /** Passkeys are not supported in this browser */
+  PASSKEY_NOT_SUPPORTED = 'PASSKEY_NOT_SUPPORTED',
+  /** Error during passkey operation */
+  PASSKEY_ERROR = 'PASSKEY_ERROR',
   /** Unknown error */
   UNKNOWN = 'UNKNOWN',
 }
