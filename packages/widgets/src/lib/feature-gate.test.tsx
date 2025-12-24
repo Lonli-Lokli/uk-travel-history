@@ -170,9 +170,10 @@ describe('FeatureGate', () => {
 
       const content = screen.getByText('Premium Content');
       expect(content).toBeTruthy();
-      expect(content.parentElement?.className).toContain('blur-sm');
+      expect(content.parentElement?.className).toContain('blur-[3px]');
       expect(content.parentElement?.className).toContain('select-none');
       expect(content.parentElement?.className).toContain('pointer-events-none');
+      expect(content.parentElement?.className).toContain('grayscale');
     });
 
     it('should have clickable overlay in blur mode', () => {
@@ -213,8 +214,9 @@ describe('FeatureGate', () => {
 
       const content = screen.getByText('Premium Content');
       expect(content).toBeTruthy();
-      expect(content.parentElement?.className).toContain('blur-[2px]');
-      expect(content.parentElement?.className).toContain('opacity-60');
+      expect(content.parentElement?.className).toContain('blur-[1.5px]');
+      expect(content.parentElement?.className).toContain('opacity-40');
+      expect(content.parentElement?.className).toContain('grayscale');
     });
 
     it('should call upgrade callback on click when authenticated', () => {
