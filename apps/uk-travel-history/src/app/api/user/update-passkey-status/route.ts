@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { getSupabaseServerClient } from '@uth/db';
+import { logger } from '@uth/utils';
 
 /**
  * POST /api/user/update-passkey-status
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       .eq('clerk_user_id', userId);
 
     if (error) {
-      console.error('Failed to update passkey status:', error);
+      logger.error('Failed to update passkey status', error);
       return NextResponse.json(
         { error: 'Failed to update passkey status' },
         { status: 500 },
@@ -59,12 +60,12 @@ export async function POST(req: NextRequest) {
       });
     } catch (metadataError) {
       // Log but don't fail the request - Supabase is source of truth
-      console.error('Failed to sync passkey metadata to Clerk:', metadataError);
+      logger.error('Failed to sync passkey metadata to Clerk', metadataError);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Update passkey status error:', error);
+    logger.error('Update passkey status error', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },

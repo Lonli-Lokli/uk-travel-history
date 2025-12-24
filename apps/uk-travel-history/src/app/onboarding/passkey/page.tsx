@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@uth/ui';
+import { logger } from '@uth/utils';
 
 export default function PasskeyOnboardingPage() {
   const { user, isLoaded } = useUser();
@@ -41,7 +42,7 @@ export default function PasskeyOnboardingPage() {
         router.push('/travel');
       }
     } catch (err) {
-      console.error('Failed to update passkey status:', err);
+      logger.error('Failed to update passkey status', err);
     }
   };
 
@@ -58,7 +59,7 @@ export default function PasskeyOnboardingPage() {
       // Mark as enrolled
       await markPasskeyEnrolled();
     } catch (err: any) {
-      console.error('Passkey enrollment failed:', err);
+      logger.error('Passkey enrollment failed', err);
       setError(
         err.message || 'Failed to enroll passkey. Please try again or contact support.',
       );

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Validate environment variables
     if (!process.env.STRIPE_SECRET_KEY) {
-      logger.error('STRIPE_SECRET_KEY not configured');
+      logger.error('STRIPE_SECRET_KEY not configured', undefined);
       return NextResponse.json(
         { error: 'Payment system not configured' },
         { status: 500 },
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     const PRICE_ID = process.env.STRIPE_PRICE_ONE_TIME_PAYMENT;
     if (!PRICE_ID) {
-      logger.error('STRIPE_PRICE_ONE_TIME_PAYMENT not configured');
+      logger.error('STRIPE_PRICE_ONE_TIME_PAYMENT not configured', undefined);
       return NextResponse.json(
         { error: 'Payment price not configured' },
         { status: 500 },
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError || !purchaseIntent) {
-      logger.error('Failed to create purchase intent:', insertError);
+      logger.error('Failed to create purchase intent', insertError);
       return NextResponse.json(
         { error: 'Failed to create purchase intent' },
         { status: 500 },
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       .eq('id', purchaseIntent.id);
 
     if (updateError) {
-      logger.error('Failed to update purchase intent:', updateError);
+      logger.error('Failed to update purchase intent', updateError);
       // Continue anyway - webhook can handle it
     }
 
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       url: session.url,
     });
   } catch (error) {
-    logger.error('Checkout error:', error);
+    logger.error('Checkout error', error);
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 },

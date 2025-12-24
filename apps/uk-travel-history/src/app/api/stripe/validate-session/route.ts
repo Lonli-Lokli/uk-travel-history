@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { retrieveCheckoutSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { getSubscriptionBySessionId } from '@uth/auth-server';
-import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -43,7 +42,9 @@ export async function POST(request: NextRequest) {
     // Check if session is for new subscription
     if (session.metadata?.checkoutType !== 'new_subscription') {
       logger.warn('[Validate Session] Session is not for new subscription', {
-        sessionId: session_id,
+        extra: {
+          sessionId: session_id,
+        },
       });
       return NextResponse.json(
         { error: 'Invalid session type' },
@@ -56,8 +57,10 @@ export async function POST(request: NextRequest) {
 
     if (paymentStatus !== 'paid') {
       logger.warn('[Validate Session] Payment not completed', {
-        sessionId: session_id,
-        paymentStatus,
+        extra: {
+          sessionId: session_id,
+          paymentStatus,
+        },
       });
       return NextResponse.json({
         paymentStatus,
@@ -71,7 +74,9 @@ export async function POST(request: NextRequest) {
 
     if (alreadyUsed) {
       logger.warn('[Validate Session] Session already used', {
-        sessionId: session_id,
+        extra: {
+          sessionId: session_id,
+        },
       });
     }
 
@@ -83,9 +88,7 @@ export async function POST(request: NextRequest) {
       customerId: session.customerId || '',
     });
   } catch (error) {
-    logger.error('[Validate Session] Error:', error);
-
-    Sentry.captureException(error, {
+    logger.error('[Validate Session] Failed to validate session', error, {
       tags: {
         service: 'stripe',
         operation: 'validate_session',

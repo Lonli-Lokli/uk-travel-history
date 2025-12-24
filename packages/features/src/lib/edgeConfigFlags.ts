@@ -120,7 +120,7 @@ export async function isFeatureEnabled(
 
     if (!flags) {
       // Edge Config not configured, default to disabled for safety
-      console.warn(
+      logger.warn(
         `Edge Config not configured, defaulting ${featureKey} to disabled`,
       );
       return DEFAULT_FEATURE_STATES[featureKey];
@@ -147,7 +147,9 @@ export async function isFeatureEnabled(
     return flag.enabled;
   } catch (error) {
     logger.error('[Feature Flags] Error checking feature flag', error, {
-      featureKey,
+      extra: {
+        featureKey,
+      },
     });
     return DEFAULT_FEATURE_STATES[featureKey];
   }

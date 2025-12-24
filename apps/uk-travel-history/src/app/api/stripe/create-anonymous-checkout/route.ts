@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
-import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Check if Stripe checkout is enabled via feature flags
     const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
     if (!stripeEnabled) {
-      logger.warn('[Anonymous Checkout] Stripe checkout feature is disabled');
+      logger.warn('[Anonymous Checkout] Stripe checkout feature is disabled', undefined);
       return NextResponse.json(
         { error: 'Stripe checkout is not available' },
         { status: 403 },
@@ -74,17 +73,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    logger.log('[Anonymous Checkout] Session created', {
-      sessionId: session.id,
-      billingPeriod,
-    });
-
-    // Track in Sentry for monitoring
-    Sentry.addBreadcrumb({
-      category: 'stripe',
-      message: 'Anonymous checkout session created',
-      level: 'info',
-      data: {
+    logger.info('[Anonymous Checkout] Session created', {
+      extra: {
         sessionId: session.id,
         billingPeriod,
       },
@@ -92,20 +82,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    logger.error('[Anonymous Checkout] Error:', error);
-
-    // Track error in Sentry with context
-    Sentry.captureException(error, {
-      tags: {
-        service: 'stripe',
-        operation: 'create_anonymous_checkout',
-      },
-      contexts: {
-        stripe: {
-          endpoint: 'create-anonymous-checkout',
+    logger.error(
+      '[Anonymous Checkout] Failed to create checkout session',
+      error,
+      {
+        tags: {
+          service: 'stripe',
+          operation: 'create_anonymous_checkout',
+        },
+        contexts: {
+          stripe: {
+            endpoint: 'create-anonymous-checkout',
+          },
         },
       },
-    });
+    );
 
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

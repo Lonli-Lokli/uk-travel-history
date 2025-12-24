@@ -1,5 +1,5 @@
 'use client';
-import * as Sentry from '@sentry/nextjs';
+import { logger } from '@uth/utils';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -8,7 +8,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    logger.error('Global error boundary caught unhandled error', error, {
+      extra: {
+        digest: error.digest,
+      },
+    });
   }, [error]);
 
   return (

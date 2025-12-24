@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('stripe-signature');
 
     if (!signature) {
-      logger.error('Missing stripe-signature header');
+      logger.error('Missing stripe-signature header', undefined);
       return NextResponse.json(
         { error: 'Missing signature' },
         { status: 400 },
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
     if (!WEBHOOK_SECRET) {
-      logger.error('STRIPE_WEBHOOK_SECRET not configured');
+      logger.error('STRIPE_WEBHOOK_SECRET not configured', undefined);
       return NextResponse.json(
         { error: 'Webhook secret not configured' },
         { status: 500 },
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
     } catch (err: any) {
-      logger.error('Webhook signature verification failed:', err.message);
+      logger.error('Webhook signature verification failed', undefined, { extra: { message: err.message } });
       return NextResponse.json(
         { error: `Webhook Error: ${err.message}` },
         { status: 400 },
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingEvent) {
-      logger.log(`Event ${event.id} already processed, skipping`);
+      logger.info(`Event ${event.id} already processed, skipping`);
       return NextResponse.json({ received: true, skipped: true });
     }
 
@@ -88,15 +88,17 @@ export async function POST(request: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
 
-      logger.log('Processing checkout.session.completed', { sessionId: session.id });
+      logger.info('Processing checkout.session.completed', { extra: { sessionId: session.id } });
 
       // Get purchase intent via client_reference_id or metadata
       const purchaseIntentId =
         session.client_reference_id || session.metadata?.purchase_intent_id;
 
       if (!purchaseIntentId) {
-        logger.error('No purchase_intent_id in session', {
-          sessionId: session.id,
+        logger.error('No purchase_intent_id in session', undefined, {
+          extra: {
+            sessionId: session.id,
+          },
         });
         return NextResponse.json(
           { error: 'Missing purchase intent ID' },
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fetchError || !purchaseIntent) {
-        logger.error('Purchase intent not found:', purchaseIntentId);
+        logger.error('Purchase intent not found', undefined, { extra: { purchaseIntentId } });
         return NextResponse.json(
           { error: 'Purchase intent not found' },
           { status: 404 },
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
 
       // If already provisioned, skip (idempotency)
       if (purchaseIntent.status === 'provisioned') {
-        logger.log(`Purchase intent ${purchaseIntentId} already provisioned`);
+        logger.info(`Purchase intent ${purchaseIntentId} already provisioned`);
         return NextResponse.json({ received: true, alreadyProvisioned: true });
       }
 
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
 
       // Validate email format
       if (!customerEmail || !isValidEmail(customerEmail)) {
-        logger.error('Invalid customer email', { email: customerEmail });
+        logger.error('Invalid customer email', undefined, { extra: { email: customerEmail } });
         return NextResponse.json(
           { error: 'Invalid customer email' },
           { status: 400 },
@@ -159,7 +161,7 @@ export async function POST(request: NextRequest) {
 
         if (existingUsers.data.length > 0) {
           clerkUserId = existingUsers.data[0].id;
-          logger.log(`Clerk user already exists: ${clerkUserId}`);
+          logger.info(`Clerk user already exists: ${clerkUserId}`);
         } else {
           // Create new Clerk user with retry logic
           let retryCount = 0;
@@ -173,17 +175,19 @@ export async function POST(request: NextRequest) {
                 skipPasswordChecks: true,
               });
               clerkUserId = clerkUser.id;
-              logger.log(`Created Clerk user: ${clerkUserId}`);
+              logger.info(`Created Clerk user: ${clerkUserId}`);
               break;
             } catch (createError: any) {
               retryCount++;
 
               // Don't retry for permanent errors
               if (createError.status === 400 || createError.status === 422) {
-                logger.error('Clerk user creation failed (permanent error):', {
-                  email: customerEmail,
-                  error: createError.message,
-                  clerkErrors: createError.errors,
+                logger.error('Clerk user creation failed (permanent error)', createError, {
+                  extra: {
+                    email: customerEmail,
+                    error: createError.message,
+                    clerkErrors: createError.errors,
+                  },
                 });
                 throw createError;
               }
@@ -191,7 +195,9 @@ export async function POST(request: NextRequest) {
               // Retry for transient errors
               if (retryCount < maxRetries) {
                 logger.warn(`Clerk user creation failed, retrying (${retryCount}/${maxRetries})`, {
-                  error: createError.message,
+                  extra: {
+                    error: createError.message,
+                  },
                 });
                 await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               } else {
@@ -238,9 +244,9 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', purchaseIntentId);
 
-        logger.log(`Successfully provisioned user for ${customerEmail}`);
+        logger.info(`Successfully provisioned user for ${customerEmail}`);
       } catch (error: any) {
-        logger.error('Failed to provision Clerk user:', error);
+        logger.error('Failed to provision Clerk user', error);
         // Don't mark as failed - retry can happen
         return NextResponse.json(
           { error: 'Failed to provision user' },
@@ -251,7 +257,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    logger.error('Webhook handler error:', error);
+    logger.error('Webhook handler error', error);
     return NextResponse.json(
       { error: 'Webhook handler error' },
       { status: 500 },
