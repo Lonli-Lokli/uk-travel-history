@@ -371,6 +371,48 @@ describe('FeatureGate', () => {
       expect(onUpgradeClick).toHaveBeenCalledTimes(1);
     });
 
+    it('should handle Enter key in paywall mode', () => {
+      const onUpgradeClick = vi.fn();
+      mockMonetizationStore.isAuthenticated = true;
+
+      render(
+        <FeatureGate
+          feature={FEATURES.EXCEL_EXPORT}
+          mode="paywall"
+          onUpgradeClick={onUpgradeClick}
+          monetizationStore={mockMonetizationStore}
+        >
+          <div>Premium Content</div>
+        </FeatureGate>
+      );
+
+      const button = screen.getByRole('button');
+      fireEvent.keyDown(button, { key: 'Enter' });
+
+      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle Space key in paywall mode', () => {
+      const onUpgradeClick = vi.fn();
+      mockMonetizationStore.isAuthenticated = true;
+
+      render(
+        <FeatureGate
+          feature={FEATURES.EXCEL_EXPORT}
+          mode="paywall"
+          onUpgradeClick={onUpgradeClick}
+          monetizationStore={mockMonetizationStore}
+        >
+          <div>Premium Content</div>
+        </FeatureGate>
+      );
+
+      const button = screen.getByRole('button');
+      fireEvent.keyDown(button, { key: ' ' });
+
+      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+    });
+
     it('should not handle other keys', () => {
       const onUpgradeClick = vi.fn();
       mockMonetizationStore.isAuthenticated = true;
@@ -388,6 +430,27 @@ describe('FeatureGate', () => {
 
       const overlay = screen.getByRole('button');
       fireEvent.keyDown(overlay, { key: 'Tab' });
+
+      expect(onUpgradeClick).not.toHaveBeenCalled();
+    });
+
+    it('should not handle other keys in paywall mode', () => {
+      const onUpgradeClick = vi.fn();
+      mockMonetizationStore.isAuthenticated = true;
+
+      render(
+        <FeatureGate
+          feature={FEATURES.EXCEL_EXPORT}
+          mode="paywall"
+          onUpgradeClick={onUpgradeClick}
+          monetizationStore={mockMonetizationStore}
+        >
+          <div>Premium Content</div>
+        </FeatureGate>
+      );
+
+      const button = screen.getByRole('button');
+      fireEvent.keyDown(button, { key: 'Escape' });
 
       expect(onUpgradeClick).not.toHaveBeenCalled();
     });
