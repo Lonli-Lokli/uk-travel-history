@@ -123,16 +123,16 @@ export const Header = observer(
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={onImportPdfClick}>
-                    <UIIcon iconName="pdf" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="pdf" className="h-4 w-4 shrink-0" />
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
-                    <UIIcon iconName="clipboard" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="clipboard" className="h-4 w-4 shrink-0" />
                     From Clipboard
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -159,16 +159,16 @@ export const Header = observer(
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={onImportPdfClick}>
-                    <UIIcon iconName="pdf" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="pdf" className="h-4 w-4 shrink-0" />
                     From PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportCsvClick}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                     From Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onImportClipboardClick}>
-                    <UIIcon iconName="clipboard" className="h-4 w-4 mr-2" />
+                    <UIIcon iconName="clipboard" className="h-4 w-4 shrink-0" />
                     From Clipboard
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -197,11 +197,11 @@ export const Header = observer(
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                       Travel history only
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onExportClick('full')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                       Full backup
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -229,11 +229,11 @@ export const Header = observer(
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                       Travel history only
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onExportClick('full')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                       Full backup
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -255,13 +255,13 @@ export const Header = observer(
                           </span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="min-w-[200px]">
                         <DropdownMenuItem disabled>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate">
                               {user.displayName || 'User'}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground truncate">
                               {user.email}
                             </span>
                           </div>
@@ -270,7 +270,7 @@ export const Header = observer(
                         <DropdownMenuItem
                           onClick={() => uiStore.handleSignOut()}
                         >
-                          <UIIcon iconName="logout" className="h-4 w-4 mr-2" />
+                          <UIIcon iconName="logout" className="h-4 w-4 shrink-0" />
                           Sign Out
                         </DropdownMenuItem>
                       </DropdownMenuContent>
