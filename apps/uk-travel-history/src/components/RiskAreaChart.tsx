@@ -15,9 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  FeatureGate,
 } from '@uth/ui';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
-import { travelStore } from '@uth/stores';
+import { travelStore, monetizationStore, paymentStore, uiStore, authStore } from '@uth/stores';
+import { FEATURES } from '@uth/features';
 
 type TimelinePoint = {
   id: string;
@@ -654,31 +656,40 @@ export const RiskAreaChart: React.FC = observer(() => {
         </div>
       </div>
 
-      {/* Risk area chart */}
-      <div className="mb-4">
-        <HighchartsReact
-          ref={areaChartRef}
-          highcharts={Highcharts}
-          options={riskAreaOptions}
-        />
-      </div>
-
-      {/* Trip timeline (Gantt) */}
-      {timeline.points.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-slate-700 mb-2">
-            Trip Timeline
-          </h4>
-          <div className="bg-slate-50 rounded border border-slate-200 p-2">
-            <HighchartsReact
-              ref={ganttChartRef}
-              highcharts={Highcharts}
-              constructorType="ganttChart"
-              options={ganttOptions}
-            />
-          </div>
+      <FeatureGate
+        feature={FEATURES.ADVANCED_ANALYTICS}
+        mode="blur"
+        monetizationStore={monetizationStore}
+        authStore={authStore}
+        paymentStore={paymentStore}
+        onLoginClick={() => uiStore.openLoginModal()}
+      >
+        {/* Risk area chart */}
+        <div className="mb-4">
+          <HighchartsReact
+            ref={areaChartRef}
+            highcharts={Highcharts}
+            options={riskAreaOptions}
+          />
         </div>
-      )}
+
+        {/* Trip timeline (Gantt) */}
+        {timeline.points.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">
+              Trip Timeline
+            </h4>
+            <div className="bg-slate-50 rounded border border-slate-200 p-2">
+              <HighchartsReact
+                ref={ganttChartRef}
+                highcharts={Highcharts}
+                constructorType="ganttChart"
+                options={ganttOptions}
+              />
+            </div>
+          </div>
+        )}
+      </FeatureGate>
 
       {/* Trip Details Dialog */}
       <Dialog

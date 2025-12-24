@@ -10,12 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   UIIcon,
+  FeatureGate,
 } from '@uth/ui';
-import { FEATURE_KEYS } from '@uth/features';
+import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { LoginModal } from './LoginModal';
 import { useFeatureFlags } from '@uth/widgets';
-import { authStore, travelStore, uiStore } from '@uth/stores';
-import { UI } from 'react-day-picker';
+import { authStore, travelStore, uiStore, monetizationStore, paymentStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -170,52 +170,70 @@ export const Header = observer(
               </DropdownMenu>
 
               {/* Desktop: Export Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    className="hidden sm:flex"
-                    disabled={!hasTrips}
-                  >
-                    <UIIcon iconName="export" className="h-4 w-4 mr-1.5" />
-                    Export
-                    <UIIcon iconName="import" className="h-3 w-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
-                    Travel history only
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExportClick('full')}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
-                    Full backup
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <FeatureGate
+                feature={FEATURES.EXCEL_EXPORT}
+                mode="disable"
+                monetizationStore={monetizationStore}
+                authStore={authStore}
+                paymentStore={paymentStore}
+                onLoginClick={() => uiStore.openLoginModal()}
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="hidden sm:flex"
+                      disabled={!hasTrips}
+                    >
+                      <UIIcon iconName="export" className="h-4 w-4 mr-1.5" />
+                      Export
+                      <UIIcon iconName="import" className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      Travel history only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onExportClick('full')}>
+                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      Full backup
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </FeatureGate>
 
               {/* Mobile: Export Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon"
-                    className="sm:hidden"
-                    disabled={!hasTrips}
-                  >
-                    <UIIcon iconName="export" className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
-                    Travel history only
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExportClick('full')}>
-                    <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
-                    Full backup
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <FeatureGate
+                feature={FEATURES.EXCEL_EXPORT}
+                mode="disable"
+                monetizationStore={monetizationStore}
+                authStore={authStore}
+                paymentStore={paymentStore}
+                onLoginClick={() => uiStore.openLoginModal()}
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      className="sm:hidden"
+                      disabled={!hasTrips}
+                    >
+                      <UIIcon iconName="export" className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onExportClick('ilr')}>
+                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      Travel history only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onExportClick('full')}>
+                      <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
+                      Full backup
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </FeatureGate>
 
               {/* Auth UI - only show if feature flag is enabled */}
               {isAuthEnabled && (
