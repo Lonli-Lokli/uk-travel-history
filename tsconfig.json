@@ -38,6 +38,9 @@
     },
     {
       "path": "./packages/auth-server"
+    },
+    {
+      "path": "./packages/db"
     }
   ]
 }

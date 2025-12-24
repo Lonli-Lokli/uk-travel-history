@@ -5,7 +5,7 @@
 
 import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@uth/utils';
-import { getSupabaseServerClient } from '@uth/utils';
+import { getSupabaseServerClient } from '@uth/db';
 import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,

@@ -1,0 +1,1 @@
+export {getSupabaseClient, getSupabaseServerClient} from './supabase';

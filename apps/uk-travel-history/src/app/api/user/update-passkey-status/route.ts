@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { getSupabaseServerClient } from '@uth/utils';
+import { getSupabaseServerClient } from '@uth/db';
 
 /**
  * POST /api/user/update-passkey-status

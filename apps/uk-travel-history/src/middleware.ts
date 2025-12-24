@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSupabaseServerClient } from '@uth/utils';
+import { getSupabaseServerClient } from '@uth/db';
 
 /**
  * Determine the auth provider from environment

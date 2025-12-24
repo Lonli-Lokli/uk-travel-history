@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@uth/utils';
+import { getSupabaseServerClient } from '@uth/db';
 import Stripe from 'stripe';
 import { logger } from '@uth/utils';
 import { clerkClient } from '@clerk/nextjs/server';
