@@ -42,7 +42,9 @@ export async function POST(request: NextRequest) {
     // Check if session is for new subscription
     if (session.metadata?.checkoutType !== 'new_subscription') {
       logger.warn('[Validate Session] Session is not for new subscription', {
-        sessionId: session_id,
+        extra: {
+          sessionId: session_id,
+        },
       });
       return NextResponse.json(
         { error: 'Invalid session type' },
@@ -55,8 +57,10 @@ export async function POST(request: NextRequest) {
 
     if (paymentStatus !== 'paid') {
       logger.warn('[Validate Session] Payment not completed', {
-        sessionId: session_id,
-        paymentStatus,
+        extra: {
+          sessionId: session_id,
+          paymentStatus,
+        },
       });
       return NextResponse.json({
         paymentStatus,
@@ -70,7 +74,9 @@ export async function POST(request: NextRequest) {
 
     if (alreadyUsed) {
       logger.warn('[Validate Session] Session already used', {
-        sessionId: session_id,
+        extra: {
+          sessionId: session_id,
+        },
       });
     }
 

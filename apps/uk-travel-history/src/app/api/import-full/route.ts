@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       return createAuthErrorResponse(error);
     }
 
-    logger.error('Error importing full data:', error);
+    logger.error('Error importing full data', error);
     return NextResponse.json(
       { error: 'Failed to import file' },
       { status: 500 },

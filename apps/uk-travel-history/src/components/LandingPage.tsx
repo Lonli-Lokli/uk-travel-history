@@ -43,7 +43,7 @@ export const LandingPage = () => {
       await travelStore.importFromPdf(file);
       router.push('/travel');
     } catch (error) {
-      logger.error('Import failed:', error);
+      logger.error('Import failed', error);
       toast({
         title: 'Import Failed',
         description:
@@ -70,7 +70,7 @@ export const LandingPage = () => {
     try {
       await csvImport.handleFileSelect(e);
     } catch (error) {
-      logger.error('Import failed:', error);
+      logger.error('Import failed', error);
       toast({
         title: 'Import Failed',
         description:

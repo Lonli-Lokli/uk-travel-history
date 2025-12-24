@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       .eq('clerk_user_id', userId);
 
     if (error) {
-      logger.error('Failed to update passkey status:', error);
+      logger.error('Failed to update passkey status', error);
       return NextResponse.json(
         { error: 'Failed to update passkey status' },
         { status: 500 },
@@ -60,12 +60,12 @@ export async function POST(req: NextRequest) {
       });
     } catch (metadataError) {
       // Log but don't fail the request - Supabase is source of truth
-      logger.error('Failed to sync passkey metadata to Clerk:', metadataError);
+      logger.error('Failed to sync passkey metadata to Clerk', metadataError);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('Update passkey status error:', error);
+    logger.error('Update passkey status error', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 },

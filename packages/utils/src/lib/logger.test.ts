@@ -22,9 +22,9 @@ describe('Logger', () => {
 
   beforeEach(() => {
     // Spy on console methods
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(vi.fn());
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(vi.fn());
 
     // Store original environment
     originalEnv = process.env.NODE_ENV;

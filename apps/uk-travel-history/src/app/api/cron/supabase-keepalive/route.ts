@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret) {
-      logger.error('CRON_SECRET not configured');
+      logger.error('CRON_SECRET not configured', undefined);
       return NextResponse.json(
         { error: 'Cron secret not configured' },
         { status: 500 },
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Invalid cron secret');
+      logger.error('Invalid cron secret', undefined);
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 },
@@ -38,14 +38,14 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.rpc('keepalive');
 
     if (error) {
-      logger.error('Keepalive RPC error:', error);
+      logger.error('Keepalive RPC error', error);
       return NextResponse.json(
         { error: 'Keepalive failed', details: error.message },
         { status: 500 },
       );
     }
 
-    logger.log('Supabase keepalive successful', { result: data });
+    logger.info('Supabase keepalive successful', { extra: { result: data } });
 
     return NextResponse.json({
       ok: true,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       result: data,
     });
   } catch (error: any) {
-    logger.error('Keepalive error:', error);
+    logger.error('Keepalive error', error);
     return NextResponse.json(
       { error: 'Keepalive failed', details: error.message },
       { status: 500 },

@@ -42,7 +42,7 @@ export default function PasskeyOnboardingPage() {
         router.push('/travel');
       }
     } catch (err) {
-      logger.error('Failed to update passkey status:', err);
+      logger.error('Failed to update passkey status', err);
     }
   };
 
@@ -59,7 +59,7 @@ export default function PasskeyOnboardingPage() {
       // Mark as enrolled
       await markPasskeyEnrolled();
     } catch (err: any) {
-      logger.error('Passkey enrollment failed:', err);
+      logger.error('Passkey enrollment failed', err);
       setError(
         err.message || 'Failed to enroll passkey. Please try again or contact support.',
       );

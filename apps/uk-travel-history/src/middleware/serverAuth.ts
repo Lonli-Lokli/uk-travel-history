@@ -47,7 +47,9 @@ export async function verifyAuth(
 
     if (!subscription) {
       logger.warn('[Auth] User has no subscription', {
-        userId: tokenClaims.uid,
+        extra: {
+          userId: tokenClaims.uid,
+        },
       });
       throw new AuthError('No active subscription found', 403);
     }
@@ -55,8 +57,10 @@ export async function verifyAuth(
     // Only active subscriptions allowed
     if (subscription.status !== SubscriptionStatus.ACTIVE) {
       logger.warn('[Auth] Subscription not active', {
-        userId: tokenClaims.uid,
-        status: subscription.status,
+        extra: {
+          userId: tokenClaims.uid,
+          status: subscription.status,
+        },
       });
       throw new AuthError(
         'Subscription not active. Please update payment method.',
@@ -114,7 +118,9 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
       logger.warn(
         '[Feature Check] Edge Config unavailable or empty - blocking all features',
         {
-          featureId,
+          extra: {
+            featureId,
+          },
         },
       );
       return true; // Block access
@@ -122,10 +128,12 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
 
     const isPremium = premiumFeatures.includes(featureId);
 
-    logger.log('[Feature Check] Feature checked', {
-      featureId,
-      isPremium,
-      totalPremiumFeatures: premiumFeatures.length,
+    logger.info('[Feature Check] Feature checked', {
+      extra: {
+        featureId,
+        isPremium,
+        totalPremiumFeatures: premiumFeatures.length,
+      },
     });
 
     return isPremium;
@@ -189,7 +197,9 @@ export async function requirePaidFeature(
 
   if (!enabled) {
     logger.warn('[Paid Feature] Feature is disabled', {
-      featureId,
+      extra: {
+        featureId,
+      },
     });
     throw new AuthError('This feature is currently disabled', 403);
   }
@@ -202,18 +212,22 @@ export async function requirePaidFeature(
 
   if (!isPremium) {
     // Feature is not premium - allow access without subscription check
-    logger.log('[Paid Feature] Free feature accessed', {
-      userId: authContext?.userId,
-      featureId,
+    logger.info('[Paid Feature] Free feature accessed', {
+      extra: {
+        userId: authContext?.userId,
+        featureId,
+      },
     });
     return authContext;
   }
 
   // Feature IS premium - subscription already verified in verifyAuth()
   // If we're here, user has active subscription, so they can access it
-  logger.log('[Paid Feature] Premium feature accessed', {
-    userId: authContext?.userId,
-    featureId,
+  logger.info('[Paid Feature] Premium feature accessed', {
+    extra: {
+      userId: authContext?.userId,
+      featureId,
+    },
   });
 
   return authContext;

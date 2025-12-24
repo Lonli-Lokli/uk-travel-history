@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Error processing PDF:', error);
+    logger.error('Error processing PDF', error);
     return NextResponse.json(
       { error: 'Failed to process PDF file' },
       { status: 500 },
