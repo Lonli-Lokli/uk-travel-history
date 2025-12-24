@@ -1,11 +1,25 @@
 const { composePlugins, withNx } = require('@nx/next');
 const { withSentryConfig } = require('@sentry/nextjs');
+const { execSync } = require('child_process');
+
+// Get Git commit hash at build time
+const getGitCommitHash = () => {
+  try {
+    return execSync('git rev-parse HEAD').toString().trim();
+  } catch (_error) {
+    return 'unknown';
+  }
+};
 
 const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
   serverExternalPackages: ['pdf-parse', '@napi-rs/canvas'],
+  env: {
+    NEXT_PUBLIC_GIT_COMMIT_HASH: getGitCommitHash(),
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
 };
 
 const plugins = [
