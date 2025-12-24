@@ -26,22 +26,54 @@ flags:
 
 component_management:
   individual_components:
-    - component_id: engine
-      name: Game Engine
+    - component_id: auth-cleint
+      name: Auth Client
       paths:
-        - packages/engine/**
-    - component_id: bot
-      name: Bot AI
+        - packages/auth-client/**
+    - component_id: auth-server
+      name: Auth Server
       paths:
-        - packages/bot/**
-    - component_id: local-client
-      name: Local Client
+        - packages/auth-server/**
+    - component_id: calculators
+      name: Calculators
       paths:
-        - packages/local-client/**
-    - component_id: shapes
-      name: Shared Types
+        - packages/calculators/**
+    - component_id: db
+      name: Db
       paths:
-        - packages/shapes/**
+        - packages/db/**
+    - component_id: features
+      name: Features
+      paths:
+        - packages/features/**
+    - component_id: parser
+      name: Parser
+      paths:
+        - packages/parser/**
+    - component_id: payments-client
+      name: Payments (Client)
+      paths:
+        - packages/payments-client/**
+    - component_id: payments-server
+      name: Payments (Server)
+      paths:
+        - packages/payments-server/**
+    - component_id: Stores
+      name: UI Stores
+      paths:
+        - packages/stores/**
+    - component_id: ui
+      name: UI Primitives
+      paths:
+        - packages/ui/**
+    - component_id: utils
+      name: Utils
+      paths:
+        - packages/utils/**
+    - component_id: widgets
+      name: UI Widgets
+      paths:
+        - packages/widgets/**
 
 ignore:
   - '**/*.spec.ts'
@@ -51,3 +83,4 @@ ignore:
   - '**/test-output/**'
   - '**/*.config.ts'
   - '**/dist/**'
+

@@ -21,7 +21,7 @@ jobs:
     env:
       IS_PR: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
       IS_NIGHTLY: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
-      PROD_URL: 'https://vinto-game.vercel.app/'
+      PROD_URL: 'https://uk-travel-history.vercel.app/'
 
     steps:
       - name: Checkout repository
