@@ -12,4 +12,3 @@ export * from './calendar';
 export * from './date-picker';
 export * from './radio-group';
 export * from './icon';
-export * from './feature-gate';

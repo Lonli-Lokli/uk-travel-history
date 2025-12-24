@@ -72,11 +72,35 @@ export type IconName =
   | 'drag-drop'
   | 'alert-triangle';
 
-export const UIIcon: FC<{ iconName: IconName; className?: string }> = ({
+export const UIIcon: FC<{
+  iconName: IconName;
+  className?: string;
+  /**
+   * Alternative: Pass a Hugeicons icon name directly (e.g., 'Lock01Icon', 'Star01Icon')
+   * This allows using any icon from @hugeicons/core-free-icons without pre-mapping
+   */
+  hugeIconName?: string;
+}> = ({
   iconName,
   className,
+  hugeIconName,
 }) => {
-  return <HugeiconsIcon icon={getIconByName(iconName)} className={className} />;
+  // If hugeIconName is provided, try to load it dynamically
+  let iconElement: IconSvgElement | null = null;
+
+  if (hugeIconName) {
+    try {
+      // Dynamic import support for any Hugeicons icon
+      const icons = require('@hugeicons/core-free-icons');
+      iconElement = icons[hugeIconName] || null;
+    } catch {
+      // Fall back to iconName mapping
+      iconElement = null;
+    }
+  }
+
+  const icon = iconElement || getIconByName(iconName);
+  return <HugeiconsIcon icon={icon} className={className} />;
 };
 
 function getIconByName(iconName: IconName): IconSvgElement {
@@ -139,7 +163,6 @@ function getIconByName(iconName: IconName): IconSvgElement {
       return ArrowDown02Icon;
     case 'calendar':
       return Calendar01Icon;
-
     case 'pencil':
       return PencilEdit01Icon;
     case 'circle':

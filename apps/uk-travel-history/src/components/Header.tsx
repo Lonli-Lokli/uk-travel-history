@@ -10,11 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   UIIcon,
-  FeatureGate,
 } from '@uth/ui';
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { LoginModal } from './LoginModal';
-import { useFeatureFlags } from '@uth/widgets';
+import { useFeatureFlags, FeatureGate } from '@uth/widgets';
 import { authStore, travelStore, uiStore, monetizationStore, paymentStore } from '@uth/stores';
 
 interface HeaderProps {
