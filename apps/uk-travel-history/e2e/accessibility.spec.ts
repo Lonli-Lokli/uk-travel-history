@@ -6,22 +6,19 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Accessibility E2E Tests for Vinto Card Game
+ * Accessibility E2E Tests for UK Travel History Parser
  *
  * This test suite uses axe-core to automatically scan for accessibility violations,
  * with a strong focus on color contrast and WCAG compliance.
  *
- * Tests are performed on both light and dark themes to ensure accessibility
- * across all color schemes.
+ * Tests are performed on both the landing page and travel page to ensure accessibility
+ * across all user journeys.
  *
  * If violations are found, the test fails and generates a detailed accessibility-report.md file.
  */
 
-const THEME_TRANSITION_TIMEOUT = 5000;
-
 // Suite-level violation tracking
 interface ViolationRecord {
-  theme: string;
   testName: string;
   url: string;
   violations: AxeResult[];
@@ -60,28 +57,147 @@ test.describe('Accessibility Tests', () => {
     }
   });
 
-  test.describe('Homepage Accessibility', () => {
-    const suiteName = 'Homepage Accessibility';
+  test.describe('Landing Page Accessibility', () => {
+    const suiteName = 'Landing Page Accessibility';
 
-    (['light', 'dark'] as const).forEach((theme) => {
-      test(`should not have accessibility violations on homepage (${theme} theme)`, async ({
-        page,
-      }) => {
-        // Navigate to the page
-        await page.goto('/');
-        await page.waitForLoadState('domcontentloaded');
+    test('should not have accessibility violations on landing page', async ({
+      page,
+    }) => {
+      // Navigate to the landing page
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
 
-        // Set theme
-        await setTheme(page, theme);
+      // Run accessibility scan and collect violations
+      await collectAccessibilityViolations(page, 'Landing Page', suiteName);
+    });
 
-        // Run accessibility scan and collect violations
-        await collectAccessibilityViolations(
-          page,
-          theme,
-          'Homepage',
-          suiteName,
-        );
+    test('should have accessible import buttons', async ({ page }) => {
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Check that buttons have accessible names
+      const pdfButton = page.getByRole('button', { name: /Import from PDF/i });
+      const excelButton = page.getByRole('button', {
+        name: /Import from Excel/i,
       });
+      const clipboardButton = page.getByRole('button', {
+        name: /Import from Clipboard/i,
+      });
+      const manualButton = page.getByRole('button', {
+        name: /add travel dates manually/i,
+      });
+
+      await expect(pdfButton).toBeVisible();
+      await expect(excelButton).toBeVisible();
+      await expect(clipboardButton).toBeVisible();
+      await expect(manualButton).toBeVisible();
+
+      // Run focused accessibility scan on button container
+      const buttonContainer = page.locator('div').filter({
+        has: pdfButton,
+      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .include(await buttonContainer.elementHandle().then((el) => el!))
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      expect(accessibilityScanResults.violations).toEqual([]);
+    });
+
+    test('should have accessible external links', async ({ page }) => {
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Check SAR link has proper attributes
+      const sarLink = page.getByRole('link', {
+        name: /Request your travel history document/i,
+      });
+      await expect(sarLink).toBeVisible();
+
+      // Verify it opens in new tab with security attributes
+      await expect(sarLink).toHaveAttribute('target', '_blank');
+      await expect(sarLink).toHaveAttribute('rel', /noopener/);
+
+      // Check Buy Me a Coffee link
+      const coffeeLink = page
+        .getByRole('link', { name: /Buy Me a Coffee/i })
+        .first();
+      await expect(coffeeLink).toBeVisible();
+      await expect(coffeeLink).toHaveAttribute('target', '_blank');
+      await expect(coffeeLink).toHaveAttribute('rel', /noopener/);
+    });
+
+    test.afterAll(async ({}, testInfo) => {
+      // Generate consolidated report for this suite
+      await generateConsolidatedReport(suiteName, testInfo);
+    });
+  });
+
+  test.describe('Travel Page Accessibility', () => {
+    const suiteName = 'Travel Page Accessibility';
+
+    test('should not have accessibility violations on travel page', async ({
+      page,
+    }) => {
+      // Navigate to the travel page
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Wait for dynamic content to load
+      await page.waitForLoadState('networkidle');
+
+      // Run accessibility scan and collect violations
+      await collectAccessibilityViolations(page, 'Travel Page', suiteName);
+    });
+
+    test('should have accessible header navigation', async ({ page }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Check logo link is accessible
+      const logoLink = page.locator('header a[href="/"]').first();
+      await expect(logoLink).toBeVisible();
+
+      // Check Import/Export buttons have accessible names
+      const importButton = page.getByRole('button', { name: /Import/i }).first();
+      await expect(importButton).toBeVisible();
+
+      // Run accessibility scan on header
+      const header = page.locator('header');
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .include(await header.elementHandle().then((el) => el!))
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      expect(accessibilityScanResults.violations).toEqual([]);
+    });
+
+    test('should have accessible dropdown menus', async ({ page }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Open Import dropdown
+      const importButton = page.getByRole('button', { name: /Import/i }).first();
+      await importButton.click();
+
+      // Wait for dropdown to appear
+      await expect(page.getByText('From PDF')).toBeVisible();
+
+      // Run accessibility scan on dropdown
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      // Check for menu-related violations
+      const menuViolations = accessibilityScanResults.violations.filter((v) =>
+        Boolean(
+          v.id.includes('menu') ||
+            v.id.includes('aria') ||
+            v.id.includes('role'),
+        ),
+      );
+
+      expect(menuViolations).toEqual([]);
     });
 
     test.afterAll(async ({}, testInfo) => {
@@ -159,42 +275,10 @@ test.describe('Accessibility Tests', () => {
     });
   });
 
-  test.describe('Game Interface Accessibility', () => {
-    const suiteName = 'Game Interface Accessibility';
-
-    (['light', 'dark'] as const).forEach((theme) => {
-      test(`should not have accessibility violations on game board (${theme} theme)`, async ({
-        page,
-      }) => {
-        // Navigate to the page
-        await page.goto('/');
-
-        await setTheme(page, theme);
-
-        // Wait for game board to be visible
-        const gameBoard = page
-          .locator('[data-testid="middle-area"]')
-          .or(page.getByRole('main'));
-        await expect(gameBoard).toBeVisible({ timeout: 15000 });
-
-        // Run accessibility scan and collect violations
-        await collectAccessibilityViolations(
-          page,
-          theme,
-          'Game Board',
-          suiteName,
-        );
-      });
-    });
-
-    test.afterAll(async ({}, testInfo) => {
-      // Generate consolidated report for this suite
-      await generateConsolidatedReport(suiteName, testInfo);
-    });
-  });
-
   test.describe('Specific WCAG Rules', () => {
-    test('should have valid ARIA attributes', async ({ page }) => {
+    test('should have valid ARIA attributes on landing page', async ({
+      page,
+    }) => {
       await page.goto('/');
       await page.waitForLoadState('domcontentloaded');
 
@@ -210,7 +294,27 @@ test.describe('Accessibility Tests', () => {
       expect(ariaViolations).toEqual([]);
     });
 
-    test('should have proper heading hierarchy', async ({ page }) => {
+    test('should have valid ARIA attributes on travel page', async ({
+      page,
+    }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      // Check for ARIA-related violations
+      const ariaViolations = accessibilityScanResults.violations.filter((v) =>
+        Boolean(v.id.includes('aria') || v.tags.includes('aria')),
+      );
+
+      expect(ariaViolations).toEqual([]);
+    });
+
+    test('should have proper heading hierarchy on landing page', async ({
+      page,
+    }) => {
       await page.goto('/');
       await page.waitForLoadState('domcontentloaded');
 
@@ -226,7 +330,27 @@ test.describe('Accessibility Tests', () => {
       expect(headingViolations).toEqual([]);
     });
 
-    test('should have accessible form controls', async ({ page }) => {
+    test('should have proper heading hierarchy on travel page', async ({
+      page,
+    }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      // Check for heading order violations
+      const headingViolations = accessibilityScanResults.violations.filter(
+        (v) => v.id === 'heading-order',
+      );
+
+      expect(headingViolations).toEqual([]);
+    });
+
+    test('should have accessible interactive elements on landing page', async ({
+      page,
+    }) => {
       await page.goto('/');
       await page.waitForLoadState('domcontentloaded');
 
@@ -234,12 +358,123 @@ test.describe('Accessibility Tests', () => {
         .withTags(['wcag2a', 'wcag2aa'])
         .analyze();
 
-      // Check for form-related violations
-      const formViolations = accessibilityScanResults.violations.filter((v) =>
-        Boolean(v.id.includes('label') || v.id.includes('form')),
+      // Check for button and link violations
+      const interactiveViolations = accessibilityScanResults.violations.filter(
+        (v) =>
+          Boolean(
+            v.id.includes('button') ||
+              v.id.includes('link') ||
+              v.id.includes('interactive'),
+          ),
       );
 
-      expect(formViolations).toEqual([]);
+      expect(interactiveViolations).toEqual([]);
+    });
+
+    test('should have accessible interactive elements on travel page', async ({
+      page,
+    }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      // Check for button and link violations
+      const interactiveViolations = accessibilityScanResults.violations.filter(
+        (v) =>
+          Boolean(
+            v.id.includes('button') ||
+              v.id.includes('link') ||
+              v.id.includes('interactive'),
+          ),
+      );
+
+      expect(interactiveViolations).toEqual([]);
+    });
+  });
+
+  test.describe('Keyboard Navigation', () => {
+    test('should be keyboard navigable on landing page', async ({ page }) => {
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Tab through interactive elements
+      await page.keyboard.press('Tab');
+
+      // Check that focus is visible
+      const focusedElement = await page.evaluate(() => {
+        const el = document.activeElement;
+        return el?.tagName;
+      });
+
+      expect(focusedElement).toBeTruthy();
+    });
+
+    test('should be keyboard navigable on travel page', async ({ page }) => {
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Tab through interactive elements
+      await page.keyboard.press('Tab');
+
+      // Check that focus is visible
+      const focusedElement = await page.evaluate(() => {
+        const el = document.activeElement;
+        return el?.tagName;
+      });
+
+      expect(focusedElement).toBeTruthy();
+    });
+
+    test('should navigate using Enter key on buttons', async ({ page }) => {
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Focus on manual entry button and press Enter
+      const manualButton = page.getByRole('button', {
+        name: /add travel dates manually/i,
+      });
+      await manualButton.focus();
+      await page.keyboard.press('Enter');
+
+      // Should navigate to travel page
+      await expect(page).toHaveURL(/\/travel/);
+    });
+  });
+
+  test.describe('Mobile Accessibility', () => {
+    test('should be accessible on mobile viewport (landing page)', async ({
+      page,
+    }) => {
+      // Set mobile viewport
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto('/');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Run accessibility scan
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      expect(accessibilityScanResults.violations).toEqual([]);
+    });
+
+    test('should be accessible on mobile viewport (travel page)', async ({
+      page,
+    }) => {
+      // Set mobile viewport
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto('/travel');
+      await page.waitForLoadState('domcontentloaded');
+
+      // Run accessibility scan
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 });
@@ -250,7 +485,6 @@ test.describe('Accessibility Tests', () => {
  */
 async function collectAccessibilityViolations(
   page: Page,
-  theme: string,
   testName: string,
   suiteName: string,
 ): Promise<void> {
@@ -266,7 +500,6 @@ async function collectAccessibilityViolations(
   }
 
   suiteViolations.get(suiteName)!.push({
-    theme,
     testName,
     url: page.url(),
     violations: accessibilityScanResults.violations,
@@ -275,10 +508,10 @@ async function collectAccessibilityViolations(
   // Log results
   if (accessibilityScanResults.violations.length > 0) {
     console.log(
-      `❌ ${testName} (${theme} theme): ${accessibilityScanResults.violations.length} violation(s)`,
+      `❌ ${testName}: ${accessibilityScanResults.violations.length} violation(s)`,
     );
   } else {
-    console.log(`✅ ${testName} (${theme} theme): No violations`);
+    console.log(`✅ ${testName}: No violations`);
   }
 
   // Fail the test if violations found (violations already stored above)
@@ -286,7 +519,7 @@ async function collectAccessibilityViolations(
 }
 
 /**
- * Generates consolidated Jira-ready report for a suite
+ * Generates consolidated report for a suite
  */
 async function generateConsolidatedReport(
   suiteName: string,
@@ -295,7 +528,7 @@ async function generateConsolidatedReport(
   const records = suiteViolations.get(suiteName) || [];
 
   // Always generate a report, even if no violations (for transparency)
-  const report = generateJiraReadyReport(suiteName, records);
+  const report = generateReport(suiteName, records);
 
   // Include browser/project name in filename to prevent overwrites across different browser runs
   const projectName = testInfo.project.name.toLowerCase().replace(/\s+/g, '-');
@@ -324,19 +557,12 @@ async function generateConsolidatedReport(
   console.log(
     `Generated accessibility report: ${filename} (${records.length} test records, ${records.reduce((sum, r) => sum + r.violations.length, 0)} violations)`,
   );
-
-  // Don't clear violations here - they should persist across retries
-  // This ensures that if a test fails with violations and then retries,
-  // the report will still contain the violations from all attempts
 }
 
 /**
- * Generates Jira-ready tickets from accessibility violations
+ * Generates GitHub-ready accessibility report
  */
-function generateJiraReadyReport(
-  suiteName: string,
-  records: ViolationRecord[],
-): string {
+function generateReport(suiteName: string, records: ViolationRecord[]): string {
   let report = `# Accessibility Issues: ${suiteName}\n\n`;
   report += `**Generated**: ${new Date().toISOString()}\n\n`;
 
@@ -353,33 +579,28 @@ function generateJiraReadyReport(
 
   report += `**Total Issues**: ${totalViolations}\n\n`;
 
-  // Group all violations by ID across all themes
-  const violationsByIdAndTheme = new Map<
+  // Group all violations by ID
+  const violationsById = new Map<
     string,
-    Map<string, { violation: AxeResult; record: ViolationRecord }[]>
+    { violation: AxeResult; record: ViolationRecord }[]
   >();
 
   records.forEach((record) => {
     record.violations.forEach((violation) => {
-      if (!violationsByIdAndTheme.has(violation.id)) {
-        violationsByIdAndTheme.set(violation.id, new Map());
+      if (!violationsById.has(violation.id)) {
+        violationsById.set(violation.id, []);
       }
-      const themeMap = violationsByIdAndTheme.get(violation.id)!;
-
-      if (!themeMap.has(record.theme)) {
-        themeMap.set(record.theme, []);
-      }
-      themeMap.get(record.theme)!.push({ violation, record });
+      violationsById.get(violation.id)!.push({ violation, record });
     });
   });
 
-  // Generate Jira-ready tickets
+  // Generate issue tickets
   let ticketNumber = 1;
 
-  violationsByIdAndTheme.forEach((themeMap, violationId) => {
-    const firstViolation = Array.from(themeMap.values())[0][0].violation;
+  violationsById.forEach((entries, violationId) => {
+    const firstViolation = entries[0].violation;
     const impactLevel = firstViolation.impact || 'unknown';
-    const priority = getJiraPriority(impactLevel);
+    const priority = getPriority(impactLevel);
 
     report += `---\n\n`;
     report += `## Ticket ${ticketNumber}: ${firstViolation.help}\n\n`;
@@ -396,53 +617,47 @@ function generateJiraReadyReport(
     report += `### Description\n\n`;
     report += `${firstViolation.description}\n\n`;
 
-    // Affected themes
-    report += `### Affected Themes\n\n`;
-    themeMap.forEach((entries, theme) => {
-      const totalElements = entries.reduce(
-        (sum, e) => sum + e.violation.nodes.length,
-        0,
-      );
-      report += `- **${theme}**: ${totalElements} element(s) affected\n`;
-    });
-    report += `\n`;
+    // Affected elements
+    const totalElements = entries.reduce(
+      (sum, e) => sum + e.violation.nodes.length,
+      0,
+    );
+    report += `### Affected Elements\n\n`;
+    report += `**Total**: ${totalElements} element(s)\n\n`;
 
-    // Technical details per theme
+    // Technical details
     report += `### Technical Details\n\n`;
-    themeMap.forEach((entries, theme) => {
-      report += `<details>\n`;
-      report += `<summary><strong>${theme} theme</strong> - ${entries[0].violation.nodes.length} affected elements</summary>\n\n`;
+    report += `<details>\n`;
+    report += `<summary><strong>View affected elements</strong></summary>\n\n`;
 
-      entries[0].violation.nodes.forEach((node: NodeResult, idx: number) => {
-        report += `#### Element ${idx + 1}\n\n`;
-        report += `**Selector**: \`${node.target.join(' ')}\`\n\n`;
-        report += `**HTML**:\n\`\`\`html\n${node.html}\n\`\`\`\n\n`;
-        report += `**Issue**: ${node.failureSummary}\n\n`;
+    entries[0].violation.nodes.forEach((node: NodeResult, idx: number) => {
+      report += `#### Element ${idx + 1}\n\n`;
+      report += `**Selector**: \`${node.target.join(' ')}\`\n\n`;
+      report += `**HTML**:\n\`\`\`html\n${node.html}\n\`\`\`\n\n`;
+      report += `**Issue**: ${node.failureSummary}\n\n`;
 
-        if (node.any && node.any.length > 0) {
-          report += `**Fix any of**:\n`;
-          node.any.forEach((fix) => {
-            report += `- ${fix.message}\n`;
-          });
-          report += `\n`;
-        }
+      if (node.any && node.any.length > 0) {
+        report += `**Fix any of**:\n`;
+        node.any.forEach((fix) => {
+          report += `- ${fix.message}\n`;
+        });
+        report += `\n`;
+      }
 
-        if (node.all && node.all.length > 0) {
-          report += `**Fix all of**:\n`;
-          node.all.forEach((fix) => {
-            report += `- ${fix.message}\n`;
-          });
-          report += `\n`;
-        }
-      });
-
-      report += `</details>\n\n`;
+      if (node.all && node.all.length > 0) {
+        report += `**Fix all of**:\n`;
+        node.all.forEach((fix) => {
+          report += `- ${fix.message}\n`;
+        });
+        report += `\n`;
+      }
     });
+
+    report += `</details>\n\n`;
 
     // Acceptance criteria
     report += `### Acceptance Criteria\n\n`;
     report += `- [ ] All \`${violationId}\` violations are resolved\n`;
-    report += `- [ ] Changes are verified in both light and dark themes\n`;
     report += `- [ ] Accessibility tests pass without violations\n`;
     report += `- [ ] Manual testing confirms proper functionality\n\n`;
 
@@ -451,28 +666,6 @@ function generateJiraReadyReport(
     report += `- [WCAG Documentation](${firstViolation.helpUrl})\n`;
     report += `- [Axe Rule: ${violationId}](${firstViolation.helpUrl})\n\n`;
 
-    // Generate copyable issue text for GitHub
-    const issueTitle = `[A11y] ${firstViolation.help}`;
-    const issueBody = generateGitHubIssueBody(
-      firstViolation,
-      violationId,
-      priority,
-      impactLevel,
-      themeMap,
-      suiteName,
-    );
-    const createIssueUrl = generateGitHubIssueUrl(issueTitle, issueBody);
-
-    // Add copy-friendly format and create issue button
-    report += `### 🎫 Create GitHub Issue\n\n`;
-    report += `[📝 Create Issue on GitHub](${createIssueUrl})\n\n`;
-    report += `<details>\n`;
-    report += `<summary>📋 <strong>Copy-friendly issue template</strong> (click to expand)</summary>\n\n`;
-    report += `\`\`\`markdown\n`;
-    report += issueBody;
-    report += `\n\`\`\`\n\n`;
-    report += `</details>\n\n`;
-
     ticketNumber++;
   });
 
@@ -480,9 +673,9 @@ function generateJiraReadyReport(
 }
 
 /**
- * Maps impact level to Jira priority
+ * Maps impact level to priority
  */
-function getJiraPriority(impact: string): string {
+function getPriority(impact: string): string {
   switch (impact.toLowerCase()) {
     case 'critical':
       return 'P1 - Critical';
@@ -495,116 +688,4 @@ function getJiraPriority(impact: string): string {
     default:
       return 'P3 - Medium';
   }
-}
-
-/**
- * Generates a GitHub issue body from accessibility violation data
- */
-function generateGitHubIssueBody(
-  violation: AxeResult,
-  violationId: string,
-  priority: string,
-  impactLevel: string,
-  themeMap: Map<string, { violation: AxeResult; record: ViolationRecord }[]>,
-  suiteName: string,
-): string {
-  let body = `## Accessibility Issue\n\n`;
-  body += `**Priority**: ${priority}\n`;
-  body += `**Impact**: ${impactLevel.toUpperCase()}\n`;
-  body += `**Rule ID**: \`${violationId}\`\n`;
-  body += `**WCAG**: ${violation.tags
-    .filter((t) => t.startsWith('wcag'))
-    .join(', ')}\n`;
-  body += `**Test Suite**: ${suiteName}\n\n`;
-
-  body += `### Description\n\n`;
-  body += `${violation.description}\n\n`;
-
-  body += `### Affected Themes\n\n`;
-  themeMap.forEach((entries, theme) => {
-    const totalElements = entries.reduce(
-      (sum, e) => sum + e.violation.nodes.length,
-      0,
-    );
-    body += `- **${theme}**: ${totalElements} element(s) affected\n`;
-  });
-  body += `\n`;
-
-  body += `### Technical Details\n\n`;
-  themeMap.forEach((entries, theme) => {
-    body += `**${theme} theme** - ${entries[0].violation.nodes.length} affected element(s)\n\n`;
-
-    entries[0].violation.nodes
-      .slice(0, 3)
-      .forEach((node: NodeResult, idx: number) => {
-        body += `#### Element ${idx + 1}\n`;
-        body += `- **Selector**: \`${node.target.join(' ')}\`\n`;
-        body += `- **Issue**: ${node.failureSummary}\n`;
-        if (node.html) {
-          // Truncate long HTML for readability in issue
-          const truncatedHtml =
-            node.html.length > 200
-              ? node.html.substring(0, 200) + '...'
-              : node.html;
-          body += `- **HTML**: \`${truncatedHtml}\`\n`;
-        }
-        body += `\n`;
-      });
-
-    if (entries[0].violation.nodes.length > 3) {
-      body += `_... and ${entries[0].violation.nodes.length - 3} more element(s)_\n\n`;
-    }
-  });
-
-  body += `### Acceptance Criteria\n\n`;
-  body += `- [ ] All \`${violationId}\` violations are resolved\n`;
-  body += `- [ ] Changes are verified in both light and dark themes\n`;
-  body += `- [ ] Accessibility tests pass without violations\n`;
-  body += `- [ ] Manual testing confirms proper functionality\n\n`;
-
-  body += `### Resources\n\n`;
-  body += `- [WCAG Documentation](${violation.helpUrl})\n`;
-  body += `- [Axe Rule: ${violationId}](${violation.helpUrl})\n`;
-
-  return body;
-}
-
-/**
- * Generates a GitHub issue creation URL with pre-filled title and body
- */
-function generateGitHubIssueUrl(title: string, body: string): string {
-  // Get repository info from environment or use a placeholder
-  const repo = process.env.GITHUB_REPOSITORY || 'owner/repo';
-  const baseUrl = `https://github.com/${repo}/issues/new`;
-
-  // URL encode the title and body
-  const params = new URLSearchParams({
-    title: title,
-    body: body,
-    labels: 'accessibility,bug',
-  });
-
-  return `${baseUrl}?${params.toString()}`;
-}
-
-/**
- * Sets the theme and waits for it to be applied
- */
-async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  await page.evaluate((t) => {
-    localStorage.setItem('theme', t);
-  }, theme);
-
-  await page.reload();
-  await page.waitForLoadState('domcontentloaded');
-
-  // Wait for the theme class to be applied to the html element
-  await page.locator(`html.${theme}`).waitFor({
-    state: 'attached',
-    timeout: THEME_TRANSITION_TIMEOUT,
-  });
-
-  // Verify theme is active
-  const htmlClass = await page.locator('html').getAttribute('class');
-  expect(htmlClass).toContain(theme);
 }
