@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+env: {
+      NODE_ENV: 'test' as const
+    },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
       provider: 'v8',
