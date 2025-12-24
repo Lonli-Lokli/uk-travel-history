@@ -7,8 +7,16 @@ import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
-import { travelStore } from '@uth/stores';
+import {
+  travelStore,
+  authStore,
+  monetizationStore,
+  paymentStore,
+  uiStore,
+} from '@uth/stores';
 import { logger } from '@uth/utils';
+import { FeatureGateProvider, FeatureButton } from '@uth/widgets';
+import { FEATURES } from '@uth/features';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -136,7 +144,12 @@ export const LandingPage = () => {
   };
 
   return (
-    <>
+    <FeatureGateProvider
+      monetizationStore={monetizationStore}
+      authStore={authStore}
+      paymentStore={paymentStore}
+      uiStore={uiStore}
+    >
       {/* Hidden File Inputs */}
       <input
         ref={pdfFileInputRef}
@@ -272,7 +285,8 @@ export const LandingPage = () => {
                   Get Started
                 </h3>
                 <div className="space-y-2">
-                  <Button
+                  <FeatureButton
+                    feature={FEATURES.PDF_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handlePdfImportClick}
@@ -292,8 +306,9 @@ export const LandingPage = () => {
                         Processing...
                       </span>
                     )}
-                  </Button>
-                  <Button
+                  </FeatureButton>
+                  <FeatureButton
+                    feature={FEATURES.CSV_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleCsvImportClick}
@@ -313,8 +328,9 @@ export const LandingPage = () => {
                         Processing...
                       </span>
                     )}
-                  </Button>
-                  <Button
+                  </FeatureButton>
+                  <FeatureButton
+                    feature={FEATURES.CSV_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleClipboardImportClick}
@@ -334,9 +350,10 @@ export const LandingPage = () => {
                         Processing...
                       </span>
                     )}
-                  </Button>
+                  </FeatureButton>
                   <div className="border-t border-slate-200 my-2 pt-2">
-                    <Button
+                    <FeatureButton
+                      feature={FEATURES.MANUAL_ENTRY}
                       variant="ghost"
                       className="w-full justify-start text-slate-600"
                       onClick={handleAddManually}
@@ -344,7 +361,7 @@ export const LandingPage = () => {
                     >
                       <UIIcon iconName="note-add" className="h-4 w-4 mr-2" />
                       Or add travel dates manually
-                    </Button>
+                    </FeatureButton>
                   </div>
                 </div>
               </div>
@@ -481,7 +498,7 @@ export const LandingPage = () => {
           </Card>
         </main>
       </div>
-    </>
+    </FeatureGateProvider>
   );
 };
 
