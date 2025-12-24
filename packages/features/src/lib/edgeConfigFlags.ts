@@ -11,8 +11,8 @@ import { logger } from '@uth/utils';
 export const FEATURE_KEYS = {
   // Master switches
   MONETIZATION: 'monetization',
-  AUTH: 'firebase_auth',
-  PAYMENTS: 'stripe_checkout',
+  AUTH: 'auth',
+  PAYMENTS: 'payments',
 
   // Premium features
   EXCEL_EXPORT: 'excel_export',
