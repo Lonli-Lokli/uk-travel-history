@@ -16,15 +16,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@uth/ui';
-import { FeatureGate } from '@uth/widgets';
+import { FeatureChart } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
-import {
-  travelStore,
-  monetizationStore,
-  paymentStore,
-  uiStore,
-  authStore,
-} from '@uth/stores';
+import { travelStore } from '@uth/stores';
 import { FEATURES } from '@uth/features';
 
 type TimelinePoint = {
@@ -662,14 +656,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         </div>
       </div>
 
-      <FeatureGate
-        feature={FEATURES.ADVANCED_ANALYTICS}
-        mode="blur"
-        monetizationStore={monetizationStore}
-        authStore={authStore}
-        paymentStore={paymentStore}
-        onLoginClick={() => uiStore.openLoginModal()}
-      >
+      <FeatureChart feature={FEATURES.ADVANCED_ANALYTICS}>
         {/* Risk area chart */}
         <div className="mb-4">
           <HighchartsReact
@@ -695,7 +682,7 @@ export const RiskAreaChart: React.FC = observer(() => {
             </div>
           </div>
         )}
-      </FeatureGate>
+      </FeatureChart>
 
       {/* Trip Details Dialog */}
       <Dialog

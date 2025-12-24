@@ -13,14 +13,8 @@ import {
 } from '@uth/ui';
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { LoginModal } from './LoginModal';
-import { useFeatureFlags, FeatureGate } from '@uth/widgets';
-import {
-  authStore,
-  travelStore,
-  uiStore,
-  monetizationStore,
-  paymentStore,
-} from '@uth/stores';
+import { useFeatureFlags, FeatureDropdownItem } from '@uth/widgets';
+import { authStore, travelStore, uiStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -188,74 +182,20 @@ export const Header = observer(
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <FeatureGate
+                  <FeatureDropdownItem
                     feature={FEATURES.EXCEL_EXPORT}
-                    mode="hide"
-                    monetizationStore={monetizationStore}
-                    authStore={authStore}
-                    paymentStore={paymentStore}
-                    onLoginClick={() => uiStore.openLoginModal()}
-                    fallback={
-                      <DropdownMenuItem
-                        disabled
-                        className="cursor-pointer opacity-60"
-                        onClick={() => {
-                          const isAuthenticated =
-                            monetizationStore.isAuthenticated || !!authStore.user;
-                          if (!isAuthenticated) {
-                            uiStore.openLoginModal();
-                          } else {
-                            paymentStore.openPaymentModal();
-                          }
-                        }}
-                      >
-                        <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                        <span>Travel history only</span>
-                        <span className="ml-auto pl-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">
-                          Premium
-                        </span>
-                      </DropdownMenuItem>
-                    }
+                    onClick={() => onExportClick('ilr')}
                   >
-                    <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                      Travel history only
-                    </DropdownMenuItem>
-                  </FeatureGate>
-                  <FeatureGate
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
+                    Travel history only
+                  </FeatureDropdownItem>
+                  <FeatureDropdownItem
                     feature={FEATURES.EXCEL_EXPORT}
-                    mode="hide"
-                    monetizationStore={monetizationStore}
-                    authStore={authStore}
-                    paymentStore={paymentStore}
-                    onLoginClick={() => uiStore.openLoginModal()}
-                    fallback={
-                      <DropdownMenuItem
-                        disabled
-                        className="cursor-pointer opacity-60"
-                        onClick={() => {
-                          const isAuthenticated =
-                            monetizationStore.isAuthenticated || !!authStore.user;
-                          if (!isAuthenticated) {
-                            uiStore.openLoginModal();
-                          } else {
-                            paymentStore.openPaymentModal();
-                          }
-                        }}
-                      >
-                        <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                        <span>Full backup</span>
-                        <span className="ml-auto pl-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">
-                          Premium
-                        </span>
-                      </DropdownMenuItem>
-                    }
+                    onClick={() => onExportClick('full')}
                   >
-                    <DropdownMenuItem onClick={() => onExportClick('full')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                      Full backup
-                    </DropdownMenuItem>
-                  </FeatureGate>
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
+                    Full backup
+                  </FeatureDropdownItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -271,74 +211,20 @@ export const Header = observer(
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <FeatureGate
+                  <FeatureDropdownItem
                     feature={FEATURES.EXCEL_EXPORT}
-                    mode="hide"
-                    monetizationStore={monetizationStore}
-                    authStore={authStore}
-                    paymentStore={paymentStore}
-                    onLoginClick={() => uiStore.openLoginModal()}
-                    fallback={
-                      <DropdownMenuItem
-                        disabled
-                        className="cursor-pointer opacity-60"
-                        onClick={() => {
-                          const isAuthenticated =
-                            monetizationStore.isAuthenticated || !!authStore.user;
-                          if (!isAuthenticated) {
-                            uiStore.openLoginModal();
-                          } else {
-                            paymentStore.openPaymentModal();
-                          }
-                        }}
-                      >
-                        <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                        <span>Travel history only</span>
-                        <span className="ml-auto pl-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">
-                          Premium
-                        </span>
-                      </DropdownMenuItem>
-                    }
+                    onClick={() => onExportClick('ilr')}
                   >
-                    <DropdownMenuItem onClick={() => onExportClick('ilr')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                      Travel history only
-                    </DropdownMenuItem>
-                  </FeatureGate>
-                  <FeatureGate
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
+                    Travel history only
+                  </FeatureDropdownItem>
+                  <FeatureDropdownItem
                     feature={FEATURES.EXCEL_EXPORT}
-                    mode="hide"
-                    monetizationStore={monetizationStore}
-                    authStore={authStore}
-                    paymentStore={paymentStore}
-                    onLoginClick={() => uiStore.openLoginModal()}
-                    fallback={
-                      <DropdownMenuItem
-                        disabled
-                        className="cursor-pointer opacity-60"
-                        onClick={() => {
-                          const isAuthenticated =
-                            monetizationStore.isAuthenticated || !!authStore.user;
-                          if (!isAuthenticated) {
-                            uiStore.openLoginModal();
-                          } else {
-                            paymentStore.openPaymentModal();
-                          }
-                        }}
-                      >
-                        <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                        <span>Full backup</span>
-                        <span className="ml-auto pl-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">
-                          Premium
-                        </span>
-                      </DropdownMenuItem>
-                    }
+                    onClick={() => onExportClick('full')}
                   >
-                    <DropdownMenuItem onClick={() => onExportClick('full')}>
-                      <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
-                      Full backup
-                    </DropdownMenuItem>
-                  </FeatureGate>
+                    <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
+                    Full backup
+                  </FeatureDropdownItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
