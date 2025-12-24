@@ -11,9 +11,6 @@ vi.mock('./authStore', () => ({
   },
 }));
 
-// Mock fetch
-global.fetch = vi.fn();
-
 describe('MonetizationStore', () => {
   beforeEach(() => {
     // Reset store state
@@ -26,7 +23,7 @@ describe('MonetizationStore', () => {
 
   describe('hasFeatureAccess', () => {
     it('should allow free tier features for free users', () => {
-      monetizationStore.tier = TIERS.FREE;
+      monetizationStore.setTier(TIERS.FREE);
 
       expect(monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
       expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(true);
@@ -35,7 +32,7 @@ describe('MonetizationStore', () => {
     });
 
     it('should deny premium features for free users', () => {
-      monetizationStore.tier = TIERS.FREE;
+      monetizationStore.setTier(TIERS.FREE);
 
       expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(false);
       expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(false);
@@ -43,7 +40,7 @@ describe('MonetizationStore', () => {
     });
 
     it('should allow all features for premium users', () => {
-      monetizationStore.tier = TIERS.PREMIUM;
+      monetizationStore.setTier(TIERS.PREMIUM);
 
       expect(monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
       expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(true);
@@ -54,12 +51,12 @@ describe('MonetizationStore', () => {
 
   describe('isPremium', () => {
     it('should return false for free tier', () => {
-      monetizationStore.tier = TIERS.FREE;
+      monetizationStore.setTier(TIERS.FREE);
       expect(monetizationStore.isPremium).toBe(false);
     });
 
     it('should return true for premium tier', () => {
-      monetizationStore.tier = TIERS.PREMIUM;
+      monetizationStore.setTier(TIERS.PREMIUM);
       expect(monetizationStore.isPremium).toBe(true);
     });
   });
@@ -76,151 +73,99 @@ describe('MonetizationStore', () => {
     });
   });
 
-  describe('fetchSubscription', () => {
-    it('should set tier to FREE when not authenticated', async () => {
-      (authStore.user as any) = null;
-
-      await monetizationStore.fetchSubscription();
-
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+  describe('isLoading', () => {
+    it('should always return false in simplified version', () => {
       expect(monetizationStore.isLoading).toBe(false);
-      expect(fetch).not.toHaveBeenCalled();
+      monetizationStore.setTier(TIERS.PREMIUM);
+      expect(monetizationStore.isLoading).toBe(false);
     });
+  });
 
-    it('should fetch subscription for authenticated users', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ tier: TIERS.PREMIUM }),
-      });
-
-      await monetizationStore.fetchSubscription();
-
-      expect(fetch).toHaveBeenCalledWith('/api/subscription/current', {
-        method: 'GET',
-        headers: {
-          Authorization: 'Bearer test-token',
-        },
-      });
+  describe('setTier', () => {
+    it('should set valid tier', () => {
+      monetizationStore.setTier(TIERS.PREMIUM);
       expect(monetizationStore.tier).toBe(TIERS.PREMIUM);
-      expect(monetizationStore.isLoading).toBe(false);
-      expect(monetizationStore.lastFetched).toBeInstanceOf(Date);
-    });
 
-    it('should default to FREE on 404 error', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: false,
-        status: 404,
-      });
-
-      await monetizationStore.fetchSubscription();
-
+      monetizationStore.setTier(TIERS.FREE);
       expect(monetizationStore.tier).toBe(TIERS.FREE);
-      expect(monetizationStore.isLoading).toBe(false);
     });
 
-    it('should handle fetch errors gracefully', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockRejectedValue(new Error('Network error'));
+    it('should reject invalid tier and default to FREE (fail-closed)', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        // Mock implementation
+      });
 
-      await monetizationStore.fetchSubscription();
-
+      monetizationStore.setTier('invalid-tier');
       expect(monetizationStore.tier).toBe(TIERS.FREE);
-      expect(monetizationStore.error).toBe('Network error');
-      expect(monetizationStore.isLoading).toBe(false);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid tier value')
+      );
+
+      consoleWarnSpy.mockRestore();
     });
 
-    it('should handle API errors', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: false,
-        status: 500,
-        json: async () => ({ error: 'Server error' }),
+    it('should reject undefined and default to FREE', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        // Mock implementation
       });
 
-      await monetizationStore.fetchSubscription();
-
+      monetizationStore.setTier(undefined);
       expect(monetizationStore.tier).toBe(TIERS.FREE);
-      expect(monetizationStore.error).toBe('Server error');
-    });
-  });
 
-  describe('refreshIfNeeded', () => {
-    it('should fetch if never fetched before', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ tier: TIERS.PREMIUM }),
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should reject null and default to FREE', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        // Mock implementation
       });
 
-      monetizationStore.lastFetched = null;
+      monetizationStore.setTier(null);
+      expect(monetizationStore.tier).toBe(TIERS.FREE);
 
-      await monetizationStore.refreshIfNeeded();
-
-      expect(fetch).toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
 
-    it('should fetch if cache expired', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ tier: TIERS.PREMIUM }),
+    it('should reject objects and default to FREE', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        // Mock implementation
       });
 
-      // Set last fetch to 6 minutes ago
-      monetizationStore.lastFetched = new Date(Date.now() - 6 * 60 * 1000);
+      monetizationStore.setTier({ tier: TIERS.PREMIUM });
+      expect(monetizationStore.tier).toBe(TIERS.FREE);
 
-      await monetizationStore.refreshIfNeeded();
-
-      expect(fetch).toHaveBeenCalled();
-    });
-
-    it('should not fetch if cache is fresh', async () => {
-      monetizationStore.lastFetched = new Date();
-
-      await monetizationStore.refreshIfNeeded();
-
-      expect(fetch).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('refresh', () => {
-    it('should force fetch regardless of cache', async () => {
-      (authStore.user as any) = { uid: 'test-user' };
-      (authStore.getIdToken as any).mockResolvedValue('test-token');
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ tier: TIERS.PREMIUM }),
-      });
-
-      monetizationStore.lastFetched = new Date();
-
-      await monetizationStore.refresh();
-
-      expect(fetch).toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
   });
 
   describe('reset', () => {
     it('should reset to default state', () => {
-      monetizationStore.tier = TIERS.PREMIUM;
-      monetizationStore.isLoading = true;
-      monetizationStore.error = 'Some error';
-      monetizationStore.lastFetched = new Date();
+      monetizationStore.setTier(TIERS.PREMIUM);
 
       monetizationStore.reset();
 
       expect(monetizationStore.tier).toBe(TIERS.FREE);
       expect(monetizationStore.isLoading).toBe(false);
-      expect(monetizationStore.error).toBe(null);
-      expect(monetizationStore.lastFetched).toBe(null);
+    });
+  });
+
+  describe('security - fail-closed behavior', () => {
+    it('should default to FREE tier on initialization', () => {
+      const newStore = new (monetizationStore.constructor as any)();
+      expect(newStore.tier).toBe(TIERS.FREE);
+    });
+
+    it('should deny premium features by default', () => {
+      const newStore = new (monetizationStore.constructor as any)();
+      expect(newStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(false);
+    });
+
+    it('should allow free features by default', () => {
+      const newStore = new (monetizationStore.constructor as any)();
+      expect(newStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
+      expect(newStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(true);
     });
   });
 });
