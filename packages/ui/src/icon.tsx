@@ -80,11 +80,7 @@ export const UIIcon: FC<{
    * This allows using any icon from @hugeicons/core-free-icons without pre-mapping
    */
   hugeIconName?: string;
-}> = ({
-  iconName,
-  className,
-  hugeIconName,
-}) => {
+}> = ({ iconName, className, hugeIconName }) => {
   // If hugeIconName is provided, try to load it dynamically
   let iconElement: IconSvgElement | null = null;
 

@@ -18,7 +18,13 @@ import {
 } from '@uth/ui';
 import { FeatureGate } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
-import { travelStore, monetizationStore, paymentStore, uiStore, authStore } from '@uth/stores';
+import {
+  travelStore,
+  monetizationStore,
+  paymentStore,
+  uiStore,
+  authStore,
+} from '@uth/stores';
 import { FEATURES } from '@uth/features';
 
 type TimelinePoint = {

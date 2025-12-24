@@ -68,7 +68,9 @@ class MonetizationStore {
       this.tier = tier;
     } else {
       // Fail-closed: invalid tier defaults to FREE
-      console.warn(`[MonetizationStore] Invalid tier value: ${tier}, defaulting to FREE`);
+      console.warn(
+        `[MonetizationStore] Invalid tier value: ${tier}, defaulting to FREE`,
+      );
       this.tier = TIERS.FREE;
     }
   }

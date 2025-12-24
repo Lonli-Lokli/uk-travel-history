@@ -144,14 +144,10 @@ class PaymentStore {
       }
 
       // Track checkout initiation
-      logger.addBreadcrumb(
-        'User initiated checkout',
-        'payment',
-        {
-          billingPeriod: this.billingPeriod,
-          sessionId,
-        }
-      );
+      logger.addBreadcrumb('User initiated checkout', 'payment', {
+        billingPeriod: this.billingPeriod,
+        sessionId,
+      });
 
       // Redirect to Stripe Checkout
       // TypeScript has issues with Stripe.js types, so we use type assertion
@@ -311,7 +307,7 @@ class PaymentStore {
         'registration',
         {
           userId,
-        }
+        },
       );
     } catch (err) {
       runInAction(() => {

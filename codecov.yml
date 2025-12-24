@@ -83,4 +83,3 @@ ignore:
   - '**/test-output/**'
   - '**/*.config.ts'
   - '**/dist/**'
-

@@ -61,7 +61,8 @@ export default function PasskeyOnboardingPage() {
     } catch (err: any) {
       logger.error('Passkey enrollment failed', err);
       setError(
-        err.message || 'Failed to enroll passkey. Please try again or contact support.',
+        err.message ||
+          'Failed to enroll passkey. Please try again or contact support.',
       );
       setIsEnrolling(false);
     }
@@ -177,8 +178,8 @@ export default function PasskeyOnboardingPage() {
                 />
               </svg>
               <span>
-                <strong>Phishing resistant</strong> - passkeys can't be stolen or
-                intercepted
+                <strong>Phishing resistant</strong> - passkeys can't be stolen
+                or intercepted
               </span>
             </div>
           </div>
@@ -200,16 +201,16 @@ export default function PasskeyOnboardingPage() {
             </Button>
 
             <p className="text-center text-xs text-slate-500">
-              You'll be prompted to use your device's biometric authentication (Face
-              ID, Touch ID, Windows Hello, etc.)
+              You'll be prompted to use your device's biometric authentication
+              (Face ID, Touch ID, Windows Hello, etc.)
             </p>
           </div>
         </div>
 
         <div className="mt-4 text-center text-xs text-slate-500">
           <p>
-            Passkey enrollment is required to access the application. This ensures
-            the security of your travel data.
+            Passkey enrollment is required to access the application. This
+            ensures the security of your travel data.
           </p>
         </div>
       </div>

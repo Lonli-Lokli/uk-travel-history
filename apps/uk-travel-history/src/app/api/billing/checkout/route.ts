@@ -23,10 +23,7 @@ export async function POST(request: NextRequest) {
     const { email } = body;
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     // Validate environment variables

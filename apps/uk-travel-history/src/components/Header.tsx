@@ -14,7 +14,13 @@ import {
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { LoginModal } from './LoginModal';
 import { useFeatureFlags, FeatureGate } from '@uth/widgets';
-import { authStore, travelStore, uiStore, monetizationStore, paymentStore } from '@uth/stores';
+import {
+  authStore,
+  travelStore,
+  uiStore,
+  monetizationStore,
+  paymentStore,
+} from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;

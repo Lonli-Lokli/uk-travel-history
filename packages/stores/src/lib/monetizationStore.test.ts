@@ -25,27 +25,49 @@ describe('MonetizationStore', () => {
     it('should allow free tier features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      expect(monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CSV_IMPORT)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.MANUAL_ENTRY)).toBe(true);
+      expect(
+        monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION),
+      ).toBe(true);
+      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(
+        true,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.CSV_IMPORT)).toBe(
+        true,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.MANUAL_ENTRY)).toBe(
+        true,
+      );
     });
 
     it('should deny premium features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(false);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(false);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(false);
+      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(
+        false,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(
+        false,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(
+        false,
+      );
     });
 
     it('should allow all features for premium users', () => {
       monetizationStore.setTier(TIERS.PREMIUM);
 
-      expect(monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(true);
+      expect(
+        monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION),
+      ).toBe(true);
+      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(
+        true,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(
+        true,
+      );
+      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(
+        true,
+      );
     });
   });
 
@@ -91,23 +113,27 @@ describe('MonetizationStore', () => {
     });
 
     it('should reject invalid tier and default to FREE (fail-closed)', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-        // Mock implementation
-      });
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          // Mock implementation
+        });
 
       monetizationStore.setTier('invalid-tier');
       expect(monetizationStore.tier).toBe(TIERS.FREE);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid tier value')
+        expect.stringContaining('Invalid tier value'),
       );
 
       consoleWarnSpy.mockRestore();
     });
 
     it('should reject undefined and default to FREE', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-        // Mock implementation
-      });
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          // Mock implementation
+        });
 
       monetizationStore.setTier(undefined);
       expect(monetizationStore.tier).toBe(TIERS.FREE);
@@ -116,9 +142,11 @@ describe('MonetizationStore', () => {
     });
 
     it('should reject null and default to FREE', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-        // Mock implementation
-      });
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          // Mock implementation
+        });
 
       monetizationStore.setTier(null);
       expect(monetizationStore.tier).toBe(TIERS.FREE);
@@ -127,9 +155,11 @@ describe('MonetizationStore', () => {
     });
 
     it('should reject objects and default to FREE', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
-        // Mock implementation
-      });
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {
+          // Mock implementation
+        });
 
       monetizationStore.setTier({ tier: TIERS.PREMIUM });
       expect(monetizationStore.tier).toBe(TIERS.FREE);

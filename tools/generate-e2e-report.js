@@ -15,7 +15,7 @@ const playwrightReportPath = path.join(__dirname, '..', 'playwright-report');
 const accessibilityReportPath = path.join(
   __dirname,
   '..',
-  'accessibility-reports'
+  'accessibility-reports',
 );
 const resultsPath = path.join(playwrightReportPath, 'results.json');
 
@@ -91,7 +91,7 @@ function parseAccessibilityReports() {
   let totalTickets = 0;
 
   console.log(
-    `Looking for accessibility reports in: ${accessibilityReportPath}`
+    `Looking for accessibility reports in: ${accessibilityReportPath}`,
   );
 
   if (!fs.existsSync(accessibilityReportPath)) {
@@ -102,17 +102,17 @@ function parseAccessibilityReports() {
   try {
     const files = fs.readdirSync(accessibilityReportPath);
     console.log(
-      `Found ${files.length} files in accessibility report directory`
+      `Found ${files.length} files in accessibility report directory`,
     );
 
     const accessibilityFiles = files.filter(
       (f) =>
         f.startsWith('accessibility-report-') &&
         f.endsWith('.md') &&
-        f !== 'README.md'
+        f !== 'README.md',
     );
     console.log(
-      `Found ${accessibilityFiles.length} accessibility report files`
+      `Found ${accessibilityFiles.length} accessibility report files`,
     );
 
     for (const file of accessibilityFiles) {
@@ -127,8 +127,8 @@ function parseAccessibilityReports() {
       const count = issueMatch
         ? parseInt(issueMatch[1], 10)
         : violationMatch
-        ? parseInt(violationMatch[1], 10)
-        : 0;
+          ? parseInt(violationMatch[1], 10)
+          : 0;
 
       // Count tickets in the new format
       const ticketMatches = content.match(/## Ticket \d+:/g) || [];

@@ -36,7 +36,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       expect(screen.getByText('Premium Content')).toBeTruthy();
@@ -60,7 +60,7 @@ describe('FeatureGate', () => {
             monetizationStore={mockMonetizationStore}
           >
             <div>Content for {mode}</div>
-          </FeatureGate>
+          </FeatureGate>,
         );
 
         expect(screen.getByText(`Content for ${mode}`)).toBeTruthy();
@@ -81,7 +81,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       expect(screen.getByText('Loading...')).toBeTruthy();
@@ -98,7 +98,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       expect(container.firstChild).toBeNull();
@@ -114,7 +114,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const content = screen.getByText('Premium Content');
@@ -133,7 +133,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       expect(container.firstChild).toBeNull();
@@ -148,7 +148,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       expect(screen.getByText('Upgrade to Premium')).toBeTruthy();
@@ -165,7 +165,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const content = screen.getByText('Premium Content');
@@ -187,7 +187,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button', {
@@ -208,7 +208,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const content = screen.getByText('Premium Content');
@@ -229,7 +229,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -249,7 +249,7 @@ describe('FeatureGate', () => {
           paymentStore={mockPaymentStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -272,7 +272,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const button = screen.getByRole('button');
@@ -294,7 +294,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -317,7 +317,7 @@ describe('FeatureGate', () => {
           authStore={mockAuthStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -341,7 +341,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -362,7 +362,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -383,7 +383,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const button = screen.getByRole('button');
@@ -404,7 +404,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const button = screen.getByRole('button');
@@ -425,7 +425,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const overlay = screen.getByRole('button');
@@ -446,7 +446,7 @@ describe('FeatureGate', () => {
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
-        </FeatureGate>
+        </FeatureGate>,
       );
 
       const button = screen.getByRole('button');
@@ -472,7 +472,7 @@ describe('FeatureGate', () => {
           >
             <div>Premium Content</div>
           </FeatureGate>
-        </div>
+        </div>,
       );
 
       const overlay = screen.getByRole('button');

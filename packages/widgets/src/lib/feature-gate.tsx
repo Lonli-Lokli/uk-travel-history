@@ -113,9 +113,7 @@ const FeatureGateComponent = ({
     }
     // For other modes, show blurred content while loading
     return (
-      <div className="relative opacity-50 pointer-events-none">
-        {children}
-      </div>
+      <div className="relative opacity-50 pointer-events-none">{children}</div>
     );
   }
 
@@ -161,7 +159,10 @@ const FeatureGateComponent = ({
     case 'blur':
       return (
         <div className="relative">
-          <div className="blur-sm select-none pointer-events-none" aria-hidden="true">
+          <div
+            className="blur-sm select-none pointer-events-none"
+            aria-hidden="true"
+          >
             {children}
           </div>
           <div
@@ -189,7 +190,10 @@ const FeatureGateComponent = ({
     case 'disable':
       return (
         <div className="relative">
-          <div className="blur-[2px] select-none pointer-events-none opacity-60" aria-hidden="true">
+          <div
+            className="blur-[2px] select-none pointer-events-none opacity-60"
+            aria-hidden="true"
+          >
             {children}
           </div>
           <div
