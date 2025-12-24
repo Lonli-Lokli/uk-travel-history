@@ -9,6 +9,13 @@ import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
+import { FeatureGateProvider } from '@uth/widgets';
+import {
+  authStore,
+  monetizationStore,
+  paymentStore,
+  uiStore,
+} from '@uth/stores';
 import {
   useFileUpload,
   useExport,
@@ -45,7 +52,12 @@ export const TravelPageClient = observer(() => {
   } = useClipboardImport();
 
   return (
-    <>
+    <FeatureGateProvider
+      monetizationStore={monetizationStore}
+      authStore={authStore}
+      paymentStore={paymentStore}
+      uiStore={uiStore}
+    >
       <input
         ref={fileInputRef}
         type="file"
@@ -109,7 +121,7 @@ export const TravelPageClient = observer(() => {
           onCancel={cancelFullDataImport}
         />
       )}
-    </>
+    </FeatureGateProvider>
   );
 });
 

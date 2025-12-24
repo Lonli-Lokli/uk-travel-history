@@ -338,9 +338,7 @@ describe('Edge Config Feature Flags', () => {
     it('should not throw errors on Edge Config failure', async () => {
       vi.mocked(get).mockRejectedValue(new Error('Network error'));
 
-      await expect(
-        isFeatureEnabled(FEATURE_KEYS.AUTH),
-      ).resolves.toBeDefined();
+      await expect(isFeatureEnabled(FEATURE_KEYS.AUTH)).resolves.toBeDefined();
     });
 
     it('should log warning when Edge Config is not configured', async () => {

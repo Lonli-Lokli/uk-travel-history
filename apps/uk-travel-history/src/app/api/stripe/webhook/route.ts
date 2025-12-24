@@ -35,10 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!signature) {
       logger.error('Missing stripe-signature header', undefined);
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
     const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -56,7 +53,9 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
     } catch (err: any) {
-      logger.error('Webhook signature verification failed', undefined, { extra: { message: err.message } });
+      logger.error('Webhook signature verification failed', undefined, {
+        extra: { message: err.message },
+      });
       return NextResponse.json(
         { error: `Webhook Error: ${err.message}` },
         { status: 400 },
@@ -88,7 +87,9 @@ export async function POST(request: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
 
-      logger.info('Processing checkout.session.completed', { extra: { sessionId: session.id } });
+      logger.info('Processing checkout.session.completed', {
+        extra: { sessionId: session.id },
+      });
 
       // Get purchase intent via client_reference_id or metadata
       const purchaseIntentId =
@@ -114,7 +115,9 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fetchError || !purchaseIntent) {
-        logger.error('Purchase intent not found', undefined, { extra: { purchaseIntentId } });
+        logger.error('Purchase intent not found', undefined, {
+          extra: { purchaseIntentId },
+        });
         return NextResponse.json(
           { error: 'Purchase intent not found' },
           { status: 404 },
@@ -141,7 +144,9 @@ export async function POST(request: NextRequest) {
 
       // Validate email format
       if (!customerEmail || !isValidEmail(customerEmail)) {
-        logger.error('Invalid customer email', undefined, { extra: { email: customerEmail } });
+        logger.error('Invalid customer email', undefined, {
+          extra: { email: customerEmail },
+        });
         return NextResponse.json(
           { error: 'Invalid customer email' },
           { status: 400 },
@@ -182,24 +187,33 @@ export async function POST(request: NextRequest) {
 
               // Don't retry for permanent errors
               if (createError.status === 400 || createError.status === 422) {
-                logger.error('Clerk user creation failed (permanent error)', createError, {
-                  extra: {
-                    email: customerEmail,
-                    error: createError.message,
-                    clerkErrors: createError.errors,
+                logger.error(
+                  'Clerk user creation failed (permanent error)',
+                  createError,
+                  {
+                    extra: {
+                      email: customerEmail,
+                      error: createError.message,
+                      clerkErrors: createError.errors,
+                    },
                   },
-                });
+                );
                 throw createError;
               }
 
               // Retry for transient errors
               if (retryCount < maxRetries) {
-                logger.warn(`Clerk user creation failed, retrying (${retryCount}/${maxRetries})`, {
-                  extra: {
-                    error: createError.message,
+                logger.warn(
+                  `Clerk user creation failed, retrying (${retryCount}/${maxRetries})`,
+                  {
+                    extra: {
+                      error: createError.message,
+                    },
                   },
-                });
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                );
+                await new Promise((resolve) =>
+                  setTimeout(resolve, 1000 * retryCount),
+                );
               } else {
                 throw createError;
               }

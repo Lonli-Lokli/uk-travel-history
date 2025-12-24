@@ -98,19 +98,28 @@ export const logger = {
    * Use for errors that impact functionality
    */
   error: (message: string, error?: unknown, options?: LogOptions): void => {
-    logToConsole('error', message, { ...options, extra: { ...options?.extra, error } });
+    logToConsole('error', message, {
+      ...options,
+      extra: { ...options?.extra, error },
+    });
 
     if (getEnvironment() === 'production') {
       if (error instanceof Error) {
-        Sentry.captureException(error, buildSentryScope('error', {
-          ...options,
-          extra: { message, ...options?.extra },
-        }));
+        Sentry.captureException(
+          error,
+          buildSentryScope('error', {
+            ...options,
+            extra: { message, ...options?.extra },
+          }),
+        );
       } else {
-        Sentry.captureMessage(message, buildSentryScope('error', {
-          ...options,
-          extra: { error, ...options?.extra },
-        }));
+        Sentry.captureMessage(
+          message,
+          buildSentryScope('error', {
+            ...options,
+            extra: { error, ...options?.extra },
+          }),
+        );
       }
     }
   },
@@ -128,7 +137,7 @@ export const logger = {
    * User information persists across all future Sentry events until cleared
    */
   setUser: (
-    user: { id?: string; username?: string; email?: string } | null
+    user: { id?: string; username?: string; email?: string } | null,
   ): void => {
     Sentry.setUser(user);
   },
@@ -140,7 +149,7 @@ export const logger = {
   addBreadcrumb: (
     message: string,
     category: string,
-    data?: Record<string, unknown>
+    data?: Record<string, unknown>,
   ): void => {
     Sentry.addBreadcrumb({
       message,
@@ -157,9 +166,10 @@ export const logger = {
 function logToConsole(
   level: 'debug' | 'info' | 'warn' | 'error',
   message: string,
-  options?: LogOptions
+  options?: LogOptions,
 ): void {
-  const consoleMethod = level === 'debug' || level === 'info' ? console.log : console[level];
+  const consoleMethod =
+    level === 'debug' || level === 'info' ? console.log : console[level];
 
   // Format the message with tags if present
   const formattedMessage = options?.tags
@@ -169,7 +179,9 @@ function logToConsole(
   // Include extra data and contexts if present
   const additionalData = {
     ...options?.extra,
-    ...(options?.contexts && Object.keys(options.contexts).length > 0 ? { contexts: options.contexts } : {}),
+    ...(options?.contexts && Object.keys(options.contexts).length > 0
+      ? { contexts: options.contexts }
+      : {}),
   };
 
   if (Object.keys(additionalData).length > 0) {
@@ -184,7 +196,7 @@ function logToConsole(
  */
 function buildSentryScope(
   level: Sentry.SeverityLevel,
-  options?: LogOptions
+  options?: LogOptions,
 ): Sentry.CaptureContext {
   return {
     level: options?.level ?? level,

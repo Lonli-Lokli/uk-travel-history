@@ -101,7 +101,7 @@ describe('Logger', () => {
       });
       expect(consoleLogSpy).toHaveBeenCalledWith(
         'Debug message {"feature":"test"}',
-        { data: 'value' }
+        { data: 'value' },
       );
     });
 
@@ -132,7 +132,7 @@ describe('Logger', () => {
       });
       expect(consoleLogSpy).toHaveBeenCalledWith(
         'Info message {"feature":"test"}',
-        { data: 'value' }
+        { data: 'value' },
       );
     });
 
@@ -280,7 +280,11 @@ describe('Logger', () => {
 
   describe('setUser', () => {
     it('calls Sentry.setUser with user object', () => {
-      logger.setUser({ id: '123', username: 'testuser', email: 'test@example.com' });
+      logger.setUser({
+        id: '123',
+        username: 'testuser',
+        email: 'test@example.com',
+      });
       expect(Sentry.setUser).toHaveBeenCalledWith({
         id: '123',
         username: 'testuser',
@@ -320,12 +324,14 @@ describe('Logger', () => {
     it('formats messages with tags', () => {
       logger.info('Test message', { tags: { feature: 'test', level: 'info' } });
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Test message {"feature":"test","level":"info"}'
+        'Test message {"feature":"test","level":"info"}',
       );
     });
 
     it('includes extra data', () => {
-      logger.info('Test message', { extra: { userId: '123', sessionId: 'abc' } });
+      logger.info('Test message', {
+        extra: { userId: '123', sessionId: 'abc' },
+      });
       expect(consoleLogSpy).toHaveBeenCalledWith('Test message', {
         userId: '123',
         sessionId: 'abc',
@@ -354,7 +360,7 @@ describe('Logger', () => {
         {
           data: 'value',
           contexts: { user: { id: '123' } },
-        }
+        },
       );
     });
   });

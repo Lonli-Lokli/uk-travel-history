@@ -11,9 +11,13 @@ export default defineConfig(() => ({
   // },
   test: {
     name: 'widgets',
+    env: {
+      NODE_ENV: 'test' as const
+    },
     watch: false,
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {

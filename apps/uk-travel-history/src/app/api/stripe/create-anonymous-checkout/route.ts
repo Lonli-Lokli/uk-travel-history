@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
     // Check if Stripe checkout is enabled via feature flags
     const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
     if (!stripeEnabled) {
-      logger.warn('[Anonymous Checkout] Stripe checkout feature is disabled', undefined);
+      logger.warn(
+        '[Anonymous Checkout] Stripe checkout feature is disabled',
+        undefined,
+      );
       return NextResponse.json(
         { error: 'Stripe checkout is not available' },
         { status: 403 },

@@ -27,10 +27,7 @@ export async function GET(request: NextRequest) {
 
     if (authHeader !== `Bearer ${cronSecret}`) {
       logger.error('Invalid cron secret', undefined);
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Call Supabase keepalive function

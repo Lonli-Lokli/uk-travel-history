@@ -16,6 +16,9 @@ export default defineConfig(() => ({
   // },
   test: {
     name: 'ui',
+    env: {
+      NODE_ENV: 'test' as const
+    },
     watch: false,
     globals: true,
     environment: 'happy-dom',
