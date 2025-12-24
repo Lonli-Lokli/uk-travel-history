@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
-import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -79,33 +78,23 @@ export async function POST(request: NextRequest) {
       billingPeriod,
     });
 
-    // Track in Sentry for monitoring
-    Sentry.addBreadcrumb({
-      category: 'stripe',
-      message: 'Anonymous checkout session created',
-      level: 'info',
-      data: {
-        sessionId: session.id,
-        billingPeriod,
-      },
-    });
-
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    logger.error('[Anonymous Checkout] Error:', error);
-
-    // Track error in Sentry with context
-    Sentry.captureException(error, {
-      tags: {
-        service: 'stripe',
-        operation: 'create_anonymous_checkout',
-      },
-      contexts: {
-        stripe: {
-          endpoint: 'create-anonymous-checkout',
+    logger.error(
+      '[Anonymous Checkout] Failed to create checkout session',
+      error,
+      {
+        tags: {
+          service: 'stripe',
+          operation: 'create_anonymous_checkout',
+        },
+        contexts: {
+          stripe: {
+            endpoint: 'create-anonymous-checkout',
+          },
         },
       },
-    });
+    );
 
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

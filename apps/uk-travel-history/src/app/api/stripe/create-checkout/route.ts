@@ -3,7 +3,6 @@ import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { verifyToken } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
-import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -37,8 +36,8 @@ export async function POST(request: NextRequest) {
     try {
       tokenClaims = await verifyToken(token);
     } catch (authError) {
-      // Track auth failures in Sentry
-      Sentry.captureException(authError, {
+      // Track auth failures
+      logger.error('Token verification failed', authError, {
         tags: {
           service: 'auth',
           operation: 'verify_token',
@@ -50,9 +49,7 @@ export async function POST(request: NextRequest) {
             tokenLength: token?.length,
           },
         },
-        level: 'error',
       });
-      logger.error('Token verification failed:', authError);
       return NextResponse.json(
         { error: 'Invalid authentication token' },
         { status: 401 },
@@ -63,7 +60,7 @@ export async function POST(request: NextRequest) {
     const userEmail = tokenClaims.email;
 
     // Set Sentry user context for error tracking
-    Sentry.setUser({ id: userId, email: userEmail ?? undefined });
+    logger.setUser({ id: userId, email: userEmail ?? undefined });
 
     if (!userEmail) {
       return NextResponse.json(
@@ -105,18 +102,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    logger.log('Stripe checkout session created', {
-      userId,
-      sessionId: session.id,
-      billingPeriod,
+    logger.info('Stripe checkout session created', {
+      extra: {
+        userId,
+        sessionId: session.id,
+        billingPeriod,
+      },
     });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    logger.error('Stripe checkout error:', error);
-
-    // Track error in Sentry with context
-    Sentry.captureException(error, {
+    // Track error with context
+    logger.error('Stripe checkout error', error, {
       tags: {
         service: 'stripe',
         operation: 'create_checkout',

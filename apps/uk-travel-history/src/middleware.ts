@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '@uth/db';
+import { logger } from '@uth/utils';
 
 /**
  * Determine the auth provider from environment
@@ -95,10 +96,10 @@ async function handleClerkMiddleware(auth: any, req: NextRequest) {
             passkey_enrolled: true,
           },
         }).catch((err) => {
-          console.error('Failed to sync passkey metadata:', err);
+          logger.error('Failed to sync passkey metadata:', err);
         });
       } catch (error) {
-        console.error('Error checking passkey enrollment:', error);
+        logger.error('Error checking passkey enrollment:', error);
         // On error, allow through to avoid blocking legitimate users
         // The actual protected resources will handle auth
         return NextResponse.next();
@@ -134,7 +135,7 @@ async function middleware(req: NextRequest) {
   if (!hasClerkCredentials()) {
     // Log error in development
     if (process.env.NODE_ENV === 'development') {
-      console.error(
+      logger.error(
         '\n⚠️  Clerk credentials missing!\n' +
         'Set CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env.local\n' +
         'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n'

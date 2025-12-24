@@ -15,7 +15,7 @@ import {
   type AuthUser,
   type AuthState,
 } from '@uth/auth-client';
-import * as Sentry from '@sentry/nextjs';
+import { logger } from '@uth/utils';
 
 class AuthStore {
   user: AuthUser | null = null;
@@ -70,8 +70,8 @@ class AuthStore {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track auth failures in Sentry
-      Sentry.captureException(error, {
+      // Track auth failures
+      logger.error('Failed to sign in with passkey', error, {
         tags: {
           service: 'auth',
           operation: 'sign_in_with_passkey',
@@ -83,7 +83,6 @@ class AuthStore {
             errorCode: error instanceof AuthError ? error.code : undefined,
           },
         },
-        level: 'error',
       });
 
       runInAction(() => {
@@ -112,8 +111,8 @@ class AuthStore {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track auth failures in Sentry
-      Sentry.captureException(error, {
+      // Track auth failures
+      logger.error('Failed to register passkey', error, {
         tags: {
           service: 'auth',
           operation: 'register_passkey',
@@ -126,7 +125,6 @@ class AuthStore {
             hasDisplayName: !!displayName,
           },
         },
-        level: 'error',
       });
 
       runInAction(() => {
@@ -154,8 +152,8 @@ class AuthStore {
         this.isAuthenticating = false;
       });
     } catch (error) {
-      // Track auth failures in Sentry
-      Sentry.captureException(error, {
+      // Track auth failures
+      logger.error('Failed to register anonymous passkey', error, {
         tags: {
           service: 'auth',
           operation: 'register_passkey_anonymous',
@@ -167,7 +165,6 @@ class AuthStore {
             errorCode: error instanceof AuthError ? error.code : undefined,
           },
         },
-        level: 'error',
       });
 
       runInAction(() => {
@@ -186,13 +183,12 @@ class AuthStore {
     try {
       await signOut();
     } catch (error) {
-      // Track signout failures in Sentry
-      Sentry.captureException(error, {
+      // Track signout failures
+      logger.error('Failed to sign out', error, {
         tags: {
           service: 'auth',
           operation: 'sign_out',
         },
-        level: 'error',
       });
       throw error;
     }
@@ -207,8 +203,8 @@ class AuthStore {
       if (!this.user) return null;
       return await getIdToken();
     } catch (error) {
-      // Track ID token retrieval failures in Sentry
-      Sentry.captureException(error, {
+      // Track ID token retrieval failures
+      logger.error('Failed to get ID token', error, {
         tags: {
           service: 'auth',
           operation: 'get_id_token',
@@ -219,7 +215,6 @@ class AuthStore {
             userEmail: this.user?.email,
           },
         },
-        level: 'error',
       });
       throw error;
     }

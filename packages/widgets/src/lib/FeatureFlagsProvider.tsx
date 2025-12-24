@@ -6,6 +6,7 @@ import {
   isFeatureEnabledClient,
   type FeatureFlagKey,
 } from '@uth/features';
+import { logger } from '@uth/utils';
 
 /**
  * Feature flags context
@@ -81,7 +82,7 @@ export function useFeatureFlags(): FeatureFlagsContextValue {
 
   if (!context) {
     // Fallback: return a safe default that disables all features
-    console.warn(
+    logger.warn(
       'useFeatureFlags called outside FeatureFlagsProvider, defaulting all flags to false',
     );
     return {

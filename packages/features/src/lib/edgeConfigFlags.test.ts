@@ -321,10 +321,13 @@ describe('Edge Config Feature Flags', () => {
 
       await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
+      // Logger.error now formats the output differently:
+      // logger.error(message, error, { featureKey }) results in:
+      // console.error(message, { error, featureKey })
       expect(consoleSpy).toHaveBeenCalledWith(
         '[Feature Flags] Error checking feature flag',
-        expect.any(Error),
         expect.objectContaining({
+          error: expect.any(Error),
           featureKey: FEATURE_KEYS.AUTH,
         }),
       );

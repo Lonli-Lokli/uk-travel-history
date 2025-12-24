@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { retrieveCheckoutSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 import { getSubscriptionBySessionId } from '@uth/auth-server';
-import * as Sentry from '@sentry/nextjs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -83,9 +82,7 @@ export async function POST(request: NextRequest) {
       customerId: session.customerId || '',
     });
   } catch (error) {
-    logger.error('[Validate Session] Error:', error);
-
-    Sentry.captureException(error, {
+    logger.error('[Validate Session] Failed to validate session', error, {
       tags: {
         service: 'stripe',
         operation: 'validate_session',

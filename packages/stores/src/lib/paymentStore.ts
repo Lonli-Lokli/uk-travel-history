@@ -3,7 +3,7 @@
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import { authStore } from './authStore';
-import * as Sentry from '@sentry/nextjs';
+import { logger } from '@uth/utils';
 
 type BillingPeriod = 'monthly' | 'annual';
 
@@ -144,15 +144,14 @@ class PaymentStore {
       }
 
       // Track checkout initiation
-      Sentry.addBreadcrumb({
-        category: 'payment',
-        message: 'User initiated checkout',
-        level: 'info',
-        data: {
+      logger.addBreadcrumb(
+        'User initiated checkout',
+        'payment',
+        {
           billingPeriod: this.billingPeriod,
           sessionId,
-        },
-      });
+        }
+      );
 
       // Redirect to Stripe Checkout
       // TypeScript has issues with Stripe.js types, so we use type assertion
@@ -178,7 +177,7 @@ class PaymentStore {
       });
 
       // Track error in Sentry
-      Sentry.captureException(err, {
+      logger.error('Failed to create checkout session', err, {
         tags: {
           service: 'payment',
           operation: 'create_checkout',
@@ -248,7 +247,7 @@ class PaymentStore {
         this.isValidatingSession = false;
       });
 
-      Sentry.captureException(err, {
+      logger.error('Failed to validate session', err, {
         tags: {
           service: 'payment',
           operation: 'validate_session',
@@ -307,14 +306,13 @@ class PaymentStore {
       });
 
       // Track successful registration
-      Sentry.addBreadcrumb({
-        category: 'registration',
-        message: 'Registration completed successfully',
-        level: 'info',
-        data: {
+      logger.addBreadcrumb(
+        'Registration completed successfully',
+        'registration',
+        {
           userId,
-        },
-      });
+        }
+      );
     } catch (err) {
       runInAction(() => {
         this.registrationError =
@@ -324,7 +322,7 @@ class PaymentStore {
         this.isCompletingRegistration = false;
       });
 
-      Sentry.captureException(err, {
+      logger.error('Failed to complete registration', err, {
         tags: {
           service: 'registration',
           operation: 'complete_registration',

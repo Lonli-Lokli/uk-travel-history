@@ -3,6 +3,7 @@
  */
 
 import Stripe from 'stripe';
+import { logger } from '@uth/utils';
 import type {
   PaymentsServerProvider,
   PaymentsServerProviderConfig,
@@ -41,7 +42,7 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build';
 
     if (!secretKey || secretKey === 'sk_test_placeholder_key_for_build') {
-      console.warn(
+      logger.warn(
         'Stripe secret key not configured. Set STRIPE_SECRET_KEY environment variable.',
       );
       return;
@@ -66,14 +67,14 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       // Load webhook secret
       this.webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       if (!this.webhookSecret) {
-        console.warn(
+        logger.warn(
           'Stripe webhook secret not configured. Webhook signature verification will be skipped.',
         );
       }
 
       this.configured = true;
     } catch (error) {
-      console.error('Failed to initialize Stripe:', error);
+      logger.error('Failed to initialize Stripe:', error);
     }
   }
 

@@ -6,7 +6,6 @@ import {
 } from '@uth/auth-server';
 import { get } from '@vercel/edge-config';
 import { logger } from '@uth/utils';
-import * as Sentry from '@sentry/nextjs';
 import { FEATURE_KEYS, isFeatureEnabled } from '@uth/features';
 
 export interface AuthContext {
@@ -75,8 +74,7 @@ export async function verifyAuth(
       throw error;
     }
 
-    logger.error('[Auth] Token verification failed:', error);
-    Sentry.captureException(error, {
+    logger.error('[Auth] Token verification failed', error, {
       tags: {
         service: 'auth',
         operation: 'verify_token',
@@ -132,9 +130,7 @@ export async function isFeaturePremium(featureId: string): Promise<boolean> {
 
     return isPremium;
   } catch (error) {
-    logger.error('[Feature Check] Failed to fetch Edge Config:', error);
-
-    Sentry.captureException(error, {
+    logger.error('[Feature Check] Failed to fetch Edge Config', error, {
       tags: {
         service: 'edge-config',
         operation: 'fetch_premium_features',
@@ -251,8 +247,7 @@ export function createAuthErrorResponse(error: unknown): NextResponse {
   }
 
   // Unexpected error - don't leak details
-  logger.error('[Auth] Unexpected error:', error);
-  Sentry.captureException(error, {
+  logger.error('[Auth] Unexpected error in auth error response', error, {
     tags: {
       service: 'auth',
       operation: 'error_response',
