@@ -46,7 +46,7 @@ export const Navbar = observer(() => {
           <Link
             href="/"
             className="flex items-center gap-2 hover:opacity-70 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-            aria-label="Home"
+            aria-label="UK Travel Parser home"
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <UIIcon iconName="airplane" className="w-4 h-4 text-white" />
