@@ -118,12 +118,12 @@ async function handleClerkMiddleware(auth: any, req: NextRequest) {
 }
 
 /**
- * Main middleware function
+ * Main proxy function (formerly middleware)
  * Respects UTH_AUTH_PROVIDER setting:
  * - 'clerk' (default): Runs Clerk middleware with passkey enforcement
  * - 'firebase': Skips middleware (Firebase auth handles it separately)
  */
-async function middleware(req: NextRequest) {
+async function proxy(req: NextRequest) {
   const authProvider = getAuthProvider();
 
   // Firebase mode: Skip all middleware (legacy auth flow)
@@ -153,7 +153,7 @@ async function middleware(req: NextRequest) {
   return wrappedMiddleware(req, {} as any);
 }
 
-export default middleware;
+export default proxy;
 
 export const config = {
   matcher: [
