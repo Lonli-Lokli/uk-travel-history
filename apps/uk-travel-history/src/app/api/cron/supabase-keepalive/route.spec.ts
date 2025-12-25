@@ -8,12 +8,7 @@ import { NextRequest } from 'next/server';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
-  getSupabaseServerClient: vi.fn(() => ({
-    rpc: vi.fn(async () => ({
-      data: 1,
-      error: null,
-    })),
-  })),
+  keepalive: vi.fn(),
 }));
 
 vi.mock('@uth/utils', () => ({
@@ -23,10 +18,17 @@ vi.mock('@uth/utils', () => ({
   },
 }));
 
+import { keepalive } from '@uth/db';
+
+const mockKeepalive = vi.mocked(keepalive);
+
 describe('GET /api/cron/supabase-keepalive', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = 'test-cron-secret';
+
+    // Setup default mock implementation
+    mockKeepalive.mockResolvedValue(1);
   });
 
   it('should successfully call keepalive with valid secret', async () => {

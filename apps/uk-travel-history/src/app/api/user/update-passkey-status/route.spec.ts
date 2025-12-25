@@ -12,7 +12,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 }));
 
 vi.mock('@uth/db', () => ({
-  getSupabaseServerClient: vi.fn(),
+  updateUserByAuthId: vi.fn(),
 }));
 
 vi.mock('@uth/utils', () => ({
@@ -25,26 +25,24 @@ vi.mock('@uth/utils', () => ({
 }));
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { getSupabaseServerClient } from '@uth/db';
+import { updateUserByAuthId } from '@uth/db';
 
 const mockAuth = vi.mocked(auth);
 const mockClerkClient = vi.mocked(clerkClient);
-const mockGetSupabaseServerClient = vi.mocked(getSupabaseServerClient);
+const mockUpdateUserByAuthId = vi.mocked(updateUserByAuthId);
 
 describe('POST /api/user/update-passkey-status', () => {
-  let mockSupabaseClient: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup mock Supabase client
-    mockSupabaseClient = {
-      from: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({ error: null }),
-    };
-
-    mockGetSupabaseServerClient.mockReturnValue(mockSupabaseClient);
+    // Setup mock for updateUserByAuthId - by default it succeeds
+    mockUpdateUserByAuthId.mockResolvedValue({
+      id: '123',
+      authUserId: 'user_123',
+      email: 'test@example.com',
+      passkeyEnrolled: true,
+      createdAt: new Date(),
+    });
 
     // Setup mock Clerk client
     const mockClerkClientInstance = {
@@ -79,9 +77,7 @@ describe('POST /api/user/update-passkey-status', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(data).toEqual({ success: true });
-    expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-    expect(mockSupabaseClient.update).toHaveBeenCalledWith({ passkey_enrolled: true });
-    expect(mockSupabaseClient.eq).toHaveBeenCalledWith('clerk_user_id', 'user_123');
+    expect(mockUpdateUserByAuthId).toHaveBeenCalledWith('user_123', { passkeyEnrolled: true });
   });
 
   it('should successfully update passkey status to false', async () => {
@@ -100,7 +96,7 @@ describe('POST /api/user/update-passkey-status', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(data).toEqual({ success: true });
-    expect(mockSupabaseClient.update).toHaveBeenCalledWith({ passkey_enrolled: false });
+    expect(mockUpdateUserByAuthId).toHaveBeenCalledWith('user_123', { passkeyEnrolled: false });
   });
 
   it('should return 401 when user is not authenticated', async () => {
@@ -119,7 +115,7 @@ describe('POST /api/user/update-passkey-status', () => {
     // Assert
     expect(response.status).toBe(401);
     expect(data).toEqual({ error: 'Unauthorized' });
-    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    expect(mockUpdateUserByAuthId).not.toHaveBeenCalled();
   });
 
   it('should return 400 when enrolled field is missing', async () => {
@@ -138,7 +134,7 @@ describe('POST /api/user/update-passkey-status', () => {
     // Assert
     expect(response.status).toBe(400);
     expect(data.error).toContain('enrolled must be a boolean');
-    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    expect(mockUpdateUserByAuthId).not.toHaveBeenCalled();
   });
 
   it('should return 400 when enrolled is not a boolean', async () => {
@@ -159,13 +155,11 @@ describe('POST /api/user/update-passkey-status', () => {
     expect(data.error).toContain('enrolled must be a boolean');
   });
 
-  it('should return 500 when Supabase update fails', async () => {
+  it('should return 500 when database update fails', async () => {
     // Arrange
     mockAuth.mockResolvedValue({ userId: 'user_123' } as any);
 
-    mockSupabaseClient.eq.mockResolvedValue({
-      error: { message: 'Database error' },
-    });
+    mockUpdateUserByAuthId.mockRejectedValue(new Error('Database error'));
 
     const request = new NextRequest('http://localhost:3000/api/user/update-passkey-status', {
       method: 'POST',

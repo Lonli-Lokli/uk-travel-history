@@ -178,13 +178,15 @@ export class SupabaseDbAdapter implements DbProvider {
   async createUser(data: CreateUserData): Promise<User> {
     const client = this.ensureConfigured();
 
-    const { data: result, error } = await client
-      .from('users')
-      .insert({
-        clerk_user_id: data.authUserId,
-        email: data.email,
-        passkey_enrolled: data.passkeyEnrolled ?? false,
-      } as Database['public']['Tables']['users']['Insert'])
+    const insertData = {
+      clerk_user_id: data.authUserId,
+      email: data.email,
+      passkey_enrolled: data.passkeyEnrolled ?? false,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error } = await (client.from('users') as any)
+      .insert(insertData)
       .select()
       .single();
 
@@ -207,8 +209,8 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.passkeyEnrolled !== undefined)
       updateData.passkey_enrolled = updates.passkeyEnrolled;
 
-    const { data, error } = await client
-      .from('users')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (client.from('users') as any)
       .update(updateData)
       .eq('clerk_user_id', authUserId)
       .select()
@@ -314,14 +316,16 @@ export class SupabaseDbAdapter implements DbProvider {
   ): Promise<PurchaseIntent> {
     const client = this.ensureConfigured();
 
-    const { data: result, error } = await client
-      .from('purchase_intents')
-      .insert({
-        email: data.email,
-        status: data.status || PurchaseIntentStatus.CREATED,
-        price_id: data.priceId ?? null,
-        product_id: data.productId ?? null,
-      } as Database['public']['Tables']['purchase_intents']['Insert'])
+    const insertData = {
+      email: data.email,
+      status: data.status || PurchaseIntentStatus.CREATED,
+      price_id: data.priceId ?? null,
+      product_id: data.productId ?? null,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error } = await (client.from('purchase_intents') as any)
+      .insert(insertData)
       .select()
       .single();
 
@@ -348,8 +352,8 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.authUserId !== undefined)
       updateData.clerk_user_id = updates.authUserId;
 
-    const { data, error } = await client
-      .from('purchase_intents')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (client.from('purchase_intents') as any)
       .update(updateData)
       .eq('id', id)
       .select()
@@ -395,13 +399,15 @@ export class SupabaseDbAdapter implements DbProvider {
   async recordWebhookEvent(data: CreateWebhookEventData): Promise<WebhookEvent> {
     const client = this.ensureConfigured();
 
-    const { data: result, error } = await client
-      .from('webhook_events')
-      .insert({
-        stripe_event_id: data.stripeEventId,
-        type: data.type,
-        payload: data.payload,
-      } as Database['public']['Tables']['webhook_events']['Insert'])
+    const insertData = {
+      stripe_event_id: data.stripeEventId,
+      type: data.type,
+      payload: data.payload,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error } = await (client.from('webhook_events') as any)
+      .insert(insertData)
       .select()
       .single();
 

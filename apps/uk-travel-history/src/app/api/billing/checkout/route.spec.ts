@@ -8,27 +8,14 @@ import { NextRequest } from 'next/server';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
-  getSupabaseServerClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => ({
-            data: {
-              id: 'purchase-intent-123',
-              email: 'test@example.com',
-              status: 'created',
-            },
-            error: null,
-          })),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          error: null,
-        })),
-      })),
-    })),
-  })),
+  createPurchaseIntent: vi.fn(),
+  updatePurchaseIntent: vi.fn(),
+  PurchaseIntentStatus: {
+    CREATED: 'created',
+    CHECKOUT_CREATED: 'checkout_created',
+    PAID: 'paid',
+    PROVISIONED: 'provisioned',
+  },
 }));
 
 vi.mock('@uth/utils', () => ({
@@ -37,6 +24,11 @@ vi.mock('@uth/utils', () => ({
     info: vi.fn(),
   },
 }));
+
+import { createPurchaseIntent, updatePurchaseIntent } from '@uth/db';
+
+const mockCreatePurchaseIntent = vi.mocked(createPurchaseIntent);
+const mockUpdatePurchaseIntent = vi.mocked(updatePurchaseIntent);
 
 vi.mock('stripe', () => {
   return {
@@ -61,6 +53,33 @@ describe('POST /api/billing/checkout', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.STRIPE_PRICE_ONE_TIME_PAYMENT = 'price_123';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    // Setup default mock implementations
+    mockCreatePurchaseIntent.mockResolvedValue({
+      id: 'purchase-intent-123',
+      email: 'test@example.com',
+      status: 'created',
+      stripeCheckoutSessionId: null,
+      stripePaymentIntentId: null,
+      priceId: null,
+      productId: null,
+      authUserId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    mockUpdatePurchaseIntent.mockResolvedValue({
+      id: 'purchase-intent-123',
+      email: 'test@example.com',
+      status: 'checkout_created',
+      stripeCheckoutSessionId: 'cs_test_123',
+      stripePaymentIntentId: null,
+      priceId: 'price_123',
+      productId: null,
+      authUserId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   });
 
   it('should create checkout session successfully', async () => {
