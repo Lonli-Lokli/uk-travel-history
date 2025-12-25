@@ -2,6 +2,7 @@
 export {
   isFeatureEnabled,
   FEATURE_KEYS,
+  DEFAULT_FEATURE_STATES,
   getAllFeatureFlags,
   isFeatureEnabledClient,
   setCachedFlags,
