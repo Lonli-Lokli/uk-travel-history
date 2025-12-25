@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { ParseResult } from '@uth/parser';
 import { format } from 'date-fns';
-import { requirePaidFeature } from '@/middleware/serverAuth';
-import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -44,10 +42,7 @@ async function initializePdfParser() {
 
 export async function POST(request: NextRequest) {
   try {
-    // SECURITY: Verify authentication and check feature access
-    // Full Excel import with visa details is a premium feature
-    await requirePaidFeature(request, FEATURES.PDF_IMPORT);
-
+    // Authentication handled by Clerk middleware in proxy.ts
     // Initialize PDF parser if not already done
     await initializePdfParser();
 

@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
 import { format, parseISO } from 'date-fns';
-import {
-  requirePaidFeature,
-  createAuthErrorResponse,
-} from '@/middleware/serverAuth';
-import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -42,10 +37,7 @@ interface ExportData {
 
 export async function POST(request: NextRequest) {
   try {
-    // SECURITY: Verify authentication and check feature access
-    // This prevents unauthorized users from bypassing client-side feature gates
-    await requirePaidFeature(request, FEATURES.EXCEL_EXPORT);
-
+    // Authentication handled by Clerk middleware in proxy.ts
     const formData = await request.formData();
     const tripsDataStr = formData.get('tripsData') as string;
     const exportMode = (formData.get('exportMode') as string) || 'ilr';
@@ -215,16 +207,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    // Handle authentication/authorization errors
-    if (
-      error &&
-      typeof error === 'object' &&
-      'name' in error &&
-      error.name === 'AuthError'
-    ) {
-      return createAuthErrorResponse(error);
-    }
-
     logger.error('Error generating Excel', error);
     return NextResponse.json(
       { error: 'Failed to generate Excel file' },
