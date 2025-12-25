@@ -11,12 +11,21 @@ vi.mock('@clerk/nextjs/server', () => ({
   clerkClient: vi.fn(),
 }));
 
-vi.mock('@uth/utils', () => ({
+vi.mock('@uth/db', () => ({
   getSupabaseServerClient: vi.fn(),
 }));
 
+vi.mock('@uth/utils', () => ({
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    log: vi.fn(),
+  },
+}));
+
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { getSupabaseServerClient } from '@uth/utils';
+import { getSupabaseServerClient } from '@uth/db';
 
 const mockAuth = vi.mocked(auth);
 const mockClerkClient = vi.mocked(clerkClient);

@@ -6,6 +6,7 @@ import './global.css';
 import { Geist } from 'next/font/google';
 import { FeatureFlagsProvider } from '@uth/widgets';
 import { ClerkProvider } from '@clerk/nextjs';
+import { Footer } from '../components/Footer';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -118,9 +119,12 @@ export default async function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={`${geist.className} h-full`}>
-        <body className="h-full bg-slate-50 overflow-y-scroll">
+        <body className="h-full bg-slate-50 overflow-y-scroll flex flex-col">
           <FeatureFlagsProvider flags={flags}>
-            {children}
+            <div className="flex-1 flex flex-col">
+              {children}
+            </div>
+            <Footer />
             <Toaster />
           </FeatureFlagsProvider>
         </body>
