@@ -28,6 +28,13 @@ export function Footer() {
             >
               Terms and Conditions
             </Link>
+            <span className="text-slate-300">•</span>
+            <Link
+              href="/status"
+              className="text-slate-600 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+            >
+              Status
+            </Link>
           </nav>
 
           {/* Developer Info Popover */}

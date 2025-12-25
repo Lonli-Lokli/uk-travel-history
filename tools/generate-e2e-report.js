@@ -243,11 +243,19 @@ function generateAccessibilitySummary(accessibilityData) {
     summary += `❌ <strong>${suiteName}</strong>: ${report.violations} violation(s) - ${report.tickets} ticket(s) ready to report`;
     summary += `</summary>\n\n`;
 
-    // Include the full report content
-    summary += report.content + '\n';
+    // Include truncated report content to avoid "Argument list too long" errors
+    // GitHub Actions has a limit on argument sizes when passing data to scripts
+    const MAX_REPORT_SIZE = 5000; // Max characters per report section
+    const truncatedContent = report.content.length > MAX_REPORT_SIZE
+      ? report.content.substring(0, MAX_REPORT_SIZE) + '\n\n... _(Report truncated. Download the full accessibility report artifact for complete details.)_'
+      : report.content;
+
+    summary += truncatedContent + '\n';
 
     summary += `</details>\n\n`;
   }
+
+  summary += '\n_💡 Tip: Download the accessibility reports artifact for complete details._\n';
 
   return summary;
 }

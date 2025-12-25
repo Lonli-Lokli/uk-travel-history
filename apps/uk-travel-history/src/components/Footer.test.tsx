@@ -24,9 +24,11 @@ describe('Footer', () => {
       render(<Footer />);
       const aboutLink = screen.getByRole('link', { name: 'About' });
       const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      const statusLink = screen.getByRole('link', { name: 'Status' });
 
       expect(aboutLink).toBeTruthy();
       expect(termsLink).toBeTruthy();
+      expect(statusLink).toBeTruthy();
     });
 
     it('should render developer info trigger button', () => {
@@ -47,6 +49,12 @@ describe('Footer', () => {
       render(<Footer />);
       const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
       expect(termsLink.getAttribute('href')).toBe('/terms');
+    });
+
+    it('should have correct href for Status link', () => {
+      render(<Footer />);
+      const statusLink = screen.getByRole('link', { name: 'Status' });
+      expect(statusLink.getAttribute('href')).toBe('/status');
     });
 
     it('should have proper hover states on links', () => {
