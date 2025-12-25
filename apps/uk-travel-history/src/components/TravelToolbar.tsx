@@ -13,7 +13,7 @@ import {
 } from '@uth/ui';
 import { FeatureGateProvider, FeatureDropdownItem } from '@uth/widgets';
 import { FEATURES } from '@uth/features';
-import { authStore, monetizationStore, paymentStore, uiStore } from '@uth/stores';
+import { authStore, monetizationStore, paymentStore } from '@uth/stores';
 
 interface TravelToolbarProps {
   triggerFileInput: () => void;
@@ -33,7 +33,6 @@ export const TravelToolbar = observer(({
       monetizationStore={monetizationStore}
       authStore={authStore}
       paymentStore={paymentStore}
-      uiStore={uiStore}
     >
       <div className="flex items-center gap-2">
         {/* Import Dropdown */}

@@ -20,10 +20,6 @@ export interface PaymentStore {
   openPaymentModal: () => void;
 }
 
-export interface UIStore {
-  openLoginModal: () => void;
-}
-
 /**
  * Feature gate context value
  */
@@ -31,7 +27,6 @@ export interface FeatureGateContextValue {
   monetizationStore: MonetizationStore;
   authStore: AuthStore;
   paymentStore: PaymentStore;
-  uiStore: UIStore;
 }
 
 const FeatureGateContext = createContext<FeatureGateContextValue | null>(null);
@@ -43,7 +38,6 @@ export interface FeatureGateProviderProps {
   monetizationStore: MonetizationStore;
   authStore: AuthStore;
   paymentStore: PaymentStore;
-  uiStore: UIStore;
   children: ReactNode;
 }
 
@@ -51,12 +45,11 @@ export function FeatureGateProvider({
   monetizationStore,
   authStore,
   paymentStore,
-  uiStore,
   children,
 }: FeatureGateProviderProps) {
   return (
     <FeatureGateContext.Provider
-      value={{ monetizationStore, authStore, paymentStore, uiStore }}
+      value={{ monetizationStore, authStore, paymentStore }}
     >
       {children}
     </FeatureGateContext.Provider>
@@ -80,7 +73,7 @@ export function useFeatureGateContext() {
  * Hook for feature access logic
  */
 export function useFeatureGate(feature: FeatureId) {
-  const { monetizationStore, authStore, paymentStore, uiStore } =
+  const { monetizationStore, authStore, paymentStore } =
     useFeatureGateContext();
 
   const hasAccess = monetizationStore.hasFeatureAccess(feature);
@@ -89,7 +82,8 @@ export function useFeatureGate(feature: FeatureId) {
 
   const handleUpgrade = () => {
     if (!isAuthenticated) {
-      uiStore.openLoginModal();
+      // Redirect to Clerk sign-in page
+      window.location.href = '/claim';
     } else {
       paymentStore.openPaymentModal();
     }

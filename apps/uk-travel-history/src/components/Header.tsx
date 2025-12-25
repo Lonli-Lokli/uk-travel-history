@@ -12,7 +12,6 @@ import {
   UIIcon,
 } from '@uth/ui';
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
-import { LoginModal } from './LoginModal';
 import { useFeatureFlags, FeatureDropdownItem } from '@uth/widgets';
 import { authStore, travelStore, uiStore } from '@uth/stores';
 
@@ -264,26 +263,24 @@ export const Header = observer(
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => uiStore.openLoginModal()}
-                    >
-                      <UIIcon
-                        iconName="fingerprint"
-                        className="h-4 w-4 mr-1.5"
-                      />
-                      <span className="hidden sm:inline">Sign In</span>
-                    </Button>
+                    <Link href="/claim">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                      >
+                        <UIIcon
+                          iconName="fingerprint"
+                          className="h-4 w-4 mr-1.5"
+                        />
+                        <span className="hidden sm:inline">Sign In</span>
+                      </Button>
+                    </Link>
                   )}
                 </>
               )}
             </div>
           </div>
         </div>
-
-        {/* Login Modal */}
-        {isAuthEnabled && <LoginModal />}
       </header>
     );
   },

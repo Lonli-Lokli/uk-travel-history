@@ -16,7 +16,6 @@ import {
   authStore,
   monetizationStore,
   paymentStore,
-  uiStore,
 } from '@uth/stores';
 import {
   useFileUpload,
@@ -73,7 +72,6 @@ export const TravelPageClient = observer(() => {
       monetizationStore={monetizationStore}
       authStore={authStore}
       paymentStore={paymentStore}
-      uiStore={uiStore}
     >
       <input
         ref={fileInputRef}
