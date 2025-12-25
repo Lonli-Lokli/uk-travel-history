@@ -7,6 +7,7 @@ import {
   ArrowRight02Icon,
   ArrowUp02Icon,
   Calendar01Icon,
+  Cancel01Icon,
   CheckmarkCircle02Icon,
   CircleIcon,
   ClipboardIcon,
@@ -20,6 +21,7 @@ import {
   InformationCircleIcon,
   Loading03Icon,
   Logout01Icon,
+  Menu01Icon,
   MultiplicationSignIcon,
   NoteAddIcon,
   Passport01Icon,
@@ -70,7 +72,9 @@ export type IconName =
   | 'circle'
   | 'plus'
   | 'drag-drop'
-  | 'alert-triangle';
+  | 'alert-triangle'
+  | 'menu'
+  | 'close';
 
 export const UIIcon: FC<{
   iconName: IconName;
@@ -169,6 +173,10 @@ function getIconByName(iconName: IconName): IconSvgElement {
       return DragDropVerticalIcon;
     case 'alert-triangle':
       return AlertTriangle;
+    case 'menu':
+      return Menu01Icon;
+    case 'close':
+      return Cancel01Icon;
     default:
       throw new NeverError(iconName);
   }
