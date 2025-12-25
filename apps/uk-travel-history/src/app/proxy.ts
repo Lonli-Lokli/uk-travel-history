@@ -2,35 +2,67 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
+import { compose, when, type MiddlewareFunction } from './middleware-compose';
 
 /**
  * Determine the auth provider from environment
  * Defaults to 'clerk' if not specified
  */
-function getAuthProvider(): 'clerk' | 'firebase' {
+const getAuthProvider = (): 'clerk' | 'firebase' => {
   const provider = process.env.UTH_AUTH_PROVIDER;
-  if (provider === 'firebase') {
-    return 'firebase';
-  }
-  return 'clerk';
-}
+  return provider === 'firebase' ? 'firebase' : 'clerk';
+};
 
 /**
  * Check if Clerk credentials are configured
  */
-function hasClerkCredentials(): boolean {
+const hasClerkCredentials = (): boolean => {
   return !!(
     process.env.CLERK_SECRET_KEY &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   );
-}
+};
 
 /**
- * Middleware handler for Clerk-based auth
- * Checks passkey enrollment and redirects if needed
+ * Firebase mode middleware - always passes through
+ * Firebase auth is handled in API routes via serverAuth utilities
  */
-async function handleClerkMiddleware(auth: any, req: NextRequest) {
-  // Dynamically import Clerk functions only when needed
+const firebaseMiddleware: MiddlewareFunction = async (
+  _req: NextRequest,
+): Promise<NextResponse | null> => {
+  return NextResponse.next();
+};
+
+/**
+ * Middleware that logs missing Clerk credentials in development
+ */
+const clerkCredentialsCheckMiddleware: MiddlewareFunction = async (
+  _req: NextRequest,
+): Promise<NextResponse | null> => {
+  if (!hasClerkCredentials()) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.error(
+        '\n⚠️  Clerk credentials missing!\n' +
+          'Set CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env.local\n' +
+          'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n',
+        undefined,
+      );
+    }
+    // Allow through without auth (app will show appropriate UI)
+    return NextResponse.next();
+  }
+  // Return null to continue to next middleware
+  return null;
+};
+
+/**
+ * Passkey enrollment check middleware
+ * Verifies that authenticated users have enrolled passkeys for sensitive routes
+ */
+const passkeyEnrollmentMiddleware = async (
+  auth: any,
+  req: NextRequest,
+): Promise<NextResponse> => {
   const { clerkClient, createRouteMatcher } =
     await import('@clerk/nextjs/server');
 
@@ -115,45 +147,61 @@ async function handleClerkMiddleware(auth: any, req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+};
 
 /**
- * Main middleware function
- * Respects UTH_AUTH_PROVIDER setting:
- * - 'clerk' (default): Runs Clerk middleware with passkey enforcement
- * - 'firebase': Skips middleware (Firebase auth handles it separately)
+ * Clerk authentication middleware
+ * Integrates with Clerk's clerkMiddleware and handles passkey enforcement
  */
-async function middleware(req: NextRequest) {
+const clerkAuthMiddleware: MiddlewareFunction = async (
+  req: NextRequest,
+): Promise<NextResponse | null> => {
+  const { clerkMiddleware } = await import('@clerk/nextjs/server');
+  const wrappedMiddleware = clerkMiddleware(passkeyEnrollmentMiddleware);
+  const result = await wrappedMiddleware(req, {} as any);
+  // Clerk middleware can return Response or undefined, convert to NextResponse | null
+  if (!result) return null;
+  return result instanceof NextResponse ? result : NextResponse.next();
+};
+
+/**
+ * Main proxy function using functional composition
+ *
+ * Composition strategy:
+ * 1. Check auth provider mode (Firebase vs Clerk)
+ * 2. If Firebase: pass through (auth handled in API routes)
+ * 3. If Clerk: check credentials → run Clerk auth → enforce passkey
+ *
+ * This demonstrates functional programming principles:
+ * - Pure functions for each concern (auth provider check, credential check, etc.)
+ * - Conditional composition via `when()` helper
+ * - Clear separation of concerns
+ */
+const proxy = async (req: NextRequest): Promise<NextResponse> => {
   const authProvider = getAuthProvider();
 
-  // Firebase mode: Skip all middleware (legacy auth flow)
-  if (authProvider === 'firebase') {
-    return NextResponse.next();
-  }
+  // Functional composition based on auth provider
+  const middleware = compose(
+    // Firebase mode: always pass through
+    when(() => authProvider === 'firebase', firebaseMiddleware),
 
-  // Clerk mode: Check if credentials are configured
-  if (!hasClerkCredentials()) {
-    // Log error in development
-    if (process.env.NODE_ENV === 'development') {
-      logger.error(
-        '\n⚠️  Clerk credentials missing!\n' +
-          'Set CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env.local\n' +
-          'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n',
-        undefined,
-      );
-    }
-    // Allow request through without auth (app will show appropriate UI)
-    return NextResponse.next();
-  }
+    // Clerk mode: check credentials first
+    when(() => authProvider === 'clerk', clerkCredentialsCheckMiddleware),
 
-  // Clerk mode with credentials: Use Clerk middleware
-  // Dynamic import to avoid module-load-time errors
-  const { clerkMiddleware } = await import('@clerk/nextjs/server');
-  const wrappedMiddleware = clerkMiddleware(handleClerkMiddleware);
-  return wrappedMiddleware(req, {} as any);
-}
+    // Clerk mode with credentials: run full auth flow
+    when(
+      () => authProvider === 'clerk' && hasClerkCredentials(),
+      clerkAuthMiddleware,
+    ),
+  );
 
-export default middleware;
+  const response = await middleware(req);
+
+  // If no middleware returned a response, pass through
+  return response || NextResponse.next();
+};
+
+export default proxy;
 
 export const config = {
   matcher: [
