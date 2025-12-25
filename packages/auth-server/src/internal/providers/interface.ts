@@ -9,6 +9,9 @@ import type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from '../../types/domain';
 
 /**
@@ -116,4 +119,28 @@ export interface AuthServerProvider {
     userId: string,
     updates: UpdateSubscriptionData,
   ): Promise<Subscription>;
+
+  /**
+   * Create a new user in the auth provider
+   * @param data - User creation data
+   * @returns Created user information
+   * @throws AuthError if creation fails
+   */
+  createUser(data: CreateUserData): Promise<AuthUser>;
+
+  /**
+   * Get users by email address
+   * @param email - Email address to search for
+   * @returns List of users with that email
+   * @throws AuthError if operation fails
+   */
+  getUsersByEmail(email: string): Promise<UserListResult>;
+
+  /**
+   * Update user metadata
+   * @param uid - The user's unique identifier
+   * @param data - Metadata to update
+   * @throws AuthError if operation fails
+   */
+  updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void>;
 }

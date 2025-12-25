@@ -85,6 +85,8 @@ export enum AuthErrorCode {
   INVALID_TOKEN = 'INVALID_TOKEN',
   /** User not found */
   USER_NOT_FOUND = 'USER_NOT_FOUND',
+  /** Invalid input data */
+  INVALID_INPUT = 'INVALID_INPUT',
   /** Unknown error */
   UNKNOWN = 'UNKNOWN',
 }
@@ -212,4 +214,36 @@ export interface UpdateSubscriptionData {
   canceledAt?: Date;
   /** Last payment error timestamp */
   lastPaymentError?: Date;
+}
+
+/**
+ * Data for creating a new user
+ */
+export interface CreateUserData {
+  /** User's email address */
+  email: string;
+  /** Whether to skip password requirement (for passkey-only auth) */
+  skipPasswordRequirement?: boolean;
+  /** Whether to skip password validation checks */
+  skipPasswordChecks?: boolean;
+}
+
+/**
+ * Data for updating user metadata
+ */
+export interface UpdateUserMetadataData {
+  /** Public metadata accessible to the client */
+  publicMetadata?: Record<string, unknown>;
+  /** Private metadata only accessible server-side */
+  privateMetadata?: Record<string, unknown>;
+}
+
+/**
+ * Result of user list query
+ */
+export interface UserListResult {
+  /** List of users matching the query */
+  users: AuthUser[];
+  /** Total count of users */
+  totalCount: number;
 }

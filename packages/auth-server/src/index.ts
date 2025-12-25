@@ -15,6 +15,9 @@ export type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from './types/domain';
 export { AuthError, AuthErrorCode, SubscriptionStatus } from './types/domain';
 
@@ -34,6 +37,10 @@ export {
   getSubscriptionBySessionId,
   createSubscription,
   updateSubscription,
+  // User management operations
+  createUser,
+  getUsersByEmail,
+  updateUserMetadata,
 } from './public/auth-operations';
 
 // DO NOT export:

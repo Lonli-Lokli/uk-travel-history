@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { updateUserMetadata } from '@uth/auth-server';
 import { updateUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 
@@ -43,19 +44,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sync to Clerk public metadata for caching
+    // Sync to auth provider public metadata for caching
     try {
-      const client = await clerkClient();
-      const clerkUser = await client.users.getUser(userId);
-      await client.users.updateUser(userId, {
+      await updateUserMetadata(userId, {
         publicMetadata: {
-          ...clerkUser.publicMetadata,
           passkey_enrolled: enrolled,
         },
       });
     } catch (metadataError) {
-      // Log but don't fail the request - Supabase is source of truth
-      logger.error('Failed to sync passkey metadata to Clerk', metadataError);
+      // Log but don't fail the request - Database is source of truth
+      logger.error('Failed to sync passkey metadata to auth provider', metadataError);
     }
 
     return NextResponse.json({ success: true });

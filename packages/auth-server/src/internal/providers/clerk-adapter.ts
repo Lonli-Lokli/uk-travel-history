@@ -17,6 +17,9 @@ import type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
@@ -274,29 +277,100 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     );
   }
 
-  /**
-   * Create a Clerk user (server-side)
-   * Used by webhook handler after successful payment
-   */
-  async createClerkUser(email: string): Promise<{ id: string; email: string }> {
+  async createUser(data: CreateUserData): Promise<AuthUser> {
     this.ensureConfigured();
 
     try {
       const client = await clerkClient();
       const user = await client.users.createUser({
-        emailAddress: [email],
-        skipPasswordRequirement: true, // Passkeys will be used
-        skipPasswordChecks: true,
+        emailAddress: [data.email],
+        skipPasswordRequirement: data.skipPasswordRequirement ?? false,
+        skipPasswordChecks: data.skipPasswordChecks ?? false,
       });
 
       return {
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress || email,
+        uid: user.id,
+        email: user.emailAddresses[0]?.emailAddress,
+        emailVerified: user.emailAddresses[0]?.verification?.status === 'verified',
+        displayName: user.fullName || user.username || undefined,
+        photoURL: user.imageUrl || undefined,
+        customClaims: user.publicMetadata,
+        createdAt: new Date(user.createdAt),
+        lastSignInAt: user.lastSignInAt ? new Date(user.lastSignInAt) : undefined,
       };
     } catch (error: any) {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
-        `Failed to create Clerk user: ${error.message}`,
+        `Failed to create user: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async getUsersByEmail(email: string): Promise<UserListResult> {
+    this.ensureConfigured();
+
+    try {
+      const client = await clerkClient();
+      const response = await client.users.getUserList({
+        emailAddress: [email],
+      });
+
+      const users: AuthUser[] = response.data.map((user) => ({
+        uid: user.id,
+        email: user.emailAddresses[0]?.emailAddress,
+        emailVerified: user.emailAddresses[0]?.verification?.status === 'verified',
+        displayName: user.fullName || user.username || undefined,
+        photoURL: user.imageUrl || undefined,
+        customClaims: user.publicMetadata,
+        createdAt: new Date(user.createdAt),
+        lastSignInAt: user.lastSignInAt ? new Date(user.lastSignInAt) : undefined,
+      }));
+
+      return {
+        users,
+        totalCount: response.totalCount,
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get users by email: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void> {
+    this.ensureConfigured();
+
+    try {
+      const client = await clerkClient();
+
+      // Get current user to merge metadata
+      const currentUser = await client.users.getUser(uid);
+
+      await client.users.updateUser(uid, {
+        publicMetadata: data.publicMetadata ? {
+          ...currentUser.publicMetadata,
+          ...data.publicMetadata,
+        } : undefined,
+        privateMetadata: data.privateMetadata ? {
+          ...currentUser.privateMetadata,
+          ...data.privateMetadata,
+        } : undefined,
+      });
+    } catch (error: any) {
+      if (error.status === 404) {
+        throw new AuthError(
+          AuthErrorCode.USER_NOT_FOUND,
+          `User not found: ${uid}`,
+          error,
+        );
+      }
+
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to update user metadata: ${error.message}`,
         error,
       );
     }

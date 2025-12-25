@@ -9,6 +9,9 @@ import type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
@@ -192,5 +195,57 @@ export class MockAuthServerAdapter implements AuthServerProvider {
     }
 
     return updated;
+  }
+
+  async createUser(data: CreateUserData): Promise<AuthUser> {
+    const userId = `mock-user-${Date.now()}`;
+    const user: AuthUser = {
+      uid: userId,
+      email: data.email,
+      emailVerified: false,
+      customClaims: {},
+      createdAt: new Date(),
+    };
+
+    this.users.set(userId, user);
+    return user;
+  }
+
+  async getUsersByEmail(email: string): Promise<UserListResult> {
+    const users: AuthUser[] = [];
+
+    for (const user of this.users.values()) {
+      if (user.email === email) {
+        users.push(user);
+      }
+    }
+
+    return {
+      users,
+      totalCount: users.length,
+    };
+  }
+
+  async updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void> {
+    const user = this.users.get(uid);
+
+    if (!user) {
+      throw new AuthError(
+        AuthErrorCode.USER_NOT_FOUND,
+        `User not found: ${uid}`,
+      );
+    }
+
+    // Merge metadata into customClaims
+    const updatedUser: AuthUser = {
+      ...user,
+      customClaims: {
+        ...user.customClaims,
+        ...(data.publicMetadata || {}),
+        ...(data.privateMetadata || {}),
+      },
+    };
+
+    this.users.set(uid, updatedUser);
   }
 }
