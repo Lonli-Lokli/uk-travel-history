@@ -13,5 +13,8 @@
   },
   "nx": {
     "name": "ui"
+  },
+  "dependencies": {
+    "vaul": "^1.1.2"
   }
 }

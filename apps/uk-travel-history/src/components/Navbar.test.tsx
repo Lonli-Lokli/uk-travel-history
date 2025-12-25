@@ -124,7 +124,7 @@ describe('Navbar', () => {
 
     it('should be hidden on mobile', () => {
       const { container } = render(<Navbar />);
-      const desktopNav = container.querySelector('.hidden.md\\:block');
+      const desktopNav = container.querySelector('.hidden.md\\:flex');
       expect(desktopNav).toBeTruthy();
     });
   });

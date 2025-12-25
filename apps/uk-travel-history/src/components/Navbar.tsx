@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,
@@ -16,6 +16,7 @@ import {
 } from '@uth/ui';
 import { navigationStore } from '@uth/stores';
 import { cn } from '@uth/utils';
+import type { ReactNode } from 'react';
 
 interface NavItem {
   href: string;
@@ -28,7 +29,11 @@ const navItems: NavItem[] = [
   { href: '/travel', label: 'Travel' },
 ];
 
-export const Navbar = observer(() => {
+interface NavbarProps {
+  children?: ReactNode;
+}
+
+export const Navbar = observer(({ children }: NavbarProps) => {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -42,23 +47,30 @@ export const Navbar = observer(() => {
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 h-16">
       <div className="max-w-6xl mx-auto px-4 h-full">
-        <div className="flex items-center justify-between h-full">
+        <div className="flex items-center justify-between h-full gap-4">
           {/* Logo/Branding */}
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-70 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+            className="flex items-center gap-2 hover:opacity-70 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded shrink-0"
             aria-label="UK Travel Parser home"
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <UIIcon iconName="airplane" className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold text-slate-900 text-base">
+            <span className="font-semibold text-slate-900 text-base hidden sm:inline">
               UK Travel Parser
             </span>
           </Link>
 
+          {/* Center content (children/toolbar) */}
+          {children && (
+            <div className="flex items-center gap-2 flex-1 justify-center">
+              {children}
+            </div>
+          )}
+
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
+          <div className={cn('hidden md:flex items-center', children ? 'gap-2' : 'gap-4')}>
             <NavigationMenu>
               <NavigationMenuList className="gap-1">
                 {navItems.map((item) => (
@@ -93,7 +105,7 @@ export const Navbar = observer(() => {
           <Button
             variant="outline"
             size="icon"
-            className="md:hidden"
+            className="md:hidden shrink-0"
             onClick={() => navigationStore.openMobileMenu()}
             aria-label="Open menu"
           >
@@ -103,13 +115,13 @@ export const Navbar = observer(() => {
       </div>
 
       {/* Mobile Drawer */}
-      <Dialog
+      <Drawer
         open={navigationStore.isMobileMenuOpen}
         onOpenChange={navigationStore.setMobileMenuOpen.bind(navigationStore)}
       >
-        <DialogContent className="sm:max-w-md p-4">
-          <DialogTitle className="sr-only">Navigation Menu</DialogTitle>
-          <nav className="mt-8">
+        <DrawerContent>
+          <DrawerTitle className="sr-only">Navigation Menu</DrawerTitle>
+          <nav className="p-4 pb-8">
             <ul className="space-y-1" role="list">
               {navItems.map((item) => (
                 <li key={item.href}>
@@ -135,8 +147,8 @@ export const Navbar = observer(() => {
               ))}
             </ul>
           </nav>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </nav>
   );
 });
