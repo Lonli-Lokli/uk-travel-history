@@ -12,7 +12,6 @@ import {
   authStore,
   monetizationStore,
   paymentStore,
-  uiStore,
 } from '@uth/stores';
 import { logger } from '@uth/utils';
 import { FeatureGateProvider, FeatureButton } from '@uth/widgets';
@@ -148,7 +147,6 @@ export const LandingPage = () => {
       monetizationStore={monetizationStore}
       authStore={authStore}
       paymentStore={paymentStore}
-      uiStore={uiStore}
     >
       {/* Hidden File Inputs */}
       <input
