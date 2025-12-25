@@ -14,6 +14,9 @@ import type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
@@ -437,6 +440,109 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
         `Failed to update subscription: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async createUser(data: CreateUserData): Promise<AuthUser> {
+    const auth = this.ensureConfigured();
+
+    try {
+      const userRecord = await auth.createUser({
+        email: data.email,
+        emailVerified: false,
+      });
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+        customClaims: userRecord.customClaims,
+        createdAt: new Date(userRecord.metadata.creationTime),
+        lastSignInAt: userRecord.metadata.lastSignInTime
+          ? new Date(userRecord.metadata.lastSignInTime)
+          : undefined,
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to create user: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async getUsersByEmail(email: string): Promise<UserListResult> {
+    const auth = this.ensureConfigured();
+
+    try {
+      const userRecord = await auth.getUserByEmail(email);
+
+      const users: AuthUser[] = [{
+        uid: userRecord.uid,
+        email: userRecord.email,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+        customClaims: userRecord.customClaims,
+        createdAt: new Date(userRecord.metadata.creationTime),
+        lastSignInAt: userRecord.metadata.lastSignInTime
+          ? new Date(userRecord.metadata.lastSignInTime)
+          : undefined,
+      }];
+
+      return {
+        users,
+        totalCount: users.length,
+      };
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        return {
+          users: [],
+          totalCount: 0,
+        };
+      }
+
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get users by email: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void> {
+    const auth = this.ensureConfigured();
+
+    try {
+      // Get current user to merge claims
+      const currentUser = await auth.getUser(uid);
+      const currentClaims = currentUser.customClaims || {};
+
+      // Firebase uses customClaims for what Clerk calls publicMetadata
+      // Firebase doesn't have a separate privateMetadata concept at the auth level
+      const updatedClaims = {
+        ...currentClaims,
+        ...(data.publicMetadata || {}),
+        ...(data.privateMetadata || {}),
+      };
+
+      await auth.setCustomUserClaims(uid, updatedClaims);
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        throw new AuthError(
+          AuthErrorCode.USER_NOT_FOUND,
+          `User not found: ${uid}`,
+          error,
+        );
+      }
+
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to update user metadata: ${error.message}`,
         error,
       );
     }

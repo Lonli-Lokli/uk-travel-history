@@ -5,16 +5,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@uth/db';
-import Stripe from 'stripe';
+import {
+  hasWebhookEventBeenProcessed,
+  recordWebhookEvent,
+  getPurchaseIntentById,
+  updatePurchaseIntent,
+  createUser as createDbUser,
+  PurchaseIntentStatus,
+} from '@uth/db';
+import type { WebhookEvent } from '@uth/payments-server';
+import { constructWebhookEvent } from '@uth/payments-server';
+import { createUser as createAuthUser, getUsersByEmail } from '@uth/auth-server';
 import { logger } from '@uth/utils';
-import { clerkClient } from '@clerk/nextjs/server';
-
-function getStripeClient() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-12-15.clover',
-  });
-}
 
 /**
  * Validate email format
@@ -48,10 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify webhook signature
-    const stripe = getStripeClient();
-    let event: Stripe.Event;
+    let event: any;
     try {
-      event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
+      event = constructWebhookEvent(body, signature, WEBHOOK_SECRET);
     } catch (err: any) {
       logger.error('Webhook signature verification failed', undefined, {
         extra: { message: err.message },
@@ -62,30 +63,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseServerClient();
-
     // Check if event already processed (idempotency)
-    const { data: existingEvent } = await supabase
-      .from('webhook_events')
-      .select('id')
-      .eq('stripe_event_id', event.id)
-      .single();
+    const alreadyProcessed = await hasWebhookEventBeenProcessed(event.id);
 
-    if (existingEvent) {
+    if (alreadyProcessed) {
       logger.info(`Event ${event.id} already processed, skipping`);
       return NextResponse.json({ received: true, skipped: true });
     }
 
     // Record webhook event
-    await supabase.from('webhook_events').insert({
-      stripe_event_id: event.id,
+    await recordWebhookEvent({
+      stripeEventId: event.id,
       type: event.type,
       payload: event.data.object as any,
     });
 
     // Handle checkout.session.completed event
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as any;
 
       logger.info('Processing checkout.session.completed', {
         extra: { sessionId: session.id },
@@ -108,13 +103,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Fetch purchase intent
-      const { data: purchaseIntent, error: fetchError } = await supabase
-        .from('purchase_intents')
-        .select('*')
-        .eq('id', purchaseIntentId)
-        .single();
+      const purchaseIntent = await getPurchaseIntentById(purchaseIntentId);
 
-      if (fetchError || !purchaseIntent) {
+      if (!purchaseIntent) {
         logger.error('Purchase intent not found', undefined, {
           extra: { purchaseIntentId },
         });
@@ -125,19 +116,16 @@ export async function POST(request: NextRequest) {
       }
 
       // If already provisioned, skip (idempotency)
-      if (purchaseIntent.status === 'provisioned') {
+      if (purchaseIntent.status === PurchaseIntentStatus.PROVISIONED) {
         logger.info(`Purchase intent ${purchaseIntentId} already provisioned`);
         return NextResponse.json({ received: true, alreadyProvisioned: true });
       }
 
       // Mark as paid
-      await supabase
-        .from('purchase_intents')
-        .update({
-          status: 'paid',
-          stripe_payment_intent_id: session.payment_intent as string,
-        })
-        .eq('id', purchaseIntentId);
+      await updatePurchaseIntent(purchaseIntentId, {
+        status: PurchaseIntentStatus.PAID,
+        stripePaymentIntentId: session.payment_intent as string,
+      });
 
       // Extract customer email
       const customerEmail = session.customer_email || purchaseIntent.email;
@@ -153,48 +141,43 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Create Clerk user (idempotent - check if user already exists)
-      let clerkUserId: string | undefined;
+      // Create or find auth user (idempotent - check if user already exists)
+      let authUserId: string | undefined;
 
       try {
-        const client = await clerkClient();
-
         // Check if user with this email already exists
-        const existingUsers = await client.users.getUserList({
-          emailAddress: [customerEmail],
-        });
+        const existingUsersResult = await getUsersByEmail(customerEmail);
 
-        if (existingUsers.data.length > 0) {
-          clerkUserId = existingUsers.data[0].id;
-          logger.info(`Clerk user already exists: ${clerkUserId}`);
+        if (existingUsersResult.users.length > 0) {
+          authUserId = existingUsersResult.users[0].uid;
+          logger.info(`Auth user already exists: ${authUserId}`);
         } else {
-          // Create new Clerk user with retry logic
+          // Create new user with retry logic
           let retryCount = 0;
           const maxRetries = 3;
 
           while (retryCount < maxRetries) {
             try {
-              const clerkUser = await client.users.createUser({
-                emailAddress: [customerEmail],
+              const authUser = await createAuthUser({
+                email: customerEmail,
                 skipPasswordRequirement: true,
                 skipPasswordChecks: true,
               });
-              clerkUserId = clerkUser.id;
-              logger.info(`Created Clerk user: ${clerkUserId}`);
+              authUserId = authUser.uid;
+              logger.info(`Created auth user: ${authUserId}`);
               break;
             } catch (createError: any) {
               retryCount++;
 
               // Don't retry for permanent errors
-              if (createError.status === 400 || createError.status === 422) {
+              if (createError.code === 'INVALID_INPUT') {
                 logger.error(
-                  'Clerk user creation failed (permanent error)',
+                  'Auth user creation failed (permanent error)',
                   createError,
                   {
                     extra: {
                       email: customerEmail,
                       error: createError.message,
-                      clerkErrors: createError.errors,
                     },
                   },
                 );
@@ -204,7 +187,7 @@ export async function POST(request: NextRequest) {
               // Retry for transient errors
               if (retryCount < maxRetries) {
                 logger.warn(
-                  `Clerk user creation failed, retrying (${retryCount}/${maxRetries})`,
+                  `Auth user creation failed, retrying (${retryCount}/${maxRetries})`,
                   {
                     extra: {
                       error: createError.message,
@@ -221,46 +204,38 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Ensure clerkUserId was assigned
-        if (!clerkUserId) {
-          throw new Error('Failed to create or retrieve Clerk user ID');
+        // Ensure authUserId was assigned
+        if (!authUserId) {
+          throw new Error('Failed to create or retrieve auth user ID');
         }
 
-        // Update purchase intent with Clerk user ID
-        await supabase
-          .from('purchase_intents')
-          .update({
-            clerk_user_id: clerkUserId,
-          })
-          .eq('id', purchaseIntentId);
+        // Update purchase intent with auth user ID
+        await updatePurchaseIntent(purchaseIntentId, {
+          authUserId: authUserId,
+        });
 
         // Insert into users table (idempotent)
-        const { error: userInsertError } = await supabase
-          .from('users')
-          .insert({
-            clerk_user_id: clerkUserId,
+        try {
+          await createDbUser({
+            authUserId: authUserId,
             email: customerEmail,
-            passkey_enrolled: false,
-          })
-          .select()
-          .single();
-
-        // Ignore duplicate key error (user already exists)
-        if (userInsertError && userInsertError.code !== '23505') {
-          throw userInsertError;
+            passkeyEnrolled: false,
+          });
+        } catch (error: any) {
+          // Ignore if user already exists (duplicate auth user ID)
+          if (error.code !== 'UNIQUE_VIOLATION') {
+            throw error;
+          }
         }
 
         // Mark purchase intent as provisioned
-        await supabase
-          .from('purchase_intents')
-          .update({
-            status: 'provisioned',
-          })
-          .eq('id', purchaseIntentId);
+        await updatePurchaseIntent(purchaseIntentId, {
+          status: PurchaseIntentStatus.PROVISIONED,
+        });
 
         logger.info(`Successfully provisioned user for ${customerEmail}`);
       } catch (error: any) {
-        logger.error('Failed to provision Clerk user', error);
+        logger.error('Failed to provision auth user', error);
         // Don't mark as failed - retry can happen
         return NextResponse.json(
           { error: 'Failed to provision user' },

@@ -10,6 +10,9 @@ import type {
   Subscription,
   CreateSubscriptionData,
   UpdateSubscriptionData,
+  CreateUserData,
+  UpdateUserMetadataData,
+  UserListResult,
 } from '../types/domain';
 import { AuthError, AuthErrorCode } from '../types/domain';
 import { getAuthProvider } from '../internal/provider-resolver';
@@ -238,4 +241,37 @@ export async function updateSubscription(
 ): Promise<Subscription> {
   const provider = getAuthProvider();
   return provider.updateSubscription(userId, updates);
+}
+
+/**
+ * Create a new user in the auth system
+ * @param data - User creation data
+ * @returns Created user information
+ * @throws AuthError if creation fails
+ */
+export async function createUser(data: CreateUserData): Promise<AuthUser> {
+  const provider = getAuthProvider();
+  return provider.createUser(data);
+}
+
+/**
+ * Get users by email address
+ * @param email - Email address to search for
+ * @returns List of users with that email
+ * @throws AuthError if operation fails
+ */
+export async function getUsersByEmail(email: string): Promise<UserListResult> {
+  const provider = getAuthProvider();
+  return provider.getUsersByEmail(email);
+}
+
+/**
+ * Update user metadata (public and/or private)
+ * @param uid - The user's unique identifier
+ * @param data - Metadata to update
+ * @throws AuthError if operation fails
+ */
+export async function updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void> {
+  const provider = getAuthProvider();
+  return provider.updateUserMetadata(uid, data);
 }

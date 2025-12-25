@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSupabaseServerClient } from '@uth/db';
+import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 
 /**
@@ -73,20 +73,15 @@ async function handleClerkMiddleware(auth: any, req: NextRequest) {
           return NextResponse.next();
         }
 
-        // Fallback to Supabase if metadata not set or false
-        const supabase = getSupabaseServerClient();
-        const { data: dbUser, error } = await supabase
-          .from('users')
-          .select('passkey_enrolled')
-          .eq('clerk_user_id', userId)
-          .single();
+        // Fallback to database if metadata not set or false
+        const dbUser = await getUserByAuthId(userId);
 
-        if (error || !dbUser) {
+        if (!dbUser) {
           // User not found in database yet - redirect to onboarding
           return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
         }
 
-        if (!dbUser.passkey_enrolled) {
+        if (!dbUser.passkeyEnrolled) {
           // User hasn't enrolled passkey
           return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
         }

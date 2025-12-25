@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@uth/db';
+import { keepalive } from '@uth/db';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -30,24 +30,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Call Supabase keepalive function
-    const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase.rpc('keepalive');
+    // Call database keepalive function
+    const result = await keepalive();
 
-    if (error) {
-      logger.error('Keepalive RPC error', error);
-      return NextResponse.json(
-        { error: 'Keepalive failed', details: error.message },
-        { status: 500 },
-      );
-    }
-
-    logger.info('Supabase keepalive successful', { extra: { result: data } });
+    logger.info('Database keepalive successful', { extra: { result } });
 
     return NextResponse.json({
       ok: true,
       timestamp: new Date().toISOString(),
-      result: data,
+      result,
     });
   } catch (error: any) {
     logger.error('Keepalive error', error);
