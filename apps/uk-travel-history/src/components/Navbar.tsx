@@ -7,6 +7,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogTitle,
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,
@@ -106,20 +107,10 @@ export const Navbar = observer(() => {
         open={navigationStore.isMobileMenuOpen}
         onOpenChange={navigationStore.setMobileMenuOpen.bind(navigationStore)}
       >
-        <DialogContent className="sm:max-w-md">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">Navigation</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigationStore.closeMobileMenu()}
-              aria-label="Close menu"
-            >
-              <UIIcon iconName="close" className="h-5 w-5" />
-            </Button>
-          </div>
-          <nav>
-            <ul className="space-y-2" role="list">
+        <DialogContent className="sm:max-w-md p-4">
+          <DialogTitle className="sr-only">Navigation Menu</DialogTitle>
+          <nav className="mt-8">
+            <ul className="space-y-1" role="list">
               {navItems.map((item) => (
                 <li key={item.href}>
                   <Link
