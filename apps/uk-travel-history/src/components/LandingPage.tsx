@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, toast, UIIcon } from '@uth/ui';
+import { Card, CardContent, toast, UIIcon } from '@uth/ui';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
@@ -205,59 +205,6 @@ export const LandingPage = () => {
       )}
 
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-        {/* Header */}
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <UIIcon iconName="airplane" className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-semibold text-slate-900 text-sm sm:text-base">
-                    UK Travel Parser
-                  </h1>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
-                    Calculate days outside UK
-                  </p>
-                </div>
-              </div>
-
-              {/* Buy Me a Coffee Button */}
-              <a
-                href="https://www.buymeacoffee.com/LonliLokliV"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden sm:block"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
-                >
-                  <UIIcon iconName="coffee" className="h-4 w-4 mr-1.5" />
-                  Buy Me a Coffee
-                </Button>
-              </a>
-
-              <a
-                href="https://www.buymeacoffee.com/LonliLokliV"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="sm:hidden"
-              >
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-[#FFDD00] hover:bg-[#FFED4E] border-[#FFDD00] hover:border-[#FFED4E] text-slate-900"
-                >
-                  <UIIcon iconName="coffee" className="h-4 w-4" />
-                </Button>
-              </a>
-            </div>
-          </div>
-        </header>
-
         {/* Main Content */}
         <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
           <Card className="bg-white">
