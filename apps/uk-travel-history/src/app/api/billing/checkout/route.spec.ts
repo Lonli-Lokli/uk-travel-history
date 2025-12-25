@@ -7,7 +7,7 @@ import { POST } from './route';
 import { NextRequest } from 'next/server';
 
 // Mock dependencies
-vi.mock('@uth/utils', () => ({
+vi.mock('@uth/db', () => ({
   getSupabaseServerClient: vi.fn(() => ({
     from: vi.fn(() => ({
       insert: vi.fn(() => ({
@@ -29,6 +29,9 @@ vi.mock('@uth/utils', () => ({
       })),
     })),
   })),
+}));
+
+vi.mock('@uth/utils', () => ({
   logger: {
     error: vi.fn(),
     info: vi.fn(),
@@ -37,16 +40,18 @@ vi.mock('@uth/utils', () => ({
 
 vi.mock('stripe', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_test_123',
-            url: 'https://checkout.stripe.com/pay/cs_test_123',
-          })),
+    default: vi.fn(function() {
+      return {
+        checkout: {
+          sessions: {
+            create: vi.fn(async () => ({
+              id: 'cs_test_123',
+              url: 'https://checkout.stripe.com/pay/cs_test_123',
+            })),
+          },
         },
-      },
-    })),
+      };
+    }),
   };
 });
 

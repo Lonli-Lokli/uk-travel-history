@@ -8,7 +8,11 @@ import {
   AuthError,
   createAuthErrorResponse,
 } from './serverAuth';
-import { getAdminAuth, getAdminFirestore } from '@uth/auth-server';
+import {
+  verifyToken,
+  getSubscription,
+  SubscriptionStatus,
+} from '@uth/auth-server';
 import { isFeatureEnabled } from '@uth/features';
 
 // Mock dependencies
@@ -17,17 +21,33 @@ vi.mock('@vercel/edge-config', () => ({
 }));
 
 vi.mock('@uth/auth-server', () => ({
-  getAdminAuth: vi.fn(),
-  getAdminFirestore: vi.fn(),
+  verifyToken: vi.fn(),
+  getSubscription: vi.fn(),
+  SubscriptionStatus: {
+    ACTIVE: 'ACTIVE',
+    CANCELED: 'CANCELED',
+    PAST_DUE: 'PAST_DUE',
+  },
 }));
 
 vi.mock('@uth/features', () => ({
   isFeatureEnabled: vi.fn(),
+  FEATURE_KEYS: {
+    MONETIZATION: 'monetization',
+    AUTH: 'auth',
+    PAYMENTS: 'payments',
+    EXCEL_EXPORT: 'excel_export',
+    EXCEL_IMPORT: 'excel_import',
+    PDF_IMPORT: 'pdf_import',
+    CLIPBOARD_IMPORT: 'clipboard_import',
+    RISK_CHART: 'risk_chart',
+  },
 }));
 
 vi.mock('@uth/utils', () => ({
   logger: {
     log: vi.fn(),
+    info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
   },
@@ -52,6 +72,7 @@ describe('Server Auth Middleware', () => {
 
   describe('verifyAuth', () => {
     it('should throw AuthError when Authorization header is missing', async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
       const request = createMockRequest();
 
       await expect(verifyAuth(request)).rejects.toThrow(AuthError);
@@ -61,6 +82,7 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should throw AuthError when Authorization header is invalid', async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
       const headers = new Headers();
       headers.set('Authorization', 'InvalidFormat');
       const request = new NextRequest('https://example.com/api/test', {
@@ -71,29 +93,23 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should verify token and check subscription status', async () => {
-      const mockAuth = {
-        verifyIdToken: vi.fn().mockResolvedValue({
-          uid: 'user123',
-          email: 'test@example.com',
-          email_verified: true,
-        }),
-      };
-
-      const mockDoc = {
-        exists: true,
-        data: () => ({ status: 'active' }),
-      };
-
-      const mockFirestore = {
-        collection: vi.fn().mockReturnValue({
-          doc: vi.fn().mockReturnValue({
-            get: vi.fn().mockResolvedValue(mockDoc),
-          }),
-        }),
-      };
-
-      vi.mocked(getAdminAuth).mockReturnValue(mockAuth as any);
-      vi.mocked(getAdminFirestore).mockReturnValue(mockFirestore as any);
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+      vi.mocked(verifyToken).mockResolvedValue({
+        uid: 'user123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
+      vi.mocked(getSubscription).mockResolvedValue({
+        id: 'sub_123',
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_123',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+      });
 
       const request = createMockRequest('valid-token');
       const result = await verifyAuth(request);
@@ -103,31 +119,17 @@ describe('Server Auth Middleware', () => {
         email: 'test@example.com',
         emailVerified: true,
       });
-      expect(mockAuth.verifyIdToken).toHaveBeenCalledWith('valid-token', true);
+      expect(verifyToken).toHaveBeenCalledWith('valid-token');
     });
 
     it('should throw AuthError when subscription does not exist', async () => {
-      const mockAuth = {
-        verifyIdToken: vi.fn().mockResolvedValue({
-          uid: 'user123',
-          email: 'test@example.com',
-        }),
-      };
-
-      const mockDoc = {
-        exists: false,
-      };
-
-      const mockFirestore = {
-        collection: vi.fn().mockReturnValue({
-          doc: vi.fn().mockReturnValue({
-            get: vi.fn().mockResolvedValue(mockDoc),
-          }),
-        }),
-      };
-
-      vi.mocked(getAdminAuth).mockReturnValue(mockAuth as any);
-      vi.mocked(getAdminFirestore).mockReturnValue(mockFirestore as any);
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+      vi.mocked(verifyToken).mockResolvedValue({
+        uid: 'user123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
+      vi.mocked(getSubscription).mockResolvedValue(null);
 
       const request = createMockRequest('valid-token');
 
@@ -138,28 +140,23 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should throw AuthError when subscription is not active', async () => {
-      const mockAuth = {
-        verifyIdToken: vi.fn().mockResolvedValue({
-          uid: 'user123',
-          email: 'test@example.com',
-        }),
-      };
-
-      const mockDoc = {
-        exists: true,
-        data: () => ({ status: 'canceled' }),
-      };
-
-      const mockFirestore = {
-        collection: vi.fn().mockReturnValue({
-          doc: vi.fn().mockReturnValue({
-            get: vi.fn().mockResolvedValue(mockDoc),
-          }),
-        }),
-      };
-
-      vi.mocked(getAdminAuth).mockReturnValue(mockAuth as any);
-      vi.mocked(getAdminFirestore).mockReturnValue(mockFirestore as any);
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+      vi.mocked(verifyToken).mockResolvedValue({
+        uid: 'user123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
+      vi.mocked(getSubscription).mockResolvedValue({
+        id: 'sub_123',
+        userId: 'user123',
+        status: SubscriptionStatus.CANCELED,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_123',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+      });
 
       const request = createMockRequest('valid-token');
 
@@ -209,33 +206,28 @@ describe('Server Auth Middleware', () => {
 
   describe('requirePaidFeature', () => {
     const setupMocks = (
-      subscriptionStatus = 'active',
+      subscriptionStatus: 'ACTIVE' | 'CANCELED' = 'ACTIVE',
       featureEnabled = true,
       isPremiumFeature = true,
     ) => {
-      const mockAuth = {
-        verifyIdToken: vi.fn().mockResolvedValue({
-          uid: 'user123',
-          email: 'test@example.com',
-          email_verified: true,
-        }),
-      };
+      vi.mocked(verifyToken).mockResolvedValue({
+        uid: 'user123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
 
-      const mockDoc = {
-        exists: true,
-        data: () => ({ status: subscriptionStatus }),
-      };
+      vi.mocked(getSubscription).mockResolvedValue({
+        id: 'sub_123',
+        userId: 'user123',
+        status: subscriptionStatus === 'ACTIVE' ? SubscriptionStatus.ACTIVE : SubscriptionStatus.CANCELED,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_123',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+      });
 
-      const mockFirestore = {
-        collection: vi.fn().mockReturnValue({
-          doc: vi.fn().mockReturnValue({
-            get: vi.fn().mockResolvedValue(mockDoc),
-          }),
-        }),
-      };
-
-      vi.mocked(getAdminAuth).mockReturnValue(mockAuth as any);
-      vi.mocked(getAdminFirestore).mockReturnValue(mockFirestore as any);
       vi.mocked(isFeatureEnabled).mockResolvedValue(featureEnabled);
 
       // Setup premium features list
@@ -247,7 +239,7 @@ describe('Server Auth Middleware', () => {
     };
 
     it('should throw AuthError when feature is disabled', async () => {
-      setupMocks('active', false, true);
+      setupMocks('ACTIVE', false, true);
 
       const request = createMockRequest('valid-token');
 
@@ -260,7 +252,7 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should allow access when feature is enabled and user has active subscription', async () => {
-      setupMocks('active', true, true);
+      setupMocks('ACTIVE', true, true);
 
       const request = createMockRequest('valid-token');
       const result = await requirePaidFeature(request, 'excel_export');
@@ -274,7 +266,7 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should allow access to free features even without checking subscription', async () => {
-      setupMocks('active', true, false);
+      setupMocks('ACTIVE', true, false);
 
       const request = createMockRequest('valid-token');
       const result = await requirePaidFeature(request, 'basic_calculation');
@@ -287,7 +279,7 @@ describe('Server Auth Middleware', () => {
     });
 
     it('should throw AuthError when subscription is not active', async () => {
-      setupMocks('canceled', true, true);
+      setupMocks('CANCELED', true, true);
 
       const request = createMockRequest('valid-token');
 
@@ -309,7 +301,7 @@ describe('Server Auth Middleware', () => {
       );
 
       // Verify authentication was NOT called since feature is disabled
-      expect(getAdminAuth).not.toHaveBeenCalled();
+      expect(verifyToken).not.toHaveBeenCalled();
     });
 
     it('should handle missing auth token for disabled feature', async () => {
@@ -322,7 +314,7 @@ describe('Server Auth Middleware', () => {
       );
 
       // Should fail on feature check, not auth
-      expect(getAdminAuth).not.toHaveBeenCalled();
+      expect(verifyToken).not.toHaveBeenCalled();
     });
   });
 
@@ -355,29 +347,23 @@ describe('Server Auth Middleware', () => {
 
   describe('Integration: Feature Flag + Premium Check', () => {
     it('should enforce both feature enablement AND premium status', async () => {
-      const mockAuth = {
-        verifyIdToken: vi.fn().mockResolvedValue({
-          uid: 'user123',
-          email: 'test@example.com',
-          email_verified: true,
-        }),
-      };
+      vi.mocked(verifyToken).mockResolvedValue({
+        uid: 'user123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
 
-      const mockDoc = {
-        exists: true,
-        data: () => ({ status: 'active' }),
-      };
-
-      const mockFirestore = {
-        collection: vi.fn().mockReturnValue({
-          doc: vi.fn().mockReturnValue({
-            get: vi.fn().mockResolvedValue(mockDoc),
-          }),
-        }),
-      };
-
-      vi.mocked(getAdminAuth).mockReturnValue(mockAuth as any);
-      vi.mocked(getAdminFirestore).mockReturnValue(mockFirestore as any);
+      vi.mocked(getSubscription).mockResolvedValue({
+        id: 'sub_123',
+        userId: 'user123',
+        status: SubscriptionStatus.ACTIVE,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_123',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+      });
 
       // Feature is premium but disabled
       vi.mocked(get).mockResolvedValue(['excel_export']);

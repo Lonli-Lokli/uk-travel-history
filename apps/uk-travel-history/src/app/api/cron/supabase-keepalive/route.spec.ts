@@ -7,13 +7,16 @@ import { GET } from './route';
 import { NextRequest } from 'next/server';
 
 // Mock dependencies
-vi.mock('@uth/utils', () => ({
+vi.mock('@uth/db', () => ({
   getSupabaseServerClient: vi.fn(() => ({
     rpc: vi.fn(async () => ({
       data: 1,
       error: null,
     })),
   })),
+}));
+
+vi.mock('@uth/utils', () => ({
   logger: {
     error: vi.fn(),
     info: vi.fn(),
