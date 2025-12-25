@@ -5,7 +5,11 @@
 
 import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@uth/utils';
-import { getSupabaseServerClient } from '@uth/db';
+import {
+  getPurchaseIntentsByAuthUserId,
+  getPurchaseIntentBySessionId,
+  PurchaseIntentStatus,
+} from '@uth/db';
 import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,
@@ -212,22 +216,11 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
 
   async getSubscription(userId: string): Promise<Subscription | null> {
     try {
-      const supabase = getSupabaseServerClient();
-
-      const { data, error } = await supabase
-        .from('purchase_intents')
-        .select('*')
-        .eq('clerk_user_id', userId)
-        .eq('status', 'provisioned')
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Not found
-          return null;
-        }
-        throw error;
-      }
+      // Get provisioned purchase intents for the user
+      const intents = await getPurchaseIntentsByAuthUserId(userId);
+      const provisioned = intents.find(
+        (intent) => intent.status === PurchaseIntentStatus.PROVISIONED,
+      );
 
       // Note: For one-time payments, we don't have subscription data
       // This is a placeholder implementation
@@ -246,20 +239,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     sessionId: string,
   ): Promise<Subscription | null> {
     try {
-      const supabase = getSupabaseServerClient();
-
-      const { data, error } = await supabase
-        .from('purchase_intents')
-        .select('*')
-        .eq('stripe_checkout_session_id', sessionId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-        throw error;
-      }
+      const intent = await getPurchaseIntentBySessionId(sessionId);
 
       // Placeholder - one-time payment doesn't have subscription
       return null;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { getSupabaseServerClient } from '@uth/db';
+import { updateUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 
 /**
@@ -32,15 +32,10 @@ export async function POST(req: NextRequest) {
     // We trust the client call succeeded if this endpoint is called with enrolled=true.
     // The middleware will use publicMetadata.passkey_enrolled to enforce access control.
 
-    // Update Supabase
-    const supabase = getSupabaseServerClient();
-
-    const { error } = await supabase
-      .from('users')
-      .update({ passkey_enrolled: enrolled })
-      .eq('clerk_user_id', userId);
-
-    if (error) {
+    // Update database
+    try {
+      await updateUserByAuthId(userId, { passkeyEnrolled: enrolled });
+    } catch (error) {
       logger.error('Failed to update passkey status', error);
       return NextResponse.json(
         { error: 'Failed to update passkey status' },

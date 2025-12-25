@@ -5,7 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@uth/db';
+import {
+  hasWebhookEventBeenProcessed,
+  recordWebhookEvent,
+  getPurchaseIntentById,
+  updatePurchaseIntent,
+  createUser,
+  PurchaseIntentStatus,
+} from '@uth/db';
 import Stripe from 'stripe';
 import { logger } from '@uth/utils';
 import { clerkClient } from '@clerk/nextjs/server';
@@ -62,23 +69,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseServerClient();
-
     // Check if event already processed (idempotency)
-    const { data: existingEvent } = await supabase
-      .from('webhook_events')
-      .select('id')
-      .eq('stripe_event_id', event.id)
-      .single();
+    const alreadyProcessed = await hasWebhookEventBeenProcessed(event.id);
 
-    if (existingEvent) {
+    if (alreadyProcessed) {
       logger.info(`Event ${event.id} already processed, skipping`);
       return NextResponse.json({ received: true, skipped: true });
     }
 
     // Record webhook event
-    await supabase.from('webhook_events').insert({
-      stripe_event_id: event.id,
+    await recordWebhookEvent({
+      stripeEventId: event.id,
       type: event.type,
       payload: event.data.object as any,
     });
@@ -108,13 +109,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Fetch purchase intent
-      const { data: purchaseIntent, error: fetchError } = await supabase
-        .from('purchase_intents')
-        .select('*')
-        .eq('id', purchaseIntentId)
-        .single();
+      const purchaseIntent = await getPurchaseIntentById(purchaseIntentId);
 
-      if (fetchError || !purchaseIntent) {
+      if (!purchaseIntent) {
         logger.error('Purchase intent not found', undefined, {
           extra: { purchaseIntentId },
         });
@@ -125,19 +122,16 @@ export async function POST(request: NextRequest) {
       }
 
       // If already provisioned, skip (idempotency)
-      if (purchaseIntent.status === 'provisioned') {
+      if (purchaseIntent.status === PurchaseIntentStatus.PROVISIONED) {
         logger.info(`Purchase intent ${purchaseIntentId} already provisioned`);
         return NextResponse.json({ received: true, alreadyProvisioned: true });
       }
 
       // Mark as paid
-      await supabase
-        .from('purchase_intents')
-        .update({
-          status: 'paid',
-          stripe_payment_intent_id: session.payment_intent as string,
-        })
-        .eq('id', purchaseIntentId);
+      await updatePurchaseIntent(purchaseIntentId, {
+        status: PurchaseIntentStatus.PAID,
+        stripePaymentIntentId: session.payment_intent as string,
+      });
 
       // Extract customer email
       const customerEmail = session.customer_email || purchaseIntent.email;
@@ -227,36 +221,28 @@ export async function POST(request: NextRequest) {
         }
 
         // Update purchase intent with Clerk user ID
-        await supabase
-          .from('purchase_intents')
-          .update({
-            clerk_user_id: clerkUserId,
-          })
-          .eq('id', purchaseIntentId);
+        await updatePurchaseIntent(purchaseIntentId, {
+          authUserId: clerkUserId,
+        });
 
         // Insert into users table (idempotent)
-        const { error: userInsertError } = await supabase
-          .from('users')
-          .insert({
-            clerk_user_id: clerkUserId,
+        try {
+          await createUser({
+            authUserId: clerkUserId,
             email: customerEmail,
-            passkey_enrolled: false,
-          })
-          .select()
-          .single();
-
-        // Ignore duplicate key error (user already exists)
-        if (userInsertError && userInsertError.code !== '23505') {
-          throw userInsertError;
+            passkeyEnrolled: false,
+          });
+        } catch (error: any) {
+          // Ignore if user already exists (duplicate auth user ID)
+          if (error.code !== 'UNIQUE_VIOLATION') {
+            throw error;
+          }
         }
 
         // Mark purchase intent as provisioned
-        await supabase
-          .from('purchase_intents')
-          .update({
-            status: 'provisioned',
-          })
-          .eq('id', purchaseIntentId);
+        await updatePurchaseIntent(purchaseIntentId, {
+          status: PurchaseIntentStatus.PROVISIONED,
+        });
 
         logger.info(`Successfully provisioned user for ${customerEmail}`);
       } catch (error: any) {

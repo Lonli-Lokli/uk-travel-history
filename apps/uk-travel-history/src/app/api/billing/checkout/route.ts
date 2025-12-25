@@ -5,7 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@uth/db';
+import {
+  createPurchaseIntent,
+  updatePurchaseIntent,
+  PurchaseIntentStatus,
+} from '@uth/db';
 import Stripe from 'stripe';
 import { logger } from '@uth/utils';
 
@@ -44,21 +48,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseServerClient();
-
     // Create purchase intent record
-    const { data: purchaseIntent, error: insertError } = await supabase
-      .from('purchase_intents')
-      .insert({
+    let purchaseIntent;
+    try {
+      purchaseIntent = await createPurchaseIntent({
         email,
-        status: 'created',
-        price_id: PRICE_ID,
-      })
-      .select()
-      .single();
-
-    if (insertError || !purchaseIntent) {
-      logger.error('Failed to create purchase intent', insertError);
+        status: PurchaseIntentStatus.CREATED,
+        priceId: PRICE_ID,
+      });
+    } catch (error) {
+      logger.error('Failed to create purchase intent', error);
       return NextResponse.json(
         { error: 'Failed to create purchase intent' },
         { status: 500 },
@@ -87,16 +86,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Update purchase intent with session ID
-    const { error: updateError } = await supabase
-      .from('purchase_intents')
-      .update({
-        stripe_checkout_session_id: session.id,
-        status: 'checkout_created',
-      })
-      .eq('id', purchaseIntent.id);
-
-    if (updateError) {
-      logger.error('Failed to update purchase intent', updateError);
+    try {
+      await updatePurchaseIntent(purchaseIntent.id, {
+        stripeCheckoutSessionId: session.id,
+        status: PurchaseIntentStatus.CHECKOUT_CREATED,
+      });
+    } catch (error) {
+      logger.error('Failed to update purchase intent', error);
       // Continue anyway - webhook can handle it
     }
 
