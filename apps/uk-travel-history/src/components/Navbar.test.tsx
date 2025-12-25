@@ -33,27 +33,27 @@ describe('Navbar', () => {
   describe('Rendering', () => {
     it('should render the navbar component', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav).toBeTruthy();
+      const header = container.querySelector('header');
+      expect(header).toBeTruthy();
     });
 
-    it('should have proper semantic HTML structure', () => {
+    it('should have proper semantic HTML5 structure', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.tagName).toBe('NAV');
+      const header = container.querySelector('header');
+      expect(header?.tagName).toBe('HEADER');
     });
 
     it('should have sticky positioning', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('sticky');
-      expect(nav?.className).toContain('top-0');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('sticky');
+      expect(header?.className).toContain('top-0');
     });
 
     it('should have fixed height for layout stability', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('h-16');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('h-14');
     });
   });
 
@@ -138,9 +138,9 @@ describe('Navbar', () => {
       expect(homeLink.className).toContain('text-slate-900');
     });
 
-    it('should mark about as active when on about page', async () => {
+    it('should mark about as active when on about subpage', async () => {
       const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/about');
+      usePathname.mockReturnValue('/about/team');
       render(<Navbar />);
       const aboutLink = screen.getByRole('link', { name: 'About' });
       expect(aboutLink.className).toContain('text-slate-900');
@@ -164,10 +164,10 @@ describe('Navbar', () => {
 
     it('should use exact match for home route', async () => {
       const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/about');
+      usePathname.mockReturnValue('/travel');
       render(<Navbar />);
       const homeLink = screen.getByRole('link', { name: 'Home' });
-      // Home should not be active when on /about
+      // Home should not be active when on /travel
       // Check that it has the inactive state classes, not the active state
       expect(homeLink.className).toContain('text-slate-600');
       expect(homeLink.className).toContain('opacity-70');
@@ -177,10 +177,10 @@ describe('Navbar', () => {
 
     it('should use startsWith match for non-home routes', async () => {
       const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/about/team');
+      usePathname.mockReturnValue('/travel/history');
       render(<Navbar />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
-      expect(aboutLink.className).toContain('text-slate-900');
+      const travelLink = screen.getByRole('link', { name: 'Travel' });
+      expect(travelLink.className).toContain('text-slate-900');
     });
   });
 
@@ -216,10 +216,9 @@ describe('Navbar', () => {
     it('should have proper touch target size (44x44px)', () => {
       render(<Navbar />);
       const menuButton = screen.getByRole('button', { name: 'Open menu' });
-      // Button uses size="icon" which translates to h-9 w-9 (36x36px)
-      // This is acceptable for mobile touch targets as it's close to 44px
-      expect(menuButton.className).toContain('h-9');
-      expect(menuButton.className).toContain('w-9');
+      // Button uses h-8 w-8 for more compact appearance on mobile
+      expect(menuButton.className).toContain('h-8');
+      expect(menuButton.className).toContain('w-8');
     });
   });
 
@@ -369,8 +368,8 @@ describe('Navbar', () => {
   describe('Responsive Design', () => {
     it('should have responsive layout classes', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('sticky');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('sticky');
     });
 
     it('should have max-width constraint', () => {
@@ -389,20 +388,20 @@ describe('Navbar', () => {
   describe('Styling', () => {
     it('should have border-bottom styling', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('border-b');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('border-b');
     });
 
     it('should have white background', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('bg-white');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('bg-white');
     });
 
     it('should have high z-index for stacking', () => {
       const { container } = render(<Navbar />);
-      const nav = container.querySelector('nav');
-      expect(nav?.className).toContain('z-50');
+      const header = container.querySelector('header');
+      expect(header?.className).toContain('z-50');
     });
 
     it('should have smooth transitions on links', () => {
@@ -504,6 +503,74 @@ describe('Navbar', () => {
       // Radix Dialog handles Escape internally
       // Just verify the dialog is open
       expect(screen.getByRole('list')).toBeTruthy();
+    });
+  });
+
+  describe('Conditional Navigation', () => {
+    it('should hide navigation on About page', async () => {
+      const { usePathname } = vi.mocked(await import('next/navigation'));
+      usePathname.mockReturnValue('/about');
+
+      render(<Navbar />);
+
+      // Navigation should not be visible
+      expect(screen.queryByRole('link', { name: 'Home' })).toBeFalsy();
+      expect(screen.queryByRole('link', { name: 'Travel' })).toBeFalsy();
+
+      // Menu button should not be visible
+      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeFalsy();
+    });
+
+    it('should hide navigation on Terms page', async () => {
+      const { usePathname } = vi.mocked(await import('next/navigation'));
+      usePathname.mockReturnValue('/terms');
+
+      render(<Navbar />);
+
+      // Navigation should not be visible
+      expect(screen.queryByRole('link', { name: 'Home' })).toBeFalsy();
+      expect(screen.queryByRole('link', { name: 'About' })).toBeFalsy();
+      expect(screen.queryByRole('link', { name: 'Travel' })).toBeFalsy();
+
+      // Menu button should not be visible
+      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeFalsy();
+    });
+
+    it('should show navigation on other pages', async () => {
+      const { usePathname } = vi.mocked(await import('next/navigation'));
+      usePathname.mockReturnValue('/travel');
+
+      render(<Navbar />);
+
+      // Navigation should be visible
+      expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'About' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Travel' })).toBeTruthy();
+    });
+
+    it('should always show logo regardless of page', async () => {
+      const { usePathname } = vi.mocked(await import('next/navigation'));
+
+      // Test on About page
+      usePathname.mockReturnValue('/about');
+      const { rerender } = render(<Navbar />);
+      expect(
+        screen.getByRole('link', { name: 'UK Travel Parser home' })
+      ).toBeTruthy();
+
+      // Test on Terms page
+      usePathname.mockReturnValue('/terms');
+      rerender(<Navbar />);
+      expect(
+        screen.getByRole('link', { name: 'UK Travel Parser home' })
+      ).toBeTruthy();
+
+      // Test on regular page
+      usePathname.mockReturnValue('/');
+      rerender(<Navbar />);
+      expect(
+        screen.getByRole('link', { name: 'UK Travel Parser home' })
+      ).toBeTruthy();
     });
   });
 });
