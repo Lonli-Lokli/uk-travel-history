@@ -130,7 +130,17 @@ export const Navbar = observer(() => {
                           avatarBox: 'w-8 h-8',
                         },
                       }}
-                    />
+                    >
+                      <UserButton.MenuItems>
+                        <UserButton.Link
+                          label="Account & Billing"
+                          labelIcon={
+                            <UIIcon iconName="credit-card" className="h-4 w-4" />
+                          }
+                          href="/account"
+                        />
+                      </UserButton.MenuItems>
+                    </UserButton>
                   </SignedIn>
                 </>
               )}
@@ -157,7 +167,17 @@ export const Navbar = observer(() => {
                           avatarBox: 'w-8 h-8',
                         },
                       }}
-                    />
+                    >
+                      <UserButton.MenuItems>
+                        <UserButton.Link
+                          label="Account & Billing"
+                          labelIcon={
+                            <UIIcon iconName="credit-card" className="h-4 w-4" />
+                          }
+                          href="/account"
+                        />
+                      </UserButton.MenuItems>
+                    </UserButton>
                   </SignedIn>
                 </>
               )}
