@@ -83,9 +83,7 @@ const routeProtectionMiddleware = async (
   // Define protected routes that require authentication
   // Per issue #100: member/premium routes redirect to /sign-in
   const isProtectedRoute = createRouteMatcher([
-    '/onboarding/(.*)',
     '/api/billing/(.*)',
-    '/api/user/(.*)',
   ]);
 
   const { userId } = await auth();
