@@ -1,7 +1,6 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -9,8 +8,6 @@ import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
-import { TravelToolbar } from './TravelToolbar';
-import { useNavbarToolbar } from '../app/LayoutClient';
 import { FeatureGateProvider } from '@uth/widgets';
 import {
   authStore,
@@ -18,23 +15,22 @@ import {
   paymentStore,
 } from '@uth/stores';
 import {
-  useFileUpload,
-  useExport,
   useClearAll,
   useCsvImport,
   useClipboardImport,
 } from './hooks';
 
+/**
+ * Travel page client component.
+ *
+ * Note: The toolbar (Import/Export buttons) is now rendered by the Navbar component
+ * based on the current route. This eliminates the need for context-based injection
+ * and useEffect timing issues that were causing the toolbar to not appear.
+ */
 export const TravelPageClient = observer(() => {
-  const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
-  const { handleExport } = useExport();
   const { handleClearAll } = useClearAll();
-  const { setToolbar } = useNavbarToolbar();
 
   const {
-    fileInputRef: csvFileInputRef,
-    handleFileSelect: handleCsvFileSelect,
-    triggerFileInput: triggerCsvFileInput,
     isDialogOpen: isCsvDialogOpen,
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
@@ -46,26 +42,11 @@ export const TravelPageClient = observer(() => {
   } = useCsvImport();
 
   const {
-    handleClipboardPaste,
     isDialogOpen: isClipboardDialogOpen,
     previewData: clipboardPreviewData,
     confirmImport: confirmClipboardImport,
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
-
-  // Inject toolbar into Navbar
-  useEffect(() => {
-    setToolbar(
-      <TravelToolbar
-        triggerFileInput={triggerFileInput}
-        triggerCsvFileInput={triggerCsvFileInput}
-        handleClipboardPaste={handleClipboardPaste}
-        handleExport={handleExport}
-      />
-    );
-
-    return () => setToolbar(null);
-  }, [setToolbar, triggerFileInput, triggerCsvFileInput, handleClipboardPaste, handleExport]);
 
   return (
     <FeatureGateProvider
@@ -73,21 +54,6 @@ export const TravelPageClient = observer(() => {
       authStore={authStore}
       paymentStore={paymentStore}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-
-      <input
-        ref={csvFileInputRef}
-        type="file"
-        accept=".csv,.txt,.xlsx"
-        className="hidden"
-        onChange={handleCsvFileSelect}
-      />
 
       <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 min-h-[calc(100vh-60px)]">
         <SummaryCards />

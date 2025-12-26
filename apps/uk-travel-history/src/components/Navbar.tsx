@@ -16,7 +16,13 @@ import {
 } from '@uth/ui';
 import { navigationStore } from '@uth/stores';
 import { cn } from '@uth/utils';
-import type { ReactNode } from 'react';
+import { TravelToolbar } from './TravelToolbar';
+import {
+  useFileUpload,
+  useExport,
+  useCsvImport,
+  useClipboardImport,
+} from './hooks';
 
 interface NavItem {
   href: string;
@@ -29,12 +35,49 @@ const navItems: NavItem[] = [
   { href: '/travel', label: 'Travel' },
 ];
 
-interface NavbarProps {
-  children?: ReactNode;
-}
-
-export const Navbar = observer(({ children }: NavbarProps) => {
+export const Navbar = observer(() => {
   const pathname = usePathname();
+
+  // Hooks for travel page toolbar
+  const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
+  const { handleExport } = useExport();
+  const {
+    fileInputRef: csvFileInputRef,
+    handleFileSelect: handleCsvFileSelect,
+    triggerFileInput: triggerCsvFileInput,
+  } = useCsvImport();
+  const { handleClipboardPaste } = useClipboardImport();
+
+  // Determine if we should show the toolbar based on current route
+  const showToolbar = pathname === '/travel';
+
+  // Render the toolbar for the travel page
+  const toolbar = showToolbar ? (
+    <>
+      {/* Hidden file inputs for the travel page */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={csvFileInputRef}
+        type="file"
+        accept=".csv,.txt,.xlsx"
+        className="hidden"
+        onChange={handleCsvFileSelect}
+      />
+      {/* Toolbar component */}
+      <TravelToolbar
+        triggerFileInput={triggerFileInput}
+        triggerCsvFileInput={triggerCsvFileInput}
+        handleClipboardPaste={handleClipboardPaste}
+        handleExport={handleExport}
+      />
+    </>
+  ) : null;
 
   const isActive = (href: string) => {
     // Exact match for home, starts with for others
@@ -65,16 +108,16 @@ export const Navbar = observer(({ children }: NavbarProps) => {
             </span>
           </Link>
 
-          {/* Center content (children/toolbar) */}
-          {children && (
+          {/* Center content (toolbar) */}
+          {toolbar && (
             <div className="flex items-center gap-2 flex-1 justify-center">
-              {children}
+              {toolbar}
             </div>
           )}
 
           {/* Desktop Navigation */}
           {!hideNavigation && (
-            <nav className={cn('hidden md:flex items-center', children ? 'gap-1' : 'gap-2')} aria-label="Main navigation">
+            <nav className={cn('hidden md:flex items-center', toolbar ? 'gap-1' : 'gap-2')} aria-label="Main navigation">
               <NavigationMenu>
                 <NavigationMenuList className="gap-1">
                   {navItems.map((item) => (
