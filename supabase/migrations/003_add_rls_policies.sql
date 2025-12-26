@@ -8,7 +8,7 @@
 -- ============================================================================
 
 -- Get current user's Clerk user ID from JWT claims
-CREATE OR REPLACE FUNCTION auth.clerk_user_id()
+CREATE OR REPLACE FUNCTION public.clerk_user_id()
 RETURNS TEXT AS $$
 BEGIN
   -- Extract clerk user ID from JWT claims
@@ -18,7 +18,7 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- Check if current user has premium access
-CREATE OR REPLACE FUNCTION auth.current_user_has_premium_access()
+CREATE OR REPLACE FUNCTION public.current_user_has_premium_access()
 RETURNS BOOLEAN AS $$
 DECLARE
   user_record users;
@@ -26,7 +26,7 @@ BEGIN
   -- Get current user record
   SELECT * INTO user_record
   FROM users
-  WHERE clerk_user_id = auth.clerk_user_id();
+  WHERE clerk_user_id = public.clerk_user_id();
 
   -- Return false if user not found
   IF NOT FOUND THEN
@@ -52,15 +52,15 @@ CREATE POLICY users_select_own
   ON users
   FOR SELECT
   TO authenticated
-  USING (clerk_user_id = auth.clerk_user_id());
+  USING (clerk_user_id = public.clerk_user_id());
 
 -- Policy: Users can update their own profile
 CREATE POLICY users_update_own
   ON users
   FOR UPDATE
   TO authenticated
-  USING (clerk_user_id = auth.clerk_user_id())
-  WITH CHECK (clerk_user_id = auth.clerk_user_id());
+  USING (clerk_user_id = public.clerk_user_id())
+  WITH CHECK (clerk_user_id = public.clerk_user_id());
 
 -- Note: INSERT on users is restricted to service_role only (via webhooks)
 -- This prevents users from creating their own accounts with premium access
@@ -79,7 +79,7 @@ CREATE POLICY purchase_intents_select_own
   ON purchase_intents
   FOR SELECT
   TO authenticated
-  USING (clerk_user_id = auth.clerk_user_id());
+  USING (clerk_user_id = public.clerk_user_id());
 
 -- Note: INSERT/UPDATE on purchase_intents is restricted to service_role only
 -- This prevents users from manipulating their payment status
@@ -103,7 +103,7 @@ REVOKE SELECT ON webhook_events FROM authenticated;
 --   ON premium_content
 --   FOR SELECT
 --   TO authenticated
---   USING (auth.current_user_has_premium_access());
+--   USING (public.current_user_has_premium_access());
 --
 -- This ensures only users with active premium subscriptions can access the data
 
