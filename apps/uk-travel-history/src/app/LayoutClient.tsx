@@ -2,7 +2,7 @@
 
 import { Navbar } from '../components/Navbar';
 import { usePathname } from 'next/navigation';
-import { ReactNode, createContext, useContext, useState, useEffect } from 'react';
+import { ReactNode, createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 interface NavbarToolbarContextValue {
   setToolbar: (toolbar: ReactNode) => void;
@@ -27,8 +27,11 @@ export function LayoutClient({ children }: { children: ReactNode }) {
     setToolbar(null);
   }, [pathname]);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({ setToolbar }), [setToolbar]);
+
   return (
-    <NavbarToolbarContext.Provider value={{ setToolbar }}>
+    <NavbarToolbarContext.Provider value={contextValue}>
       <Navbar>{toolbar}</Navbar>
       <div className="flex-1 flex flex-col">
         {children}
