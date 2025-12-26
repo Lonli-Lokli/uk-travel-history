@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 import { compose, when, type MiddlewareFunction } from './middleware-compose';
 
@@ -56,10 +55,11 @@ const clerkCredentialsCheckMiddleware: MiddlewareFunction = async (
 };
 
 /**
- * Passkey enrollment check middleware
- * Verifies that authenticated users have enrolled passkeys for sensitive routes
+ * Route authorization middleware
+ * Handles authentication and authorization for protected routes
+ * Part of issue #100: defense-in-depth security with middleware + RLS
  */
-const passkeyEnrollmentMiddleware = async (
+const routeAuthorizationMiddleware = async (
   auth: any,
   req: NextRequest,
 ): Promise<NextResponse> => {
@@ -69,95 +69,97 @@ const passkeyEnrollmentMiddleware = async (
   // Define public routes that don't require authentication
   const isPublicRoute = createRouteMatcher([
     '/',
+    '/about',
+    '/terms',
+    '/status',
     '/travel',
+    '/api/parse',
     '/api/billing/checkout',
     '/api/stripe/webhook',
+    '/api/webhooks/clerk',
     '/api/cron/supabase-keepalive',
-    '/api/parse',
-    '/api/export',
   ]);
 
-  // Define routes that require passkey enrollment
-  const requiresPasskeyRoute = createRouteMatcher([
-    '/travel',
-    '/api/parse',
+  // Define routes that require premium subscription
+  // These routes get double-checked: here in middleware AND in route handlers
+  const requiresPremiumRoute = createRouteMatcher([
     '/api/export',
+    '/api/import-full',
   ]);
 
   const { userId } = await auth();
 
-  // Allow public routes
+  // Allow public routes without auth check
   if (isPublicRoute(req)) {
-    // For authenticated users on public routes that require passkey
-    if (userId && requiresPasskeyRoute(req)) {
-      try {
-        // First check Clerk public metadata (cached)
-        const client = await clerkClient();
-        const user = await client.users.getUser(userId);
-
-        // Check metadata cache first
-        const passkeyEnrolled = user.publicMetadata?.passkey_enrolled as
-          | boolean
-          | undefined;
-
-        if (passkeyEnrolled === true) {
-          // Fast path: metadata confirms enrollment
-          return NextResponse.next();
-        }
-
-        // Fallback to database if metadata not set or false
-        const dbUser = await getUserByAuthId(userId);
-
-        if (!dbUser) {
-          // User not found in database yet - redirect to onboarding
-          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
-        }
-
-        if (!dbUser.passkeyEnrolled) {
-          // User hasn't enrolled passkey
-          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
-        }
-
-        // If we get here, Supabase says enrolled but metadata doesn't
-        // Sync metadata in background (fire and forget)
-        client.users
-          .updateUser(userId, {
-            publicMetadata: {
-              ...user.publicMetadata,
-              passkey_enrolled: true,
-            },
-          })
-          .catch((err) => {
-            logger.error('Failed to sync passkey metadata', err);
-          });
-      } catch (error) {
-        logger.error('Error checking passkey enrollment', error);
-        // On error, allow through to avoid blocking legitimate users
-        // The actual protected resources will handle auth
-        return NextResponse.next();
-      }
-    }
-
     return NextResponse.next();
   }
 
-  // For protected routes, ensure authentication
+  // For all non-public routes, require authentication
   if (!userId) {
     return NextResponse.redirect(new URL('/claim', req.url));
   }
 
+  // For premium routes, check subscription status using Clerk metadata
+  // This provides early rejection before reaching route handlers
+  if (requiresPremiumRoute(req)) {
+    try {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+
+      // Check if user has premium access via public metadata
+      // This is synced from Stripe webhooks or subscription updates
+      const subscriptionTier = user.publicMetadata?.subscription_tier as
+        | string
+        | undefined;
+      const subscriptionStatus = user.publicMetadata?.subscription_status as
+        | string
+        | undefined;
+
+      // Allow access if user has active premium subscription
+      // Tiers: 'free', 'monthly', 'yearly', 'lifetime'
+      // Statuses: 'active', 'trialing', 'past_due', 'canceled', etc.
+      const hasPremiumTier = ['monthly', 'yearly', 'lifetime'].includes(
+        subscriptionTier || '',
+      );
+      const hasActiveStatus = ['active', 'trialing'].includes(
+        subscriptionStatus || '',
+      );
+
+      if (!hasPremiumTier || !hasActiveStatus) {
+        // User doesn't have premium access - return 403
+        return NextResponse.json(
+          {
+            error: 'Premium subscription required',
+            code: 'premium_required',
+          },
+          { status: 403 },
+        );
+      }
+
+      // User has premium access - allow through
+      // Route handler will perform additional validation via assertFeatureAccess
+      return NextResponse.next();
+    } catch (error) {
+      logger.error('Error checking premium access in middleware', error);
+      // On error, allow through to route handler
+      // The route handler's assertFeatureAccess will be the final gate
+      return NextResponse.next();
+    }
+  }
+
+  // For other protected routes, allow authenticated users through
   return NextResponse.next();
 };
 
 /**
  * Clerk authentication middleware
- * Integrates with Clerk's clerkMiddleware and handles passkey enforcement
+ * Integrates with Clerk's clerkMiddleware and handles route authorization
  */
 const clerkAuthMiddleware: MiddlewareFunction = async (
   req: NextRequest,
 ): Promise<NextResponse | null> => {
   const { clerkMiddleware } = await import('@clerk/nextjs/server');
-  const wrappedMiddleware = clerkMiddleware(passkeyEnrollmentMiddleware);
+  const wrappedMiddleware = clerkMiddleware(routeAuthorizationMiddleware);
   const result = await wrappedMiddleware(req, {} as any);
   // Clerk middleware can return Response or undefined, convert to NextResponse | null
   if (!result) return null;
@@ -170,7 +172,12 @@ const clerkAuthMiddleware: MiddlewareFunction = async (
  * Composition strategy:
  * 1. Check auth provider mode (Firebase vs Clerk)
  * 2. If Firebase: pass through (auth handled in API routes)
- * 3. If Clerk: check credentials → run Clerk auth → enforce passkey
+ * 3. If Clerk: check credentials → run Clerk auth → enforce route authorization
+ *
+ * Authorization layers (defense-in-depth for issue #100):
+ * - Middleware: Early rejection for premium routes using Clerk metadata
+ * - Route handlers: Feature-based enforcement via assertFeatureAccess
+ * - Database: Supabase RLS policies enforce data access
  *
  * This demonstrates functional programming principles:
  * - Pure functions for each concern (auth provider check, credential check, etc.)
