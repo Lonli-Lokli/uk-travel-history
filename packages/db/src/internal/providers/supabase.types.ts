@@ -117,6 +117,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      has_premium_access: {
+        Args: { user_id: string };
+        Returns: boolean;
+      };
     };
   };
 }

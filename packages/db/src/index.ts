@@ -18,7 +18,10 @@ export type {
   CreateWebhookEventData,
 } from './types/domain';
 
-export { DbError, DbErrorCode, PurchaseIntentStatus } from './types/domain';
+export { DbError, DbErrorCode, PurchaseIntentStatus, SubscriptionTier, SubscriptionStatus } from './types/domain';
+
+// Export client factory functions
+export { createUserScopedClient, createAdminClient, checkUserHasPremiumAccess } from './lib/client-factory';
 
 // Export public operations
 export {
