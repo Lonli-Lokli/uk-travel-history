@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
+import { SignedIn, SignedOut, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs';
 import {
   Button,
   DropdownMenu,
@@ -13,7 +14,7 @@ import {
 } from '@uth/ui';
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { useFeatureFlags, FeatureDropdownItem } from '@uth/widgets';
-import { authStore, travelStore, uiStore } from '@uth/stores';
+import { travelStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -32,7 +33,6 @@ export const Header = observer(
     const { isFeatureEnabled } = useFeatureFlags();
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
-    const user = authStore.user;
     const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.AUTH);
 
     return (
@@ -230,41 +230,18 @@ export const Header = observer(
               {/* Auth UI - only show if feature flag is enabled */}
               {isAuthEnabled && (
                 <>
-                  {user ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <UIIcon iconName="user" className="h-4 w-4 mr-1.5" />
-                          <span className="hidden sm:inline">
-                            {user.displayName ||
-                              user.email?.split('@')[0] ||
-                              'Account'}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-[200px]">
-                        <DropdownMenuItem disabled>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">
-                              {user.displayName || 'User'}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {user.email}
-                            </span>
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => uiStore.handleSignOut()}
-                        >
-                          <UIIcon iconName="logout" className="h-4 w-4 shrink-0" />
-                          Sign Out
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
+                  <SignedIn>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: 'w-8 h-8',
+                        },
+                      }}
+                    />
+                  </SignedIn>
+                  <SignedOut>
                     <div className="flex items-center gap-2">
-                      <Link href="/sign-in">
+                      <SignInButton mode="modal">
                         <Button
                           variant="outline"
                           size="sm"
@@ -275,17 +252,17 @@ export const Header = observer(
                           />
                           <span className="hidden sm:inline">Sign In</span>
                         </Button>
-                      </Link>
-                      <Link href="/sign-up">
+                      </SignInButton>
+                      <SignUpButton mode="modal">
                         <Button
                           size="sm"
                           className="hidden sm:flex"
                         >
                           Sign Up
                         </Button>
-                      </Link>
+                      </SignUpButton>
                     </div>
-                  )}
+                  </SignedOut>
                 </>
               )}
             </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs';
 import {
   Button,
   Drawer,
@@ -118,16 +118,16 @@ export const Navbar = observer(() => {
                 <>
                   <SignedOut>
                     <div className="flex items-center gap-2">
-                      <Link href="/sign-in">
+                      <SignInButton mode="modal">
                         <Button variant="outline" size="sm" className="h-9">
                           Sign In
                         </Button>
-                      </Link>
-                      <Link href="/sign-up">
+                      </SignInButton>
+                      <SignUpButton mode="modal">
                         <Button size="sm" className="h-9">
                           Sign Up
                         </Button>
-                      </Link>
+                      </SignUpButton>
                     </div>
                   </SignedOut>
                   <SignedIn>
@@ -152,16 +152,16 @@ export const Navbar = observer(() => {
                 <>
                   <SignedOut>
                     <div className="flex items-center gap-1.5">
-                      <Link href="/sign-in">
+                      <SignInButton mode="modal">
                         <Button variant="outline" size="sm" className="h-8 text-xs px-3">
                           Sign In
                         </Button>
-                      </Link>
-                      <Link href="/sign-up">
+                      </SignInButton>
+                      <SignUpButton mode="modal">
                         <Button size="sm" className="h-8 text-xs px-3">
                           Sign Up
                         </Button>
-                      </Link>
+                      </SignUpButton>
                     </div>
                   </SignedOut>
                   <SignedIn>
