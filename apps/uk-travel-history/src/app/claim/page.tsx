@@ -23,11 +23,11 @@ export default function ClaimPage() {
           elements: {
             rootBox: 'mx-auto',
             card: 'shadow-xl',
+            footer: 'hidden', // Hide the footer which contains the sign-up link
           },
         }}
         routing="path"
         path="/claim"
-        signUpUrl="/claim"
         afterSignInUrl="/onboarding/passkey"
         redirectUrl="/onboarding/passkey"
       />
