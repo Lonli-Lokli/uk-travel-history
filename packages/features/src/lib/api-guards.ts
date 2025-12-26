@@ -12,6 +12,7 @@
  * 5. Type safety - TypeScript ensures correctness at compile time
  */
 
+/* eslint-disable @nx/enforce-module-boundaries */
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import { getUserByAuthId } from '@uth/db';

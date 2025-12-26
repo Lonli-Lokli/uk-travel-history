@@ -6,7 +6,8 @@
  * subscription requirements, and rollout percentages.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+/* eslint-disable @nx/enforce-module-boundaries */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   checkFeatureAccess,
@@ -15,33 +16,20 @@ import {
   assertFeatureAccess,
   withFeatureAccess,
   type UserContext,
-  type FeaturePolicy,
 } from './api-guards';
 import { FEATURES, TIERS } from './features';
+import { logger } from '@uth/utils';
+import { getUserByAuthId } from '@uth/db';
+import * as edgeConfigFlags from './edgeConfigFlags';
 
 // Mock dependencies
-vi.mock('@uth/utils', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-// Mock Edge Config to respect default feature policies
-vi.mock('./edgeConfigFlags', () => {
-  return {
-    isFeatureEnabled: vi.fn(),
-  };
-});
-
-// Mock auth dependencies
-vi.mock('@clerk/nextjs/server', () => ({
-  auth: vi.fn(),
-}));
-
 vi.mock('@uth/db', () => ({
   getUserByAuthId: vi.fn(),
+}));
+
+// Mock auth dependencies (these are external packages, ok to mock)
+vi.mock('@clerk/nextjs/server', () => ({
+  auth: vi.fn(),
 }));
 
 vi.mock('@uth/auth-server', () => ({
@@ -49,22 +37,22 @@ vi.mock('@uth/auth-server', () => ({
   getSubscription: vi.fn(),
 }));
 
-// Get mock references after module mocks are set up
-let mockLogger: any;
-let mockIsFeatureEnabled: any;
-
-beforeEach(async () => {
+beforeEach(() => {
   vi.clearAllMocks();
 
-  // Get mock references
-  const utils = await import('@uth/utils');
-  mockLogger = utils.logger;
+  // Spy on logger methods (with empty implementation to suppress logs during tests)
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  vi.spyOn(logger, 'info').mockImplementation(() => {});
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  vi.spyOn(logger, 'error').mockImplementation(() => {});
 
-  const edgeConfig = await import('./edgeConfigFlags');
-  mockIsFeatureEnabled = edgeConfig.isFeatureEnabled;
+  // Spy on db methods
+  vi.mocked(getUserByAuthId).mockResolvedValue(null);
 
-  // Default mock for isFeatureEnabled to respect defaults
-  mockIsFeatureEnabled.mockImplementation(async (featureId: string) => {
+  // Spy on edge config
+  vi.spyOn(edgeConfigFlags, 'isFeatureEnabled').mockImplementation(async (featureId: string) => {
     const policy = DEFAULT_FEATURE_POLICIES[featureId];
     return policy ? policy.enabled : false;
   });
@@ -522,7 +510,7 @@ describe('API Feature Guards', () => {
       const context = await getUserContext(request);
 
       expect(context).toBeNull();
-      expect(mockLogger.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         '[Feature Guards] Error extracting user context',
         expect.any(Error)
       );
@@ -555,7 +543,7 @@ describe('API Feature Guards', () => {
 
       expect(context).toBeTruthy();
       expect(context?.userId).toBe('user-123');
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -588,7 +576,7 @@ describe('API Feature Guards', () => {
         assertFeatureAccess(request, FEATURES.EXCEL_EXPORT)
       ).rejects.toThrow();
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         '[Feature Access] Denied',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -612,7 +600,7 @@ describe('API Feature Guards', () => {
       const context = await assertFeatureAccess(request, FEATURES.PDF_IMPORT);
 
       // Should log access decision
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -704,7 +692,7 @@ describe('API Feature Guards', () => {
       const response = await wrappedHandler(request);
 
       expect(response.status).toBe(500);
-      expect(mockLogger.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         '[Feature Access] Unexpected error in route handler',
         expect.any(Error)
       );
