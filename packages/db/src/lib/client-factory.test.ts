@@ -219,7 +219,9 @@ describe('client-factory', () => {
       process.env.SUPABASE_URL = 'https://test.supabase.co';
       process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Intentionally empty - suppressing console.error during test
+      });
       const mockError = new Error('RPC failed');
       const mockRpc = vi.fn().mockResolvedValue({ data: null, error: mockError });
       const mockClient = { rpc: mockRpc };
@@ -238,7 +240,9 @@ describe('client-factory', () => {
       process.env.SUPABASE_URL = 'https://test.supabase.co';
       process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Intentionally empty - suppressing console.error during test
+      });
       const mockError = { message: 'Connection timeout', code: 'ETIMEDOUT' };
       const mockRpc = vi.fn().mockResolvedValue({ data: null, error: mockError });
       const mockClient = { rpc: mockRpc };

@@ -20,7 +20,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 
 // Import mocked dependencies
 import { logger } from '@uth/utils';
-import { clerkClient, createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
+import { createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
 
 describe('Proxy (Next.js 16 Middleware)', () => {
   const originalEnv = process.env;
@@ -156,7 +156,7 @@ describe('Proxy (Next.js 16 Middleware)', () => {
       vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
 
       const req = createMockRequest('/dashboard');
-      const result = await proxy(req);
+      await proxy(req);
 
       // The actual redirect happens in handleClerkMiddleware
       expect(mockAuth).toHaveBeenCalled();
