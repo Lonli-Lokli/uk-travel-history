@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
+import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import {
   Button,
   Drawer,
@@ -14,9 +15,10 @@ import {
   NavigationMenuLink,
   UIIcon,
 } from '@uth/ui';
-import { navigationStore } from '@uth/stores';
+import { navigationStore, navbarToolbarStore } from '@uth/stores';
 import { cn } from '@uth/utils';
-import type { ReactNode } from 'react';
+import { useFeatureFlags } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
 
 interface NavItem {
   href: string;
@@ -29,12 +31,12 @@ const navItems: NavItem[] = [
   { href: '/travel', label: 'Travel' },
 ];
 
-interface NavbarProps {
-  children?: ReactNode;
-}
-
-export const Navbar = observer(({ children }: NavbarProps) => {
+export const Navbar = observer(() => {
   const pathname = usePathname();
+  const { isFeatureEnabled } = useFeatureFlags();
+
+  // Update pathname in store - this will auto-clear toolbar on navigation
+  navbarToolbarStore.updatePathname(pathname);
 
   const isActive = (href: string) => {
     // Exact match for home, starts with for others
@@ -46,6 +48,9 @@ export const Navbar = observer(({ children }: NavbarProps) => {
 
   // Hide navigation on About and Terms pages for cleaner minimalist design
   const hideNavigation = pathname === '/about' || pathname === '/terms';
+
+  // Check if auth feature is enabled
+  const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.AUTH);
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 h-14">
@@ -65,58 +70,108 @@ export const Navbar = observer(({ children }: NavbarProps) => {
             </span>
           </Link>
 
-          {/* Center content (children/toolbar) */}
-          {children && (
+          {/* Center content (toolbar from store) */}
+          {navbarToolbarStore.hasToolbarItems && (
             <div className="flex items-center gap-2 flex-1 justify-center">
-              {children}
+              {navbarToolbarStore.toolbarItems.map((item) => (
+                <div key={item.id}>{item.element}</div>
+              ))}
             </div>
           )}
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation and Auth */}
           {!hideNavigation && (
-            <nav className={cn('hidden md:flex items-center', children ? 'gap-1' : 'gap-2')} aria-label="Main navigation">
-              <NavigationMenu>
-                <NavigationMenuList className="gap-1">
-                  {navItems.map((item) => (
-                    <NavigationMenuItem key={item.href}>
-                      <NavigationMenuLink asChild>
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            'group inline-flex h-9 w-max items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all',
-                            'hover:bg-slate-50 hover:text-slate-900',
-                            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                            'relative',
-                            isActive(item.href)
-                              ? 'text-slate-900'
-                              : 'text-slate-600 opacity-70 hover:opacity-100'
-                          )}
-                        >
-                          {item.label}
-                          {/* Active indicator */}
-                          {isActive(item.href) && (
-                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                          )}
-                        </Link>
-                      </NavigationMenuLink>
-                    </NavigationMenuItem>
-                  ))}
-                </NavigationMenuList>
-              </NavigationMenu>
-            </nav>
+            <div className="hidden md:flex items-center gap-2 ml-auto">
+              <nav className={cn('flex items-center', navbarToolbarStore.hasToolbarItems ? 'gap-1' : 'gap-2')} aria-label="Main navigation">
+                <NavigationMenu>
+                  <NavigationMenuList className="gap-1">
+                    {navItems.map((item) => (
+                      <NavigationMenuItem key={item.href}>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              'group inline-flex h-9 w-max items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all',
+                              'hover:bg-slate-50 hover:text-slate-900',
+                              'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                              'relative',
+                              isActive(item.href)
+                                ? 'text-slate-900'
+                                : 'text-slate-600 opacity-70 hover:opacity-100'
+                            )}
+                          >
+                            {item.label}
+                            {/* Active indicator */}
+                            {isActive(item.href) && (
+                              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                            )}
+                          </Link>
+                        </NavigationMenuLink>
+                      </NavigationMenuItem>
+                    ))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </nav>
+
+              {/* Auth UI (desktop) - only show when auth feature is enabled */}
+              {isAuthEnabled && (
+                <>
+                  <SignedOut>
+                    <Link href="/claim">
+                      <Button variant="outline" size="sm" className="h-9">
+                        Sign In
+                      </Button>
+                    </Link>
+                  </SignedOut>
+                  <SignedIn>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: 'w-8 h-8',
+                        },
+                      }}
+                    />
+                  </SignedIn>
+                </>
+              )}
+            </div>
           )}
 
-          {/* Mobile Menu Trigger */}
+          {/* Mobile Menu Trigger and Auth */}
           {!hideNavigation && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="md:hidden shrink-0 h-8 w-8"
-              onClick={() => navigationStore.openMobileMenu()}
-              aria-label="Open menu"
-            >
-              <UIIcon iconName="menu" className="h-4 w-4" />
-            </Button>
+            <div className="md:hidden flex items-center gap-2 ml-auto">
+              {/* Auth UI (mobile) - only show when auth feature is enabled */}
+              {isAuthEnabled && (
+                <>
+                  <SignedOut>
+                    <Link href="/claim">
+                      <Button variant="outline" size="sm" className="h-8 text-xs px-3">
+                        Sign In
+                      </Button>
+                    </Link>
+                  </SignedOut>
+                  <SignedIn>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: 'w-8 h-8',
+                        },
+                      }}
+                    />
+                  </SignedIn>
+                </>
+              )}
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 h-8 w-8"
+                onClick={() => navigationStore.openMobileMenu()}
+                aria-label="Open menu"
+              >
+                <UIIcon iconName="menu" className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
       </div>

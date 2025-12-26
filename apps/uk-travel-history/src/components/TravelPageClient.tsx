@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -9,28 +9,34 @@ import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
-import { TravelToolbar } from './TravelToolbar';
-import { useNavbarToolbar } from '../app/LayoutClient';
 import { FeatureGateProvider } from '@uth/widgets';
+import { TravelToolbar } from './TravelToolbar';
 import {
   authStore,
   monetizationStore,
   paymentStore,
+  navbarToolbarStore,
 } from '@uth/stores';
 import {
-  useFileUpload,
-  useExport,
   useClearAll,
   useCsvImport,
   useClipboardImport,
+  useFileUpload,
+  useExport,
 } from './hooks';
 
+/**
+ * Travel page client component.
+ *
+ * This component registers its toolbar items with the navbarToolbarStore.
+ * The Navbar observes the store and renders the registered items.
+ */
 export const TravelPageClient = observer(() => {
+  const { handleClearAll } = useClearAll();
+
+  // Hooks for toolbar functionality
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
   const { handleExport } = useExport();
-  const { handleClearAll } = useClearAll();
-  const { setToolbar } = useNavbarToolbar();
-
   const {
     fileInputRef: csvFileInputRef,
     handleFileSelect: handleCsvFileSelect,
@@ -53,19 +59,54 @@ export const TravelPageClient = observer(() => {
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
 
-  // Inject toolbar into Navbar
+  // Register toolbar items with the store on mount
   useEffect(() => {
-    setToolbar(
-      <TravelToolbar
-        triggerFileInput={triggerFileInput}
-        triggerCsvFileInput={triggerCsvFileInput}
-        handleClipboardPaste={handleClipboardPaste}
-        handleExport={handleExport}
-      />
-    );
+    navbarToolbarStore.registerToolbarItems([
+      {
+        id: 'travel-toolbar',
+        element: (
+          <>
+            {/* Hidden file inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <input
+              ref={csvFileInputRef}
+              type="file"
+              accept=".csv,.txt,.xlsx"
+              className="hidden"
+              onChange={handleCsvFileSelect}
+            />
+            {/* Toolbar component */}
+            <TravelToolbar
+              triggerFileInput={triggerFileInput}
+              triggerCsvFileInput={triggerCsvFileInput}
+              handleClipboardPaste={handleClipboardPaste}
+              handleExport={handleExport}
+            />
+          </>
+        ),
+      },
+    ]);
 
-    return () => setToolbar(null);
-  }, [setToolbar, triggerFileInput, triggerCsvFileInput, handleClipboardPaste, handleExport]);
+    // Cleanup: clear toolbar when component unmounts
+    return () => {
+      navbarToolbarStore.clearToolbar();
+    };
+  }, [
+    fileInputRef,
+    csvFileInputRef,
+    handleFileSelect,
+    handleCsvFileSelect,
+    triggerFileInput,
+    triggerCsvFileInput,
+    handleClipboardPaste,
+    handleExport,
+  ]);
 
   return (
     <FeatureGateProvider
@@ -73,21 +114,6 @@ export const TravelPageClient = observer(() => {
       authStore={authStore}
       paymentStore={paymentStore}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-
-      <input
-        ref={csvFileInputRef}
-        type="file"
-        accept=".csv,.txt,.xlsx"
-        className="hidden"
-        onChange={handleCsvFileSelect}
-      />
 
       <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 min-h-[calc(100vh-60px)]">
         <SummaryCards />

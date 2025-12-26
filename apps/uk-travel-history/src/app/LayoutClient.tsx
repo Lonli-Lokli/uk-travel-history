@@ -1,38 +1,21 @@
 'use client';
 
 import { Navbar } from '../components/Navbar';
-import { usePathname } from 'next/navigation';
-import { ReactNode, createContext, useContext, useState, useEffect } from 'react';
+import { ReactNode } from 'react';
 
-interface NavbarToolbarContextValue {
-  setToolbar: (toolbar: ReactNode) => void;
-}
-
-const NavbarToolbarContext = createContext<NavbarToolbarContextValue>({
-  setToolbar: () => {
-    // Default no-op function
-  },
-});
-
-export function useNavbarToolbar() {
-  return useContext(NavbarToolbarContext);
-}
-
+/**
+ * Layout client component that wraps the app with the Navbar.
+ *
+ * The Navbar now handles its own toolbar rendering based on the current route,
+ * eliminating the need for context-based injection and useEffect timing issues.
+ */
 export function LayoutClient({ children }: { children: ReactNode }) {
-  const [toolbar, setToolbar] = useState<ReactNode>(null);
-  const pathname = usePathname();
-
-  // Clear toolbar on route change
-  useEffect(() => {
-    setToolbar(null);
-  }, [pathname]);
-
   return (
-    <NavbarToolbarContext.Provider value={{ setToolbar }}>
-      <Navbar>{toolbar}</Navbar>
+    <>
+      <Navbar />
       <div className="flex-1 flex flex-col">
         {children}
       </div>
-    </NavbarToolbarContext.Provider>
+    </>
   );
 }

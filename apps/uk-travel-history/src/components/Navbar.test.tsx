@@ -194,7 +194,8 @@ describe('Navbar', () => {
     it('should show mobile menu trigger only on mobile', () => {
       render(<Navbar />);
       const menuButton = screen.getByRole('button', { name: 'Open menu' });
-      expect(menuButton.className).toContain('md:hidden');
+      // The button's parent container has md:hidden class
+      expect(menuButton.parentElement?.className).toContain('md:hidden');
     });
 
     it('should open mobile menu when trigger is clicked', () => {

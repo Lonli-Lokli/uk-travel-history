@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
 import { format, parseISO } from 'date-fns';
+import { assertFeatureAccess } from '@uth/features/server';
+import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -37,7 +39,9 @@ interface ExportData {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication handled by Clerk middleware in proxy.ts
+    // Enforce feature access - Excel export requires premium tier
+    await assertFeatureAccess(request, FEATURES.EXCEL_EXPORT);
+
     const formData = await request.formData();
     const tripsDataStr = formData.get('tripsData') as string;
     const exportMode = (formData.get('exportMode') as string) || 'ilr';

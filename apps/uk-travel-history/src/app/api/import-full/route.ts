@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
 import { parse, format } from 'date-fns';
+import { assertFeatureAccess } from '@uth/features/server';
+import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication handled by Clerk middleware in proxy.ts
+    // Enforce feature access - CSV/Excel import feature
+    await assertFeatureAccess(request, FEATURES.CSV_IMPORT);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 

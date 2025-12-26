@@ -11,6 +11,11 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./server": {
+      "types": "./src/lib/server.ts",
+      "import": "./src/lib/server.ts",
+      "default": "./src/lib/server.ts"
+    },
     "./package.json": "./package.json"
   },
   "nx": {

@@ -9,6 +9,9 @@ export {
   type FeatureFlagKey,
 } from './edgeConfigFlags';
 
-// Feature tier system
+// Feature tier system (client-safe)
 export * from './features';
-export * from './server-validation';
+
+// NOTE: Server-only exports (api-guards, server-validation) moved to './server'
+// Import from '@uth/features/server' for server-side code
+// This prevents accidental imports in client components
