@@ -18,7 +18,13 @@ export type {
   CreateWebhookEventData,
 } from './types/domain';
 
-export { DbError, DbErrorCode, PurchaseIntentStatus } from './types/domain';
+export {
+  DbError,
+  DbErrorCode,
+  PurchaseIntentStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
+} from './types/domain';
 
 // Export public operations
 export {

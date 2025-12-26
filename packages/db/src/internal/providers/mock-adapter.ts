@@ -14,7 +14,13 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
 } from '../../types/domain';
-import { DbError, DbErrorCode, PurchaseIntentStatus } from '../../types/domain';
+import {
+  DbError,
+  DbErrorCode,
+  PurchaseIntentStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
+} from '../../types/domain';
 
 /**
  * Mock implementation for testing
@@ -84,6 +90,12 @@ export class MockDbAdapter implements DbProvider {
       authUserId: data.authUserId,
       email: data.email,
       passkeyEnrolled: data.passkeyEnrolled ?? false,
+      subscriptionTier: data.subscriptionTier ?? SubscriptionTier.FREE,
+      subscriptionStatus: data.subscriptionStatus ?? SubscriptionStatus.ACTIVE,
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      stripePriceId: data.stripePriceId ?? null,
+      currentPeriodEnd: data.currentPeriodEnd ?? null,
       createdAt: new Date(),
     };
 
@@ -108,6 +120,12 @@ export class MockDbAdapter implements DbProvider {
       ...user,
       email: updates.email ?? user.email,
       passkeyEnrolled: updates.passkeyEnrolled ?? user.passkeyEnrolled,
+      subscriptionTier: updates.subscriptionTier ?? user.subscriptionTier,
+      subscriptionStatus: updates.subscriptionStatus ?? user.subscriptionStatus,
+      stripeCustomerId: updates.stripeCustomerId !== undefined ? updates.stripeCustomerId : user.stripeCustomerId,
+      stripeSubscriptionId: updates.stripeSubscriptionId !== undefined ? updates.stripeSubscriptionId : user.stripeSubscriptionId,
+      stripePriceId: updates.stripePriceId !== undefined ? updates.stripePriceId : user.stripePriceId,
+      currentPeriodEnd: updates.currentPeriodEnd !== undefined ? updates.currentPeriodEnd : user.currentPeriodEnd,
     };
 
     this.users.set(updated.id, updated);
