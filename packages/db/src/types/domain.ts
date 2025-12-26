@@ -63,6 +63,28 @@ export class DbError extends Error {
 // ============================================================================
 
 /**
+ * Subscription tier enum
+ */
+export enum SubscriptionTier {
+  FREE = 'free',
+  MONTHLY = 'monthly',
+  YEARLY = 'yearly',
+  LIFETIME = 'lifetime',
+}
+
+/**
+ * Subscription status enum
+ */
+export enum SubscriptionStatus {
+  ACTIVE = 'active',
+  TRIALING = 'trialing',
+  PAST_DUE = 'past_due',
+  CANCELED = 'canceled',
+  INCOMPLETE = 'incomplete',
+  UNPAID = 'unpaid',
+}
+
+/**
  * Represents a user in the database
  */
 export interface User {
@@ -74,8 +96,22 @@ export interface User {
   email: string;
   /** Whether user has enrolled in passkey authentication */
   passkeyEnrolled: boolean;
+  /** Subscription tier */
+  subscriptionTier: SubscriptionTier;
+  /** Subscription status (null for free tier) */
+  subscriptionStatus: SubscriptionStatus | null;
+  /** Stripe customer ID */
+  stripeCustomerId: string | null;
+  /** Stripe subscription ID (null for lifetime/free) */
+  stripeSubscriptionId: string | null;
+  /** Stripe price ID */
+  stripePriceId: string | null;
+  /** End of current billing period (null for lifetime/free) */
+  currentPeriodEnd: Date | null;
   /** When the user record was created */
   createdAt: Date;
+  /** When the user record was last updated */
+  updatedAt: Date;
 }
 
 /**
@@ -88,6 +124,18 @@ export interface CreateUserData {
   email: string;
   /** Whether user has enrolled in passkey authentication (optional, defaults to false) */
   passkeyEnrolled?: boolean;
+  /** Subscription tier (optional, defaults to FREE) */
+  subscriptionTier?: SubscriptionTier;
+  /** Subscription status (optional) */
+  subscriptionStatus?: SubscriptionStatus | null;
+  /** Stripe customer ID (optional) */
+  stripeCustomerId?: string | null;
+  /** Stripe subscription ID (optional) */
+  stripeSubscriptionId?: string | null;
+  /** Stripe price ID (optional) */
+  stripePriceId?: string | null;
+  /** End of current billing period (optional) */
+  currentPeriodEnd?: Date | null;
 }
 
 /**
@@ -98,6 +146,18 @@ export interface UpdateUserData {
   email?: string;
   /** Whether user has enrolled in passkey authentication */
   passkeyEnrolled?: boolean;
+  /** Subscription tier */
+  subscriptionTier?: SubscriptionTier;
+  /** Subscription status */
+  subscriptionStatus?: SubscriptionStatus | null;
+  /** Stripe customer ID */
+  stripeCustomerId?: string | null;
+  /** Stripe subscription ID */
+  stripeSubscriptionId?: string | null;
+  /** Stripe price ID */
+  stripePriceId?: string | null;
+  /** End of current billing period */
+  currentPeriodEnd?: Date | null;
 }
 
 // ============================================================================

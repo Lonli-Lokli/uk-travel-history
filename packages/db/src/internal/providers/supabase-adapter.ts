@@ -182,6 +182,12 @@ export class SupabaseDbAdapter implements DbProvider {
       clerk_user_id: data.authUserId,
       email: data.email,
       passkey_enrolled: data.passkeyEnrolled ?? false,
+      subscription_tier: data.subscriptionTier ?? 'free',
+      subscription_status: data.subscriptionStatus ?? null,
+      stripe_customer_id: data.stripeCustomerId ?? null,
+      stripe_subscription_id: data.stripeSubscriptionId ?? null,
+      stripe_price_id: data.stripePriceId ?? null,
+      current_period_end: data.currentPeriodEnd?.toISOString() ?? null,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -208,6 +214,18 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.passkeyEnrolled !== undefined)
       updateData.passkey_enrolled = updates.passkeyEnrolled;
+    if (updates.subscriptionTier !== undefined)
+      updateData.subscription_tier = updates.subscriptionTier;
+    if (updates.subscriptionStatus !== undefined)
+      updateData.subscription_status = updates.subscriptionStatus;
+    if (updates.stripeCustomerId !== undefined)
+      updateData.stripe_customer_id = updates.stripeCustomerId;
+    if (updates.stripeSubscriptionId !== undefined)
+      updateData.stripe_subscription_id = updates.stripeSubscriptionId;
+    if (updates.stripePriceId !== undefined)
+      updateData.stripe_price_id = updates.stripePriceId;
+    if (updates.currentPeriodEnd !== undefined)
+      updateData.current_period_end = updates.currentPeriodEnd?.toISOString() ?? null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from('users') as any)
@@ -428,7 +446,14 @@ export class SupabaseDbAdapter implements DbProvider {
       authUserId: row.clerk_user_id,
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
+      subscriptionTier: row.subscription_tier as any,
+      subscriptionStatus: row.subscription_status as any,
+      stripeCustomerId: row.stripe_customer_id,
+      stripeSubscriptionId: row.stripe_subscription_id,
+      stripePriceId: row.stripe_price_id,
+      currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
       createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 
