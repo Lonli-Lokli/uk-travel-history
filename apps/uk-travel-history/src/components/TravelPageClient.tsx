@@ -1,6 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useEffect, useRef } from 'react';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -9,28 +10,37 @@ import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { FeatureGateProvider } from '@uth/widgets';
+import { TravelToolbar } from './TravelToolbar';
 import {
   authStore,
   monetizationStore,
   paymentStore,
+  navbarToolbarStore,
 } from '@uth/stores';
 import {
   useClearAll,
   useCsvImport,
   useClipboardImport,
+  useFileUpload,
+  useExport,
 } from './hooks';
 
 /**
  * Travel page client component.
  *
- * Note: The toolbar (Import/Export buttons) is now rendered by the Navbar component
- * based on the current route. This eliminates the need for context-based injection
- * and useEffect timing issues that were causing the toolbar to not appear.
+ * This component registers its toolbar items with the navbarToolbarStore.
+ * The Navbar observes the store and renders the registered items.
  */
 export const TravelPageClient = observer(() => {
   const { handleClearAll } = useClearAll();
 
+  // Hooks for toolbar functionality
+  const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
+  const { handleExport } = useExport();
   const {
+    fileInputRef: csvFileInputRef,
+    handleFileSelect: handleCsvFileSelect,
+    triggerFileInput: triggerCsvFileInput,
     isDialogOpen: isCsvDialogOpen,
     previewData: csvPreviewData,
     confirmImport: confirmCsvImport,
@@ -42,11 +52,61 @@ export const TravelPageClient = observer(() => {
   } = useCsvImport();
 
   const {
+    handleClipboardPaste,
     isDialogOpen: isClipboardDialogOpen,
     previewData: clipboardPreviewData,
     confirmImport: confirmClipboardImport,
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
+
+  // Register toolbar items with the store on mount
+  useEffect(() => {
+    navbarToolbarStore.registerToolbarItems([
+      {
+        id: 'travel-toolbar',
+        element: (
+          <>
+            {/* Hidden file inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <input
+              ref={csvFileInputRef}
+              type="file"
+              accept=".csv,.txt,.xlsx"
+              className="hidden"
+              onChange={handleCsvFileSelect}
+            />
+            {/* Toolbar component */}
+            <TravelToolbar
+              triggerFileInput={triggerFileInput}
+              triggerCsvFileInput={triggerCsvFileInput}
+              handleClipboardPaste={handleClipboardPaste}
+              handleExport={handleExport}
+            />
+          </>
+        ),
+      },
+    ]);
+
+    // Cleanup: clear toolbar when component unmounts
+    return () => {
+      navbarToolbarStore.clearToolbar();
+    };
+  }, [
+    fileInputRef,
+    csvFileInputRef,
+    handleFileSelect,
+    handleCsvFileSelect,
+    triggerFileInput,
+    triggerCsvFileInput,
+    handleClipboardPaste,
+    handleExport,
+  ]);
 
   return (
     <FeatureGateProvider
