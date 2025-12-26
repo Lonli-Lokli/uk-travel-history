@@ -180,14 +180,14 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
               <ul className="space-y-2">
                 <li className="flex items-start text-sm text-slate-700">
                   <UIIcon
-                    iconName="checkmark"
+                    iconName="check"
                     className="h-5 w-5 text-green-600 mr-2 flex-shrink-0"
                   />
                   <span>Travel history parsing from PDF</span>
                 </li>
                 <li className="flex items-start text-sm text-slate-700">
                   <UIIcon
-                    iconName="checkmark"
+                    iconName="check"
                     className="h-5 w-5 text-green-600 mr-2 flex-shrink-0"
                   />
                   <span>Manual trip entry and editing</span>
@@ -196,7 +196,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                   className={`flex items-start text-sm ${isPremium ? 'text-slate-700' : 'text-slate-400'}`}
                 >
                   <UIIcon
-                    iconName={isPremium ? 'checkmark' : 'cancel'}
+                    iconName={isPremium ? 'check' : 'circle-x'}
                     className={`h-5 w-5 mr-2 flex-shrink-0 ${isPremium ? 'text-green-600' : 'text-slate-400'}`}
                   />
                   <span>Excel export (ILR format)</span>
@@ -205,7 +205,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                   className={`flex items-start text-sm ${isPremium ? 'text-slate-700' : 'text-slate-400'}`}
                 >
                   <UIIcon
-                    iconName={isPremium ? 'checkmark' : 'cancel'}
+                    iconName={isPremium ? 'check' : 'circle-x'}
                     className={`h-5 w-5 mr-2 flex-shrink-0 ${isPremium ? 'text-green-600' : 'text-slate-400'}`}
                   />
                   <span>Full backup export</span>
@@ -214,7 +214,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                   className={`flex items-start text-sm ${isPremium ? 'text-slate-700' : 'text-slate-400'}`}
                 >
                   <UIIcon
-                    iconName={isPremium ? 'checkmark' : 'cancel'}
+                    iconName={isPremium ? 'check' : 'circle-x'}
                     className={`h-5 w-5 mr-2 flex-shrink-0 ${isPremium ? 'text-green-600' : 'text-slate-400'}`}
                   />
                   <span>Priority support</span>
@@ -230,7 +230,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                   className="w-full"
                   size="lg"
                 >
-                  <UIIcon iconName="zap" className="h-5 w-5 mr-2" />
+                  <UIIcon iconName="arrow-up" className="h-5 w-5 mr-2" />
                   Upgrade to Premium
                 </Button>
               ) : (
@@ -252,7 +252,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                       </>
                     ) : (
                       <>
-                        <UIIcon iconName="settings" className="h-4 w-4 mr-2" />
+                        <UIIcon iconName="pencil" className="h-4 w-4 mr-2" />
                         Manage Subscription
                       </>
                     )}

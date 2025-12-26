@@ -242,7 +242,7 @@ export const Header = observer(
                         <UserButton.Link
                           label="Account & Billing"
                           labelIcon={
-                            <UIIcon iconName="credit-card" className="h-4 w-4" />
+                            <UIIcon iconName="user" className="h-4 w-4" />
                           }
                           href="/account"
                         />

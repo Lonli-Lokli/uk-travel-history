@@ -19,7 +19,9 @@ export default async function AccountPage() {
         email: user.emailAddresses[0]?.emailAddress || '',
         subscriptionTier: dbUser?.subscriptionTier || 'free',
         subscriptionStatus: dbUser?.subscriptionStatus || null,
-        currentPeriodEnd: dbUser?.currentPeriodEnd || null,
+        currentPeriodEnd: dbUser?.currentPeriodEnd
+          ? dbUser.currentPeriodEnd.toISOString()
+          : null,
         stripeCustomerId: dbUser?.stripeCustomerId || null,
       }}
     />

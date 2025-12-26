@@ -8,12 +8,16 @@ import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 import { logger } from '@uth/utils';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
-});
+// Force dynamic rendering to avoid build-time execution
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Stripe client at runtime to avoid build-time errors
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-02-24.acacia',
+    });
+
     // Verify user is authenticated
     const { userId } = await auth();
     if (!userId) {
