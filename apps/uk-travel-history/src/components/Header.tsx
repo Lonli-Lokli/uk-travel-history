@@ -263,18 +263,28 @@ export const Header = observer(
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <Link href="/claim">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
-                        <UIIcon
-                          iconName="fingerprint"
-                          className="h-4 w-4 mr-1.5"
-                        />
-                        <span className="hidden sm:inline">Sign In</span>
-                      </Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href="/sign-in">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                        >
+                          <UIIcon
+                            iconName="fingerprint"
+                            className="h-4 w-4 mr-1.5"
+                          />
+                          <span className="hidden sm:inline">Sign In</span>
+                        </Button>
+                      </Link>
+                      <Link href="/sign-up">
+                        <Button
+                          size="sm"
+                          className="hidden sm:flex"
+                        >
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
                   )}
                 </>
               )}

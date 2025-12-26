@@ -38,13 +38,13 @@ export function usePremiumAccess() {
 
   /**
    * Handle upgrade action
-   * - If not authenticated: redirect to sign-in
+   * - If not authenticated: redirect to sign-up
    * - If authenticated: open payment modal
    */
   const handleUpgrade = () => {
     if (!isAuthenticated) {
-      // Redirect to Clerk sign-in page
-      window.location.href = '/claim';
+      // Redirect to Clerk sign-up page
+      window.location.href = '/sign-up';
     } else {
       paymentStore.openPaymentModal();
     }

@@ -85,7 +85,7 @@ describe('Premium Feature Integration', () => {
       expect(screen.getByText('Premium Feature')).toBeTruthy();
     });
 
-    it('redirects unauthenticated users to sign-in', () => {
+    it('redirects unauthenticated users to sign-up', () => {
       mockMonetizationStore.isAuthenticated = false;
       vi.mocked(mockMonetizationStore.hasFeatureAccess).mockReturnValue(false);
 
@@ -110,7 +110,7 @@ describe('Premium Feature Integration', () => {
       const button = screen.getByText('Upgrade');
       fireEvent.click(button);
 
-      expect(window.location.href).toBe('/claim');
+      expect(window.location.href).toBe('/sign-up');
     });
 
     it('shows payment modal for authenticated free users', () => {

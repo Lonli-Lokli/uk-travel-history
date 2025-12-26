@@ -122,7 +122,7 @@ describe('usePremiumAccess', () => {
   });
 
   describe('handleUpgrade', () => {
-    it('redirects to /claim when user is not authenticated', () => {
+    it('redirects to /sign-up when user is not authenticated', () => {
       mockMonetizationStore.isAuthenticated = false;
       mockAuthStore.user = null;
       vi.mocked(mockMonetizationStore.hasFeatureAccess).mockReturnValue(false);
@@ -131,7 +131,7 @@ describe('usePremiumAccess', () => {
 
       result.current.handleUpgrade();
 
-      expect(window.location.href).toBe('/claim');
+      expect(window.location.href).toBe('/sign-up');
     });
 
     it('opens payment modal when user is authenticated', () => {

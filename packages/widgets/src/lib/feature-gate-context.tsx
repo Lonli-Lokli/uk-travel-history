@@ -82,8 +82,8 @@ export function useFeatureGate(feature: FeatureId) {
 
   const handleUpgrade = () => {
     if (!isAuthenticated) {
-      // Redirect to Clerk sign-in page
-      window.location.href = '/claim';
+      // Redirect to Clerk sign-up page
+      window.location.href = '/sign-up';
     } else {
       paymentStore.openPaymentModal();
     }

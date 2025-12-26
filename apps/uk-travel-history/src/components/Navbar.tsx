@@ -117,11 +117,18 @@ export const Navbar = observer(() => {
               {isAuthEnabled && (
                 <>
                   <SignedOut>
-                    <Link href="/claim">
-                      <Button variant="outline" size="sm" className="h-9">
-                        Sign In
-                      </Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href="/sign-in">
+                        <Button variant="outline" size="sm" className="h-9">
+                          Sign In
+                        </Button>
+                      </Link>
+                      <Link href="/sign-up">
+                        <Button size="sm" className="h-9">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
                   </SignedOut>
                   <SignedIn>
                     <UserButton
@@ -144,11 +151,18 @@ export const Navbar = observer(() => {
               {isAuthEnabled && (
                 <>
                   <SignedOut>
-                    <Link href="/claim">
-                      <Button variant="outline" size="sm" className="h-8 text-xs px-3">
-                        Sign In
-                      </Button>
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link href="/sign-in">
+                        <Button variant="outline" size="sm" className="h-8 text-xs px-3">
+                          Sign In
+                        </Button>
+                      </Link>
+                      <Link href="/sign-up">
+                        <Button size="sm" className="h-8 text-xs px-3">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
                   </SignedOut>
                   <SignedIn>
                     <UserButton
