@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/nextjs';
 import {
   Button,
   DropdownMenu,
@@ -227,7 +227,7 @@ export const Header = observer(
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Auth UI - only show if feature flag is enabled */}
+              {/* Auth UI - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
                   <SignedIn>
@@ -240,28 +240,15 @@ export const Header = observer(
                     />
                   </SignedIn>
                   <SignedOut>
-                    <div className="flex items-center gap-2">
-                      <SignInButton mode="modal">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                        >
-                          <UIIcon
-                            iconName="fingerprint"
-                            className="h-4 w-4 mr-1.5"
-                          />
-                          <span className="hidden sm:inline">Sign In</span>
-                        </Button>
-                      </SignInButton>
-                      <SignUpButton mode="modal">
-                        <Button
-                          size="sm"
-                          className="hidden sm:flex"
-                        >
-                          Sign Up
-                        </Button>
-                      </SignUpButton>
-                    </div>
+                    <SignInButton mode="modal">
+                      <Button size="sm">
+                        <UIIcon
+                          iconName="fingerprint"
+                          className="h-4 w-4 mr-1.5"
+                        />
+                        <span className="hidden sm:inline">Sign In</span>
+                      </Button>
+                    </SignInButton>
                   </SignedOut>
                 </>
               )}

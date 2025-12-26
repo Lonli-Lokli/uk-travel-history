@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/nextjs';
 import {
   Button,
   Drawer,
@@ -113,22 +113,15 @@ export const Navbar = observer(() => {
                 </NavigationMenu>
               </nav>
 
-              {/* Auth UI (desktop) - only show when auth feature is enabled */}
+              {/* Auth UI (desktop) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
                   <SignedOut>
-                    <div className="flex items-center gap-2">
-                      <SignInButton mode="modal">
-                        <Button variant="outline" size="sm" className="h-9">
-                          Sign In
-                        </Button>
-                      </SignInButton>
-                      <SignUpButton mode="modal">
-                        <Button size="sm" className="h-9">
-                          Sign Up
-                        </Button>
-                      </SignUpButton>
-                    </div>
+                    <SignInButton mode="modal">
+                      <Button size="sm" className="h-9">
+                        Sign In
+                      </Button>
+                    </SignInButton>
                   </SignedOut>
                   <SignedIn>
                     <UserButton
@@ -147,22 +140,15 @@ export const Navbar = observer(() => {
           {/* Mobile Menu Trigger and Auth */}
           {!hideNavigation && (
             <div className="md:hidden flex items-center gap-2 ml-auto">
-              {/* Auth UI (mobile) - only show when auth feature is enabled */}
+              {/* Auth UI (mobile) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
                   <SignedOut>
-                    <div className="flex items-center gap-1.5">
-                      <SignInButton mode="modal">
-                        <Button variant="outline" size="sm" className="h-8 text-xs px-3">
-                          Sign In
-                        </Button>
-                      </SignInButton>
-                      <SignUpButton mode="modal">
-                        <Button size="sm" className="h-8 text-xs px-3">
-                          Sign Up
-                        </Button>
-                      </SignUpButton>
-                    </div>
+                    <SignInButton mode="modal">
+                      <Button size="sm" className="h-8 text-xs px-3">
+                        Sign In
+                      </Button>
+                    </SignInButton>
                   </SignedOut>
                   <SignedIn>
                     <UserButton

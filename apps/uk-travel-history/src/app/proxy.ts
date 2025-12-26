@@ -98,7 +98,7 @@ const routeProtectionMiddleware = async (
   // Protected routes require authentication
   if (isProtectedRoute(req) && !userId) {
     // Redirect to sign-in for protected routes
-    const signInUrl = new URL('/claim', req.url);
+    const signInUrl = new URL('/sign-in', req.url);
     signInUrl.searchParams.set('redirect_url', req.url);
     return NextResponse.redirect(signInUrl);
   }
