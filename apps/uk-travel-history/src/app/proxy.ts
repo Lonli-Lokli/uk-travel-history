@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 import { compose, when, type MiddlewareFunction } from './middleware-compose';
 
@@ -56,108 +55,68 @@ const clerkCredentialsCheckMiddleware: MiddlewareFunction = async (
 };
 
 /**
- * Passkey enrollment check middleware
- * Verifies that authenticated users have enrolled passkeys for sensitive routes
+ * Route protection middleware for public sign-up model
+ * Per issue #100: Public sign-up enabled, passkeys optional, RLS enforces security
  */
-const passkeyEnrollmentMiddleware = async (
+const routeProtectionMiddleware = async (
   auth: any,
   req: NextRequest,
 ): Promise<NextResponse> => {
-  const { clerkClient, createRouteMatcher } =
-    await import('@clerk/nextjs/server');
+  const { createRouteMatcher } = await import('@clerk/nextjs/server');
 
   // Define public routes that don't require authentication
+  // Per issue #100: landing, pricing, docs/blog, public previews, free features
   const isPublicRoute = createRouteMatcher([
     '/',
-    '/travel',
+    '/about',
+    '/terms',
+    '/status',
+    '/travel', // Free tier access to travel tracker
+    '/api/parse',
+    '/api/export',
     '/api/billing/checkout',
     '/api/stripe/webhook',
+    '/api/webhooks/clerk',
     '/api/cron/supabase-keepalive',
-    '/api/parse',
-    '/api/export',
   ]);
 
-  // Define routes that require passkey enrollment
-  const requiresPasskeyRoute = createRouteMatcher([
-    '/travel',
-    '/api/parse',
-    '/api/export',
+  // Define protected routes that require authentication
+  // Per issue #100: member/premium routes redirect to /sign-in
+  const isProtectedRoute = createRouteMatcher([
+    '/onboarding/(.*)',
+    '/api/billing/(.*)',
+    '/api/user/(.*)',
   ]);
 
   const { userId } = await auth();
 
-  // Allow public routes
+  // Allow public routes without authentication
   if (isPublicRoute(req)) {
-    // For authenticated users on public routes that require passkey
-    if (userId && requiresPasskeyRoute(req)) {
-      try {
-        // First check Clerk public metadata (cached)
-        const client = await clerkClient();
-        const user = await client.users.getUser(userId);
-
-        // Check metadata cache first
-        const passkeyEnrolled = user.publicMetadata?.passkey_enrolled as
-          | boolean
-          | undefined;
-
-        if (passkeyEnrolled === true) {
-          // Fast path: metadata confirms enrollment
-          return NextResponse.next();
-        }
-
-        // Fallback to database if metadata not set or false
-        const dbUser = await getUserByAuthId(userId);
-
-        if (!dbUser) {
-          // User not found in database yet - redirect to onboarding
-          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
-        }
-
-        if (!dbUser.passkeyEnrolled) {
-          // User hasn't enrolled passkey
-          return NextResponse.redirect(new URL('/onboarding/passkey', req.url));
-        }
-
-        // If we get here, Supabase says enrolled but metadata doesn't
-        // Sync metadata in background (fire and forget)
-        client.users
-          .updateUser(userId, {
-            publicMetadata: {
-              ...user.publicMetadata,
-              passkey_enrolled: true,
-            },
-          })
-          .catch((err) => {
-            logger.error('Failed to sync passkey metadata', err);
-          });
-      } catch (error) {
-        logger.error('Error checking passkey enrollment', error);
-        // On error, allow through to avoid blocking legitimate users
-        // The actual protected resources will handle auth
-        return NextResponse.next();
-      }
-    }
-
     return NextResponse.next();
   }
 
-  // For protected routes, ensure authentication
-  if (!userId) {
-    return NextResponse.redirect(new URL('/claim', req.url));
+  // Protected routes require authentication
+  if (isProtectedRoute(req) && !userId) {
+    // Redirect to sign-in for protected routes
+    const signInUrl = new URL('/claim', req.url);
+    signInUrl.searchParams.set('redirect_url', req.url);
+    return NextResponse.redirect(signInUrl);
   }
 
+  // Default: allow through
+  // RLS policies in Supabase will enforce actual data access control
   return NextResponse.next();
 };
 
 /**
  * Clerk authentication middleware
- * Integrates with Clerk's clerkMiddleware and handles passkey enforcement
+ * Integrates with Clerk's clerkMiddleware and handles route protection
  */
 const clerkAuthMiddleware: MiddlewareFunction = async (
   req: NextRequest,
 ): Promise<NextResponse | null> => {
   const { clerkMiddleware } = await import('@clerk/nextjs/server');
-  const wrappedMiddleware = clerkMiddleware(passkeyEnrollmentMiddleware);
+  const wrappedMiddleware = clerkMiddleware(routeProtectionMiddleware);
   const result = await wrappedMiddleware(req, {} as any);
   // Clerk middleware can return Response or undefined, convert to NextResponse | null
   if (!result) return null;
@@ -170,7 +129,12 @@ const clerkAuthMiddleware: MiddlewareFunction = async (
  * Composition strategy:
  * 1. Check auth provider mode (Firebase vs Clerk)
  * 2. If Firebase: pass through (auth handled in API routes)
- * 3. If Clerk: check credentials → run Clerk auth → enforce passkey
+ * 3. If Clerk: check credentials → run Clerk auth → protect routes
+ *
+ * Per issue #100: Public sign-up model with RLS-enforced security
+ * - No passkey enforcement (passkeys optional)
+ * - Route protection: public routes open, member/premium routes require auth
+ * - Data security enforced by Supabase RLS policies, not middleware
  *
  * This demonstrates functional programming principles:
  * - Pure functions for each concern (auth provider check, credential check, etc.)
