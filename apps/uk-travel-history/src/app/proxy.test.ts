@@ -3,10 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import proxy from './proxy';
 
 // Mock dependencies
-vi.mock('@uth/db', () => ({
-  getUserByAuthId: vi.fn(),
-}));
-
 vi.mock('@uth/utils', () => ({
   logger: {
     log: vi.fn(),
@@ -17,15 +13,13 @@ vi.mock('@uth/utils', () => ({
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({
-  clerkClient: vi.fn(),
   createRouteMatcher: vi.fn(),
   clerkMiddleware: vi.fn(),
 }));
 
 // Import mocked dependencies
-import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
-import { clerkClient, createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
+import { createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
 
 describe('Proxy (Next.js 16 Middleware)', () => {
   const originalEnv = process.env;
@@ -146,12 +140,8 @@ describe('Proxy (Next.js 16 Middleware)', () => {
     it('should redirect to /claim when accessing protected route without authentication', async () => {
       const mockAuth = vi.fn().mockResolvedValue({ userId: null });
       const mockIsPublicRoute = vi.fn().mockReturnValue(false);
-      const mockRequiresPasskeyRoute = vi.fn().mockReturnValue(false);
 
-      vi.mocked(createRouteMatcher).mockImplementation((routes: string[]) => {
-        if (routes.includes('/')) return mockIsPublicRoute;
-        return mockRequiresPasskeyRoute;
-      });
+      vi.mocked(createRouteMatcher).mockImplementation(() => mockIsPublicRoute);
 
       const mockWrappedMiddleware = vi.fn(async (req: NextRequest) => {
         const handler = vi.mocked(clerkMiddleware).mock.calls[0][0];
@@ -163,40 +153,43 @@ describe('Proxy (Next.js 16 Middleware)', () => {
       const req = createMockRequest('/dashboard');
       const result = await proxy(req);
 
-      // The actual redirect happens in handleClerkMiddleware
+      // The actual redirect happens in routeProtectionMiddleware
       expect(mockAuth).toHaveBeenCalled();
+    });
+
+    it('should allow authenticated users to access protected routes', async () => {
+      const mockAuth = vi.fn().mockResolvedValue({ userId: 'user_123' });
+      const mockIsPublicRoute = vi.fn().mockReturnValue(false);
+
+      vi.mocked(createRouteMatcher).mockImplementation(() => mockIsPublicRoute);
+
+      const mockWrappedMiddleware = vi.fn(async (req: NextRequest) => {
+        const handler = vi.mocked(clerkMiddleware).mock.calls[0][0];
+        return handler(mockAuth, req);
+      });
+
+      vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
+
+      const req = createMockRequest('/onboarding/passkey');
+      const result = await proxy(req);
+
+      expect(mockAuth).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
 
-  describe('Passkey Enrollment', () => {
+  describe('Public Sign-Up Model (Issue #100)', () => {
     beforeEach(() => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
       process.env.CLERK_SECRET_KEY = 'test-secret-key';
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'test-publishable-key';
     });
 
-    it('should check passkey enrollment for authenticated users on protected routes', async () => {
-      const mockUserId = 'user_123';
-      const mockAuth = vi.fn().mockResolvedValue({ userId: mockUserId });
-
-      const mockGetUser = vi.fn().mockResolvedValue({
-        id: mockUserId,
-        publicMetadata: { passkey_enrolled: true },
-      });
-
-      const mockClient = vi.fn().mockResolvedValue({
-        users: { getUser: mockGetUser },
-      });
-
-      vi.mocked(clerkClient).mockImplementation(mockClient);
-
+    it('should allow unauthenticated access to /travel (free feature)', async () => {
+      const mockAuth = vi.fn().mockResolvedValue({ userId: null });
       const mockIsPublicRoute = vi.fn().mockReturnValue(true);
-      const mockRequiresPasskeyRoute = vi.fn().mockReturnValue(true);
 
-      vi.mocked(createRouteMatcher).mockImplementation((routes: string[]) => {
-        if (routes.includes('/travel')) return mockRequiresPasskeyRoute;
-        return mockIsPublicRoute;
-      });
+      vi.mocked(createRouteMatcher).mockImplementation(() => mockIsPublicRoute);
 
       const mockWrappedMiddleware = vi.fn(async (req: NextRequest) => {
         const handler = vi.mocked(clerkMiddleware).mock.calls[0][0];
@@ -206,41 +199,17 @@ describe('Proxy (Next.js 16 Middleware)', () => {
       vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
 
       const req = createMockRequest('/travel');
-      await proxy(req);
+      const result = await proxy(req);
 
       expect(mockAuth).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
 
-    it('should redirect to /onboarding/passkey when user not enrolled', async () => {
-      const mockUserId = 'user_123';
-      const mockAuth = vi.fn().mockResolvedValue({ userId: mockUserId });
-
-      const mockGetUser = vi.fn().mockResolvedValue({
-        id: mockUserId,
-        publicMetadata: { passkey_enrolled: false },
-      });
-
-      const mockClient = vi.fn().mockResolvedValue({
-        users: { getUser: mockGetUser },
-      });
-
-      vi.mocked(clerkClient).mockImplementation(mockClient);
-      vi.mocked(getUserByAuthId).mockResolvedValue({
-        id: '1',
-        authId: mockUserId,
-        email: 'test@example.com',
-        passkeyEnrolled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
+    it('should allow unauthenticated access to /api/parse (free feature)', async () => {
+      const mockAuth = vi.fn().mockResolvedValue({ userId: null });
       const mockIsPublicRoute = vi.fn().mockReturnValue(true);
-      const mockRequiresPasskeyRoute = vi.fn().mockReturnValue(true);
 
-      vi.mocked(createRouteMatcher).mockImplementation((routes: string[]) => {
-        if (routes.includes('/travel')) return mockRequiresPasskeyRoute;
-        return mockIsPublicRoute;
-      });
+      vi.mocked(createRouteMatcher).mockImplementation(() => mockIsPublicRoute);
 
       const mockWrappedMiddleware = vi.fn(async (req: NextRequest) => {
         const handler = vi.mocked(clerkMiddleware).mock.calls[0][0];
@@ -249,27 +218,18 @@ describe('Proxy (Next.js 16 Middleware)', () => {
 
       vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
 
-      const req = createMockRequest('/travel');
-      await proxy(req);
+      const req = createMockRequest('/api/parse');
+      const result = await proxy(req);
 
       expect(mockAuth).toHaveBeenCalled();
-      expect(getUserByAuthId).toHaveBeenCalledWith(mockUserId);
+      expect(result).toBeDefined();
     });
 
-    it('should handle errors gracefully and allow through', async () => {
-      const mockUserId = 'user_123';
-      const mockAuth = vi.fn().mockResolvedValue({ userId: mockUserId });
-
-      const mockClient = vi.fn().mockRejectedValue(new Error('Clerk API error'));
-      vi.mocked(clerkClient).mockImplementation(mockClient);
-
+    it('should allow access to /api/export but authorization checked in route handler', async () => {
+      const mockAuth = vi.fn().mockResolvedValue({ userId: null });
       const mockIsPublicRoute = vi.fn().mockReturnValue(true);
-      const mockRequiresPasskeyRoute = vi.fn().mockReturnValue(true);
 
-      vi.mocked(createRouteMatcher).mockImplementation((routes: string[]) => {
-        if (routes.includes('/travel')) return mockRequiresPasskeyRoute;
-        return mockIsPublicRoute;
-      });
+      vi.mocked(createRouteMatcher).mockImplementation(() => mockIsPublicRoute);
 
       const mockWrappedMiddleware = vi.fn(async (req: NextRequest) => {
         const handler = vi.mocked(clerkMiddleware).mock.calls[0][0];
@@ -278,13 +238,12 @@ describe('Proxy (Next.js 16 Middleware)', () => {
 
       vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
 
-      const req = createMockRequest('/travel');
-      await proxy(req);
+      const req = createMockRequest('/api/export');
+      const result = await proxy(req);
 
-      expect(logger.error).toHaveBeenCalledWith(
-        'Error checking passkey enrollment',
-        expect.any(Error)
-      );
+      // Middleware allows through; premium check happens in route handler
+      expect(mockAuth).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
 
