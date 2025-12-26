@@ -1,112 +1,74 @@
--- Migration: Add entitlement fields for subscription management
+-- Migration: Add subscription entitlement fields to users table
 -- Date: 2025-12-26
--- Description: Adds subscription_tier, subscription_status, and Stripe identifiers to users table
+-- Description: Adds tier, status, and Stripe identifiers for subscription management
+-- Related to Issue #100: Migrate to unlocked public sign-up + Supabase RLS-enforced entitlements
 
 -- ============================================================================
--- Enums for subscription management
+-- Subscription Tier and Status Enums
 -- ============================================================================
 
--- Subscription tier enum
-CREATE TYPE subscription_tier AS ENUM (
-  'free',      -- Free tier (default for new sign-ups)
-  'monthly',   -- Monthly recurring subscription
-  'yearly',    -- Yearly recurring subscription
-  'lifetime'   -- Lifetime one-time purchase
-);
+-- Subscription tiers
+CREATE TYPE subscription_tier AS ENUM ('free', 'monthly', 'yearly', 'lifetime');
 
--- Subscription status enum
+-- Subscription statuses (aligned with Stripe subscription statuses)
 CREATE TYPE subscription_status AS ENUM (
   'active',      -- Subscription is active and paid
+  'past_due',    -- Payment failed but subscription not cancelled yet
+  'canceled',    -- Subscription has been cancelled
   'trialing',    -- In trial period
-  'past_due',    -- Payment failed, grace period
-  'canceled',    -- Subscription canceled
-  'incomplete',  -- Initial payment incomplete
-  'unpaid'       -- Payment failed, no access
+  'incomplete',  -- Initial payment failed
+  'unpaid'       -- Payment failed and grace period ended
 );
 
 -- ============================================================================
--- Add entitlement columns to users table
+-- Add Entitlement Fields to Users Table
 -- ============================================================================
 
 ALTER TABLE users
   ADD COLUMN subscription_tier subscription_tier NOT NULL DEFAULT 'free',
-  ADD COLUMN subscription_status subscription_status DEFAULT NULL,
-  ADD COLUMN stripe_customer_id TEXT DEFAULT NULL,
-  ADD COLUMN stripe_subscription_id TEXT DEFAULT NULL,
-  ADD COLUMN stripe_price_id TEXT DEFAULT NULL,
-  ADD COLUMN current_period_end TIMESTAMPTZ DEFAULT NULL,
-  ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  ADD COLUMN subscription_status subscription_status NOT NULL DEFAULT 'active',
+  ADD COLUMN stripe_customer_id TEXT,
+  ADD COLUMN stripe_subscription_id TEXT,
+  ADD COLUMN stripe_price_id TEXT,
+  ADD COLUMN current_period_end TIMESTAMPTZ;
 
--- Add indexes for subscription queries
+-- Indexes for efficient entitlement queries
 CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON users(subscription_tier);
 CREATE INDEX IF NOT EXISTS idx_users_subscription_status ON users(subscription_status);
-CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id);
-CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id);
-
--- Add unique constraint on stripe_customer_id
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_stripe_customer_id_unique
-  ON users(stripe_customer_id)
-  WHERE stripe_customer_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL;
 
 -- ============================================================================
--- Update trigger for users.updated_at
+-- Helper Function: Check Premium Access
 -- ============================================================================
 
--- Trigger to auto-update updated_at on users
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- Helper function to check if user has premium access
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION has_premium_access(user_id UUID)
+CREATE OR REPLACE FUNCTION has_premium_access(user_row users)
 RETURNS BOOLEAN AS $$
-DECLARE
-  tier subscription_tier;
-  status subscription_status;
 BEGIN
-  SELECT subscription_tier, subscription_status
-  INTO tier, status
-  FROM users
-  WHERE id = user_id;
-
-  -- Free tier has no premium access
-  IF tier = 'free' THEN
-    RETURN FALSE;
-  END IF;
-
-  -- Lifetime always has access
-  IF tier = 'lifetime' THEN
-    RETURN TRUE;
-  END IF;
-
-  -- Subscription tiers require active status
-  IF status IN ('active', 'trialing') THEN
-    RETURN TRUE;
-  END IF;
-
-  RETURN FALSE;
+  RETURN user_row.subscription_tier IN ('monthly', 'yearly', 'lifetime')
+    AND user_row.subscription_status IN ('active', 'trialing');
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql IMMUTABLE;
 
 -- ============================================================================
--- Data migration: Set existing users to lifetime tier
+-- Migrate Existing Users
 -- ============================================================================
 
--- Existing users were created via payment, so they get lifetime access
+-- Set all existing users to 'lifetime' tier (they paid for one-time access)
+-- This preserves backward compatibility with the previous payment model
 UPDATE users
 SET
   subscription_tier = 'lifetime',
   subscription_status = 'active'
-WHERE subscription_tier = 'free';
+WHERE subscription_tier = 'free';  -- Only update users still on default 'free'
 
-COMMENT ON TABLE users IS 'Application users with entitlement tracking';
-COMMENT ON COLUMN users.subscription_tier IS 'User subscription tier (free/monthly/yearly/lifetime)';
-COMMENT ON COLUMN users.subscription_status IS 'Current subscription status (active/canceled/etc)';
-COMMENT ON COLUMN users.stripe_customer_id IS 'Stripe customer ID for billing';
-COMMENT ON COLUMN users.stripe_subscription_id IS 'Stripe subscription ID (null for lifetime)';
-COMMENT ON COLUMN users.stripe_price_id IS 'Stripe price ID for current subscription';
-COMMENT ON COLUMN users.current_period_end IS 'End of current billing period (null for lifetime)';
+-- ============================================================================
+-- Comments for Documentation
+-- ============================================================================
+
+COMMENT ON COLUMN users.subscription_tier IS 'User subscription tier: free (default), monthly, yearly, or lifetime (one-time purchase)';
+COMMENT ON COLUMN users.subscription_status IS 'Stripe subscription status: active, past_due, canceled, trialing, incomplete, or unpaid';
+COMMENT ON COLUMN users.stripe_customer_id IS 'Stripe customer ID for billing management';
+COMMENT ON COLUMN users.stripe_subscription_id IS 'Stripe subscription ID (null for one-time lifetime purchases)';
+COMMENT ON COLUMN users.stripe_price_id IS 'Stripe price ID for the current subscription/purchase';
+COMMENT ON COLUMN users.current_period_end IS 'End date of current subscription period (null for lifetime)';

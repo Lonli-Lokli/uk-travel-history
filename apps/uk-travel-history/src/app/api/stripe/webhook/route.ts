@@ -11,7 +11,11 @@ import {
   getPurchaseIntentById,
   updatePurchaseIntent,
   createUser as createDbUser,
+  updateUserByAuthId,
+  getUserByAuthId,
   PurchaseIntentStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
 } from '@uth/db';
 import type { WebhookEvent } from '@uth/payments-server';
 import { constructWebhookEvent } from '@uth/payments-server';
@@ -244,6 +248,90 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Handle customer.subscription.created event
+    if (event.type === 'customer.subscription.created') {
+      const subscription = event.data.object as any;
+
+      logger.info('Processing customer.subscription.created', {
+        extra: { subscriptionId: subscription.id },
+      });
+
+      try {
+        await handleSubscriptionChange(subscription, 'created');
+      } catch (error: any) {
+        logger.error('Failed to handle subscription.created', error);
+        // Don't return error - event was recorded, can be retried
+      }
+    }
+
+    // Handle customer.subscription.updated event
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object as any;
+
+      logger.info('Processing customer.subscription.updated', {
+        extra: { subscriptionId: subscription.id },
+      });
+
+      try {
+        await handleSubscriptionChange(subscription, 'updated');
+      } catch (error: any) {
+        logger.error('Failed to handle subscription.updated', error);
+        // Don't return error - event was recorded, can be retried
+      }
+    }
+
+    // Handle customer.subscription.deleted event
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object as any;
+
+      logger.info('Processing customer.subscription.deleted', {
+        extra: { subscriptionId: subscription.id },
+      });
+
+      try {
+        await handleSubscriptionCancellation(subscription);
+      } catch (error: any) {
+        logger.error('Failed to handle subscription.deleted', error);
+        // Don't return error - event was recorded, can be retried
+      }
+    }
+
+    // Handle invoice.payment_succeeded event
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object as any;
+
+      logger.info('Processing invoice.payment_succeeded', {
+        extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
+      });
+
+      if (invoice.subscription) {
+        try {
+          await handleInvoicePaymentSucceeded(invoice);
+        } catch (error: any) {
+          logger.error('Failed to handle invoice.payment_succeeded', error);
+          // Don't return error - event was recorded, can be retried
+        }
+      }
+    }
+
+    // Handle invoice.payment_failed event
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object as any;
+
+      logger.info('Processing invoice.payment_failed', {
+        extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
+      });
+
+      if (invoice.subscription) {
+        try {
+          await handleInvoicePaymentFailed(invoice);
+        } catch (error: any) {
+          logger.error('Failed to handle invoice.payment_failed', error);
+          // Don't return error - event was recorded, can be retried
+        }
+      }
+    }
+
     return NextResponse.json({ received: true });
   } catch (error) {
     logger.error('Webhook handler error', error);
@@ -251,5 +339,292 @@ export async function POST(request: NextRequest) {
       { error: 'Webhook handler error' },
       { status: 500 },
     );
+  }
+}
+
+/**
+ * Map Stripe price ID to subscription tier
+ */
+function mapPriceToTier(priceId: string): SubscriptionTier {
+  // Check environment variables for price IDs
+  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
+  const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID;
+  const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID;
+
+  if (priceId === monthlyPriceId) {
+    return SubscriptionTier.MONTHLY;
+  }
+  if (priceId === yearlyPriceId) {
+    return SubscriptionTier.YEARLY;
+  }
+  if (priceId === lifetimePriceId) {
+    return SubscriptionTier.LIFETIME;
+  }
+
+  // Default to monthly if unknown
+  logger.warn('Unknown price ID, defaulting to monthly', {
+    extra: { priceId },
+  });
+  return SubscriptionTier.MONTHLY;
+}
+
+/**
+ * Map Stripe subscription status to domain status
+ */
+function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
+  switch (stripeStatus) {
+    case 'active':
+      return SubscriptionStatus.ACTIVE;
+    case 'past_due':
+      return SubscriptionStatus.PAST_DUE;
+    case 'canceled':
+      return SubscriptionStatus.CANCELED;
+    case 'trialing':
+      return SubscriptionStatus.TRIALING;
+    case 'incomplete':
+      return SubscriptionStatus.INCOMPLETE;
+    case 'unpaid':
+      return SubscriptionStatus.UNPAID;
+    default:
+      logger.warn('Unknown Stripe status, defaulting to active', {
+        extra: { stripeStatus },
+      });
+      return SubscriptionStatus.ACTIVE;
+  }
+}
+
+/**
+ * Handle subscription creation or update
+ */
+async function handleSubscriptionChange(
+  subscription: any,
+  action: 'created' | 'updated',
+): Promise<void> {
+  const customerId = subscription.customer;
+  const subscriptionId = subscription.id;
+  const status = subscription.status;
+  const priceId = subscription.items?.data[0]?.price?.id;
+  const currentPeriodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+
+  if (!priceId) {
+    logger.error('No price ID in subscription', undefined, {
+      extra: { subscriptionId },
+    });
+    return;
+  }
+
+  const tier = mapPriceToTier(priceId);
+  const subscriptionStatus = mapStripeStatus(status);
+
+  // Get customer email from subscription metadata or customer object
+  const customerEmail = subscription.metadata?.email;
+
+  if (!customerEmail) {
+    logger.error('No customer email in subscription metadata', undefined, {
+      extra: { subscriptionId, customerId },
+    });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const existingUsersResult = await getUsersByEmail(customerEmail);
+
+    if (existingUsersResult.users.length === 0) {
+      logger.error('No auth user found for subscription', undefined, {
+        extra: { email: customerEmail, subscriptionId },
+      });
+      return;
+    }
+
+    const authUserId = existingUsersResult.users[0].uid;
+
+    // Check if user exists in database
+    const dbUser = await getUserByAuthId(authUserId);
+
+    if (!dbUser) {
+      // Create user with subscription entitlements
+      await createDbUser({
+        authUserId,
+        email: customerEmail,
+        passkeyEnrolled: false,
+        subscriptionTier: tier,
+        subscriptionStatus,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        stripePriceId: priceId,
+        currentPeriodEnd,
+      });
+
+      logger.info(`Created user with ${tier} subscription`, {
+        extra: { authUserId, subscriptionId },
+      });
+    } else {
+      // Update user with subscription entitlements
+      await updateUserByAuthId(authUserId, {
+        subscriptionTier: tier,
+        subscriptionStatus,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        stripePriceId: priceId,
+        currentPeriodEnd,
+      });
+
+      logger.info(`Updated user subscription to ${tier}`, {
+        extra: { authUserId, subscriptionId, action },
+      });
+    }
+  } catch (error: any) {
+    logger.error('Failed to handle subscription change', error, {
+      extra: { subscriptionId, action },
+    });
+    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
+  }
+}
+
+/**
+ * Handle subscription cancellation
+ */
+async function handleSubscriptionCancellation(subscription: any): Promise<void> {
+  const subscriptionId = subscription.id;
+  const customerEmail = subscription.metadata?.email;
+
+  if (!customerEmail) {
+    logger.error('No customer email in subscription metadata', undefined, {
+      extra: { subscriptionId },
+    });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const existingUsersResult = await getUsersByEmail(customerEmail);
+
+    if (existingUsersResult.users.length === 0) {
+      logger.warn('No auth user found for cancelled subscription', {
+        extra: { email: customerEmail, subscriptionId },
+      });
+      return;
+    }
+
+    const authUserId = existingUsersResult.users[0].uid;
+
+    // Update user to free tier with canceled status
+    await updateUserByAuthId(authUserId, {
+      subscriptionTier: SubscriptionTier.FREE,
+      subscriptionStatus: SubscriptionStatus.CANCELED,
+      stripeSubscriptionId: null, // Clear subscription ID
+      currentPeriodEnd: null,
+    });
+
+    logger.info('Downgraded user to free tier after cancellation', {
+      extra: { authUserId, subscriptionId },
+    });
+  } catch (error: any) {
+    logger.error('Failed to handle subscription cancellation', error, {
+      extra: { subscriptionId },
+    });
+    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
+  }
+}
+
+/**
+ * Handle successful invoice payment
+ */
+async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
+  const subscriptionId = invoice.subscription;
+  const customerEmail = invoice.customer_email;
+
+  if (!customerEmail) {
+    logger.error('No customer email in invoice', undefined, {
+      extra: { invoiceId: invoice.id },
+    });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const existingUsersResult = await getUsersByEmail(customerEmail);
+
+    if (existingUsersResult.users.length === 0) {
+      logger.warn('No auth user found for invoice payment', {
+        extra: { email: customerEmail, subscriptionId },
+      });
+      return;
+    }
+
+    const authUserId = existingUsersResult.users[0].uid;
+    const dbUser = await getUserByAuthId(authUserId);
+
+    if (!dbUser) {
+      logger.warn('No database user found for invoice payment', {
+        extra: { authUserId, subscriptionId },
+      });
+      return;
+    }
+
+    // If user was past_due or unpaid, reactivate them
+    if (
+      dbUser.subscriptionStatus === SubscriptionStatus.PAST_DUE ||
+      dbUser.subscriptionStatus === SubscriptionStatus.UNPAID
+    ) {
+      await updateUserByAuthId(authUserId, {
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+      });
+
+      logger.info('Reactivated user subscription after payment', {
+        extra: { authUserId, subscriptionId },
+      });
+    }
+  } catch (error: any) {
+    logger.error('Failed to handle invoice payment succeeded', error, {
+      extra: { invoiceId: invoice.id, subscriptionId },
+    });
+    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
+  }
+}
+
+/**
+ * Handle failed invoice payment
+ */
+async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
+  const subscriptionId = invoice.subscription;
+  const customerEmail = invoice.customer_email;
+
+  if (!customerEmail) {
+    logger.error('No customer email in invoice', undefined, {
+      extra: { invoiceId: invoice.id },
+    });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const existingUsersResult = await getUsersByEmail(customerEmail);
+
+    if (existingUsersResult.users.length === 0) {
+      logger.warn('No auth user found for failed invoice', {
+        extra: { email: customerEmail, subscriptionId },
+      });
+      return;
+    }
+
+    const authUserId = existingUsersResult.users[0].uid;
+
+    // Mark user as past_due (Stripe will retry payment)
+    await updateUserByAuthId(authUserId, {
+      subscriptionStatus: SubscriptionStatus.PAST_DUE,
+    });
+
+    logger.info('Marked user subscription as past_due after payment failure', {
+      extra: { authUserId, subscriptionId },
+    });
+  } catch (error: any) {
+    logger.error('Failed to handle invoice payment failed', error, {
+      extra: { invoiceId: invoice.id, subscriptionId },
+    });
+    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
   }
 }

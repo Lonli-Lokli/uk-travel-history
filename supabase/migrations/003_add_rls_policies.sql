@@ -1,155 +1,128 @@
--- Migration: Add Row Level Security (RLS) policies
+-- Migration: Add RLS policies for user-scoped and premium access control
 -- Date: 2025-12-26
--- Description: Implements security-first RLS policies for user-scoped and premium access
+-- Description: Implements security-first RLS policies for entitlement enforcement
+-- Related to Issue #100: Migrate to unlocked public sign-up + Supabase RLS-enforced entitlements
 
 -- ============================================================================
--- Drop existing overly permissive grants
+-- Helper Functions for RLS Policies
 -- ============================================================================
 
--- Revoke direct grants to authenticated role
-REVOKE ALL ON purchase_intents FROM authenticated;
-REVOKE ALL ON users FROM authenticated;
-REVOKE ALL ON webhook_events FROM authenticated;
-
--- ============================================================================
--- Users Table Policies
--- ============================================================================
-
--- Policy: Users can read their own profile
-CREATE POLICY "Users can read their own profile"
-  ON users
-  FOR SELECT
-  USING (
-    clerk_user_id = auth.jwt() ->> 'sub'
-  );
-
--- Policy: Users can update their own profile (limited fields)
-CREATE POLICY "Users can update their own profile"
-  ON users
-  FOR UPDATE
-  USING (
-    clerk_user_id = auth.jwt() ->> 'sub'
-  )
-  WITH CHECK (
-    clerk_user_id = auth.jwt() ->> 'sub'
-  );
-
--- Note: INSERT and DELETE are intentionally not allowed for regular users
--- User creation is handled by Clerk webhook using service_role
--- User deletion is handled by Clerk webhook or admin actions
-
--- ============================================================================
--- Purchase Intents Table Policies
--- ============================================================================
-
--- Policy: Users can read their own purchase intents
-CREATE POLICY "Users can read their own purchase intents"
-  ON purchase_intents
-  FOR SELECT
-  USING (
-    clerk_user_id = auth.jwt() ->> 'sub'
-    OR email = auth.jwt() ->> 'email'
-  );
-
--- Policy: Anyone can create a purchase intent (for pre-auth checkout)
-CREATE POLICY "Anyone can create a purchase intent"
-  ON purchase_intents
-  FOR INSERT
-  WITH CHECK (true);
-
--- Note: UPDATE and DELETE are not allowed for regular users
--- Updates are handled by webhooks using service_role
-
--- ============================================================================
--- Webhook Events Table Policies
--- ============================================================================
-
--- Policy: No direct access to webhook_events
--- This table is for internal use only (webhooks via service_role)
--- No policies needed - deny all by default
-
--- ============================================================================
--- Helper function to get current user's Clerk ID from JWT
--- ============================================================================
-
+-- Get current user's Clerk user ID from JWT claims
 CREATE OR REPLACE FUNCTION auth.clerk_user_id()
 RETURNS TEXT AS $$
 BEGIN
-  RETURN auth.jwt() ->> 'sub';
+  -- Extract clerk user ID from JWT claims
+  -- Clerk stores user_id in the 'sub' claim
+  RETURN nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::text;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
--- ============================================================================
--- Helper function to check if current user has premium access
--- ============================================================================
-
+-- Check if current user has premium access
 CREATE OR REPLACE FUNCTION auth.current_user_has_premium_access()
 RETURNS BOOLEAN AS $$
 DECLARE
-  user_tier subscription_tier;
-  user_status subscription_status;
+  user_record users;
 BEGIN
-  SELECT subscription_tier, subscription_status
-  INTO user_tier, user_status
+  -- Get current user record
+  SELECT * INTO user_record
   FROM users
   WHERE clerk_user_id = auth.clerk_user_id();
 
+  -- Return false if user not found
   IF NOT FOUND THEN
     RETURN FALSE;
   END IF;
 
-  -- Free tier has no premium access
-  IF user_tier = 'free' THEN
-    RETURN FALSE;
-  END IF;
-
-  -- Lifetime always has access
-  IF user_tier = 'lifetime' THEN
-    RETURN TRUE;
-  END IF;
-
-  -- Subscription tiers require active or trialing status
-  IF user_status IN ('active', 'trialing') THEN
-    RETURN TRUE;
-  END IF;
-
-  RETURN FALSE;
+  -- Check premium access using helper function
+  RETURN has_premium_access(user_record);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- ============================================================================
--- Example premium table (for future use)
+-- RLS Policies for Users Table
 -- ============================================================================
 
--- When you create premium-only tables, use a policy like this:
+-- Drop existing overly permissive grants
+REVOKE SELECT ON users FROM authenticated;
+REVOKE INSERT ON users FROM authenticated;
+REVOKE UPDATE ON users FROM authenticated;
+
+-- Policy: Users can read their own profile
+CREATE POLICY users_select_own
+  ON users
+  FOR SELECT
+  TO authenticated
+  USING (clerk_user_id = auth.clerk_user_id());
+
+-- Policy: Users can update their own profile
+CREATE POLICY users_update_own
+  ON users
+  FOR UPDATE
+  TO authenticated
+  USING (clerk_user_id = auth.clerk_user_id())
+  WITH CHECK (clerk_user_id = auth.clerk_user_id());
+
+-- Note: INSERT on users is restricted to service_role only (via webhooks)
+-- This prevents users from creating their own accounts with premium access
+
+-- ============================================================================
+-- RLS Policies for Purchase Intents Table
+-- ============================================================================
+
+-- Drop existing overly permissive grants
+REVOKE SELECT ON purchase_intents FROM authenticated;
+REVOKE INSERT ON purchase_intents FROM authenticated;
+REVOKE UPDATE ON purchase_intents FROM authenticated;
+
+-- Policy: Users can only view their own purchase intents
+CREATE POLICY purchase_intents_select_own
+  ON purchase_intents
+  FOR SELECT
+  TO authenticated
+  USING (clerk_user_id = auth.clerk_user_id());
+
+-- Note: INSERT/UPDATE on purchase_intents is restricted to service_role only
+-- This prevents users from manipulating their payment status
+
+-- ============================================================================
+-- RLS Policies for Webhook Events Table
+-- ============================================================================
+
+-- Drop existing overly permissive grants
+REVOKE SELECT ON webhook_events FROM authenticated;
+
+-- Webhook events should NOT be readable by regular users (sensitive payment data)
+-- Only service_role can access this table
+
+-- ============================================================================
+-- Example: Premium Content Table (for future use)
+-- ============================================================================
+-- If you create tables that require premium access, use this pattern:
 --
--- CREATE POLICY "Premium users only"
---   ON premium_features
+-- CREATE POLICY premium_content_select
+--   ON premium_content
 --   FOR SELECT
---   USING (
---     auth.current_user_has_premium_access()
---   );
+--   TO authenticated
+--   USING (auth.current_user_has_premium_access());
+--
+-- This ensures only users with active premium subscriptions can access the data
 
 -- ============================================================================
--- Grant minimal permissions
+-- Grant Permissions for User-Scoped Access
 -- ============================================================================
 
--- Grant schema usage to authenticated users
-GRANT USAGE ON SCHEMA public TO authenticated;
+-- Users can SELECT their own data via RLS policies
+GRANT SELECT ON users TO authenticated;
+GRANT UPDATE ON users TO authenticated;
+GRANT SELECT ON purchase_intents TO authenticated;
 
--- Grant specific table permissions (RLS will enforce row-level access)
-GRANT SELECT, UPDATE ON users TO authenticated;
-GRANT SELECT, INSERT ON purchase_intents TO authenticated;
+-- Service role retains full access for webhooks and admin operations
+-- (Already granted in 001_initial_schema.sql)
 
--- Functions available to authenticated users
-GRANT EXECUTE ON FUNCTION auth.clerk_user_id() TO authenticated;
-GRANT EXECUTE ON FUNCTION auth.current_user_has_premium_access() TO authenticated;
-GRANT EXECUTE ON FUNCTION has_premium_access(UUID) TO authenticated;
+-- ============================================================================
+-- Comments for Documentation
+-- ============================================================================
 
--- Service role retains full access
--- (Implicitly granted, no changes needed)
-
-COMMENT ON FUNCTION auth.clerk_user_id IS 'Returns the Clerk user ID from the JWT token';
-COMMENT ON FUNCTION auth.current_user_has_premium_access IS 'Checks if the current authenticated user has premium access';
-COMMENT ON POLICY "Users can read their own profile" ON users IS 'Users can only read their own profile data';
-COMMENT ON POLICY "Users can update their own profile" ON users IS 'Users can only update their own profile (but not entitlement fields)';
+COMMENT ON POLICY users_select_own ON users IS 'Users can read their own profile data';
+COMMENT ON POLICY users_update_own ON users IS 'Users can update their own profile data (but not entitlement fields - those are service_role only)';
+COMMENT ON POLICY purchase_intents_select_own ON purchase_intents IS 'Users can view their own purchase history';

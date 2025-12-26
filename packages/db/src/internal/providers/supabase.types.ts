@@ -51,13 +51,18 @@ export interface Database {
           email: string;
           passkey_enrolled: boolean;
           subscription_tier: 'free' | 'monthly' | 'yearly' | 'lifetime';
-          subscription_status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid' | null;
+          subscription_status:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           stripe_price_id: string | null;
           current_period_end: string | null;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -65,13 +70,18 @@ export interface Database {
           email: string;
           passkey_enrolled?: boolean;
           subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
-          subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid' | null;
+          subscription_status?:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
           current_period_end?: string | null;
           created_at?: string;
-          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -79,13 +89,18 @@ export interface Database {
           email?: string;
           passkey_enrolled?: boolean;
           subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
-          subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'unpaid' | null;
+          subscription_status?:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
           current_period_end?: string | null;
           created_at?: string;
-          updated_at?: string;
         };
       };
       webhook_events: {
@@ -116,10 +131,6 @@ export interface Database {
       keepalive: {
         Args: Record<string, never>;
         Returns: number;
-      };
-      has_premium_access: {
-        Args: { user_id: string };
-        Returns: boolean;
       };
     };
   };

@@ -63,24 +63,34 @@ export class DbError extends Error {
 // ============================================================================
 
 /**
- * Subscription tier enum
+ * Subscription tier for entitlement enforcement
  */
 export enum SubscriptionTier {
+  /** Free tier (default for new sign-ups) */
   FREE = 'free',
+  /** Monthly recurring subscription */
   MONTHLY = 'monthly',
+  /** Yearly recurring subscription */
   YEARLY = 'yearly',
+  /** Lifetime one-time purchase */
   LIFETIME = 'lifetime',
 }
 
 /**
- * Subscription status enum
+ * Subscription status (aligned with Stripe statuses)
  */
 export enum SubscriptionStatus {
+  /** Subscription is active and paid */
   ACTIVE = 'active',
-  TRIALING = 'trialing',
+  /** Payment failed but subscription not cancelled yet */
   PAST_DUE = 'past_due',
+  /** Subscription has been cancelled */
   CANCELED = 'canceled',
+  /** In trial period */
+  TRIALING = 'trialing',
+  /** Initial payment failed */
   INCOMPLETE = 'incomplete',
+  /** Payment failed and grace period ended */
   UNPAID = 'unpaid',
 }
 
@@ -96,22 +106,20 @@ export interface User {
   email: string;
   /** Whether user has enrolled in passkey authentication */
   passkeyEnrolled: boolean;
-  /** Subscription tier */
+  /** Subscription tier for entitlement enforcement */
   subscriptionTier: SubscriptionTier;
-  /** Subscription status (null for free tier) */
-  subscriptionStatus: SubscriptionStatus | null;
-  /** Stripe customer ID */
+  /** Subscription status */
+  subscriptionStatus: SubscriptionStatus;
+  /** Stripe customer ID (if user has purchased) */
   stripeCustomerId: string | null;
-  /** Stripe subscription ID (null for lifetime/free) */
+  /** Stripe subscription ID (if user has recurring subscription) */
   stripeSubscriptionId: string | null;
-  /** Stripe price ID */
+  /** Stripe price ID for current subscription/purchase */
   stripePriceId: string | null;
-  /** End of current billing period (null for lifetime/free) */
+  /** End date of current subscription period (null for lifetime) */
   currentPeriodEnd: Date | null;
   /** When the user record was created */
   createdAt: Date;
-  /** When the user record was last updated */
-  updatedAt: Date;
 }
 
 /**
@@ -126,15 +134,15 @@ export interface CreateUserData {
   passkeyEnrolled?: boolean;
   /** Subscription tier (optional, defaults to FREE) */
   subscriptionTier?: SubscriptionTier;
-  /** Subscription status (optional) */
-  subscriptionStatus?: SubscriptionStatus | null;
+  /** Subscription status (optional, defaults to ACTIVE) */
+  subscriptionStatus?: SubscriptionStatus;
   /** Stripe customer ID (optional) */
   stripeCustomerId?: string | null;
   /** Stripe subscription ID (optional) */
   stripeSubscriptionId?: string | null;
   /** Stripe price ID (optional) */
   stripePriceId?: string | null;
-  /** End of current billing period (optional) */
+  /** Current period end (optional) */
   currentPeriodEnd?: Date | null;
 }
 
@@ -149,14 +157,14 @@ export interface UpdateUserData {
   /** Subscription tier */
   subscriptionTier?: SubscriptionTier;
   /** Subscription status */
-  subscriptionStatus?: SubscriptionStatus | null;
+  subscriptionStatus?: SubscriptionStatus;
   /** Stripe customer ID */
   stripeCustomerId?: string | null;
   /** Stripe subscription ID */
   stripeSubscriptionId?: string | null;
   /** Stripe price ID */
   stripePriceId?: string | null;
-  /** End of current billing period */
+  /** Current period end */
   currentPeriodEnd?: Date | null;
 }
 

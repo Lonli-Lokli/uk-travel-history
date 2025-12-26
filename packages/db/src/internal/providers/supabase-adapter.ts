@@ -16,7 +16,13 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
 } from '../../types/domain';
-import { DbError, DbErrorCode, PurchaseIntentStatus } from '../../types/domain';
+import {
+  DbError,
+  DbErrorCode,
+  PurchaseIntentStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
+} from '../../types/domain';
 import type { Database } from './supabase.types';
 
 /**
@@ -182,8 +188,8 @@ export class SupabaseDbAdapter implements DbProvider {
       clerk_user_id: data.authUserId,
       email: data.email,
       passkey_enrolled: data.passkeyEnrolled ?? false,
-      subscription_tier: data.subscriptionTier ?? 'free',
-      subscription_status: data.subscriptionStatus ?? null,
+      subscription_tier: data.subscriptionTier ?? SubscriptionTier.FREE,
+      subscription_status: data.subscriptionStatus ?? SubscriptionStatus.ACTIVE,
       stripe_customer_id: data.stripeCustomerId ?? null,
       stripe_subscription_id: data.stripeSubscriptionId ?? null,
       stripe_price_id: data.stripePriceId ?? null,
@@ -446,14 +452,14 @@ export class SupabaseDbAdapter implements DbProvider {
       authUserId: row.clerk_user_id,
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
-      subscriptionTier: row.subscription_tier as any,
-      subscriptionStatus: row.subscription_status as any,
-      stripeCustomerId: row.stripe_customer_id,
-      stripeSubscriptionId: row.stripe_subscription_id,
-      stripePriceId: row.stripe_price_id,
+      subscriptionTier: (row.subscription_tier as SubscriptionTier) ?? SubscriptionTier.FREE,
+      subscriptionStatus:
+        (row.subscription_status as SubscriptionStatus) ?? SubscriptionStatus.ACTIVE,
+      stripeCustomerId: row.stripe_customer_id ?? null,
+      stripeSubscriptionId: row.stripe_subscription_id ?? null,
+      stripePriceId: row.stripe_price_id ?? null,
       currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
     };
   }
 
