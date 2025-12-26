@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { ParseResult } from '@uth/parser';
 import { format } from 'date-fns';
+import { assertFeatureAccess } from '@uth/features/server';
+import { FEATURES } from '@uth/features';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -42,7 +44,9 @@ async function initializePdfParser() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication handled by Clerk middleware in proxy.ts
+    // Enforce feature access - PDF import feature
+    await assertFeatureAccess(request, FEATURES.PDF_IMPORT);
+
     // Initialize PDF parser if not already done
     await initializePdfParser();
 
