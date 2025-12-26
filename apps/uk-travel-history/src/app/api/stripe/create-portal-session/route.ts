@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import Stripe from 'stripe';
+import { createPortalSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
 
 // Force dynamic rendering to avoid build-time execution
@@ -13,11 +13,6 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Initialize Stripe client at runtime to avoid build-time errors
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: '2025-02-24.acacia',
-    });
-
     // Verify user is authenticated
     const { userId } = await auth();
     if (!userId) {
@@ -34,20 +29,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Customer Portal session
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account`,
-    });
+    // Create Customer Portal session using SDK
+    const url = await createPortalSession(
+      customerId,
+      returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account`,
+    );
 
     logger.addBreadcrumb('Customer portal session created', 'billing', {
       customerId,
       userId,
     });
 
-    return NextResponse.json({
-      url: session.url,
-    });
+    return NextResponse.json({ url });
   } catch (error) {
     logger.error('Failed to create customer portal session', error);
     return NextResponse.json(

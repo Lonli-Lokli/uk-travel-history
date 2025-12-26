@@ -1,22 +1,22 @@
 import { redirect } from 'next/navigation';
-import { currentUser } from '@clerk/nextjs/server';
+import { getCurrentUser } from '@uth/auth-server';
 import { AccountPageClient } from './AccountPageClient';
 import { getUserByAuthId } from '@uth/db';
 
 export default async function AccountPage() {
-  const user = await currentUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect('/sign-in?redirect_url=/account');
   }
 
   // Fetch user subscription data from Supabase
-  const dbUser = await getUserByAuthId(user.id);
+  const dbUser = await getUserByAuthId(user.uid);
 
   return (
     <AccountPageClient
       user={{
-        email: user.emailAddresses[0]?.emailAddress || '',
+        email: user.email || '',
         subscriptionTier: dbUser?.subscriptionTier || 'free',
         subscriptionStatus: dbUser?.subscriptionStatus || null,
         currentPeriodEnd: dbUser?.currentPeriodEnd

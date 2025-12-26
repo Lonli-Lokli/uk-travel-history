@@ -9,50 +9,35 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Webhook } from 'svix';
 import { headers } from 'next/headers';
-import { createAdminClient, SubscriptionTier, SubscriptionStatus } from '@uth/db';
+import { verifyWebhook } from '@uth/auth-server';
+import { createAdminClient } from '@uth/db';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-/**
- * Verify Clerk webhook signature
- */
-async function verifyWebhook(request: NextRequest) {
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-
-  if (!WEBHOOK_SECRET) {
-    throw new Error('CLERK_WEBHOOK_SECRET not configured');
-  }
-
-  const headersList = await headers();
-  const svix_id = headersList.get('svix-id');
-  const svix_timestamp = headersList.get('svix-timestamp');
-  const svix_signature = headersList.get('svix-signature');
-
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    throw new Error('Missing svix headers');
-  }
-
-  const body = await request.text();
-
-  const wh = new Webhook(WEBHOOK_SECRET);
-
-  return wh.verify(body, {
-    'svix-id': svix_id,
-    'svix-timestamp': svix_timestamp,
-    'svix-signature': svix_signature,
-  });
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook signature
+    // Verify webhook signature using SDK
+    const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+    if (!WEBHOOK_SECRET) {
+      logger.error('CLERK_WEBHOOK_SECRET not configured', undefined);
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    }
+
+    const body = await request.text();
+    const headersList = await headers();
+
+    // Convert Headers to plain object for SDK
+    const headersObj: Record<string, string> = {};
+    headersList.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+
     let event;
     try {
-      event = await verifyWebhook(request);
+      event = await verifyWebhook(body, headersObj, WEBHOOK_SECRET);
     } catch (err) {
       logger.error('Clerk webhook verification failed', undefined, {
         extra: { error: (err as Error).message },
@@ -60,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const { type, data } = event as any;
+    const { type, data } = event;
 
     logger.info(`Clerk webhook received: ${type}`, {
       extra: { userId: data.id },

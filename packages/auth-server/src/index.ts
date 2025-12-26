@@ -18,6 +18,8 @@ export type {
   CreateUserData,
   UpdateUserMetadataData,
   UserListResult,
+  UserWebhookEventData,
+  WebhookVerificationResult,
 } from './types/domain';
 export { AuthError, AuthErrorCode, SubscriptionStatus } from './types/domain';
 
@@ -41,6 +43,10 @@ export {
   createUser,
   getUsersByEmail,
   updateUserMetadata,
+  // Webhook operations
+  verifyWebhook,
+  // Current user operations
+  getCurrentUser,
 } from './public/auth-operations';
 
 // DO NOT export:

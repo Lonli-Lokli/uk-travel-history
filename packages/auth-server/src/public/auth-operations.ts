@@ -275,3 +275,68 @@ export async function updateUserMetadata(uid: string, data: UpdateUserMetadataDa
   const provider = getAuthProvider();
   return provider.updateUserMetadata(uid, data);
 }
+
+// ============================================================================
+// Webhook Event Processing Operations
+// ============================================================================
+
+/**
+ * Webhook event data for user lifecycle events
+ */
+export interface UserWebhookEventData {
+  id: string;
+  email_addresses?: Array<{
+    id: string;
+    email_address: string;
+  }>;
+  primary_email_address_id?: string;
+}
+
+/**
+ * Result of webhook verification
+ */
+export interface WebhookVerificationResult {
+  type: string;
+  data: any;
+}
+
+/**
+ * Verify webhook signature and extract event data
+ * Provider-agnostic webhook verification
+ * @param body - Raw webhook body (string)
+ * @param headers - Webhook headers with signature info
+ * @param secret - Webhook secret for verification
+ * @returns Verified event type and data
+ * @throws AuthError if verification fails
+ */
+export async function verifyWebhook(
+  body: string,
+  headers: Record<string, string>,
+  secret: string,
+): Promise<WebhookVerificationResult> {
+  const provider = getAuthProvider();
+  if (!provider.verifyWebhook) {
+    throw new AuthError(
+      AuthErrorCode.NOT_IMPLEMENTED,
+      'Webhook verification not supported by this auth provider',
+    );
+  }
+  return provider.verifyWebhook(body, headers, secret);
+}
+
+/**
+ * Get current authenticated user from server context
+ * This is a server-side function that retrieves the currently authenticated user
+ * @returns Current user or null if not authenticated
+ * @throws AuthError if operation fails
+ */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const provider = getAuthProvider();
+  if (!provider.getCurrentUser) {
+    throw new AuthError(
+      AuthErrorCode.NOT_IMPLEMENTED,
+      'getCurrentUser not supported by this auth provider',
+    );
+  }
+  return provider.getCurrentUser();
+}

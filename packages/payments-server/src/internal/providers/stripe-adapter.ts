@@ -453,4 +453,31 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       actions: ['Event normalized from Stripe webhook'],
     };
   }
+
+  async createPortalSession(
+    customerId: string,
+    returnUrl: string,
+  ): Promise<string> {
+    if (!this.stripe) {
+      throw new PaymentsError(
+        PaymentsErrorCode.CONFIG_ERROR,
+        'Stripe not initialized',
+      );
+    }
+
+    try {
+      const session = await this.stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+      });
+
+      return session.url;
+    } catch (error: unknown) {
+      throw new PaymentsError(
+        PaymentsErrorCode.PROVIDER_ERROR,
+        'Failed to create portal session',
+        error,
+      );
+    }
+  }
 }
