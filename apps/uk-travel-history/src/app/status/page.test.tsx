@@ -15,19 +15,25 @@ vi.mock('@uth/features', async () => {
 // Mock the flow library
 vi.mock('@/lib/appFlow', () => ({
   appFlow: {
-    page: (fn: any) => async () => {
-      const generator = fn();
-      let result = generator.next();
-      while (!result.done) {
-        result = generator.next(await result.value);
-      }
-      return result.value;
+    page: (generatorFn: any) => {
+      return async () => {
+        const gen = generatorFn();
+        let value;
+        let result = gen.next();
+
+        while (!result.done) {
+          value = await result.value;
+          result = gen.next(value);
+        }
+
+        return result.value;
+      };
     },
   },
 }));
 
 vi.mock('@/lib/flow', () => ({
-  call: (fn: any) => fn,
+  call: (promiseOrValue: any) => promiseOrValue,
 }));
 
 describe('StatusPage', () => {
