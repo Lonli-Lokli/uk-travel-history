@@ -3,7 +3,7 @@
  * Handles server-side auth operations using Clerk Backend SDK
  */
 
-import { clerkClient, auth } from '@clerk/nextjs/server';
+import { clerkClient, currentUser } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
 import { logger } from '@uth/utils';
 import {
@@ -421,17 +421,11 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      // Use auth() instead of currentUser() for Next.js 16 compatibility
-      // auth() works with proxy.ts middleware, while currentUser() requires middleware.ts
-      const { userId } = await auth();
+      const user = await currentUser();
 
-      if (!userId) {
+      if (!user) {
         return null;
       }
-
-      // Fetch full user details using the userId
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
 
       return {
         uid: user.id,
