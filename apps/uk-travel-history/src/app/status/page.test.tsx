@@ -12,6 +12,24 @@ vi.mock('@uth/features', async () => {
   };
 });
 
+// Mock the flow library
+vi.mock('@/lib/appFlow', () => ({
+  appFlow: {
+    page: (fn: any) => async () => {
+      const generator = fn();
+      let result = generator.next();
+      while (!result.done) {
+        result = generator.next(await result.value);
+      }
+      return result.value;
+    },
+  },
+}));
+
+vi.mock('@/lib/flow', () => ({
+  call: (fn: any) => fn,
+}));
+
 describe('StatusPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

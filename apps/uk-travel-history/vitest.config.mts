@@ -26,6 +26,7 @@ env: {
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, './src'),
       '@uth/ui': path.resolve(__dirname, '../../packages/ui/src'),
       '@uth/utils': path.resolve(__dirname, '../../packages/utils/src'),
       '@uth/features': path.resolve(__dirname, '../../packages/features/src'),
