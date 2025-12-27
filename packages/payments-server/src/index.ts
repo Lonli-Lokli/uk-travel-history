@@ -36,6 +36,7 @@ export {
   retrieveCheckoutSession,
   retrieveSubscription,
   constructWebhookEvent,
+  createPortalSession,
 } from './public/payments-operations';
 
 // DO NOT export:

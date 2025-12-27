@@ -107,4 +107,16 @@ export interface PaymentsServerProvider {
     signature: string,
     secret: string,
   ): any;
+
+  /**
+   * Create a customer portal session for subscription management
+   * @param customerId - The customer ID
+   * @param returnUrl - URL to return to after portal session
+   * @returns Portal session URL
+   * @throws PaymentsError if creation fails
+   */
+  createPortalSession?(
+    customerId: string,
+    returnUrl: string,
+  ): Promise<string>;
 }

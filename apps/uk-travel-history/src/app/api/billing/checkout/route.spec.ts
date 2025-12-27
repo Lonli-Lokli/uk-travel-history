@@ -102,7 +102,7 @@ describe('POST /api/billing/checkout', () => {
     expect(mockCreateCheckoutSession).toHaveBeenCalledWith({
       plan: 'PREMIUM_ONCE',
       customerEmail: 'test@example.com',
-      successUrl: 'http://localhost:3000/claim?session_id={CHECKOUT_SESSION_ID}',
+      successUrl: 'http://localhost:3000/travel?session_id={CHECKOUT_SESSION_ID}',
       cancelUrl: 'http://localhost:3000/',
       metadata: {
         purchase_intent_id: 'purchase-intent-123',

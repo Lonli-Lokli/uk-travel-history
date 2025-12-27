@@ -19,13 +19,27 @@ This is a Next.js application designed to help users track their UK travel histo
 ## Tech Stack & Architecture
 
 ### Framework & Libraries
-- **Next.js 14** (App Router)
+- **Next.js 16** (App Router with `proxy.ts` middleware)
 - **MobX** for state management (observer pattern)
 - **TanStack React Table v8** for table functionality
 - **shadcn/ui + Radix UI** for components
 - **Tailwind CSS** for styling
 - **pdf-parse** for PDF parsing
 - **ExcelJS** for Excel export
+
+### Authentication & Payments (Issue #100)
+- **Clerk** for authentication (public sign-up model)
+  - Modal-based sign-in/sign-up via `<SignInButton>` and `<SignUpButton>`
+  - JWT tokens used for Supabase RLS authentication
+  - Webhook handler at `/api/webhooks/clerk` for user provisioning
+- **Supabase** for database with Row Level Security (RLS)
+  - User-scoped clients use anon key + Clerk JWT (RLS enforced)
+  - Admin clients use service_role key (webhooks only, bypasses RLS)
+  - Factory functions: `createUserScopedClient()`, `createAdminClient()`
+- **Stripe** for payments
+  - Subscription tiers: free, monthly, yearly, lifetime
+  - Webhook handler at `/api/stripe/webhook` for subscription lifecycle
+  - Customer Portal integration for subscription management
 
 ### Project Structure
 ```
@@ -55,15 +69,21 @@ apps/uk-travel-history/
 ```
 
 ### Routing Structure
+**Active Routes**:
 - **`/`** (Home): Landing page with instructions and CTAs
-  - Shows empty state with "How to Get PDF" guide
-  - Two action buttons that navigate to `/travel`
-- **`/travel`** (Travel Tracker): Main application
-  - Always shows full UI (cards, table, etc.)
-  - Users interact with Import/Export buttons in header
-  - Header logo links back to home
+- **`/travel`** (Travel Tracker): Main application (free tier access)
+- **`/account`** (Account & Billing): Subscription management
+- **`/sign-in`** and **`/sign-up`**: Clerk authentication pages
+- **`/about`**: About page
+- **`/terms`**: Terms and conditions
+- **`/status`**: Feature flags dashboard
 
-**Design Philosophy**: Clean navigation without hacky query params or setTimeout. Users are routed to the travel page where they naturally use the UI buttons.
+**Removed Routes** (as of Issue #100):
+- ~~`/claim`~~ - Replaced by public sign-in/sign-up
+- ~~`/registration`~~ - Replaced by Clerk webhook auto-provisioning
+- ~~`/onboarding/passkey`~~ - Passkeys now optional
+
+**Design Philosophy**: Clean navigation with public sign-up model. Users sign in/up via Clerk modals, then access free features immediately. Premium features require subscription upgrade via `/account` page.
 
 ## Development Guidelines
 
@@ -74,6 +94,35 @@ apps/uk-travel-history/
 3. **Calculations**: The formula for full days is: `(Return Date - Departure Date) - 1`
 4. **UI/UX**: Maintain mobile-first, responsive design (cards on mobile, table on desktop)
 5. **Data Validation**: Ensure dates are valid and in correct format
+6. **Security**: Follow the three-layer defense model (see Security Model section below)
+
+### Security Model
+
+The application uses a **three-layer defense** strategy for access control:
+
+**Layer 1: Route Protection** (`proxy.ts`)
+- Next.js 16 middleware authenticates requests via `clerkMiddleware()`
+- Public routes: `/`, `/travel`, `/about`, `/terms`, `/status`
+- Protected routes: `/account`, `/api/billing/*`, `/api/user/*`
+- Webhook routes: `/api/webhooks/*`, `/api/stripe/webhook`
+
+**Layer 2: API Route Authorization**
+- Feature-based authorization via `@uth/features` package
+- Server-side validation of subscription tiers
+- Use `getCurrentUser()` from `@uth/auth-server` for type-safe user access
+
+**Layer 3: Database RLS Policies** (`supabase/migrations/003_add_rls_policies.sql`)
+- **Users table**: Can only read/update own profile
+  - CRITICAL: Column-level restrictions prevent users from modifying entitlement fields
+  - `subscription_tier`, `stripe_customer_id`, etc. can only be modified by service_role
+- **Purchase intents**: Can only view own purchase history
+- **Webhook events**: Service_role only (contains sensitive payment data)
+
+**Important Rules**:
+- NEVER use `as any` type assertions with Supabase client (types are already defined)
+- ALWAYS use `createUserScopedClient()` for user-facing operations (RLS enforced)
+- ONLY use `createAdminClient()` in webhook handlers (bypasses RLS)
+- Webhook handlers MUST verify signatures before processing
 
 ### Code Style
 - Use TypeScript for type safety

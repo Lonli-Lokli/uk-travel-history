@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       const sessionRef = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ONCE,
         customerEmail: email,
-        successUrl: `${APP_URL}/claim?session_id={CHECKOUT_SESSION_ID}`,
+        successUrl: `${APP_URL}/travel?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${APP_URL}/`,
         metadata: {
           purchase_intent_id: purchaseIntent.id,

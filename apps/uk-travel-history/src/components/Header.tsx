@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
+import { SignedIn, SignedOut, UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
   Button,
   DropdownMenu,
@@ -13,7 +14,7 @@ import {
 } from '@uth/ui';
 import { FEATURE_KEYS, FEATURES } from '@uth/features';
 import { useFeatureFlags, FeatureDropdownItem } from '@uth/widgets';
-import { authStore, travelStore, uiStore } from '@uth/stores';
+import { travelStore } from '@uth/stores';
 
 interface HeaderProps {
   onImportPdfClick: () => void;
@@ -30,9 +31,9 @@ export const Header = observer(
     onExportClick,
   }: HeaderProps) => {
     const { isFeatureEnabled } = useFeatureFlags();
+    const { isLoaded } = useAuth();
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
-    const user = authStore.user;
     const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.AUTH);
 
     return (
@@ -227,54 +228,45 @@ export const Header = observer(
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Auth UI - only show if feature flag is enabled */}
+              {/* Auth UI - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  {user ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <UIIcon iconName="user" className="h-4 w-4 mr-1.5" />
-                          <span className="hidden sm:inline">
-                            {user.displayName ||
-                              user.email?.split('@')[0] ||
-                              'Account'}
-                          </span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-[200px]">
-                        <DropdownMenuItem disabled>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">
-                              {user.displayName || 'User'}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {user.email}
-                            </span>
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => uiStore.handleSignOut()}
-                        >
-                          <UIIcon iconName="logout" className="h-4 w-4 shrink-0" />
-                          Sign Out
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
                   ) : (
-                    <Link href="/claim">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
-                        <UIIcon
-                          iconName="fingerprint"
-                          className="h-4 w-4 mr-1.5"
-                        />
-                        <span className="hidden sm:inline">Sign In</span>
-                      </Button>
-                    </Link>
+                    <>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm">
+                            <UIIcon
+                              iconName="fingerprint"
+                              className="h-4 w-4 mr-1.5"
+                            />
+                            <span className="hidden sm:inline">Sign In</span>
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                    </>
                   )}
                 </>
               )}

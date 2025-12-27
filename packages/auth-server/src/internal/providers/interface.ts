@@ -12,6 +12,7 @@ import type {
   CreateUserData,
   UpdateUserMetadataData,
   UserListResult,
+  WebhookVerificationResult,
 } from '../../types/domain';
 
 /**
@@ -143,4 +144,25 @@ export interface AuthServerProvider {
    * @throws AuthError if operation fails
    */
   updateUserMetadata(uid: string, data: UpdateUserMetadataData): Promise<void>;
+
+  /**
+   * Verify webhook signature and extract event data (optional)
+   * @param body - Raw webhook body
+   * @param headers - Webhook headers with signature info
+   * @param secret - Webhook secret for verification
+   * @returns Verified event type and data
+   * @throws AuthError if verification fails
+   */
+  verifyWebhook?(
+    body: string,
+    headers: Record<string, string>,
+    secret: string,
+  ): Promise<WebhookVerificationResult>;
+
+  /**
+   * Get current authenticated user from server context (optional)
+   * @returns Current user or null if not authenticated
+   * @throws AuthError if operation fails
+   */
+  getCurrentUser?(): Promise<AuthUser | null>;
 }

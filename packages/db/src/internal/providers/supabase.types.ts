@@ -50,6 +50,18 @@ export interface Database {
           clerk_user_id: string;
           email: string;
           passkey_enrolled: boolean;
+          subscription_tier: 'free' | 'monthly' | 'yearly' | 'lifetime';
+          subscription_status:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          stripe_price_id: string | null;
+          current_period_end: string | null;
           created_at: string;
         };
         Insert: {
@@ -57,6 +69,18 @@ export interface Database {
           clerk_user_id: string;
           email: string;
           passkey_enrolled?: boolean;
+          subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
+          subscription_status?:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_price_id?: string | null;
+          current_period_end?: string | null;
           created_at?: string;
         };
         Update: {
@@ -64,6 +88,18 @@ export interface Database {
           clerk_user_id?: string;
           email?: string;
           passkey_enrolled?: boolean;
+          subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
+          subscription_status?:
+            | 'active'
+            | 'past_due'
+            | 'canceled'
+            | 'trialing'
+            | 'incomplete'
+            | 'unpaid';
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_price_id?: string | null;
+          current_period_end?: string | null;
           created_at?: string;
         };
       };

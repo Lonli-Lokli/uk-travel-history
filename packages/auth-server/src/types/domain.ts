@@ -87,6 +87,8 @@ export enum AuthErrorCode {
   USER_NOT_FOUND = 'USER_NOT_FOUND',
   /** Invalid input data */
   INVALID_INPUT = 'INVALID_INPUT',
+  /** Feature not implemented by provider */
+  NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
   /** Unknown error */
   UNKNOWN = 'UNKNOWN',
 }
@@ -246,4 +248,24 @@ export interface UserListResult {
   users: AuthUser[];
   /** Total count of users */
   totalCount: number;
+}
+
+/**
+ * Webhook event data for user lifecycle events
+ */
+export interface UserWebhookEventData {
+  id: string;
+  email_addresses?: Array<{
+    id: string;
+    email_address: string;
+  }>;
+  primary_email_address_id?: string;
+}
+
+/**
+ * Result of webhook verification
+ */
+export interface WebhookVerificationResult {
+  type: string;
+  data: any;
 }

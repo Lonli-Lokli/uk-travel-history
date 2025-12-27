@@ -123,5 +123,23 @@ export function constructWebhookEvent(
   return provider.constructWebhookEvent(body, signature, secret);
 }
 
+/**
+ * Create a customer portal session for subscription management
+ * @param customerId - The customer ID
+ * @param returnUrl - URL to return to after portal session
+ * @returns Portal session URL
+ * @throws PaymentsError if creation fails or not supported
+ */
+export async function createPortalSession(
+  customerId: string,
+  returnUrl: string,
+): Promise<string> {
+  const provider = getPaymentsProvider();
+  if (!provider.createPortalSession) {
+    throw new Error('Portal session creation not supported by this payments provider');
+  }
+  return provider.createPortalSession(customerId, returnUrl);
+}
+
 // Re-export PaymentPlan enum for convenience
 export { PaymentPlan };

@@ -3,7 +3,8 @@
  * Handles server-side auth operations using Clerk Backend SDK
  */
 
-import { clerkClient } from '@clerk/nextjs/server';
+import { clerkClient, currentUser } from '@clerk/nextjs/server';
+import { Webhook } from 'svix';
 import { logger } from '@uth/utils';
 import {
   getPurchaseIntentsByAuthUserId,
@@ -20,6 +21,7 @@ import type {
   CreateUserData,
   UpdateUserMetadataData,
   UserListResult,
+  WebhookVerificationResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
@@ -371,6 +373,92 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
         `Failed to update user metadata: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async verifyWebhook(
+    body: string,
+    headers: Record<string, string>,
+    secret: string,
+  ): Promise<WebhookVerificationResult> {
+    this.ensureConfigured();
+
+    try {
+      const svix_id = headers['svix-id'];
+      const svix_timestamp = headers['svix-timestamp'];
+      const svix_signature = headers['svix-signature'];
+
+      if (!svix_id || !svix_timestamp || !svix_signature) {
+        throw new AuthError(
+          AuthErrorCode.INVALID_INPUT,
+          'Missing svix headers for webhook verification',
+        );
+      }
+
+      const wh = new Webhook(secret);
+      const event = wh.verify(body, {
+        'svix-id': svix_id,
+        'svix-timestamp': svix_timestamp,
+        'svix-signature': svix_signature,
+      }) as any;
+
+      return {
+        type: event.type,
+        data: event.data,
+      };
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.INVALID_TOKEN,
+        `Webhook verification failed: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async getCurrentUser(): Promise<AuthUser | null> {
+    this.ensureConfigured();
+
+    try {
+      const user = await currentUser();
+
+      if (!user) {
+        logger.info('getCurrentUser: No authenticated user found');
+        return null;
+      }
+
+      logger.debug('getCurrentUser: Successfully retrieved user', {
+        extra: {
+          userId: user.id,
+          email: user.emailAddresses[0]?.emailAddress,
+        },
+      });
+
+      return {
+        uid: user.id,
+        email: user.emailAddresses[0]?.emailAddress,
+        emailVerified: user.emailAddresses[0]?.verification?.status === 'verified',
+        displayName: user.fullName || user.username || undefined,
+        photoURL: user.imageUrl || undefined,
+        customClaims: user.publicMetadata,
+        createdAt: new Date(user.createdAt),
+        lastSignInAt: user.lastSignInAt ? new Date(user.lastSignInAt) : undefined,
+      };
+    } catch (error: any) {
+      // Log the full error details for debugging
+      logger.error('getCurrentUser: Failed to retrieve current user', {
+        extra: {
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          errorStatus: error.status,
+        },
+      });
+
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get current user: ${error.message}`,
         error,
       );
     }

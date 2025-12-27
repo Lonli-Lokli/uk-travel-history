@@ -5,3 +5,5 @@ export * from './feature-gate-context';
 export * from './feature-dropdown-item';
 export * from './feature-button';
 export * from './feature-chart';
+export * from './premium-gate';
+export * from './use-premium-access';

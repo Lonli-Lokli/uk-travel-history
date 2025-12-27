@@ -13,10 +13,11 @@ interface ValidateSessionRequest {
 /**
  * Validates a Stripe Checkout session ID.
  *
- * SECURITY: This endpoint does NOT require authentication (pre-registration).
+ * SECURITY: This endpoint does NOT require authentication.
  * However, it only provides session validation - no sensitive data.
  *
- * Used by /registration page to verify payment before allowing account creation.
+ * NOTE: This endpoint is part of legacy payment flow and may be removed.
+ * New flow uses Clerk webhook to auto-provision users after payment.
  *
  * Returns:
  * - paymentStatus: 'paid' | 'unpaid'

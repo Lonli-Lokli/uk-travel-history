@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
     // Note: No userId - this is pre-registration flow
     const session = await createCheckoutSession({
       plan,
-      // CRITICAL: Redirect to registration page with session_id
+      // CRITICAL: Redirect to travel page with session_id
       // {CHECKOUT_SESSION_ID} is Stripe template variable
-      successUrl: `${appUrl}/registration?session_id={CHECKOUT_SESSION_ID}`,
+      successUrl: `${appUrl}/travel?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${appUrl}/?checkout=canceled`,
       metadata: {
         billingPeriod,

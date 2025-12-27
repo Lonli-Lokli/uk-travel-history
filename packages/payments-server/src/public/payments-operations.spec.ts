@@ -260,7 +260,7 @@ describe('Payments Server - SDK Operations', () => {
       const session = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ANNUAL,
         successUrl:
-          'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+          'https://example.com/travel?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://example.com/cancel',
         metadata: {
           isPreRegistration: 'true',
@@ -320,7 +320,7 @@ describe('Payments Server - SDK Operations', () => {
       const anonymousSession = await createCheckoutSession({
         plan: PaymentPlan.PREMIUM_ANNUAL,
         successUrl:
-          'https://example.com/registration?session_id={CHECKOUT_SESSION_ID}',
+          'https://example.com/travel?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://example.com/cancel',
       });
       expect(anonymousSession.id).toBeDefined();

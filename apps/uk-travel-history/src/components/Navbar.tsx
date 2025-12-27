@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
   Button,
   Drawer,
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
 export const Navbar = observer(() => {
   const pathname = usePathname();
   const { isFeatureEnabled } = useFeatureFlags();
+  const { isLoaded } = useAuth();
 
   // Update pathname in store - this will auto-clear toolbar on navigation
   navbarToolbarStore.updatePathname(pathname);
@@ -113,25 +114,42 @@ export const Navbar = observer(() => {
                 </NavigationMenu>
               </nav>
 
-              {/* Auth UI (desktop) - only show when auth feature is enabled */}
+              {/* Auth UI (desktop) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  <SignedOut>
-                    <Link href="/claim">
-                      <Button variant="outline" size="sm" className="h-9">
-                        Sign In
-                      </Button>
-                    </Link>
-                  </SignedOut>
-                  <SignedIn>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        },
-                      }}
-                    />
-                  </SignedIn>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+                  ) : (
+                    <>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm" className="h-9">
+                            Sign In
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -140,25 +158,42 @@ export const Navbar = observer(() => {
           {/* Mobile Menu Trigger and Auth */}
           {!hideNavigation && (
             <div className="md:hidden flex items-center gap-2 ml-auto">
-              {/* Auth UI (mobile) - only show when auth feature is enabled */}
+              {/* Auth UI (mobile) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  <SignedOut>
-                    <Link href="/claim">
-                      <Button variant="outline" size="sm" className="h-8 text-xs px-3">
-                        Sign In
-                      </Button>
-                    </Link>
-                  </SignedOut>
-                  <SignedIn>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        },
-                      }}
-                    />
-                  </SignedIn>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+                  ) : (
+                    <>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm" className="h-8 text-xs px-3">
+                            Sign In
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                    </>
+                  )}
                 </>
               )}
 
