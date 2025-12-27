@@ -424,8 +424,16 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
       const user = await currentUser();
 
       if (!user) {
+        logger.info('getCurrentUser: No authenticated user found');
         return null;
       }
+
+      logger.debug('getCurrentUser: Successfully retrieved user', {
+        extra: {
+          userId: user.id,
+          email: user.emailAddresses[0]?.emailAddress,
+        },
+      });
 
       return {
         uid: user.id,
@@ -438,6 +446,16 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
         lastSignInAt: user.lastSignInAt ? new Date(user.lastSignInAt) : undefined,
       };
     } catch (error: any) {
+      // Log the full error details for debugging
+      logger.error('getCurrentUser: Failed to retrieve current user', {
+        extra: {
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorCode: error.code,
+          errorStatus: error.status,
+        },
+      });
+
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
         `Failed to get current user: ${error.message}`,
