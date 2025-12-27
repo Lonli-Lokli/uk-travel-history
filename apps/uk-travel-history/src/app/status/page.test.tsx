@@ -18,12 +18,38 @@ vi.mock('@/lib/appFlow', () => ({
     page: (generatorFn: any) => {
       return async () => {
         const gen = generatorFn();
-        let value;
-        let result = gen.next();
+        let lastValue: any;
+        let result = await gen.next();
 
         while (!result.done) {
-          value = await result.value;
-          result = gen.next(value);
+          const step = result.value;
+
+          // Handle CallStep structure (has _tag, fn, and policy)
+          if (step && typeof step === 'object' && '_tag' in step && step._tag === 'CallStep') {
+            try {
+              // Execute the fn from the CallStep
+              lastValue = await step.fn();
+            } catch (error) {
+              // If fn fails and there's a policy, apply it
+              if (step.policy) {
+                if (step.policy.type === 'optional') {
+                  lastValue = step.policy.fallback;
+                } else if (step.policy.type === 'ui') {
+                  // For UI policy, return the fallback as the final result
+                  return step.policy.fallback;
+                } else {
+                  throw error;
+                }
+              } else {
+                throw error;
+              }
+            }
+          } else {
+            // Fallback for simple values (shouldn't happen with real flow code)
+            lastValue = await step;
+          }
+
+          result = await gen.next(lastValue);
         }
 
         return result.value;
@@ -33,7 +59,37 @@ vi.mock('@/lib/appFlow', () => ({
 }));
 
 vi.mock('@/lib/flow', () => ({
-  call: (promiseOrValue: any) => promiseOrValue,
+  call: (fn: any, ...args: any[]) => {
+    return {
+      _tag: 'CallStep',
+      fn: () => (typeof fn === 'function' ? fn(...args) : fn),
+      step: fn?.name || 'anonymous',
+      orUI(fallback: any, message?: string) {
+        return {
+          ...this,
+          policy: { type: 'ui', fallback, message },
+        };
+      },
+      orRedirect(url: string, message?: string) {
+        return {
+          ...this,
+          policy: { type: 'redirect', url, message },
+        };
+      },
+      optional(fallback: any, message?: string) {
+        return {
+          ...this,
+          policy: { type: 'optional', fallback, message },
+        };
+      },
+      orThrow(message?: string) {
+        return {
+          ...this,
+          policy: { type: 'throw', message },
+        };
+      },
+    };
+  },
 }));
 
 describe('StatusPage', () => {
