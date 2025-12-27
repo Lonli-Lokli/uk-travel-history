@@ -115,8 +115,8 @@ export function createAdminClient(): SupabaseClient<Database> {
 export async function checkUserHasPremiumAccess(clerkUserId: string): Promise<boolean> {
   const client = createAdminClient();
 
-  const { data, error } = await (client as any)
-    .rpc('has_premium_access', { user_id: clerkUserId });
+  // Note: Using type assertion because RPC function types aren't defined in Database type
+  const { data, error } = await (client.rpc as any)('has_premium_access', { user_id: clerkUserId });
 
   if (error) {
     console.error('Error checking premium access:', error);

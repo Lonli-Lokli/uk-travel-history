@@ -274,7 +274,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
           <p className="text-sm text-slate-600">
             Need help?{' '}
             <a
-              href="mailto:support@example.com"
+              href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com'}`}
               className="text-primary hover:underline"
             >
               Contact Support

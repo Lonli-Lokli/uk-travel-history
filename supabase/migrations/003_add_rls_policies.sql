@@ -54,13 +54,22 @@ CREATE POLICY users_select_own
   TO authenticated
   USING (clerk_user_id = public.clerk_user_id());
 
--- Policy: Users can update their own profile
+-- Policy: Users can update their own profile (but NOT entitlement fields)
 CREATE POLICY users_update_own
   ON users
   FOR UPDATE
   TO authenticated
   USING (clerk_user_id = public.clerk_user_id())
-  WITH CHECK (clerk_user_id = public.clerk_user_id());
+  WITH CHECK (
+    clerk_user_id = public.clerk_user_id() AND
+    -- Prevent modification of entitlement fields (only webhooks can modify these)
+    subscription_tier = (SELECT subscription_tier FROM users WHERE clerk_user_id = public.clerk_user_id()) AND
+    subscription_status IS NOT DISTINCT FROM (SELECT subscription_status FROM users WHERE clerk_user_id = public.clerk_user_id()) AND
+    stripe_customer_id IS NOT DISTINCT FROM (SELECT stripe_customer_id FROM users WHERE clerk_user_id = public.clerk_user_id()) AND
+    stripe_subscription_id IS NOT DISTINCT FROM (SELECT stripe_subscription_id FROM users WHERE clerk_user_id = public.clerk_user_id()) AND
+    stripe_price_id IS NOT DISTINCT FROM (SELECT stripe_price_id FROM users WHERE clerk_user_id = public.clerk_user_id()) AND
+    current_period_end IS NOT DISTINCT FROM (SELECT current_period_end FROM users WHERE clerk_user_id = public.clerk_user_id())
+  );
 
 -- Note: INSERT on users is restricted to service_role only (via webhooks)
 -- This prevents users from creating their own accounts with premium access

@@ -65,36 +65,30 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'No email found' }, { status: 400 });
         }
 
-        // Check if user already exists
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('clerk_user_id', data.id)
-          .single();
+        // Use upsert to handle race conditions (Stripe webhook may create user first)
+        // If user exists from Stripe webhook, preserve existing tier/status
+        // Note: Using type assertion here because Supabase client types aren't inferring correctly
+        const { error: upsertError } = await (supabase.from('users').upsert as any)(
+          {
+            clerk_user_id: data.id,
+            email: email,
+            passkey_enrolled: false,
+            subscription_tier: 'free' as const,
+            subscription_status: null,
+            stripe_customer_id: null,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_end: null,
+          },
+          {
+            onConflict: 'clerk_user_id',
+            ignoreDuplicates: true, // Don't override if exists (preserves Stripe-provisioned users)
+          }
+        );
 
-        if (existingUser) {
-          logger.info('User already exists, skipping creation', {
-            extra: { userId: data.id },
-          });
-          return NextResponse.json({ received: true, skipped: true });
-        }
-
-        // Create user with free tier
-        const { error: createError } = await (supabase.from('users') as any).insert({
-          clerk_user_id: data.id,
-          email: email,
-          passkey_enrolled: false,
-          subscription_tier: 'free',
-          subscription_status: null,
-          stripe_customer_id: null,
-          stripe_subscription_id: null,
-          stripe_price_id: null,
-          current_period_end: null,
-        });
-
-        if (createError) {
-          logger.error('Failed to create user in Supabase', undefined, {
-            extra: { userId: data.id, error: createError },
+        if (upsertError) {
+          logger.error('Failed to upsert user in Supabase', undefined, {
+            extra: { userId: data.id, error: upsertError },
           });
           return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
@@ -111,8 +105,7 @@ export async function POST(request: NextRequest) {
         const email = data.email_addresses?.find((e: any) => e.id === data.primary_email_address_id)?.email_address;
 
         if (email) {
-          const { error: updateError } = await (supabase.from('users') as any)
-            .update({ email })
+          const { error: updateError } = await (supabase.from('users').update as any)({ email })
             .eq('clerk_user_id', data.id);
 
           if (updateError) {
@@ -131,8 +124,7 @@ export async function POST(request: NextRequest) {
 
       case 'user.deleted': {
         // Delete user from Supabase
-        const { error: deleteError } = await (supabase.from('users') as any)
-          .delete()
+        const { error: deleteError } = await (supabase.from('users').delete as any)()
           .eq('clerk_user_id', data.id);
 
         if (deleteError) {
