@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   description: 'View the status of features and their configuration in the UK Travel History Parser.',
 };
 
+// Force dynamic rendering for flow-based pages
+// This prevents Next.js from attempting static generation which causes timeout
+// due to the while(true) generator pattern in flow.tsx
+export const dynamic = 'force-dynamic';
+
 interface FeatureInfo {
   key: FeatureFlagKey;
   name: string;

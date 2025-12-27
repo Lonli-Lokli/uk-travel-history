@@ -6,6 +6,11 @@ import { logger } from '@uth/utils';
 import { appFlow } from '@/lib/appFlow';
 import { call } from '@/lib/flow';
 
+// Force dynamic rendering for flow-based pages
+// This prevents Next.js from attempting static generation which causes timeout
+// due to the while(true) generator pattern in flow.tsx
+export const dynamic = 'force-dynamic';
+
 export default appFlow.page<void>(async function* AccountPage() {
   // Attempt to get current authenticated user with error policy
   const user = (yield call(getCurrentUser).orRedirect(
