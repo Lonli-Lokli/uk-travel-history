@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
   Button,
   Drawer,
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
 export const Navbar = observer(() => {
   const pathname = usePathname();
   const { isFeatureEnabled } = useFeatureFlags();
+  const { isLoaded } = useAuth();
 
   // Update pathname in store - this will auto-clear toolbar on navigation
   navbarToolbarStore.updatePathname(pathname);
@@ -116,32 +117,39 @@ export const Navbar = observer(() => {
               {/* Auth UI (desktop) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  <SignedOut>
-                    <SignInButton mode="modal">
-                      <Button size="sm" className="h-9">
-                        Sign In
-                      </Button>
-                    </SignInButton>
-                  </SignedOut>
-                  <SignedIn>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        },
-                      }}
-                    >
-                      <UserButton.MenuItems>
-                        <UserButton.Link
-                          label="Account & Billing"
-                          labelIcon={
-                            <UIIcon iconName="user" className="h-4 w-4" />
-                          }
-                          href="/account"
-                        />
-                      </UserButton.MenuItems>
-                    </UserButton>
-                  </SignedIn>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+                  ) : (
+                    <>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm" className="h-9">
+                            Sign In
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -153,32 +161,39 @@ export const Navbar = observer(() => {
               {/* Auth UI (mobile) - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  <SignedOut>
-                    <SignInButton mode="modal">
-                      <Button size="sm" className="h-8 text-xs px-3">
-                        Sign In
-                      </Button>
-                    </SignInButton>
-                  </SignedOut>
-                  <SignedIn>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        },
-                      }}
-                    >
-                      <UserButton.MenuItems>
-                        <UserButton.Link
-                          label="Account & Billing"
-                          labelIcon={
-                            <UIIcon iconName="user" className="h-4 w-4" />
-                          }
-                          href="/account"
-                        />
-                      </UserButton.MenuItems>
-                    </UserButton>
-                  </SignedIn>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+                  ) : (
+                    <>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm" className="h-8 text-xs px-3">
+                            Sign In
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                    </>
+                  )}
                 </>
               )}
 

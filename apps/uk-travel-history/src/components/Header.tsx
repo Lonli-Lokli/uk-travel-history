@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { observer } from 'mobx-react-lite';
-import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
   Button,
   DropdownMenu,
@@ -31,6 +31,7 @@ export const Header = observer(
     onExportClick,
   }: HeaderProps) => {
     const { isFeatureEnabled } = useFeatureFlags();
+    const { isLoaded } = useAuth();
     const isLoading = travelStore.isLoading;
     const hasTrips = travelStore.trips.length > 0;
     const isAuthEnabled = isFeatureEnabled(FEATURE_KEYS.AUTH);
@@ -230,36 +231,43 @@ export const Header = observer(
               {/* Auth UI - single button for both sign in/up */}
               {isAuthEnabled && (
                 <>
-                  <SignedIn>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        },
-                      }}
-                    >
-                      <UserButton.MenuItems>
-                        <UserButton.Link
-                          label="Account & Billing"
-                          labelIcon={
-                            <UIIcon iconName="user" className="h-4 w-4" />
-                          }
-                          href="/account"
-                        />
-                      </UserButton.MenuItems>
-                    </UserButton>
-                  </SignedIn>
-                  <SignedOut>
-                    <SignInButton mode="modal">
-                      <Button size="sm">
-                        <UIIcon
-                          iconName="fingerprint"
-                          className="h-4 w-4 mr-1.5"
-                        />
-                        <span className="hidden sm:inline">Sign In</span>
-                      </Button>
-                    </SignInButton>
-                  </SignedOut>
+                  {!isLoaded ? (
+                    // Show skeleton while Clerk is loading
+                    <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+                  ) : (
+                    <>
+                      <SignedIn>
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              avatarBox: 'w-8 h-8',
+                            },
+                          }}
+                        >
+                          <UserButton.MenuItems>
+                            <UserButton.Link
+                              label="Account & Billing"
+                              labelIcon={
+                                <UIIcon iconName="user" className="h-4 w-4" />
+                              }
+                              href="/account"
+                            />
+                          </UserButton.MenuItems>
+                        </UserButton>
+                      </SignedIn>
+                      <SignedOut>
+                        <SignInButton mode="modal">
+                          <Button size="sm">
+                            <UIIcon
+                              iconName="fingerprint"
+                              className="h-4 w-4 mr-1.5"
+                            />
+                            <span className="hidden sm:inline">Sign In</span>
+                          </Button>
+                        </SignInButton>
+                      </SignedOut>
+                    </>
+                  )}
                 </>
               )}
             </div>

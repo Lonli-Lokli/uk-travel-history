@@ -24,6 +24,15 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// Mock Clerk
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: vi.fn(() => ({ isLoaded: true, isSignedIn: false })),
+  SignedIn: ({ children }: { children: React.ReactNode }) => null,
+  SignedOut: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  UserButton: () => null,
+}));
+
 describe('Navbar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
