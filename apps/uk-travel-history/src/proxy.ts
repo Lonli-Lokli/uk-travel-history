@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { logger } from '@uth/utils';
-import { compose, when, type MiddlewareFunction } from './middleware-compose';
+import { when } from 'mobx';
+import { MiddlewareFunction, compose } from './app/middleware-compose';
 
 /**
  * Determine the auth provider from environment
