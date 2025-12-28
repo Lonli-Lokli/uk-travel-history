@@ -1,38 +1,42 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-import proxy from './proxy';
+import proxy, { configureProxy } from './proxy';
 
-// Mock dependencies
-vi.mock('@uth/utils', () => ({
-  logger: {
-    log: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
+// Mock Clerk - this is still needed as it's a third-party dependency
 vi.mock('@clerk/nextjs/server', () => ({
   clerkClient: vi.fn(),
   createRouteMatcher: vi.fn(),
   clerkMiddleware: vi.fn(),
 }));
 
-// Import mocked dependencies
-import { logger } from '@uth/utils';
 import { createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
 
 describe('Proxy (Next.js 16 Middleware)', () => {
   const originalEnv = process.env;
 
+  // Create mock logger for testing
+  const mockLogger = {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset environment
     process.env = { ...originalEnv };
+
+    // Configure proxy with mock logger for all tests
+    configureProxy({
+      logger: mockLogger,
+    });
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    // Reset to default configuration
+    configureProxy({});
   });
 
   const createMockRequest = (
@@ -80,7 +84,7 @@ describe('Proxy (Next.js 16 Middleware)', () => {
       const req = createMockRequest('/travel');
       await proxy(req);
 
-      expect(logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('Clerk credentials missing'),
         undefined,
       );

@@ -1,12 +1,79 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { compose, logger, MiddlewareFunction, when } from '@uth/utils';
+import type { LogOptions } from '@uth/utils';
+
+/**
+ * Logger interface for dependency injection
+ * Allows tests to provide custom logger implementations
+ */
+export interface Logger {
+  error: (message: string, error?: unknown, options?: LogOptions) => void;
+  warn: (message: string, options?: LogOptions) => void;
+  info: (message: string, options?: LogOptions) => void;
+  debug: (message: string, options?: LogOptions) => void;
+}
+
+/**
+ * Configuration options for the proxy middleware
+ * Allows injection of dependencies for better testability
+ */
+export interface ProxyConfig {
+  /**
+   * Logger implementation (defaults to @uth/utils logger)
+   */
+  logger?: Logger;
+
+  /**
+   * Get auth provider (defaults to reading from process.env)
+   */
+  getAuthProvider?: () => 'clerk' | 'firebase';
+
+  /**
+   * Check if Clerk credentials are configured (defaults to checking process.env)
+   */
+  hasClerkCredentials?: () => boolean;
+}
+
+/**
+ * Global configuration for the proxy middleware
+ * Can be set via configureProxy() for testing or customization
+ */
+let proxyConfig: ProxyConfig = {};
+
+/**
+ * Configure the proxy middleware with custom dependencies
+ * Useful for testing or customizing behavior
+ *
+ * @example
+ * // In tests
+ * configureProxy({
+ *   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }
+ * });
+ *
+ * @example
+ * // Reset to defaults
+ * configureProxy({});
+ */
+export function configureProxy(config: ProxyConfig): void {
+  proxyConfig = config;
+}
+
+/**
+ * Get the configured logger or fall back to default
+ */
+function getLogger(): Logger {
+  return proxyConfig.logger || logger;
+}
 
 /**
  * Determine the auth provider from environment
  * Defaults to 'clerk' if not specified
  */
 const getAuthProvider = (): 'clerk' | 'firebase' => {
+  if (proxyConfig.getAuthProvider) {
+    return proxyConfig.getAuthProvider();
+  }
   const provider = process.env.UTH_AUTH_PROVIDER;
   return provider === 'firebase' ? 'firebase' : 'clerk';
 };
@@ -15,6 +82,9 @@ const getAuthProvider = (): 'clerk' | 'firebase' => {
  * Check if Clerk credentials are configured
  */
 const hasClerkCredentials = (): boolean => {
+  if (proxyConfig.hasClerkCredentials) {
+    return proxyConfig.hasClerkCredentials();
+  }
   return !!(
     process.env.CLERK_SECRET_KEY &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -39,7 +109,8 @@ const clerkCredentialsCheckMiddleware: MiddlewareFunction = async (
 ): Promise<NextResponse | null> => {
   if (!hasClerkCredentials()) {
     if (process.env.NODE_ENV === 'development') {
-      logger.error(
+      const log = getLogger();
+      log.error(
         '\n⚠️  Clerk credentials missing!\n' +
           'Set CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env.local\n' +
           'Or set UTH_AUTH_PROVIDER=firebase to use legacy auth.\n',

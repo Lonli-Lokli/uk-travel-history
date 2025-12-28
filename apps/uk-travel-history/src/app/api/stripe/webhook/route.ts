@@ -20,7 +20,7 @@ import {
 import type { WebhookEvent } from '@uth/payments-server';
 import { constructWebhookEvent } from '@uth/payments-server';
 import { createUser as createAuthUser, getUsersByEmail } from '@uth/auth-server';
-import { logger } from '@uth/utils';
+import { getRouteLogger } from '@/lib/routeLogger';
 
 /**
  * Validate email format
@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('stripe-signature');
 
     if (!signature) {
-      logger.error('Missing stripe-signature header', undefined);
+      getRouteLogger().error('Missing stripe-signature header', undefined);
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
     const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
     if (!WEBHOOK_SECRET) {
-      logger.error('STRIPE_WEBHOOK_SECRET not configured', undefined);
+      getRouteLogger().error('STRIPE_WEBHOOK_SECRET not configured', undefined);
       return NextResponse.json(
         { error: 'Webhook secret not configured' },
         { status: 500 },
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     try {
       event = constructWebhookEvent(body, signature, WEBHOOK_SECRET);
     } catch (err: any) {
-      logger.error('Webhook signature verification failed', undefined, {
+      getRouteLogger().error('Webhook signature verification failed', undefined, {
         extra: { message: err.message },
       });
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const alreadyProcessed = await hasWebhookEventBeenProcessed(event.id);
 
     if (alreadyProcessed) {
-      logger.info(`Event ${event.id} already processed, skipping`);
+      getRouteLogger().info(`Event ${event.id} already processed, skipping`);
       return NextResponse.json({ received: true, skipped: true });
     }
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as any;
 
-      logger.info('Processing checkout.session.completed', {
+      getRouteLogger().info('Processing checkout.session.completed', {
         extra: { sessionId: session.id },
       });
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         session.client_reference_id || session.metadata?.purchase_intent_id;
 
       if (!purchaseIntentId) {
-        logger.error('No purchase_intent_id in session', undefined, {
+        getRouteLogger().error('No purchase_intent_id in session', undefined, {
           extra: {
             sessionId: session.id,
           },
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       const purchaseIntent = await getPurchaseIntentById(purchaseIntentId);
 
       if (!purchaseIntent) {
-        logger.error('Purchase intent not found', undefined, {
+        getRouteLogger().error('Purchase intent not found', undefined, {
           extra: { purchaseIntentId },
         });
         return NextResponse.json(
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
       // If already provisioned, skip (idempotency)
       if (purchaseIntent.status === PurchaseIntentStatus.PROVISIONED) {
-        logger.info(`Purchase intent ${purchaseIntentId} already provisioned`);
+        getRouteLogger().info(`Purchase intent ${purchaseIntentId} already provisioned`);
         return NextResponse.json({ received: true, alreadyProvisioned: true });
       }
 
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
       // Validate email format
       if (!customerEmail || !isValidEmail(customerEmail)) {
-        logger.error('Invalid customer email', undefined, {
+        getRouteLogger().error('Invalid customer email', undefined, {
           extra: { email: customerEmail },
         });
         return NextResponse.json(
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
         if (existingUsersResult.users.length > 0) {
           authUserId = existingUsersResult.users[0].uid;
-          logger.info(`Auth user already exists: ${authUserId}`);
+          getRouteLogger().info(`Auth user already exists: ${authUserId}`);
         } else {
           // Create new user with retry logic
           let retryCount = 0;
@@ -168,14 +168,14 @@ export async function POST(request: NextRequest) {
                 skipPasswordChecks: true,
               });
               authUserId = authUser.uid;
-              logger.info(`Created auth user: ${authUserId}`);
+              getRouteLogger().info(`Created auth user: ${authUserId}`);
               break;
             } catch (createError: any) {
               retryCount++;
 
               // Don't retry for permanent errors
               if (createError.code === 'INVALID_INPUT') {
-                logger.error(
+                getRouteLogger().error(
                   'Auth user creation failed (permanent error)',
                   createError,
                   {
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
 
               // Retry for transient errors
               if (retryCount < maxRetries) {
-                logger.warn(
+                getRouteLogger().warn(
                   `Auth user creation failed, retrying (${retryCount}/${maxRetries})`,
                   {
                     extra: {
@@ -237,9 +237,9 @@ export async function POST(request: NextRequest) {
           status: PurchaseIntentStatus.PROVISIONED,
         });
 
-        logger.info(`Successfully provisioned user for ${customerEmail}`);
+        getRouteLogger().info(`Successfully provisioned user for ${customerEmail}`);
       } catch (error: any) {
-        logger.error('Failed to provision auth user', error);
+        getRouteLogger().error('Failed to provision auth user', error);
         // Don't mark as failed - retry can happen
         return NextResponse.json(
           { error: 'Failed to provision user' },
@@ -252,14 +252,14 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.created') {
       const subscription = event.data.object as any;
 
-      logger.info('Processing customer.subscription.created', {
+      getRouteLogger().info('Processing customer.subscription.created', {
         extra: { subscriptionId: subscription.id },
       });
 
       try {
         await handleSubscriptionChange(subscription, 'created');
       } catch (error: any) {
-        logger.error('Failed to handle subscription.created', error);
+        getRouteLogger().error('Failed to handle subscription.created', error);
         // Don't return error - event was recorded, can be retried
       }
     }
@@ -268,14 +268,14 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object as any;
 
-      logger.info('Processing customer.subscription.updated', {
+      getRouteLogger().info('Processing customer.subscription.updated', {
         extra: { subscriptionId: subscription.id },
       });
 
       try {
         await handleSubscriptionChange(subscription, 'updated');
       } catch (error: any) {
-        logger.error('Failed to handle subscription.updated', error);
+        getRouteLogger().error('Failed to handle subscription.updated', error);
         // Don't return error - event was recorded, can be retried
       }
     }
@@ -284,14 +284,14 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as any;
 
-      logger.info('Processing customer.subscription.deleted', {
+      getRouteLogger().info('Processing customer.subscription.deleted', {
         extra: { subscriptionId: subscription.id },
       });
 
       try {
         await handleSubscriptionCancellation(subscription);
       } catch (error: any) {
-        logger.error('Failed to handle subscription.deleted', error);
+        getRouteLogger().error('Failed to handle subscription.deleted', error);
         // Don't return error - event was recorded, can be retried
       }
     }
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object as any;
 
-      logger.info('Processing invoice.payment_succeeded', {
+      getRouteLogger().info('Processing invoice.payment_succeeded', {
         extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
       });
 
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
         try {
           await handleInvoicePaymentSucceeded(invoice);
         } catch (error: any) {
-          logger.error('Failed to handle invoice.payment_succeeded', error);
+          getRouteLogger().error('Failed to handle invoice.payment_succeeded', error);
           // Don't return error - event was recorded, can be retried
         }
       }
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as any;
 
-      logger.info('Processing invoice.payment_failed', {
+      getRouteLogger().info('Processing invoice.payment_failed', {
         extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
       });
 
@@ -326,7 +326,7 @@ export async function POST(request: NextRequest) {
         try {
           await handleInvoicePaymentFailed(invoice);
         } catch (error: any) {
-          logger.error('Failed to handle invoice.payment_failed', error);
+          getRouteLogger().error('Failed to handle invoice.payment_failed', error);
           // Don't return error - event was recorded, can be retried
         }
       }
@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    logger.error('Webhook handler error', error);
+    getRouteLogger().error('Webhook handler error', error);
     return NextResponse.json(
       { error: 'Webhook handler error' },
       { status: 500 },
@@ -362,7 +362,7 @@ function mapPriceToTier(priceId: string): SubscriptionTier {
   }
 
   // Default to monthly if unknown
-  logger.warn('Unknown price ID, defaulting to monthly', {
+  getRouteLogger().warn('Unknown price ID, defaulting to monthly', {
     extra: { priceId },
   });
   return SubscriptionTier.MONTHLY;
@@ -386,7 +386,7 @@ function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
     case 'unpaid':
       return SubscriptionStatus.UNPAID;
     default:
-      logger.warn('Unknown Stripe status, defaulting to active', {
+      getRouteLogger().warn('Unknown Stripe status, defaulting to active', {
         extra: { stripeStatus },
       });
       return SubscriptionStatus.ACTIVE;
@@ -409,7 +409,7 @@ async function handleSubscriptionChange(
     : null;
 
   if (!priceId) {
-    logger.error('No price ID in subscription', undefined, {
+    getRouteLogger().error('No price ID in subscription', undefined, {
       extra: { subscriptionId },
     });
     return;
@@ -422,7 +422,7 @@ async function handleSubscriptionChange(
   const customerEmail = subscription.metadata?.email;
 
   if (!customerEmail) {
-    logger.error('No customer email in subscription metadata', undefined, {
+    getRouteLogger().error('No customer email in subscription metadata', undefined, {
       extra: { subscriptionId, customerId },
     });
     return;
@@ -433,7 +433,7 @@ async function handleSubscriptionChange(
     const existingUsersResult = await getUsersByEmail(customerEmail);
 
     if (existingUsersResult.users.length === 0) {
-      logger.error('No auth user found for subscription', undefined, {
+      getRouteLogger().error('No auth user found for subscription', undefined, {
         extra: { email: customerEmail, subscriptionId },
       });
       return;
@@ -458,7 +458,7 @@ async function handleSubscriptionChange(
         currentPeriodEnd,
       });
 
-      logger.info(`Created user with ${tier} subscription`, {
+      getRouteLogger().info(`Created user with ${tier} subscription`, {
         extra: { authUserId, subscriptionId },
       });
     } else {
@@ -472,12 +472,12 @@ async function handleSubscriptionChange(
         currentPeriodEnd,
       });
 
-      logger.info(`Updated user subscription to ${tier}`, {
+      getRouteLogger().info(`Updated user subscription to ${tier}`, {
         extra: { authUserId, subscriptionId, action },
       });
     }
   } catch (error: any) {
-    logger.error('Failed to handle subscription change', error, {
+    getRouteLogger().error('Failed to handle subscription change', error, {
       extra: { subscriptionId, action },
     });
     // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
@@ -492,7 +492,7 @@ async function handleSubscriptionCancellation(subscription: any): Promise<void> 
   const customerEmail = subscription.metadata?.email;
 
   if (!customerEmail) {
-    logger.error('No customer email in subscription metadata', undefined, {
+    getRouteLogger().error('No customer email in subscription metadata', undefined, {
       extra: { subscriptionId },
     });
     return;
@@ -503,7 +503,7 @@ async function handleSubscriptionCancellation(subscription: any): Promise<void> 
     const existingUsersResult = await getUsersByEmail(customerEmail);
 
     if (existingUsersResult.users.length === 0) {
-      logger.warn('No auth user found for cancelled subscription', {
+      getRouteLogger().warn('No auth user found for cancelled subscription', {
         extra: { email: customerEmail, subscriptionId },
       });
       return;
@@ -519,11 +519,11 @@ async function handleSubscriptionCancellation(subscription: any): Promise<void> 
       currentPeriodEnd: null,
     });
 
-    logger.info('Downgraded user to free tier after cancellation', {
+    getRouteLogger().info('Downgraded user to free tier after cancellation', {
       extra: { authUserId, subscriptionId },
     });
   } catch (error: any) {
-    logger.error('Failed to handle subscription cancellation', error, {
+    getRouteLogger().error('Failed to handle subscription cancellation', error, {
       extra: { subscriptionId },
     });
     // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
@@ -538,7 +538,7 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
   const customerEmail = invoice.customer_email;
 
   if (!customerEmail) {
-    logger.error('No customer email in invoice', undefined, {
+    getRouteLogger().error('No customer email in invoice', undefined, {
       extra: { invoiceId: invoice.id },
     });
     return;
@@ -549,7 +549,7 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
     const existingUsersResult = await getUsersByEmail(customerEmail);
 
     if (existingUsersResult.users.length === 0) {
-      logger.warn('No auth user found for invoice payment', {
+      getRouteLogger().warn('No auth user found for invoice payment', {
         extra: { email: customerEmail, subscriptionId },
       });
       return;
@@ -559,7 +559,7 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
     const dbUser = await getUserByAuthId(authUserId);
 
     if (!dbUser) {
-      logger.warn('No database user found for invoice payment', {
+      getRouteLogger().warn('No database user found for invoice payment', {
         extra: { authUserId, subscriptionId },
       });
       return;
@@ -574,12 +574,12 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
         subscriptionStatus: SubscriptionStatus.ACTIVE,
       });
 
-      logger.info('Reactivated user subscription after payment', {
+      getRouteLogger().info('Reactivated user subscription after payment', {
         extra: { authUserId, subscriptionId },
       });
     }
   } catch (error: any) {
-    logger.error('Failed to handle invoice payment succeeded', error, {
+    getRouteLogger().error('Failed to handle invoice payment succeeded', error, {
       extra: { invoiceId: invoice.id, subscriptionId },
     });
     // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
@@ -594,7 +594,7 @@ async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
   const customerEmail = invoice.customer_email;
 
   if (!customerEmail) {
-    logger.error('No customer email in invoice', undefined, {
+    getRouteLogger().error('No customer email in invoice', undefined, {
       extra: { invoiceId: invoice.id },
     });
     return;
@@ -605,7 +605,7 @@ async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
     const existingUsersResult = await getUsersByEmail(customerEmail);
 
     if (existingUsersResult.users.length === 0) {
-      logger.warn('No auth user found for failed invoice', {
+      getRouteLogger().warn('No auth user found for failed invoice', {
         extra: { email: customerEmail, subscriptionId },
       });
       return;
@@ -618,11 +618,11 @@ async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
       subscriptionStatus: SubscriptionStatus.PAST_DUE,
     });
 
-    logger.info('Marked user subscription as past_due after payment failure', {
+    getRouteLogger().info('Marked user subscription as past_due after payment failure', {
       extra: { authUserId, subscriptionId },
     });
   } catch (error: any) {
-    logger.error('Failed to handle invoice payment failed', error, {
+    getRouteLogger().error('Failed to handle invoice payment failed', error, {
       extra: { invoiceId: invoice.id, subscriptionId },
     });
     // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)

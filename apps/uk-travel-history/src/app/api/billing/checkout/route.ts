@@ -11,7 +11,7 @@ import {
   PurchaseIntentStatus,
 } from '@uth/db';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
-import { logger } from '@uth/utils';
+import { getRouteLogger } from '@/lib/routeLogger';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Get price ID from env
     const PRICE_ID = process.env.STRIPE_PRICE_ONE_TIME_PAYMENT;
     if (!PRICE_ID) {
-      logger.error('STRIPE_PRICE_ONE_TIME_PAYMENT not configured', undefined);
+      getRouteLogger().error('STRIPE_PRICE_ONE_TIME_PAYMENT not configured', undefined);
       return NextResponse.json(
         { error: 'Payment price not configured' },
         { status: 500 },
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         priceId: PRICE_ID,
       });
     } catch (error) {
-      logger.error('Failed to create purchase intent', error);
+      getRouteLogger().error('Failed to create purchase intent', error);
       return NextResponse.json(
         { error: 'Failed to create purchase intent' },
         { status: 500 },
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           status: PurchaseIntentStatus.CHECKOUT_CREATED,
         });
       } catch (error) {
-        logger.error('Failed to update purchase intent', error);
+        getRouteLogger().error('Failed to update purchase intent', error);
         // Continue anyway - webhook can handle it
       }
 
@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
         url: sessionRef.url,
       });
     } catch (error) {
-      logger.error('Checkout session creation error', error);
+      getRouteLogger().error('Checkout session creation error', error);
       return NextResponse.json(
         { error: 'Failed to create checkout session' },
         { status: 500 },
       );
     }
   } catch (error) {
-    logger.error('Checkout error', error);
+    getRouteLogger().error('Checkout error', error);
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 },

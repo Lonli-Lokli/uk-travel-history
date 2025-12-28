@@ -5,18 +5,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GET } from './route';
 import { NextRequest } from 'next/server';
+import { configureRouteLogger } from '@/lib/routeLogger';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
   keepalive: vi.fn(),
 }));
 
-vi.mock('@uth/utils', () => ({
-  logger: {
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}));
+// Create mock logger for testing
+const mockLogger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
 
 import { keepalive } from '@uth/db';
 
@@ -25,6 +27,12 @@ const mockKeepalive = vi.mocked(keepalive);
 describe('GET /api/cron/supabase-keepalive', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Configure route logger with mock
+    configureRouteLogger({
+      logger: mockLogger,
+    });
+
     process.env.CRON_SECRET = 'test-cron-secret';
 
     // Setup default mock implementation

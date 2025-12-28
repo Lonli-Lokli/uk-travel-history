@@ -10,22 +10,30 @@ import { NextRequest } from 'next/server';
 import * as db from '@uth/db';
 import * as paymentsServer from '@uth/payments-server';
 import * as authServer from '@uth/auth-server';
+import { configureRouteLogger } from '@/lib/routeLogger';
 
 // Mock dependencies
 vi.mock('@uth/db');
 vi.mock('@uth/payments-server');
 vi.mock('@uth/auth-server');
-vi.mock('@uth/utils', () => ({
-  logger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-  },
-}));
+
+// Create mock logger for testing
+const mockLogger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
 
 describe('Stripe Webhook Handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Configure route logger with mock
+    configureRouteLogger({
+      logger: mockLogger,
+    });
+
     process.env.STRIPE_WEBHOOK_SECRET = 'test_webhook_secret';
     process.env.STRIPE_MONTHLY_PRICE_ID = 'price_monthly';
     process.env.STRIPE_YEARLY_PRICE_ID = 'price_yearly';

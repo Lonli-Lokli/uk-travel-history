@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { logger } from '@uth/utils';
 import { format, parseISO } from 'date-fns';
 import { assertFeatureAccess } from '@uth/features/server';
 import { FEATURES } from '@uth/features';
+import { getRouteLogger } from '@/lib/routeLogger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Error generating Excel', error);
+    getRouteLogger().error('Error generating Excel', error);
     return NextResponse.json(
       { error: 'Failed to generate Excel file' },
       { status: 500 },
