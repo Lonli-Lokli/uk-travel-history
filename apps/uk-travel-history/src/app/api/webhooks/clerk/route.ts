@@ -88,13 +88,20 @@ export async function POST(request: NextRequest) {
 
         if (upsertError) {
           logger.error('Failed to upsert user in Supabase', undefined, {
-            extra: { userId: data.id, error: upsertError },
+            extra: {
+              userId: data.id,
+              email,
+              error: upsertError,
+              errorCode: upsertError.code,
+              errorMessage: upsertError.message,
+              errorDetails: upsertError.details,
+            },
           });
           return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        logger.info('User provisioned successfully', {
-          extra: { userId: data.id, email },
+        logger.info('User provisioned successfully via webhook', {
+          extra: { userId: data.id, email, webhookEvent: 'user.created' },
         });
 
         break;

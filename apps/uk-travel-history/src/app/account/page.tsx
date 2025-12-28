@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser, type AuthUser } from '@uth/auth-server';
 import { AccountPageClient } from './AccountPageClient';
+import { AccountErrorFallback } from '@/components/AccountErrorFallback';
 import { getUserByAuthId, type User } from '@uth/db';
 import { logger } from '@uth/utils';
 import { appFlow } from '@/lib/appFlow';
@@ -24,22 +25,29 @@ export default appFlow.page<void>(async function* AccountPage() {
     redirect('/sign-in?redirect_url=/account');
   }
 
-  // Fetch user subscription data from Supabase with error policy
-  const dbUser = (yield call(getUserByAuthId, user.uid).orRedirect(
-    '/sign-in?error=database_error',
-    'Failed to fetch user data from database'
-  )) as User | null;
+  // Fetch user subscription data from Supabase
+  // Use optional policy to handle missing user gracefully
+  const dbUser = (yield call(getUserByAuthId, user.uid).optional(null)) as User | null;
 
-  // Handle race condition: user exists in Clerk but not yet in Supabase
-  // This can happen during webhook processing delays
+  // Handle missing database user: show error UI instead of redirecting
+  // This can happen if webhook failed or database record was deleted
   if (!dbUser) {
-    logger.warn('User exists in Clerk but not in database - webhook race condition', {
+    logger.error('User exists in Clerk but not in database', {
       extra: {
         userId: user.uid,
         email: user.email,
+        message: 'Webhook may have failed or database record was deleted',
       },
     });
-    redirect('/sign-in?error=account_not_ready');
+
+    // Return error fallback UI instead of redirecting
+    // This allows the user to retry provisioning
+    return (
+      <AccountErrorFallback
+        userId={user.uid}
+        email={user.email || 'Unknown'}
+      />
+    );
   }
 
   return (

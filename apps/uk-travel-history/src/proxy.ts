@@ -148,6 +148,7 @@ const routeProtectionMiddleware = async (
     '/api/stripe/webhook',
     '/api/webhooks/clerk',
     '/api/cron/supabase-keepalive',
+    '/api/user/provision', // Manual user provisioning fallback
   ]);
 
   // Define protected routes that require authentication
