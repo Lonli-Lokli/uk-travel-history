@@ -13,6 +13,56 @@ import {
 } from '@uth/calculators';
 import { calculateTripDurations } from '@uth/calculators';
 
+/**
+ * HTTP client interface for dependency injection
+ * Allows tests to provide custom fetch implementations
+ */
+export interface HttpClient {
+  fetch: typeof fetch;
+}
+
+/**
+ * Configuration options for the travel store
+ * Allows injection of dependencies for better testability
+ */
+export interface TravelStoreConfig {
+  /**
+   * HTTP client implementation (defaults to global fetch)
+   */
+  httpClient?: HttpClient;
+}
+
+/**
+ * Global configuration for the travel store
+ * Can be set via configureTravelStore() for testing or customization
+ */
+let storeConfig: TravelStoreConfig = {};
+
+/**
+ * Configure the travel store with custom dependencies
+ * Useful for testing or customizing behavior
+ *
+ * @example
+ * // In tests
+ * configureTravelStore({
+ *   httpClient: { fetch: vi.fn() }
+ * });
+ *
+ * @example
+ * // Reset to defaults
+ * configureTravelStore({});
+ */
+export function configureTravelStore(config: TravelStoreConfig): void {
+  storeConfig = config;
+}
+
+/**
+ * Get the configured HTTP client or fall back to global fetch
+ */
+function getHttpClient(): HttpClient {
+  return storeConfig.httpClient || { fetch: globalThis.fetch };
+}
+
 class TravelStore {
   trips: TripRecord[] = [];
   vignetteEntryDate = '';
@@ -215,7 +265,8 @@ class TravelStore {
       formData.append('file', file);
       formData.append('responseType', 'json');
 
-      const response = await fetch('/api/parse', {
+      const client = getHttpClient();
+      const response = await client.fetch('/api/parse', {
         method: 'POST',
         body: formData,
       });
@@ -267,7 +318,8 @@ class TravelStore {
     formData.append('exportMode', mode);
     formData.append('responseType', 'excel');
 
-    const response = await fetch('/api/export', {
+    const client = getHttpClient();
+    const response = await client.fetch('/api/export', {
       method: 'POST',
       body: formData,
     });
@@ -391,7 +443,8 @@ class TravelStore {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/import-full', {
+      const client = getHttpClient();
+      const response = await client.fetch('/api/import-full', {
         method: 'POST',
         body: formData,
       });

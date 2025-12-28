@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { travelStore } from './travelStore';
+import { travelStore, configureTravelStore } from './travelStore';
 
-// Mock fetch for testing
-global.fetch = vi.fn();
+// Create a mock fetch function
+const mockFetch = vi.fn();
 
 describe('TravelStore', () => {
   beforeEach(() => {
@@ -14,6 +14,11 @@ describe('TravelStore', () => {
     travelStore.isLoading = false;
     travelStore.error = null;
     vi.clearAllMocks();
+
+    // Configure store with mock HTTP client
+    configureTravelStore({
+      httpClient: { fetch: mockFetch },
+    });
   });
 
   describe('exportToExcel', () => {
@@ -21,14 +26,14 @@ describe('TravelStore', () => {
       const mockBlob = new Blob(['test'], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         blob: () => Promise.resolve(mockBlob),
       });
 
       const result = await travelStore.exportToExcel('ilr');
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/export',
         expect.objectContaining({
           method: 'POST',
@@ -41,20 +46,20 @@ describe('TravelStore', () => {
       const mockBlob = new Blob(['test'], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         blob: () => Promise.resolve(mockBlob),
       });
 
       await travelStore.exportToExcel('full');
 
-      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const callArgs = mockFetch.mock.calls[0];
       const formData = callArgs[1].body as FormData;
       expect(formData.get('exportMode')).toBe('full');
     });
 
     it('should throw error when export fails', async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         json: () => Promise.resolve({ error: 'Export failed' }),
       });
@@ -91,7 +96,7 @@ describe('TravelStore', () => {
         },
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
@@ -142,7 +147,7 @@ describe('TravelStore', () => {
         },
       };
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
@@ -157,7 +162,7 @@ describe('TravelStore', () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         json: () => Promise.resolve({ error: 'Invalid file format' }),
       });
