@@ -15,9 +15,63 @@
 /* eslint-disable @nx/enforce-module-boundaries */
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
+import type { LogOptions } from '@uth/utils';
 import { getUserByAuthId } from '@uth/db';
 import { isFeatureEnabled } from './edgeConfigFlags';
 import { FEATURES, type FeatureId, type TierId, TIERS } from './features';
+
+/**
+ * Logger interface for dependency injection
+ * Allows tests to provide custom logger implementations
+ */
+export interface Logger {
+  error: (message: string, error?: unknown, options?: LogOptions) => void;
+  warn: (message: string, options?: LogOptions) => void;
+  info: (message: string, options?: LogOptions) => void;
+  debug: (message: string, options?: LogOptions) => void;
+}
+
+/**
+ * Configuration options for the API guards
+ * Allows injection of dependencies for better testability
+ */
+export interface ApiGuardsConfig {
+  /**
+   * Logger implementation (defaults to @uth/utils logger)
+   */
+  logger?: Logger;
+}
+
+/**
+ * Global configuration for the API guards
+ * Can be set via configureApiGuards() for testing or customization
+ */
+let apiGuardsConfig: ApiGuardsConfig = {};
+
+/**
+ * Configure the API guards with custom dependencies
+ * Useful for testing or customizing behavior
+ *
+ * @example
+ * // In tests
+ * configureApiGuards({
+ *   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }
+ * });
+ *
+ * @example
+ * // Reset to defaults
+ * configureApiGuards({});
+ */
+export function configureApiGuards(config: ApiGuardsConfig): void {
+  apiGuardsConfig = config;
+}
+
+/**
+ * Get the configured logger or fall back to default
+ */
+function getLogger(): Logger {
+  return apiGuardsConfig.logger || logger;
+}
 
 // Dynamic imports for lazy-loaded libraries
 // auth-server is marked as lazy-loaded in nx.json to avoid circular dependencies
@@ -207,7 +261,7 @@ export async function getUserContext(
       hasActiveSubscription,
     };
   } catch (error) {
-    logger.error('[Feature Guards] Error extracting user context', error);
+    getLogger().error('[Feature Guards] Error extracting user context', error);
     return null;
   }
 }
@@ -236,7 +290,7 @@ async function getFeaturePolicy(
       enabled: isEnabled,
     };
   } catch (error) {
-    logger.warn('[Feature Guards] Error fetching feature policy, using defaults', {
+    getLogger().warn('[Feature Guards] Error fetching feature policy, using defaults', {
       extra: { featureId, error },
     });
     return DEFAULT_FEATURE_POLICIES[featureId];
@@ -420,9 +474,9 @@ function logFeatureAccess(
   };
 
   if (result.allowed) {
-    logger.info('[Feature Access] Allowed', { extra: logData });
+    getLogger().info('[Feature Access] Allowed', { extra: logData });
   } else {
-    logger.warn('[Feature Access] Denied', { extra: logData });
+    getLogger().warn('[Feature Access] Denied', { extra: logData });
   }
 }
 
@@ -519,7 +573,7 @@ export function withFeatureAccess(
         return error;
       }
       // Otherwise, log and return generic error
-      logger.error('[Feature Access] Unexpected error in route handler', error);
+      getLogger().error('[Feature Access] Unexpected error in route handler', error);
       return NextResponse.json(
         { error: 'Internal server error' },
         { status: 500 },

@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
+import { configureRouteLogger } from '@/lib/routeLogger';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -27,12 +28,13 @@ vi.mock('@uth/payments-server', () => ({
   },
 }));
 
-vi.mock('@uth/utils', () => ({
-  logger: {
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}));
+// Create mock logger for testing
+const mockLogger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
 
 import { createPurchaseIntent, updatePurchaseIntent } from '@uth/db';
 import { createCheckoutSession } from '@uth/payments-server';
@@ -44,6 +46,12 @@ const mockCreateCheckoutSession = vi.mocked(createCheckoutSession);
 describe('POST /api/billing/checkout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Configure route logger with mock
+    configureRouteLogger({
+      logger: mockLogger,
+    });
+
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.STRIPE_PRICE_ONE_TIME_PAYMENT = 'price_123';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';

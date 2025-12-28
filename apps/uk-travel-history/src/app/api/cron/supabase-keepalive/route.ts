@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { keepalive } from '@uth/db';
-import { logger } from '@uth/utils';
+import { getRouteLogger } from '@/lib/routeLogger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 10;
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret) {
-      logger.error('CRON_SECRET not configured', undefined);
+      getRouteLogger().error('CRON_SECRET not configured', undefined);
       return NextResponse.json(
         { error: 'Cron secret not configured' },
         { status: 500 },
@@ -26,14 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Invalid cron secret', undefined);
+      getRouteLogger().error('Invalid cron secret', undefined);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Call database keepalive function
     const result = await keepalive();
 
-    logger.info('Database keepalive successful', { extra: { result } });
+    getRouteLogger().info('Database keepalive successful', { extra: { result } });
 
     return NextResponse.json({
       ok: true,
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       result,
     });
   } catch (error: any) {
-    logger.error('Keepalive error', error);
+    getRouteLogger().error('Keepalive error', error);
     return NextResponse.json(
       { error: 'Keepalive failed', details: error.message },
       { status: 500 },

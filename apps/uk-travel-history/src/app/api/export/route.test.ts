@@ -1,14 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
+import { configureRouteLogger } from '@/lib/routeLogger';
 
 // Mock dependencies
-vi.mock('@uth/utils', () => ({
-  logger: {
-    error: vi.fn(),
-  },
-}));
-
 vi.mock('@uth/features/server', () => ({
   assertFeatureAccess: vi.fn(),
 }));
@@ -19,9 +14,22 @@ vi.mock('@uth/features', () => ({
   },
 }));
 
+// Create mock logger for testing
+const mockLogger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
+
 describe('Export API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Configure route logger with mock
+    configureRouteLogger({
+      logger: mockLogger,
+    });
   });
 
   const createMockRequest = (formData: Record<string, string>) => {

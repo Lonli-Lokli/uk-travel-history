@@ -15,10 +15,10 @@ import {
   getUserContext,
   assertFeatureAccess,
   withFeatureAccess,
+  configureApiGuards,
   type UserContext,
 } from './api-guards';
 import { FEATURES, TIERS } from './features';
-import { logger } from '@uth/utils';
 import { getUserByAuthId } from '@uth/db';
 import * as edgeConfigFlags from './edgeConfigFlags';
 
@@ -37,16 +37,21 @@ vi.mock('@uth/auth-server', () => ({
   getSubscription: vi.fn(),
 }));
 
+// Create mock logger for testing
+const mockLogger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Spy on logger methods (with empty implementation to suppress logs during tests)
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  vi.spyOn(logger, 'info').mockImplementation(() => {});
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  vi.spyOn(logger, 'warn').mockImplementation(() => {});
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  vi.spyOn(logger, 'error').mockImplementation(() => {});
+  // Configure API guards with mock logger
+  configureApiGuards({
+    logger: mockLogger,
+  });
 
   // Spy on db methods
   vi.mocked(getUserByAuthId).mockResolvedValue(null);
@@ -510,7 +515,7 @@ describe('API Feature Guards', () => {
       const context = await getUserContext(request);
 
       expect(context).toBeNull();
-      expect(logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         '[Feature Guards] Error extracting user context',
         expect.any(Error)
       );
@@ -543,7 +548,7 @@ describe('API Feature Guards', () => {
 
       expect(context).toBeTruthy();
       expect(context?.userId).toBe('user-123');
-      expect(logger.info).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -576,7 +581,7 @@ describe('API Feature Guards', () => {
         assertFeatureAccess(request, FEATURES.EXCEL_EXPORT)
       ).rejects.toThrow();
 
-      expect(logger.warn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         '[Feature Access] Denied',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -600,7 +605,7 @@ describe('API Feature Guards', () => {
       const context = await assertFeatureAccess(request, FEATURES.PDF_IMPORT);
 
       // Should log access decision
-      expect(logger.info).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
@@ -692,7 +697,7 @@ describe('API Feature Guards', () => {
       const response = await wrappedHandler(request);
 
       expect(response.status).toBe(500);
-      expect(logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         '[Feature Access] Unexpected error in route handler',
         expect.any(Error)
       );
