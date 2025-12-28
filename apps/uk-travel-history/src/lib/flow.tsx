@@ -37,9 +37,9 @@
  * ```
  */
 
-import { Suspense, use, type ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { success, failure, type Result } from "@lonli-lokli/ts-result";
+import { Suspense, use, type ReactNode } from 'react';
+import { redirect } from 'next/navigation';
+import { success, failure, type Result } from '@lonli-lokli/ts-result';
 
 // ============================================================================
 // Navigation Error Detection
@@ -51,8 +51,8 @@ import { success, failure, type Result } from "@lonli-lokli/ts-result";
  */
 export function isNextNavigationError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
-  const msg = err.message || "";
-  return msg.includes("NEXT_REDIRECT") || msg.includes("NEXT_NOT_FOUND");
+  const msg = err.message || '';
+  return msg.includes('NEXT_REDIRECT') || msg.includes('NEXT_NOT_FOUND');
 }
 
 // ============================================================================
@@ -61,14 +61,14 @@ export function isNextNavigationError(err: unknown): boolean {
 
 export type FlowLoggerEvent =
   | {
-      type: "step_error";
+      type: 'step_error';
       step: string;
       ms: number;
       message?: string;
       error: unknown;
     }
   | {
-      type: "flow_error";
+      type: 'flow_error';
       error: unknown;
     };
 
@@ -82,7 +82,7 @@ export type FlowLogger = (event: FlowLoggerEvent) => void;
  * Converts a Promise to a Result, catching errors
  */
 export async function toResult<T>(
-  promise: Promise<T>
+  promise: Promise<T>,
 ): Promise<Result<unknown, T>> {
   try {
     const value = await promise;
@@ -100,7 +100,7 @@ export function matchResult<F, S, R>(
   handlers: {
     success: (value: S) => R;
     failure: (error: F) => R;
-  }
+  },
 ): R {
   if (result.isSuccess()) {
     return handlers.success(result.unwrap());
@@ -109,7 +109,9 @@ export function matchResult<F, S, R>(
     return handlers.failure(result.value as F);
   } else {
     // Handle Initial and Pending states - default to failure case
-    return handlers.failure(new Error("Result is in initial or pending state") as unknown as F);
+    return handlers.failure(
+      new Error('Result is in initial or pending state') as unknown as F,
+    );
   }
 }
 
@@ -118,13 +120,13 @@ export function matchResult<F, S, R>(
 // ============================================================================
 
 type ErrorPolicy<T> =
-  | { type: "redirect"; url: string; message?: string }
-  | { type: "ui"; fallback: ReactNode; message?: string }
-  | { type: "optional"; fallback: T; message?: string }
-  | { type: "throw"; message?: string };
+  | { type: 'redirect'; url: string; message?: string }
+  | { type: 'ui'; fallback: ReactNode; message?: string }
+  | { type: 'optional'; fallback: T; message?: string }
+  | { type: 'throw'; message?: string };
 
 interface CallStep<T> {
-  _tag: "CallStep";
+  _tag: 'CallStep';
   fn: () => Promise<T>;
   step: string;
   policy?: ErrorPolicy<T>;
@@ -142,21 +144,21 @@ export function call<T, A extends unknown[]>(
   ...args: A
 ): CallStep<T> {
   const step: CallStep<T> = {
-    _tag: "CallStep",
+    _tag: 'CallStep',
     fn: () => fn(...args),
-    step: fn.name || "anonymous",
+    step: fn.name || 'anonymous',
     policy: undefined,
     orRedirect(url: string, message?: string) {
-      return { ...this, policy: { type: "redirect", url, message } };
+      return { ...this, policy: { type: 'redirect', url, message } };
     },
     orUI(fallback: ReactNode, message?: string) {
-      return { ...this, policy: { type: "ui", fallback, message } };
+      return { ...this, policy: { type: 'ui', fallback, message } };
     },
     optional(fallback: T, message?: string) {
-      return { ...this, policy: { type: "optional", fallback, message } };
+      return { ...this, policy: { type: 'optional', fallback, message } };
     },
     orThrow(message?: string) {
-      return { ...this, policy: { type: "throw", message } };
+      return { ...this, policy: { type: 'throw', message } };
     },
   };
   return step;
@@ -167,7 +169,7 @@ export function call<T, A extends unknown[]>(
 // ============================================================================
 
 interface ParStep<T extends unknown[]> {
-  _tag: "ParStep";
+  _tag: 'ParStep';
   steps: { [K in keyof T]: CallStep<T[K]> };
 }
 
@@ -178,7 +180,7 @@ export function par<T extends unknown[]>(
   ...steps: { [K in keyof T]: CallStep<T[K]> }
 ): ParStep<T> {
   return {
-    _tag: "ParStep",
+    _tag: 'ParStep',
     steps,
   };
 }
@@ -205,7 +207,7 @@ interface FlowContext {
 
 async function executeCallStep<T>(
   step: CallStep<T>,
-  ctx: FlowContext
+  ctx: FlowContext,
 ): Promise<T> {
   const startTime = Date.now();
 
@@ -222,7 +224,7 @@ async function executeCallStep<T>(
     // Log the error
     if (ctx.logger) {
       ctx.logger({
-        type: "step_error",
+        type: 'step_error',
         step: step.step,
         ms,
         message: step.policy?.message,
@@ -231,22 +233,22 @@ async function executeCallStep<T>(
     }
 
     // Handle based on policy
-    const policy = step.policy || { type: "throw" };
+    const policy = step.policy || { type: 'throw' };
 
     switch (policy.type) {
-      case "redirect":
+      case 'redirect':
         redirect(policy.url);
-        throw new Error("Unreachable: redirect should throw");
+        throw new Error('Unreachable: redirect should throw');
 
-      case "ui":
+      case 'ui':
         // For UI errors, we throw a special error that will be caught
         // by the flow executor and rendered as UI
         throw { _flowUIError: true, fallback: policy.fallback };
 
-      case "optional":
+      case 'optional':
         return policy.fallback;
 
-      case "throw":
+      case 'throw':
       default:
         throw error;
     }
@@ -255,7 +257,7 @@ async function executeCallStep<T>(
 
 async function executeParStep<T extends unknown[]>(
   parStep: ParStep<T>,
-  ctx: FlowContext
+  ctx: FlowContext,
 ): Promise<T> {
   const promises = parStep.steps.map((step) => executeCallStep(step, ctx));
   return (await Promise.all(promises)) as T;
@@ -271,22 +273,23 @@ const MAX_FLOW_ITERATIONS = 1000;
  * Executes a flow generator, handling all call/par steps and errors
  */
 async function executeFlow<P, R>(
-  gen: (props: P) => AsyncGenerator<CallStep<unknown> | ParStep<unknown[]>, R, unknown>,
+  gen: (
+    props: P,
+  ) => AsyncGenerator<CallStep<unknown> | ParStep<unknown[]>, R, unknown>,
   props: P,
-  ctx: FlowContext
+  ctx: FlowContext,
 ): Promise<R> {
   const iterator = gen(props);
   let lastValue: unknown = undefined;
   let iterations = 0;
 
   try {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       // Prevent infinite loops
       if (++iterations > MAX_FLOW_ITERATIONS) {
         throw new Error(
           `Flow exceeded maximum iterations (${MAX_FLOW_ITERATIONS}). ` +
-          `This likely indicates an infinite loop in the generator function.`
+            `This likely indicates an infinite loop in the generator function.`,
         );
       }
 
@@ -297,10 +300,10 @@ async function executeFlow<P, R>(
       }
 
       // Execute the yielded step
-      if ("_tag" in value) {
-        if (value._tag === "CallStep") {
+      if ('_tag' in value) {
+        if (value._tag === 'CallStep') {
           lastValue = await executeCallStep(value as CallStep<unknown>, ctx);
-        } else if (value._tag === "ParStep") {
+        } else if (value._tag === 'ParStep') {
           lastValue = await executeParStep(value as ParStep<unknown[]>, ctx);
         }
       }
@@ -314,8 +317,8 @@ async function executeFlow<P, R>(
     // Handle UI errors
     if (
       error &&
-      typeof error === "object" &&
-      "_flowUIError" in error &&
+      typeof error === 'object' &&
+      '_flowUIError' in error &&
       error._flowUIError === true
     ) {
       return (error as unknown as { fallback: ReactNode }).fallback as R;
@@ -324,7 +327,7 @@ async function executeFlow<P, R>(
     // Log flow-level errors
     if (ctx.logger) {
       ctx.logger({
-        type: "flow_error",
+        type: 'flow_error',
         error,
       });
     }
@@ -340,8 +343,14 @@ async function executeFlow<P, R>(
 
 export interface Flow {
   page<P = void>(
-    gen: (props: P) => AsyncGenerator<CallStep<unknown> | ParStep<unknown[]>, ReactNode, unknown>,
-    options?: Partial<FlowOptions>
+    gen: (
+      props: P,
+    ) => AsyncGenerator<
+      CallStep<unknown> | ParStep<unknown[]>,
+      ReactNode,
+      unknown
+    >,
+    options?: Partial<FlowOptions>,
   ): (props: P) => ReactNode;
 }
 
@@ -351,8 +360,14 @@ export interface Flow {
 export function createFlow(defaultOptions: FlowOptions): Flow {
   return {
     page<P = void>(
-      gen: (props: P) => AsyncGenerator<CallStep<unknown> | ParStep<unknown[]>, ReactNode, unknown>,
-      options?: Partial<FlowOptions>
+      gen: (
+        props: P,
+      ) => AsyncGenerator<
+        CallStep<unknown> | ParStep<unknown[]>,
+        ReactNode,
+        unknown
+      >,
+      options?: Partial<FlowOptions>,
     ) {
       const opts = { ...defaultOptions, ...options };
       const ctx: FlowContext = {
@@ -377,7 +392,11 @@ export function createFlow(defaultOptions: FlowOptions): Flow {
 /**
  * Inner component that uses React.use() to await the flow promise
  */
-function FlowPageInner({ promise }: { promise: Promise<ReactNode> }): ReactNode {
+function FlowPageInner({
+  promise,
+}: {
+  promise: Promise<ReactNode>;
+}): ReactNode {
   const result = use(promise);
   return result;
 }

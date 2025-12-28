@@ -35,9 +35,14 @@ describe('Proxy (Next.js 16 Middleware)', () => {
     process.env = originalEnv;
   });
 
-  const createMockRequest = (url: string, headers?: Record<string, string>): NextRequest => {
+  const createMockRequest = (
+    url: string,
+    headers?: Record<string, string>,
+  ): NextRequest => {
     const headerObj = new Headers(headers);
-    return new NextRequest(new URL(url, 'https://example.com'), { headers: headerObj });
+    return new NextRequest(new URL(url, 'https://example.com'), {
+      headers: headerObj,
+    });
   };
 
   describe('Firebase Mode', () => {
@@ -77,7 +82,7 @@ describe('Proxy (Next.js 16 Middleware)', () => {
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Clerk credentials missing'),
-        undefined
+        undefined,
       );
     });
   });
@@ -90,7 +95,9 @@ describe('Proxy (Next.js 16 Middleware)', () => {
     });
 
     it('should call clerkMiddleware when credentials are configured', async () => {
-      const mockWrappedMiddleware = vi.fn().mockResolvedValue(NextResponse.next());
+      const mockWrappedMiddleware = vi
+        .fn()
+        .mockResolvedValue(NextResponse.next());
       vi.mocked(clerkMiddleware).mockReturnValue(mockWrappedMiddleware);
 
       const req = createMockRequest('/travel');
@@ -108,10 +115,12 @@ describe('Proxy (Next.js 16 Middleware)', () => {
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'test-publishable-key';
 
       const mockAuth = vi.fn().mockResolvedValue({ userId: null });
-      const mockRouteMatcher = vi.fn((routes: string[]) => (req: NextRequest) => {
-        const path = new URL(req.url).pathname;
-        return routes.includes(path);
-      });
+      const mockRouteMatcher = vi.fn(
+        (routes: string[]) => (req: NextRequest) => {
+          const path = new URL(req.url).pathname;
+          return routes.includes(path);
+        },
+      );
 
       vi.mocked(createRouteMatcher).mockImplementation(mockRouteMatcher);
 
@@ -163,10 +172,9 @@ describe('Proxy (Next.js 16 Middleware)', () => {
     });
   });
 
-
   describe('Config Export', () => {
     it('should export matcher configuration', async () => {
-      const { config } = await import('../../proxy');
+      const { config } = await import('./proxy');
 
       expect(config).toBeDefined();
       expect(config.matcher).toBeInstanceOf(Array);
