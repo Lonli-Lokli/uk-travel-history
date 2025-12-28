@@ -166,7 +166,7 @@ describe('Proxy (Next.js 16 Middleware)', () => {
 
   describe('Config Export', () => {
     it('should export matcher configuration', async () => {
-      const { config } = await import('./proxy');
+      const { config } = await import('../../proxy');
 
       expect(config).toBeDefined();
       expect(config.matcher).toBeInstanceOf(Array);

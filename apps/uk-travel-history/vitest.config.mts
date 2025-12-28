@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), nxViteTsPaths()],
   test: {
     globals: true,
     environment: 'jsdom',
@@ -22,15 +22,6 @@ env: {
         '**/mockData/**',
         'test/**',
       ],
-    },
-  },
-  resolve: {
-    alias: {
-      '@uth/ui': path.resolve(__dirname, '../../packages/ui/src'),
-      '@uth/utils': path.resolve(__dirname, '../../packages/utils/src'),
-      '@uth/features': path.resolve(__dirname, '../../packages/features/src'),
-      '@uth/stores': path.resolve(__dirname, '../../packages/stores/src'),
-      '@uth/widgets': path.resolve(__dirname, '../../packages/widgets/src'),
     },
   },
 });

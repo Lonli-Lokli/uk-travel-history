@@ -7,11 +7,18 @@ import {
   DEFAULT_FEATURE_STATES,
   type FeatureFlagKey,
 } from '@uth/features';
+import { appFlow } from '@/lib/appFlow';
+import { call } from '@/lib/flow';
 
 export const metadata: Metadata = {
   title: 'Status',
   description: 'View the status of features and their configuration in the UK Travel History Parser.',
 };
+
+// Force dynamic rendering for flow-based pages
+// This prevents Next.js from attempting static generation which causes timeout
+// due to the while(true) generator pattern in flow.tsx
+export const dynamic = 'force-dynamic';
 
 interface FeatureInfo {
   key: FeatureFlagKey;
@@ -112,9 +119,24 @@ function FeatureStatusBadge({
   );
 }
 
-export default async function StatusPage() {
-  // Fetch all feature flags from Edge Config
-  const featureFlags = await getAllFeatureFlags();
+export default appFlow.page<void>(async function* StatusPage() {
+  // Fetch all feature flags from Edge Config with error handling
+  const featureFlags = (yield call(getAllFeatureFlags).orUI(
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="max-w-md mx-auto p-6 bg-amber-50 border border-amber-200 rounded-lg">
+        <h2 className="text-lg font-semibold text-amber-900 mb-2">
+          Unable to Load Feature Flags
+        </h2>
+        <p className="text-sm text-amber-700">
+          There was an error loading the feature flag configuration. Some features may not be available.
+        </p>
+        <p className="text-xs text-amber-600 mt-3">
+          This error has been logged. If the problem persists, please contact support.
+        </p>
+      </div>
+    </div>,
+    'Failed to fetch feature flags from Edge Config'
+  )) as Record<FeatureFlagKey, boolean>;
 
   // Group features by category
   const featuresByCategory = FEATURE_INFO.reduce(
@@ -213,4 +235,4 @@ export default async function StatusPage() {
       </div>
     </div>
   );
-}
+});
