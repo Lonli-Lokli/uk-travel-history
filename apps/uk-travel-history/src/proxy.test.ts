@@ -2,15 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import proxy from './proxy';
 
-// Mock dependencies
-vi.mock('@uth/utils', () => ({
-  logger: {
-    log: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+// Mock dependencies - use importOriginal to preserve compose and when functions
+vi.mock('@uth/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@uth/utils')>();
+  return {
+    ...actual,
+    logger: {
+      log: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
+  };
+});
 
 vi.mock('@clerk/nextjs/server', () => ({
   clerkClient: vi.fn(),
