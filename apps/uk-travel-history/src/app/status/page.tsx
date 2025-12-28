@@ -130,6 +130,9 @@ export default appFlow.page<void>(async function* StatusPage() {
         <p className="text-sm text-amber-700">
           There was an error loading the feature flag configuration. Some features may not be available.
         </p>
+        <p className="text-xs text-amber-600 mt-3">
+          This error has been logged. If the problem persists, please contact support.
+        </p>
       </div>
     </div>,
     'Failed to fetch feature flags from Edge Config'

@@ -3,6 +3,38 @@
  *
  * This utility provides a clean way to handle async operations and errors in
  * Server Components without repetitive try/catch blocks.
+ *
+ * @example Basic usage with error policies
+ * ```tsx
+ * export default appFlow.page(async function* MyPage() {
+ *   // Redirect on error
+ *   const user = (yield call(getUser).orRedirect('/login')) as User;
+ *
+ *   // Show fallback UI on error
+ *   const data = (yield call(fetchData, user.id).orUI(
+ *     <ErrorMessage />
+ *   )) as Data[];
+ *
+ *   // Use default value on error
+ *   const settings = (yield call(getSettings).optional({})) as Settings;
+ *
+ *   return <div>{data.map(item => <Item key={item.id} {...item} />)}</div>;
+ * });
+ * ```
+ *
+ * @example Parallel execution
+ * ```tsx
+ * export default appFlow.page(async function* Dashboard() {
+ *   // Execute multiple calls in parallel
+ *   const [user, posts, comments] = (yield par(
+ *     call(getUser).orRedirect('/login'),
+ *     call(getPosts).optional([]),
+ *     call(getComments).optional([])
+ *   )) as [User, Post[], Comment[]];
+ *
+ *   return <Dashboard user={user} posts={posts} comments={comments} />;
+ * });
+ * ```
  */
 
 import { Suspense, use, type ReactNode } from "react";
@@ -230,6 +262,12 @@ async function executeParStep<T extends unknown[]>(
 }
 
 /**
+ * Maximum number of iterations allowed in a flow to prevent infinite loops
+ * This is a safety mechanism - most flows complete in < 100 iterations
+ */
+const MAX_FLOW_ITERATIONS = 1000;
+
+/**
  * Executes a flow generator, handling all call/par steps and errors
  */
 async function executeFlow<P, R>(
@@ -239,10 +277,19 @@ async function executeFlow<P, R>(
 ): Promise<R> {
   const iterator = gen(props);
   let lastValue: unknown = undefined;
+  let iterations = 0;
 
   try {
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      // Prevent infinite loops
+      if (++iterations > MAX_FLOW_ITERATIONS) {
+        throw new Error(
+          `Flow exceeded maximum iterations (${MAX_FLOW_ITERATIONS}). ` +
+          `This likely indicates an infinite loop in the generator function.`
+        );
+      }
+
       const { value, done } = await iterator.next(lastValue);
 
       if (done) {
