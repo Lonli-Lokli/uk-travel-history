@@ -13,7 +13,7 @@ vi.mock('@uth/features', async () => {
 });
 
 // Mock the flow library
-vi.mock('@/lib/appFlow', () => ({
+vi.mock('@uth/flow', () => ({
   appFlow: {
     page: (generatorFn: any) => {
       return async () => {
@@ -56,39 +56,41 @@ vi.mock('@/lib/appFlow', () => ({
       };
     },
   },
-}));
-
-vi.mock('@/lib/flow', () => ({
   call: (fn: any, ...args: any[]) => {
-    return {
+    const step: any = {
       _tag: 'CallStep',
       fn: () => (typeof fn === 'function' ? fn(...args) : fn),
       step: fn?.name || 'anonymous',
+      policy: undefined,
+      *[Symbol.iterator]() {
+        return yield step;
+      },
       orUI(fallback: any, message?: string) {
         return {
-          ...this,
+          ...step,
           policy: { type: 'ui', fallback, message },
         };
       },
       orRedirect(url: string, message?: string) {
         return {
-          ...this,
+          ...step,
           policy: { type: 'redirect', url, message },
         };
       },
       optional(fallback: any, message?: string) {
         return {
-          ...this,
+          ...step,
           policy: { type: 'optional', fallback, message },
         };
       },
       orThrow(message?: string) {
         return {
-          ...this,
+          ...step,
           policy: { type: 'throw', message },
         };
       },
     };
+    return step;
   },
 }));
 

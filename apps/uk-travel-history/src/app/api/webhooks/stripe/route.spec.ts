@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import * as db from '@uth/db';
 import * as paymentsServer from '@uth/payments-server';
 import * as authServer from '@uth/auth-server';
-import { configureRouteLogger } from '@/lib/routeLogger';
+import { configureRouteLogger } from '@uth/flow';
 
 // Mock dependencies
 vi.mock('@uth/db');
