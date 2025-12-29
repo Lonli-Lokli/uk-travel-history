@@ -16,3 +16,6 @@ export {
   getAccessibleFeatures,
   type UserTier,
 } from './server-validation';
+
+// Re-export feature keys and types for server-side usage
+export { FEATURE_KEYS, TIERS, type FeatureFlagKey, type TierId } from './shapes';

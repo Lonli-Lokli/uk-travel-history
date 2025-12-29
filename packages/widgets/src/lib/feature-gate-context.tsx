@@ -1,13 +1,13 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { FeatureId } from '@uth/features';
+import type { FeatureFlagKey } from '@uth/features';
 
 /**
  * Store interfaces for feature gating
  */
 export interface MonetizationStore {
-  hasFeatureAccess: (featureId: FeatureId) => boolean;
+  hasFeatureAccess: (featureId: FeatureFlagKey) => boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -72,7 +72,7 @@ export function useFeatureGateContext() {
 /**
  * Hook for feature access logic
  */
-export function useFeatureGate(feature: FeatureId) {
+export function useFeatureGate(feature: FeatureFlagKey) {
   const { monetizationStore, authStore, paymentStore } =
     useFeatureGateContext();
 
