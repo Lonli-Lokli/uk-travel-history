@@ -117,22 +117,41 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
 }
 
 /**
+ * INTERNAL: Load all feature policies from Edge Config
+ * Single source of truth for Edge Config access
+ *
+ * @returns Promise<EdgeConfigPolicies | null> All policies or null if unavailable
+ */
+async function loadPoliciesFromEdgeConfig(): Promise<EdgeConfigPolicies | null> {
+  try {
+    const policies = await get<EdgeConfigPolicies>('feature-policies');
+    return policies || null;
+  } catch (error) {
+    logger.error('[Feature Policies] Error loading from Edge Config', error);
+    return null;
+  }
+}
+
+/**
  * SERVER-SIDE ONLY: Check if a feature is enabled via Vercel Edge Config
  *
- * This function fetches from Edge Config with fallback logic:
- * 1. First checks Vercel Edge Config (runtime control)
- * 2. Applies rollout percentage and beta user logic
- * 3. Falls back to disabled state on error
+ * WARNING: This function does NOT check user tier or subscription status.
+ * For access control, use checkFeatureAccess() or assertFeatureAccess() from api-guards.ts
+ *
+ * This function only checks:
+ * 1. Global enabled flag
+ * 2. Rollout percentage
+ * 3. Beta user list
  *
  * @param featureKey - The feature identifier to check
  * @param userId - Optional user ID for rollout percentage and beta user checks
  * @returns Promise<boolean> indicating if the feature is enabled
  *
  * @example
- * // Server-side usage
+ * // Server-side usage (for display purposes only, NOT for access control)
  * const isEnabled = await isFeatureEnabled('excel_export_premium', userId);
  * if (isEnabled) {
- *   // Proceed with feature
+ *   // Show UI element (but still enforce access control on API routes!)
  * }
  */
 export async function isFeatureEnabled(
@@ -140,7 +159,7 @@ export async function isFeatureEnabled(
   userId?: string,
 ): Promise<boolean> {
   try {
-    const flags = await get<EdgeConfigPolicies>('feature-policies');
+    const flags = await loadPoliciesFromEdgeConfig();
 
     if (!flags) {
       // Edge Config not configured, default to disabled for safety
@@ -253,8 +272,8 @@ export function isFeatureEnabledClient(featureKey: FeatureFlagKey): boolean {
  */
 export async function isEdgeConfigAvailable(): Promise<boolean> {
   try {
-    await get('features');
-    return true;
+    const policies = await loadPoliciesFromEdgeConfig();
+    return policies !== null;
   } catch {
     return false;
   }
@@ -270,6 +289,9 @@ export type EdgeConfigPolicies = Record<FeatureFlagKey, FeaturePolicy>;
  * SERVER-SIDE ONLY: Get feature policy from Edge Config or use default
  * This allows runtime control of feature behavior without redeployment
  *
+ * WARNING: This function does NOT validate user tier or subscription.
+ * For access control, use checkFeatureAccess() or assertFeatureAccess() from api-guards.ts
+ *
  * @param featureKey - The feature to check
  * @returns Promise<FeaturePolicy> The feature policy
  *
@@ -284,8 +306,8 @@ export async function getFeaturePolicy(
   featureKey: FeatureFlagKey,
 ): Promise<FeaturePolicy> {
   try {
-    // Fetch all policies from Edge Config
-    const policies = await get<EdgeConfigPolicies>('feature-policies');
+    // Fetch all policies from Edge Config using centralized method
+    const policies = await loadPoliciesFromEdgeConfig();
 
     if (policies && policies[featureKey]) {
       // Merge with defaults to ensure all required fields are present
@@ -309,6 +331,9 @@ export async function getFeaturePolicy(
  * SERVER-SIDE ONLY: Get all feature policies from Edge Config
  * Useful for batch operations and caching
  *
+ * WARNING: This function does NOT validate user tier or subscription.
+ * For access control, use checkFeatureAccess() or assertFeatureAccess() from api-guards.ts
+ *
  * @returns Promise<Record<FeatureFlagKey, FeaturePolicy>> All feature policies
  *
  * @example
@@ -320,7 +345,8 @@ export async function getAllFeaturePolicies(): Promise<
   Record<FeatureFlagKey, FeaturePolicy>
 > {
   try {
-    const policies = await get<EdgeConfigPolicies>('feature-policies');
+    // Fetch all policies from Edge Config using centralized method
+    const policies = await loadPoliciesFromEdgeConfig();
 
     if (!policies) {
       return DEFAULT_FEATURE_POLICIES;
