@@ -7,8 +7,7 @@ import {
   DEFAULT_FEATURE_STATES,
   type FeatureFlagKey,
 } from '@uth/features';
-import { appFlow } from '@/lib/appFlow';
-import { call } from '@/lib/flow';
+import { call, appFlow } from '@uth/flow';
 
 export const metadata: Metadata = {
   title: 'Status',

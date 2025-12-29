@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { keepalive } from '@uth/db';
-import { getRouteLogger } from '@/lib/routeLogger';
+import { getRouteLogger } from '@uth/flow';
 
 export const runtime = 'nodejs';
 export const maxDuration = 10;

@@ -17,10 +17,9 @@ import {
   SubscriptionTier,
   SubscriptionStatus,
 } from '@uth/db';
-import type { WebhookEvent } from '@uth/payments-server';
 import { constructWebhookEvent } from '@uth/payments-server';
 import { createUser as createAuthUser, getUsersByEmail } from '@uth/auth-server';
-import { getRouteLogger } from '@/lib/routeLogger';
+import { getRouteLogger } from '@uth/flow';
 
 /**
  * Validate email format

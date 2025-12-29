@@ -4,8 +4,7 @@ import { AccountPageClient } from './AccountPageClient';
 import { AccountErrorFallback } from '@/components/AccountErrorFallback';
 import { getUserByAuthId, type User } from '@uth/db';
 import { logger } from '@uth/utils';
-import { appFlow } from '@/lib/appFlow';
-import { call } from '@/lib/flow';
+import { call, appFlow } from '@uth/flow';
 
 // Force dynamic rendering for flow-based pages
 // This prevents Next.js from attempting static generation which causes timeout

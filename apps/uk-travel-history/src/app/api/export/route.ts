@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 import { format, parseISO } from 'date-fns';
 import { assertFeatureAccess } from '@uth/features/server';
 import { FEATURES } from '@uth/features';
-import { getRouteLogger } from '@/lib/routeLogger';
+import { getRouteLogger } from '@uth/flow';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;

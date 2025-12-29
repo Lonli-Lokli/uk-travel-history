@@ -15,9 +15,6 @@ const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
-  experimental: {
-    instrumentationHook: true,  // Enable instrumentation.ts
-  },
   serverExternalPackages: ['pdf-parse', '@napi-rs/canvas'],
   env: {
     NEXT_PUBLIC_GIT_COMMIT_HASH: getGitCommitHash(),
@@ -54,14 +51,9 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
 
   // Sentry webpack configuration
   webpack: {
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
     treeshake: {
-      removeDebugLogging: false,  // Keep console.log for diagnostics
+      removeDebugLogging: true
     },
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
     automaticVercelMonitors: true,
   },
 

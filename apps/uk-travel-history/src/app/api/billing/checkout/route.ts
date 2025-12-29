@@ -11,7 +11,7 @@ import {
   PurchaseIntentStatus,
 } from '@uth/db';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
-import { getRouteLogger } from '@/lib/routeLogger';
+import { getRouteLogger } from '@uth/flow';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

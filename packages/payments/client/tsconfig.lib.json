@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "rootDir": "src",
@@ -14,19 +14,7 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../parser/tsconfig.lib.json"
-    },
-    {
-      "path": "../calculators/tsconfig.lib.json"
-    },
-    {
-      "path": "../features/tsconfig.lib.json"
-    },
-    {
-      "path": "../utils/tsconfig.lib.json"
-    },
-    {
-      "path": "../auth/client/tsconfig.lib.json"
+      "path": "../../utils/tsconfig.lib.json"
     }
   ],
   "exclude": [
