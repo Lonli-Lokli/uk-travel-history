@@ -36,7 +36,8 @@
         "packages/stores/*",
         "packages/payments-server/*",
         "packages/payments-client/*",
-        "packages/db/*"
+        "packages/db/*",
+        "packages/flow/core/*"
       ]
     },
     {
@@ -68,7 +69,8 @@
         "packages/stores/*",
         "packages/paymments-client/*",
         "packages/paymments-server/*",
-        "packages/db/*"
+        "packages/db/*",
+        "packages/flow/core/*"
       ],
       "options": {
         "typecheck": {

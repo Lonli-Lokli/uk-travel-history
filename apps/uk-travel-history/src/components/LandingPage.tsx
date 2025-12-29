@@ -7,15 +7,11 @@ import { useClipboardImport } from './hooks/useClipboardImport';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
-import {
-  travelStore,
-  authStore,
-  monetizationStore,
-  paymentStore,
-} from '@uth/stores';
+import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
-import { FeatureGateProvider, FeatureButton } from '@uth/widgets';
+import { FeatureButton } from '@uth/widgets';
 import { FEATURES } from '@uth/features';
+import { ProvidersWrapper } from './ProvidersWrapper';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -143,11 +139,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <FeatureGateProvider
-      monetizationStore={monetizationStore}
-      authStore={authStore}
-      paymentStore={paymentStore}
-    >
+    <ProvidersWrapper>
       {/* Hidden File Inputs */}
       <input
         ref={pdfFileInputRef}
@@ -443,7 +435,7 @@ export const LandingPage = () => {
           </Card>
         </main>
       </div>
-    </FeatureGateProvider>
+    </ProvidersWrapper>
   );
 };
 

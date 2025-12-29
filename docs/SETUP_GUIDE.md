@@ -5,6 +5,7 @@ This guide covers the complete setup for issue #100: migrating to unlocked publi
 ## Overview
 
 The application now supports:
+
 - **Public sign-up**: Users can create accounts without payment
 - **Subscription tiers**: Free, Monthly, Yearly, Lifetime
 - **RLS enforcement**: Database-level security for entitlements
@@ -39,6 +40,7 @@ supabase migration apply 003_add_rls_policies.sql
 ### Verify Tables
 
 Your `users` table should now have these columns:
+
 - `id` (UUID, primary key)
 - `clerk_user_id` (TEXT, unique)
 - `email` (TEXT)
@@ -107,16 +109,19 @@ All should return `rowsecurity = true`.
 2. Create three products:
 
 **Monthly Subscription**
+
 - Name: "UK Travel History - Monthly"
 - Pricing: $9.99/month (recurring)
 - Copy **Price ID** → `STRIPE_MONTHLY_PRICE_ID`
 
 **Yearly Subscription**
+
 - Name: "UK Travel History - Yearly"
 - Pricing: $99/year (recurring)
 - Copy **Price ID** → `STRIPE_YEARLY_PRICE_ID`
 
 **Lifetime Access**
+
 - Name: "UK Travel History - Lifetime"
 - Pricing: $199 (one-time)
 - Copy **Price ID** → `STRIPE_LIFETIME_PRICE_ID`
@@ -124,7 +129,7 @@ All should return `rowsecurity = true`.
 ### Configure Webhook
 
 1. Go to **Stripe Dashboard** → **Developers** → **Webhooks** → **Add Endpoint**
-2. Set endpoint URL: `https://your-domain.com/api/stripe/webhook`
+2. Set endpoint URL: `https://your-domain.com/api/webhooks/stripe`
 3. Select events to listen to:
    - `checkout.session.completed`
    - `customer.subscription.created`
@@ -196,7 +201,7 @@ brew install stripe/stripe-cli/stripe
 stripe login
 
 # Forward webhooks to local server
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
 **Test subscription creation:**
@@ -275,6 +280,7 @@ Before deploying to production:
 The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS. **NEVER** expose it to the client.
 
 **Safe usage:**
+
 - ✅ Stripe webhook handlers
 - ✅ Clerk webhook handlers
 - ✅ Admin API routes
@@ -339,6 +345,7 @@ After completing this setup:
 ## 10. Support
 
 For issues or questions:
+
 - Open an issue on GitHub
 - Check Sentry for error logs
 - Review Clerk dashboard for auth issues

@@ -15,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  UIIcon,
 } from '@uth/ui';
 import { FeatureChart } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
@@ -575,147 +580,163 @@ export const RiskAreaChart: React.FC = observer(() => {
 
   if (!rollingAbsenceData || rollingAbsenceData.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-3">
-        <h3 className="text-base font-semibold text-slate-800 mb-2">
-          Risk-Based Timeline
-        </h3>
-        <div className="text-center py-6 text-slate-500">
-          <p className="text-sm">
-            Set a Vignette Entry Date or Visa Start Date to view the risk
-            timeline.
-          </p>
-        </div>
-      </div>
+      <Card className="bg-white mb-3">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <UIIcon
+              iconName="line-chart"
+              className="w-4 h-4 text-muted-foreground"
+            />
+            180-Day Rolling Absence Risk Timeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6 text-slate-500">
+            <p className="text-sm">
+              Set a Vignette Entry Date or Visa Start Date to view the risk
+              timeline.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 mb-3">
-      <div className="mb-3">
-        <h3 className="text-base font-semibold text-slate-800 mb-2">
-          180-Day Rolling Absence Risk Timeline
-        </h3>
-        <div className="flex flex-wrap gap-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: '#3b82f6' }}
-            />
-            <span className="text-slate-600">Days Absent (&lt;180)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: '#ef4444' }}
-            />
-            <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
-          </div>
-          {crossoverPoints.length > 0 && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="7"
-                    fill="#ef4444"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M5 5L11 11M11 5L5 11"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className="text-slate-600">Limit Breached</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="7"
-                    fill="#059669"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M5 8L7 10L11 6"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-slate-600">Limit Recovered</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <FeatureChart feature={FEATURES.ADVANCED_ANALYTICS}>
-        {/* Risk area chart */}
-        <div className="mb-4">
-          <HighchartsReact
-            ref={areaChartRef}
-            highcharts={Highcharts}
-            options={riskAreaOptions}
+    <Card className="bg-white mb-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <UIIcon
+            iconName="line-chart"
+            className="w-4 h-4 text-muted-foreground"
           />
+          180-Day Rolling Absence Risk Timeline
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: '#3b82f6' }}
+              />
+              <span className="text-slate-600">Days Absent (&lt;180)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: '#ef4444' }}
+              />
+              <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
+            </div>
+            {crossoverPoints.length > 0 && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="7"
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M5 5L11 11M11 5L5 11"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="text-slate-600">Limit Breached</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="7"
+                      fill="#059669"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M5 8L7 10L11 6"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="text-slate-600">Limit Recovered</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Trip timeline (Gantt) */}
-        {timeline.points.length > 0 && (
-          <div>
-            <h4 className="text-sm font-semibold text-slate-700 mb-2">
-              Trip Timeline
-            </h4>
-            <div className="bg-slate-50 rounded border border-slate-200 p-2">
-              <HighchartsReact
-                ref={ganttChartRef}
-                highcharts={Highcharts}
-                constructorType="ganttChart"
-                options={ganttOptions}
-              />
-            </div>
+        <FeatureChart feature={FEATURES.ADVANCED_ANALYTICS}>
+          {/* Risk area chart */}
+          <div className="mb-4">
+            <HighchartsReact
+              ref={areaChartRef}
+              highcharts={Highcharts}
+              options={riskAreaOptions}
+            />
           </div>
-        )}
-      </FeatureChart>
 
-      {/* Trip Details Dialog */}
-      <Dialog
-        open={!!selectedTripDetails}
-        onOpenChange={(open) => {
-          if (!open) {
-            travelStore.clearSelectedTrip();
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {selectedTripDetails?.name || 'Trip Details'}
-            </DialogTitle>
-            <DialogDescription asChild>
-              {selectedTripDetails ? (
-                <div className="mt-2 text-sm">
-                  <p>
-                    <strong>Departure:</strong> {selectedTripDetails.start}
-                  </p>
-                  <p>
-                    <strong>Return:</strong> {selectedTripDetails.end}
-                  </p>
-                </div>
-              ) : (
-                <span />
-              )}
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-    </div>
+          {/* Trip timeline (Gantt) */}
+          {timeline.points.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">
+                Trip Timeline
+              </h4>
+              <div className="bg-slate-50 rounded border border-slate-200 p-2">
+                <HighchartsReact
+                  ref={ganttChartRef}
+                  highcharts={Highcharts}
+                  constructorType="ganttChart"
+                  options={ganttOptions}
+                />
+              </div>
+            </div>
+          )}
+        </FeatureChart>
+
+        {/* Trip Details Dialog */}
+        <Dialog
+          open={!!selectedTripDetails}
+          onOpenChange={(open) => {
+            if (!open) {
+              travelStore.clearSelectedTrip();
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedTripDetails?.name || 'Trip Details'}
+              </DialogTitle>
+              <DialogDescription asChild>
+                {selectedTripDetails ? (
+                  <div className="mt-2 text-sm">
+                    <p>
+                      <strong>Departure:</strong> {selectedTripDetails.start}
+                    </p>
+                    <p>
+                      <strong>Return:</strong> {selectedTripDetails.end}
+                    </p>
+                  </div>
+                ) : (
+                  <span />
+                )}
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 });
 

@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
     if (!WEBHOOK_SECRET) {
       logger.error('CLERK_WEBHOOK_SECRET not configured', undefined);
-      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Webhook secret not configured' },
+        { status: 500 },
+      );
     }
 
     const body = await request.text();
@@ -56,19 +59,26 @@ export async function POST(request: NextRequest) {
     switch (type) {
       case 'user.created': {
         // Provision new user in Supabase with free tier
-        const email = data.email_addresses?.find((e: any) => e.id === data.primary_email_address_id)?.email_address;
+        const email = data.email_addresses?.find(
+          (e: any) => e.id === data.primary_email_address_id,
+        )?.email_address;
 
         if (!email) {
           logger.error('No email found in user.created event', undefined, {
             extra: { userId: data.id },
           });
-          return NextResponse.json({ error: 'No email found' }, { status: 400 });
+          return NextResponse.json(
+            { error: 'No email found' },
+            { status: 400 },
+          );
         }
 
         // Use upsert to handle race conditions (Stripe webhook may create user first)
         // If user exists from Stripe webhook, preserve existing tier/status
         // Note: Using type assertion here because Supabase client types aren't inferring correctly
-        const { error: upsertError } = await (supabase.from('users').upsert as any)(
+        const { error: upsertError } = await (
+          supabase.from('users').upsert as any
+        )(
           {
             clerk_user_id: data.id,
             email: email,
@@ -83,18 +93,28 @@ export async function POST(request: NextRequest) {
           {
             onConflict: 'clerk_user_id',
             ignoreDuplicates: true, // Don't override if exists (preserves Stripe-provisioned users)
-          }
+          },
         );
 
         if (upsertError) {
           logger.error('Failed to upsert user in Supabase', undefined, {
-            extra: { userId: data.id, error: upsertError },
+            extra: {
+              userId: data.id,
+              email,
+              error: upsertError,
+              errorCode: upsertError.code,
+              errorMessage: upsertError.message,
+              errorDetails: upsertError.details,
+            },
           });
-          return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+          return NextResponse.json(
+            { error: 'Failed to create user' },
+            { status: 500 },
+          );
         }
 
-        logger.info('User provisioned successfully', {
-          extra: { userId: data.id, email },
+        logger.info('User provisioned successfully via webhook', {
+          extra: { userId: data.id, email, webhookEvent: 'user.created' },
         });
 
         break;
@@ -102,11 +122,14 @@ export async function POST(request: NextRequest) {
 
       case 'user.updated': {
         // Update user email if changed
-        const email = data.email_addresses?.find((e: any) => e.id === data.primary_email_address_id)?.email_address;
+        const email = data.email_addresses?.find(
+          (e: any) => e.id === data.primary_email_address_id,
+        )?.email_address;
 
         if (email) {
-          const { error: updateError } = await (supabase.from('users').update as any)({ email })
-            .eq('clerk_user_id', data.id);
+          const { error: updateError } = await (
+            supabase.from('users').update as any
+          )({ email }).eq('clerk_user_id', data.id);
 
           if (updateError) {
             logger.error('Failed to update user in Supabase', undefined, {
@@ -124,14 +147,18 @@ export async function POST(request: NextRequest) {
 
       case 'user.deleted': {
         // Delete user from Supabase
-        const { error: deleteError } = await (supabase.from('users').delete as any)()
-          .eq('clerk_user_id', data.id);
+        const { error: deleteError } = await (
+          supabase.from('users').delete as any
+        )().eq('clerk_user_id', data.id);
 
         if (deleteError) {
           logger.error('Failed to delete user from Supabase', undefined, {
             extra: { userId: data.id, error: deleteError },
           });
-          return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+          return NextResponse.json(
+            { error: 'Failed to delete user' },
+            { status: 500 },
+          );
         }
 
         logger.info('User deleted successfully', {
@@ -152,7 +179,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

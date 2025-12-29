@@ -99,16 +99,6 @@ class PaymentStore {
     this.error = null;
 
     try {
-      // Get price ID from environment variables
-      const priceId =
-        this.billingPeriod === 'monthly'
-          ? process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY
-          : process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ANNUAL;
-
-      if (!priceId) {
-        throw new Error('Stripe price ID not configured');
-      }
-
       // Create anonymous checkout session
       const response = await fetch('/api/stripe/create-anonymous-checkout', {
         method: 'POST',
@@ -116,7 +106,6 @@ class PaymentStore {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId,
           billingPeriod: this.billingPeriod,
         }),
       });

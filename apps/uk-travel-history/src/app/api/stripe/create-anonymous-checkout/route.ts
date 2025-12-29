@@ -7,7 +7,6 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 interface AnonymousCheckoutRequest {
-  priceId: string;
   billingPeriod: 'monthly' | 'annual';
 }
 

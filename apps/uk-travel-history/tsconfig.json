@@ -59,22 +59,25 @@
       "path": "../../packages/features"
     },
     {
-      "path": "../../packages/payments-server"
+      "path": "../../packages/payments/server"
     },
     {
-      "path": "../../packages/utils"
+      "path": "../../packages/flow"
     },
     {
       "path": "../../packages/db"
     },
     {
-      "path": "../../packages/auth-server"
+      "path": "../../packages/auth/server"
     },
     {
       "path": "../../packages/stores"
     },
     {
       "path": "../../packages/ui"
+    },
+    {
+      "path": "../../packages/utils"
     }
   ]
 }

@@ -11,7 +11,7 @@ import {
   PurchaseIntentStatus,
 } from '@uth/db';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
-import { getRouteLogger } from '@/lib/routeLogger';
+import { getRouteLogger } from '@uth/flow';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -25,9 +25,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get price ID from env
-    const PRICE_ID = process.env.STRIPE_PRICE_ONE_TIME_PAYMENT;
+    const PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID;
     if (!PRICE_ID) {
-      getRouteLogger().error('STRIPE_PRICE_ONE_TIME_PAYMENT not configured', undefined);
+      getRouteLogger().error(
+        'STRIPE_LIFETIME_PRICE_ID not configured',
+        undefined,
+      );
       return NextResponse.json(
         { error: 'Payment price not configured' },
         { status: 500 },

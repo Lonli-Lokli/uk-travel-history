@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { Button, UIIcon } from '@uth/ui';
+import { UIIcon } from '@uth/ui';
 import type { Metadata } from 'next';
 import {
   getAllFeatureFlags,
@@ -7,12 +6,13 @@ import {
   DEFAULT_FEATURE_STATES,
   type FeatureFlagKey,
 } from '@uth/features';
-import { appFlow } from '@/lib/appFlow';
-import { call } from '@/lib/flow';
+import { call, appFlow } from '@uth/flow';
+import { PageWrapper } from '@/components/PageWrapper';
 
 export const metadata: Metadata = {
   title: 'Status',
-  description: 'View the status of features and their configuration in the UK Travel History Parser.',
+  description:
+    'View the status of features and their configuration in the UK Travel History Parser.',
 };
 
 // Force dynamic rendering for flow-based pages
@@ -119,24 +119,27 @@ function FeatureStatusBadge({
   );
 }
 
-export default appFlow.page<void>(async function* StatusPage() {
+export default appFlow.page(async function* StatusPage() {
   // Fetch all feature flags from Edge Config with error handling
-  const featureFlags = (yield call(getAllFeatureFlags).orUI(
+  // Using yield* for automatic type inference (no manual type annotation needed!)
+  const featureFlags = yield* call(getAllFeatureFlags).orUI(
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="max-w-md mx-auto p-6 bg-amber-50 border border-amber-200 rounded-lg">
         <h2 className="text-lg font-semibold text-amber-900 mb-2">
           Unable to Load Feature Flags
         </h2>
         <p className="text-sm text-amber-700">
-          There was an error loading the feature flag configuration. Some features may not be available.
+          There was an error loading the feature flag configuration. Some
+          features may not be available.
         </p>
         <p className="text-xs text-amber-600 mt-3">
-          This error has been logged. If the problem persists, please contact support.
+          This error has been logged. If the problem persists, please contact
+          support.
         </p>
       </div>
     </div>,
-    'Failed to fetch feature flags from Edge Config'
-  )) as Record<FeatureFlagKey, boolean>;
+    'Failed to fetch feature flags from Edge Config',
+  );
 
   // Group features by category
   const featuresByCategory = FEATURE_INFO.reduce(
@@ -151,88 +154,83 @@ export default appFlow.page<void>(async function* StatusPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* Back Button */}
-        <Link href="/" className="inline-block mb-8">
-          <Button variant="outline" size="sm">
-            <UIIcon iconName="arrow-left" className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
-        </Link>
+    <PageWrapper variant="plain">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 mb-6">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">
+          System Status
+        </h1>
+        <p className="text-slate-600">
+          View the current status of features and their configuration. Features
+          can be controlled via Vercel Edge Config for runtime management.
+        </p>
+      </div>
 
-        {/* Header */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            System Status
-          </h1>
-          <p className="text-slate-600">
-            View the current status of features and their configuration. Features can be controlled via Vercel Edge Config for runtime management.
+      {/* Feature Status by Category */}
+      {Object.entries(featuresByCategory).map(([category, features]) => (
+        <div
+          key={category}
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 mb-6"
+        >
+          <h2 className="text-xl font-semibold text-slate-900 mb-4">
+            {category}
+          </h2>
+          <div className="space-y-4">
+            {features.map((feature) => {
+              const isEnabled = featureFlags[feature.key];
+              const defaultState = DEFAULT_FEATURE_STATES[feature.key];
+              const isDefault = isEnabled === defaultState;
+
+              return (
+                <div
+                  key={feature.key}
+                  className="flex items-start justify-between py-3 border-b border-slate-100 last:border-0"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-slate-900">
+                        {feature.name}
+                      </h3>
+                      <code className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                        {feature.key}
+                      </code>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      {feature.description}
+                    </p>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    <FeatureStatusBadge
+                      enabled={isEnabled}
+                      isDefault={isDefault}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Legend */}
+      <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
+        <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+          <UIIcon iconName="info-circle" className="h-4 w-4 mr-2" />
+          Feature Flag Information
+        </h3>
+        <div className="text-sm text-blue-800 space-y-2">
+          <p>
+            <strong>Default:</strong> Features showing the "Default" badge are
+            using their default configuration and are not overridden by Edge
+            Config.
+          </p>
+          <p>
+            <strong>Edge Config:</strong> Features without the "Default" badge
+            are being controlled by Vercel Edge Config, allowing runtime
+            configuration without redeployment.
           </p>
         </div>
-
-        {/* Feature Status by Category */}
-        {Object.entries(featuresByCategory).map(([category, features]) => (
-          <div
-            key={category}
-            className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 mb-6"
-          >
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">
-              {category}
-            </h2>
-            <div className="space-y-4">
-              {features.map((feature) => {
-                const isEnabled = featureFlags[feature.key];
-                const defaultState = DEFAULT_FEATURE_STATES[feature.key];
-                const isDefault = isEnabled === defaultState;
-
-                return (
-                  <div
-                    key={feature.key}
-                    className="flex items-start justify-between py-3 border-b border-slate-100 last:border-0"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-slate-900">
-                          {feature.name}
-                        </h3>
-                        <code className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                          {feature.key}
-                        </code>
-                      </div>
-                      <p className="text-sm text-slate-600">
-                        {feature.description}
-                      </p>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      <FeatureStatusBadge
-                        enabled={isEnabled}
-                        isDefault={isDefault}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        {/* Legend */}
-        <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
-          <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
-            <UIIcon iconName="info-circle" className="h-4 w-4 mr-2" />
-            Feature Flag Information
-          </h3>
-          <div className="text-sm text-blue-800 space-y-2">
-            <p>
-              <strong>Default:</strong> Features showing the "Default" badge are using their default configuration and are not overridden by Edge Config.
-            </p>
-            <p>
-              <strong>Edge Config:</strong> Features without the "Default" badge are being controlled by Vercel Edge Config, allowing runtime configuration without redeployment.
-            </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 });

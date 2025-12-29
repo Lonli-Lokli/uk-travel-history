@@ -7,18 +7,21 @@ This is a Next.js application designed to help users track their UK travel histo
 ## Key Requirements
 
 ### Core Functionality
+
 1. **Travel History Tracking**: Parse and manage trips in/out of the UK
 2. **Vignette Entry Dates**: Track when vignette entries occurred
 3. **Visa Start Dates**: Track visa commencement dates
 4. **Days Calculation**: Calculate full days outside UK (excluding departure and return days)
 
 ### Data Sources
+
 - PDF uploads from UK Home Office SAR (Subject Access Request) documents
 - Manual entry for all data types
 
 ## Tech Stack & Architecture
 
 ### Framework & Libraries
+
 - **Next.js 16** (App Router with `proxy.ts` middleware)
 - **MobX** for state management (observer pattern)
 - **TanStack React Table v8** for table functionality
@@ -28,6 +31,7 @@ This is a Next.js application designed to help users track their UK travel histo
 - **ExcelJS** for Excel export
 
 ### Authentication & Payments (Issue #100)
+
 - **Clerk** for authentication (public sign-up model)
   - Modal-based sign-in/sign-up via `<SignInButton>` and `<SignUpButton>`
   - JWT tokens used for Supabase RLS authentication
@@ -38,10 +42,11 @@ This is a Next.js application designed to help users track their UK travel histo
   - Factory functions: `createUserScopedClient()`, `createAdminClient()`
 - **Stripe** for payments
   - Subscription tiers: free, monthly, yearly, lifetime
-  - Webhook handler at `/api/stripe/webhook` for subscription lifecycle
+  - Webhook handler at `/api/webhooks/stripe` for subscription lifecycle
   - Customer Portal integration for subscription management
 
 ### Project Structure
+
 ```
 apps/uk-travel-history/
 ├── src/app/
@@ -69,7 +74,9 @@ apps/uk-travel-history/
 ```
 
 ### Routing Structure
+
 **Active Routes**:
+
 - **`/`** (Home): Landing page with instructions and CTAs
 - **`/travel`** (Travel Tracker): Main application (free tier access)
 - **`/account`** (Account & Billing): Subscription management
@@ -79,6 +86,7 @@ apps/uk-travel-history/
 - **`/status`**: Feature flags dashboard
 
 **Removed Routes** (as of Issue #100):
+
 - ~~`/claim`~~ - Replaced by public sign-in/sign-up
 - ~~`/registration`~~ - Replaced by Clerk webhook auto-provisioning
 - ~~`/onboarding/passkey`~~ - Passkeys now optional
@@ -101,17 +109,20 @@ apps/uk-travel-history/
 The application uses a **three-layer defense** strategy for access control:
 
 **Layer 1: Route Protection** (`proxy.ts`)
+
 - Next.js 16 middleware authenticates requests via `clerkMiddleware()`
 - Public routes: `/`, `/travel`, `/about`, `/terms`, `/status`
 - Protected routes: `/account`, `/api/billing/*`, `/api/user/*`
-- Webhook routes: `/api/webhooks/*`, `/api/stripe/webhook`
+- Webhook routes: `/api/webhooks/*`, `/api/webhooks/stripe`
 
 **Layer 2: API Route Authorization**
+
 - Feature-based authorization via `@uth/features` package
 - Server-side validation of subscription tiers
 - Use `getCurrentUser()` from `@uth/auth-server` for type-safe user access
 
 **Layer 3: Database RLS Policies** (`supabase/migrations/003_add_rls_policies.sql`)
+
 - **Users table**: Can only read/update own profile
   - CRITICAL: Column-level restrictions prevent users from modifying entitlement fields
   - `subscription_tier`, `stripe_customer_id`, etc. can only be modified by service_role
@@ -119,12 +130,14 @@ The application uses a **three-layer defense** strategy for access control:
 - **Webhook events**: Service_role only (contains sensitive payment data)
 
 **Important Rules**:
+
 - NEVER use `as any` type assertions with Supabase client (types are already defined)
 - ALWAYS use `createUserScopedClient()` for user-facing operations (RLS enforced)
 - ONLY use `createAdminClient()` in webhook handlers (bypasses RLS)
 - Webhook handlers MUST verify signatures before processing
 
 ### Code Style
+
 - Use TypeScript for type safety
 - Follow existing component patterns (shadcn/ui conventions)
 - Keep components small and focused
@@ -133,7 +146,9 @@ The application uses a **three-layer defense** strategy for access control:
 ### Common Tasks
 
 #### Adding New Data Fields
+
 When adding fields like vignette entry date or visa start date:
+
 1. Update the data model in `stores/travelStore.ts`
 2. Add columns to table in `TravelTable.tsx`
 3. Update PDF parser if data can be extracted from PDFs
@@ -141,12 +156,14 @@ When adding fields like vignette entry date or visa start date:
 5. Update UI forms/inputs for manual entry
 
 #### PDF Parsing
+
 - Parser is in `lib/parser.ts`
 - API endpoint: `app/api/parse/route.ts`
 - Currently parses travel history from Home Office SAR documents
 - May need extension to parse vignette/visa dates if available in PDFs
 
 #### Excel Export
+
 - Export logic in `app/api/export/route.ts`
 - Uses ExcelJS to generate formatted spreadsheets
 - Should include all tracked data: trips, vignette dates, visa dates
@@ -160,6 +177,7 @@ When adding fields like vignette entry date or visa start date:
 ## Current State
 
 ### Recently Modified Files
+
 - **Routing & Pages**:
   - `app/page.tsx` - Home/landing page (NEW routing structure)
   - `app/travel/page.tsx` - Travel tracker page (NEW route)
@@ -173,6 +191,7 @@ When adding fields like vignette entry date or visa start date:
   - `app/api/export/route.ts` - Enhanced Excel export with all calculations
 
 ### Recent Changes
+
 - ✅ **Routing**: Separated home and travel pages with Next.js App Router
 - ✅ **Landing Page**: Professional onboarding with SAR request instructions
 - ✅ **Navigation**: Query params for deep linking (import/add actions)
@@ -188,10 +207,12 @@ When adding fields like vignette entry date or visa start date:
 ### Date Handling & Calculations
 
 #### Date Storage and Display
+
 - All dates stored in ISO format (YYYY-MM-DD)
 - Display format: DD/MM/YYYY (UK context)
 
 #### Absence Calculation (per UK Home Office Guidance v22.0)
+
 The application follows the official UK Home Office guidance for calculating continuous periods:
 
 1. **Full Days Outside UK**:
@@ -212,17 +233,20 @@ The application follows the official UK Home Office guidance for calculating con
    - If any 12-month window exceeds 180 days, the continuous period may be broken
 
 #### Key Rules from Home Office Guidance
+
 - **180-day limit**: Maximum absence in any rolling 12-month period
 - **Whole days only**: Part-day absences (same-day return) don't count
 - **Rolling basis**: For leave granted after 11 January 2018, absences are considered on a rolling basis
 - **Continuous period**: Must be spent lawfully in the UK with valid leave
 
 ### Performance Considerations
+
 - PDF parsing can be slow for large documents
 - Consider showing loading states
 - Table virtualization may be needed for users with extensive travel history
 
 ### Security
+
 - File uploads should be validated (file type, size)
 - PDF parsing should be sandboxed (potential security risk)
 - No sensitive data should be logged

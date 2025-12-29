@@ -28,19 +28,22 @@
       "path": "./packages/stores"
     },
     {
-      "path": "./packages/payments-client"
+      "path": "./packages/payments/client"
     },
     {
-      "path": "./packages/payments-server"
+      "path": "./packages/payments/server"
     },
     {
-      "path": "./packages/auth-client"
+      "path": "./packages/auth/client"
     },
     {
-      "path": "./packages/auth-server"
+      "path": "./packages/auth/server"
     },
     {
       "path": "./packages/db"
+    },
+    {
+      "path": "./packages/flow"
     }
   ]
 }

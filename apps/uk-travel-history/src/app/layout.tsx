@@ -47,10 +47,19 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  icons: {
-    icon: '/favicon.svg',
-    apple: '/favicon.svg',
-  },
+  // Note: Next.js will automatically serve icon.svg from src/app/icon.svg
+  // Adding explicit fallbacks for browsers that need specific formats
+  icons: [
+    {
+      rel: 'icon',
+      type: 'image/svg+xml',
+      url: '/favicon.svg',
+    },
+    {
+      rel: 'apple-touch-icon',
+      url: '/favicon.svg',
+    },
+  ],
   manifest: '/site.webmanifest',
   openGraph: {
     type: 'website',
@@ -119,12 +128,10 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en" className={`${geist.className} h-full`}>
-        <body className="h-full bg-slate-50 overflow-y-scroll flex flex-col">
+      <html lang="en" className={geist.className}>
+        <body className="min-h-screen bg-slate-50 flex flex-col">
           <FeatureFlagsProvider flags={flags}>
-            <LayoutClient>
-              {children}
-            </LayoutClient>
+            <LayoutClient>{children}</LayoutClient>
             <Footer />
             <Toaster />
           </FeatureFlagsProvider>

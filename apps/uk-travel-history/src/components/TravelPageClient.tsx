@@ -1,7 +1,6 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { useEffect, useRef } from 'react';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -9,14 +8,8 @@ import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
-import { FeatureGateProvider } from '@uth/widgets';
 import { TravelToolbar } from './TravelToolbar';
-import {
-  authStore,
-  monetizationStore,
-  paymentStore,
-  navbarToolbarStore,
-} from '@uth/stores';
+import { ProvidersWrapper } from './ProvidersWrapper';
 import {
   useClearAll,
   useCsvImport,
@@ -28,8 +21,7 @@ import {
 /**
  * Travel page client component.
  *
- * This component registers its toolbar items with the navbarToolbarStore.
- * The Navbar observes the store and renders the registered items.
+ * This component renders its own toolbar at the top of the page.
  */
 export const TravelPageClient = observer(() => {
   const { handleClearAll } = useClearAll();
@@ -59,63 +51,34 @@ export const TravelPageClient = observer(() => {
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
 
-  // Register toolbar items with the store on mount
-  useEffect(() => {
-    navbarToolbarStore.registerToolbarItems([
-      {
-        id: 'travel-toolbar',
-        element: (
-          <>
-            {/* Hidden file inputs */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            <input
-              ref={csvFileInputRef}
-              type="file"
-              accept=".csv,.txt,.xlsx"
-              className="hidden"
-              onChange={handleCsvFileSelect}
-            />
-            {/* Toolbar component */}
-            <TravelToolbar
-              triggerFileInput={triggerFileInput}
-              triggerCsvFileInput={triggerCsvFileInput}
-              handleClipboardPaste={handleClipboardPaste}
-              handleExport={handleExport}
-            />
-          </>
-        ),
-      },
-    ]);
-
-    // Cleanup: clear toolbar when component unmounts
-    return () => {
-      navbarToolbarStore.clearToolbar();
-    };
-  }, [
-    fileInputRef,
-    csvFileInputRef,
-    handleFileSelect,
-    handleCsvFileSelect,
-    triggerFileInput,
-    triggerCsvFileInput,
-    handleClipboardPaste,
-    handleExport,
-  ]);
-
   return (
-    <FeatureGateProvider
-      monetizationStore={monetizationStore}
-      authStore={authStore}
-      paymentStore={paymentStore}
-    >
+    <ProvidersWrapper>
+      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+        {/* Page Toolbar */}
+        <div className="mb-4 flex justify-end">
+          {/* Hidden file inputs */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <input
+            ref={csvFileInputRef}
+            type="file"
+            accept=".csv,.txt,.xlsx"
+            className="hidden"
+            onChange={handleCsvFileSelect}
+          />
+          <TravelToolbar
+            triggerFileInput={triggerFileInput}
+            triggerCsvFileInput={triggerCsvFileInput}
+            handleClipboardPaste={handleClipboardPaste}
+            handleExport={handleExport}
+          />
+        </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 min-h-[calc(100vh-60px)]">
         <SummaryCards />
         <VisaDetailsCard />
         <ValidationStatusCard />
@@ -155,7 +118,7 @@ export const TravelPageClient = observer(() => {
           onCancel={cancelFullDataImport}
         />
       )}
-    </FeatureGateProvider>
+    </ProvidersWrapper>
   );
 });
 

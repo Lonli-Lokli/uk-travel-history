@@ -1,7 +1,7 @@
 // Navbar Toolbar Store
 // Manages navbar toolbar items with automatic cleanup on navigation
 
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, action, observable } from 'mobx';
 import { ReactNode } from 'react';
 
 export interface ToolbarItem {
@@ -14,10 +14,18 @@ class NavbarToolbarStore {
   currentPathname = '';
 
   // Registered toolbar items
+  // Use shallow observable: the array reference is observable, but not the React elements inside
   toolbarItems: ToolbarItem[] = [];
 
   constructor() {
-    makeAutoObservable(this);
+    makeAutoObservable(this, {
+      registerToolbarItems: action,
+      clearToolbar: action,
+      updatePathname: action,
+      // Make toolbarItems shallowly observable - only the array reference, not the contents
+      // This allows reactivity when items are added/removed without wrapping React elements
+      toolbarItems: observable.shallow,
+    });
   }
 
   /**

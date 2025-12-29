@@ -1,45 +1,52 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser, type AuthUser } from '@uth/auth-server';
 import { AccountPageClient } from './AccountPageClient';
+import { AccountErrorFallback } from '@/components/AccountErrorFallback';
 import { getUserByAuthId, type User } from '@uth/db';
 import { logger } from '@uth/utils';
-import { appFlow } from '@/lib/appFlow';
-import { call } from '@/lib/flow';
+import { call, appFlow } from '@uth/flow';
 
 // Force dynamic rendering for flow-based pages
 // This prevents Next.js from attempting static generation which causes timeout
 // due to the while(true) generator pattern in flow.tsx
 export const dynamic = 'force-dynamic';
 
-export default appFlow.page<void>(async function* AccountPage() {
+export default appFlow.page(async function* AccountPage() {
   // Attempt to get current authenticated user with error policy
-  const user = (yield call(getCurrentUser).orRedirect(
+  // Using yield* for automatic type inference
+  const user = yield* call(getCurrentUser).orRedirect(
     '/sign-in?error=auth_error',
-    'Auth failed'
-  )) as AuthUser | null;
+    'Auth failed',
+  );
 
   // Handle null user case (value missing, not error)
   if (!user) {
-    logger.info('Account page accessed without authentication, redirecting to sign-in');
+    logger.info(
+      'Account page accessed without authentication, redirecting to sign-in',
+    );
     redirect('/sign-in?redirect_url=/account');
   }
 
-  // Fetch user subscription data from Supabase with error policy
-  const dbUser = (yield call(getUserByAuthId, user.uid).orRedirect(
-    '/sign-in?error=database_error',
-    'Failed to fetch user data from database'
-  )) as User | null;
+  // Fetch user subscription data from Supabase
+  // Use optional policy to handle missing user gracefully
+  const dbUser = yield* call(getUserByAuthId, user.uid).optional(null);
 
-  // Handle race condition: user exists in Clerk but not yet in Supabase
-  // This can happen during webhook processing delays
+  // Handle missing database user: show error UI instead of redirecting
+  // This can happen if webhook failed or database record was deleted
   if (!dbUser) {
-    logger.warn('User exists in Clerk but not in database - webhook race condition', {
+    logger.error('User exists in Clerk but not in database', undefined, {
       extra: {
         userId: user.uid,
         email: user.email,
+        message: 'Webhook may have failed or database record was deleted',
       },
     });
-    redirect('/sign-in?error=account_not_ready');
+
+    // Return error fallback UI instead of redirecting
+    // This allows the user to retry provisioning
+    return (
+      <AccountErrorFallback userId={user.uid} email={user.email || 'Unknown'} />
+    );
   }
 
   return (
