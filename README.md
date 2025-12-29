@@ -29,6 +29,9 @@ A professional Next.js web application for tracking UK travel history and calcul
 - **Framework**: Next.js 16 (App Router) with TypeScript
 - **Runtime**: React 19
 - **State Management**: MobX (observer pattern)
+- **Authentication**: Clerk (public sign-up model)
+- **Database**: Supabase (PostgreSQL with RLS)
+- **Payments**: Stripe (subscriptions + one-time)
 - **Table**: TanStack React Table v8
 - **UI Components**: shadcn/ui + Radix UI
 - **Styling**: Tailwind CSS
@@ -38,6 +41,102 @@ A professional Next.js web application for tracking UK travel history and calcul
 - **Date Handling**: date-fns
 - **Error Tracking**: Sentry
 - **Monorepo**: Nx
+
+## Architecture
+
+This is an Nx monorepo with a layered architecture following domain-driven design principles.
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Next.js App                         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Server Components (RSC)                         │  │
+│  │  - Pages with appFlow.page() generators          │  │
+│  │  - API Routes (/api/*)                           │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Client Components                               │  │
+│  │  - MobX Stores (reactive state)                  │  │
+│  │  - UI Components (shadcn/ui)                     │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│              Shared Packages (@uth/*)                   │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Flow      │  │  Auth        │  │  Payments    │  │
+│  │  (control)  │  │  (client/    │  │  (client/    │  │
+│  │             │  │   server)    │  │   server)    │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  Features   │  │   Stores     │  │   Widgets    │  │
+│  │  (flags)    │  │   (MobX)     │  │  (React)     │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │     DB      │  │      UI      │  │    Utils     │  │
+│  │  (Supabase) │  │  (shadcn/ui) │  │  (helpers)   │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐                    │
+│  │   Parser    │  │  Calculators │                    │
+│  │    (PDF)    │  │  (ILR logic) │                    │
+│  └─────────────┘  └──────────────┘                    │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│              External Services                          │
+│  ┌──────────┐  ┌──────────┐  ┌────────────────────┐   │
+│  │  Clerk   │  │ Supabase │  │      Stripe        │   │
+│  │  (Auth)  │  │   (DB)   │  │    (Payments)      │   │
+│  └──────────┘  └──────────┘  └────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Package Responsibilities
+
+**Core Infrastructure:**
+
+- **[`@uth/flow`](./packages/flow/README.md)** - Generator-based control flow for Server Components
+- **[`@uth/features`](./packages/features/README.md)** - Feature flag system (env + Vercel Edge Config)
+- **[`@uth/db`](./packages/db/README.md)** - Supabase client with RLS, user provisioning, schema
+- **[`@uth/utils`](./packages/utils/README.md)** - Shared utilities (logger, date helpers, validation)
+
+**Authentication & Payments:**
+
+- **[`@uth/auth/client`](./packages/auth/client/README.md)** - Client-side auth (React hooks, Clerk adapter)
+- **[`@uth/auth/server`](./packages/auth/server/README.md)** - Server-side auth (user management, JWT validation)
+- **[`@uth/payments/client`](./packages/payments/client/README.md)** - Client-side payments (Stripe checkout UI)
+- **[`@uth/payments/server`](./packages/payments/server/README.md)** - Server-side payments (webhooks, subscriptions)
+
+**State & UI:**
+
+- **[`@uth/stores`](./packages/stores/README.md)** - MobX stores (travel, auth, payment, navigation)
+- **[`@uth/widgets`](./packages/widgets/README.md)** - React widgets (feature gates, providers)
+- **[`@uth/ui`](./packages/ui/README.md)** - shadcn/ui components + Radix primitives
+
+**Domain Logic:**
+
+- **[`@uth/calculators`](./packages/calculators/README.md)** - ILR calculations (backward counting, rolling periods)
+- **[`@uth/parser`](./packages/parser/README.md)** - PDF parsing (Home Office SAR documents)
+
+### Security Model
+
+**Three-Layer Defense:**
+
+1. **Route Protection** (`proxy.ts` middleware)
+   - Clerk authentication for protected routes
+   - Public routes: `/`, `/travel`, `/about`, `/terms`, `/status`
+   - Protected routes: `/account`, `/api/billing/*`
+
+2. **API Authorization** (feature-based)
+   - Subscription tier validation via `@uth/features`
+   - Type-safe user access via `getCurrentUser()`
+
+3. **Database RLS** (Supabase Row Level Security)
+   - User-scoped clients (anon key + Clerk JWT)
+   - Admin clients (service_role key, webhooks only)
+   - Column-level restrictions on entitlement fields
 
 ## Prerequisites
 

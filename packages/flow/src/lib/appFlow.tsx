@@ -5,8 +5,8 @@
  * error handling and logging configuration.
  */
 
-import { logger } from "@uth/utils";
-import { createFlow, FlowLoggerEvent } from "./flow";
+import { logger } from '@uth/utils';
+import { createFlow, FlowLoggerEvent } from './flow';
 
 /**
  * Application-wide flow instance
@@ -30,11 +30,10 @@ export const appFlow = createFlow({
             System Error
           </h2>
           <p className="text-sm text-red-700 mb-3">
-            An unexpected error occurred. Please try again later or contact support if the problem persists.
+            An unexpected error occurred. Please try again later or contact
+            support if the problem persists.
           </p>
-          <p className="text-xs text-red-600 font-mono">
-            Error ID: {errorId}
-          </p>
+          <p className="text-xs text-red-600 font-mono">Error ID: {errorId}</p>
         </div>
       </div>
     );
@@ -43,7 +42,7 @@ export const appFlow = createFlow({
     // Generate unique error ID for tracking
     const errorId = crypto.randomUUID();
 
-    if (e.type === "step_error") {
+    if (e.type === 'step_error') {
       logger.error(`Flow step failed: ${e.step}`, {
         extra: {
           errorId,
@@ -55,8 +54,8 @@ export const appFlow = createFlow({
         },
       });
     }
-    if (e.type === "flow_error") {
-      logger.error("Flow error", {
+    if (e.type === 'flow_error') {
+      logger.error('Flow error', {
         extra: {
           errorId,
           error: e.error instanceof Error ? e.error.message : String(e.error),

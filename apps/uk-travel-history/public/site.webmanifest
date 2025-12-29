@@ -1,0 +1,18 @@
+{
+  "name": "UK Travel History Parser",
+  "short_name": "UK Travel Parser",
+  "description": "Track your UK travel history and calculate continuous residence for settlement applications",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#0ea5e9",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
+}

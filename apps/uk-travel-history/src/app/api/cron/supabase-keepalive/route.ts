@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
     // Call database keepalive function
     const result = await keepalive();
 
-    getRouteLogger().info('Database keepalive successful', { extra: { result } });
+    getRouteLogger().info('Database keepalive successful', {
+      extra: { result },
+    });
 
     return NextResponse.json({
       ok: true,

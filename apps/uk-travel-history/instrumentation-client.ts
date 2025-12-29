@@ -8,7 +8,10 @@ import { getEnvironment } from '@uth/utils';
 // Diagnostic logging for environment detection
 const environment = getEnvironment();
 console.log('[Sentry Client Init] Environment:', environment);
-console.log('[Sentry Client Init] NEXT_PUBLIC_VERCEL_ENV:', process.env.NEXT_PUBLIC_VERCEL_ENV);
+console.log(
+  '[Sentry Client Init] NEXT_PUBLIC_VERCEL_ENV:',
+  process.env.NEXT_PUBLIC_VERCEL_ENV,
+);
 console.log('[Sentry Client Init] NODE_ENV:', process.env.NODE_ENV);
 
 Sentry.init({

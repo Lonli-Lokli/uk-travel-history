@@ -145,7 +145,7 @@ const routeProtectionMiddleware = async (
     '/api/parse',
     '/api/export',
     '/api/billing/checkout',
-    '/api/stripe/webhook',
+    '/api/webhooks/stripe',
     '/api/webhooks/clerk',
     '/api/cron/supabase-keepalive',
     '/api/user/provision', // Manual user provisioning fallback
@@ -153,9 +153,7 @@ const routeProtectionMiddleware = async (
 
   // Define protected routes that require authentication
   // Per issue #100: member/premium routes redirect to /sign-in
-  const isProtectedRoute = createRouteMatcher([
-    '/api/billing/(.*)',
-  ]);
+  const isProtectedRoute = createRouteMatcher(['/api/billing/(.*)']);
 
   const { userId } = await auth();
 
@@ -244,5 +242,3 @@ export const config = {
     '/(api|trpc)(.*)',
   ],
 };
-
-

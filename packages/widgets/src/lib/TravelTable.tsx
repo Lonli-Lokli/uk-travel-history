@@ -21,6 +21,12 @@ export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // Memoize data to ensure it updates when trips change
+  const data = useMemo(
+    () => travelStore.tripsWithCalculations,
+    [travelStore.tripsWithCalculations],
+  );
+
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
@@ -179,7 +185,7 @@ export const TravelTable = observer(() => {
   );
 
   const table = useReactTable({
-    data: travelStore.tripsWithCalculations,
+    data,
     columns,
     state: { sorting },
     onSortingChange: setSorting,

@@ -11,11 +11,11 @@ import { ReactNode } from 'react';
  */
 export function LayoutClient({ children }: { children: ReactNode }) {
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       <Navbar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1">
         {children}
       </div>
-    </>
+    </div>
   );
 }

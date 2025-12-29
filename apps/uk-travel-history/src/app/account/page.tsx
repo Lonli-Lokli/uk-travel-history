@@ -11,22 +11,25 @@ import { call, appFlow } from '@uth/flow';
 // due to the while(true) generator pattern in flow.tsx
 export const dynamic = 'force-dynamic';
 
-export default appFlow.page<void>(async function* AccountPage() {
+export default appFlow.page(async function* AccountPage() {
   // Attempt to get current authenticated user with error policy
-  const user = (yield call(getCurrentUser).orRedirect(
+  // Using yield* for automatic type inference
+  const user = yield* call(getCurrentUser).orRedirect(
     '/sign-in?error=auth_error',
-    'Auth failed'
-  )) as AuthUser | null;
+    'Auth failed',
+  );
 
   // Handle null user case (value missing, not error)
   if (!user) {
-    logger.info('Account page accessed without authentication, redirecting to sign-in');
+    logger.info(
+      'Account page accessed without authentication, redirecting to sign-in',
+    );
     redirect('/sign-in?redirect_url=/account');
   }
 
   // Fetch user subscription data from Supabase
   // Use optional policy to handle missing user gracefully
-  const dbUser = (yield call(getUserByAuthId, user.uid).optional(null)) as User | null;
+  const dbUser = yield* call(getUserByAuthId, user.uid).optional(null);
 
   // Handle missing database user: show error UI instead of redirecting
   // This can happen if webhook failed or database record was deleted
@@ -42,10 +45,7 @@ export default appFlow.page<void>(async function* AccountPage() {
     // Return error fallback UI instead of redirecting
     // This allows the user to retry provisioning
     return (
-      <AccountErrorFallback
-        userId={user.uid}
-        email={user.email || 'Unknown'}
-      />
+      <AccountErrorFallback userId={user.uid} email={user.email || 'Unknown'} />
     );
   }
 

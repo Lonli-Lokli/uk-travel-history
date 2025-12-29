@@ -42,7 +42,7 @@ describe('Stripe Webhook Handler', () => {
 
   describe('Webhook Signature Verification', () => {
     it('should return 400 if signature header is missing', async () => {
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         body: JSON.stringify({ test: 'data' }),
       });
@@ -57,7 +57,7 @@ describe('Stripe Webhook Handler', () => {
     it('should return 500 if webhook secret is not configured', async () => {
       delete process.env.STRIPE_WEBHOOK_SECRET;
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: {
           'stripe-signature': 'test_sig',
@@ -77,7 +77,7 @@ describe('Stripe Webhook Handler', () => {
         throw new Error('Invalid signature');
       });
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: {
           'stripe-signature': 'invalid_sig',
@@ -105,7 +105,7 @@ describe('Stripe Webhook Handler', () => {
 
       vi.mocked(db.hasWebhookEventBeenProcessed).mockResolvedValue(true);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: {
           'stripe-signature': 'valid_sig',
@@ -149,7 +149,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.getUserByAuthId).mockResolvedValue(null);
       vi.mocked(db.createUser).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: {
           'stripe-signature': 'valid_sig',
@@ -194,7 +194,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.getUserByAuthId).mockResolvedValue(null);
       vi.mocked(db.createUser).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -245,7 +245,7 @@ describe('Stripe Webhook Handler', () => {
       } as any);
       vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -283,7 +283,7 @@ describe('Stripe Webhook Handler', () => {
       } as any);
       vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -327,7 +327,7 @@ describe('Stripe Webhook Handler', () => {
       } as any);
       vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -361,7 +361,7 @@ describe('Stripe Webhook Handler', () => {
       } as any);
       vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -391,7 +391,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.hasWebhookEventBeenProcessed).mockResolvedValue(false);
       vi.mocked(db.recordWebhookEvent).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -430,7 +430,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.getUserByAuthId).mockResolvedValue(null);
       vi.mocked(db.createUser).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -470,7 +470,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.getUserByAuthId).mockResolvedValue(null);
       vi.mocked(db.createUser).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),
@@ -510,7 +510,7 @@ describe('Stripe Webhook Handler', () => {
       vi.mocked(db.getUserByAuthId).mockResolvedValue(null);
       vi.mocked(db.createUser).mockResolvedValue({} as any);
 
-      const request = new NextRequest('http://localhost/api/stripe/webhook', {
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
         method: 'POST',
         headers: { 'stripe-signature': 'valid_sig' },
         body: JSON.stringify({}),

@@ -57,11 +57,11 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       // Load price IDs from environment
       this.priceIds = {
         [PaymentPlan.PREMIUM_MONTHLY]:
-          process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 'price_premium_monthly',
+          process.env.STRIPE_MONTHLY_PRICE_ID || 'price_monthly',
         [PaymentPlan.PREMIUM_ANNUAL]:
-          process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 'price_premium_annual',
+          process.env.STRIPE_YEARLY_PRICE_ID || 'price_yearly',
         [PaymentPlan.PREMIUM_ONCE]:
-          process.env.STRIPE_PRICE_PREMIUM_ONCE || 'price_premium_once',
+          process.env.STRIPE_LIFETIME_PRICE_ID || 'price_lifetime',
       };
 
       // Load webhook secret

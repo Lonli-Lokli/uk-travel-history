@@ -53,7 +53,7 @@ describe('POST /api/billing/checkout', () => {
     });
 
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
-    process.env.STRIPE_PRICE_ONE_TIME_PAYMENT = 'price_123';
+    process.env.STRIPE_LIFETIME_PRICE_ID = 'price_123';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 
     // Setup default mock implementations
@@ -92,10 +92,13 @@ describe('POST /api/billing/checkout', () => {
 
   it('should create checkout session successfully', async () => {
     // Arrange
-    const request = new NextRequest('http://localhost:3000/api/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
-    });
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com' }),
+      },
+    );
 
     // Act
     const response = await POST(request);
@@ -110,7 +113,8 @@ describe('POST /api/billing/checkout', () => {
     expect(mockCreateCheckoutSession).toHaveBeenCalledWith({
       plan: 'PREMIUM_ONCE',
       customerEmail: 'test@example.com',
-      successUrl: 'http://localhost:3000/travel?session_id={CHECKOUT_SESSION_ID}',
+      successUrl:
+        'http://localhost:3000/travel?session_id={CHECKOUT_SESSION_ID}',
       cancelUrl: 'http://localhost:3000/',
       metadata: {
         purchase_intent_id: 'purchase-intent-123',
@@ -121,10 +125,13 @@ describe('POST /api/billing/checkout', () => {
 
   it('should return 400 if email is missing', async () => {
     // Arrange
-    const request = new NextRequest('http://localhost:3000/api/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
 
     // Act
     const response = await POST(request);
@@ -137,10 +144,13 @@ describe('POST /api/billing/checkout', () => {
 
   it('should return 400 if email is not a string', async () => {
     // Arrange
-    const request = new NextRequest('http://localhost:3000/api/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ email: 123 }),
-    });
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 123 }),
+      },
+    );
 
     // Act
     const response = await POST(request);
@@ -153,11 +163,16 @@ describe('POST /api/billing/checkout', () => {
 
   it('should return 500 if checkout session creation fails', async () => {
     // Arrange
-    mockCreateCheckoutSession.mockRejectedValue(new Error('Payment system not configured'));
-    const request = new NextRequest('http://localhost:3000/api/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
-    });
+    mockCreateCheckoutSession.mockRejectedValue(
+      new Error('Payment system not configured'),
+    );
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com' }),
+      },
+    );
 
     // Act
     const response = await POST(request);
@@ -168,13 +183,16 @@ describe('POST /api/billing/checkout', () => {
     expect(data.error).toBe('Failed to create checkout session');
   });
 
-  it('should return 500 if STRIPE_PRICE_ONE_TIME_PAYMENT is not configured', async () => {
+  it('should return 500 if STRIPE_LIFETIME_PRICE_ID is not configured', async () => {
     // Arrange
-    delete process.env.STRIPE_PRICE_ONE_TIME_PAYMENT;
-    const request = new NextRequest('http://localhost:3000/api/billing/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
-    });
+    delete process.env.STRIPE_LIFETIME_PRICE_ID;
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com' }),
+      },
+    );
 
     // Act
     const response = await POST(request);

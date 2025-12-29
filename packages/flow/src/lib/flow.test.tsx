@@ -308,7 +308,7 @@ describe('Flow Utility', () => {
       const parStep = par(
         call(fn1).orThrow(),
         call(fn2).optional(null),
-        call(fn3).orUI(<div>Error</div>)
+        call(fn3).orUI(<div>Error</div>),
       );
 
       expect(parStep._tag).toBe('ParStep');

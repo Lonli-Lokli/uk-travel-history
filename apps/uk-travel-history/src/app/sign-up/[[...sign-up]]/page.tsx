@@ -19,8 +19,7 @@ export default function SignUpPage() {
         routing="path"
         path="/sign-up"
         signInUrl="/sign-in"
-        afterSignUpUrl="/travel"
-        redirectUrl="/travel"
+        fallbackRedirectUrl="/travel"
       />
     </div>
   );

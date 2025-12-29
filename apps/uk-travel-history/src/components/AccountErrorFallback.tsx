@@ -9,7 +9,10 @@ interface AccountErrorFallbackProps {
   email: string;
 }
 
-export function AccountErrorFallback({ userId, email }: AccountErrorFallbackProps) {
+export function AccountErrorFallback({
+  userId,
+  email,
+}: AccountErrorFallbackProps) {
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -38,7 +41,9 @@ export function AccountErrorFallback({ userId, email }: AccountErrorFallbackProp
         window.location.reload();
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred',
+      );
     } finally {
       setIsProvisioning(false);
     }
@@ -69,14 +74,18 @@ export function AccountErrorFallback({ userId, email }: AccountErrorFallbackProp
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-slate-200 p-8">
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-            <UIIcon iconName="alert-triangle" className="h-8 w-8 text-yellow-600" />
+            <UIIcon
+              iconName="alert-triangle"
+              className="h-8 w-8 text-yellow-600"
+            />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">
             Account Setup Incomplete
           </h2>
           <p className="text-slate-600 mb-6">
-            Your authentication was successful, but your account data is missing from our database.
-            This is unusual and may indicate a technical issue during account setup.
+            Your authentication was successful, but your account data is missing
+            from our database. This is unusual and may indicate a technical
+            issue during account setup.
           </p>
 
           <div className="w-full bg-slate-50 rounded-lg p-4 mb-6 text-left">
@@ -85,7 +94,9 @@ export function AccountErrorFallback({ userId, email }: AccountErrorFallbackProp
             </p>
             <p className="text-sm text-slate-700">
               <span className="font-medium">User ID:</span>{' '}
-              <code className="text-xs bg-white px-1 py-0.5 rounded">{userId}</code>
+              <code className="text-xs bg-white px-1 py-0.5 rounded">
+                {userId}
+              </code>
             </p>
           </div>
 
@@ -104,12 +115,15 @@ export function AccountErrorFallback({ userId, email }: AccountErrorFallbackProp
             >
               {isProvisioning ? (
                 <>
-                  <UIIcon iconName="loading" className="h-5 w-5 mr-2 animate-spin" />
+                  <UIIcon
+                    iconName="loading"
+                    className="h-5 w-5 mr-2 animate-spin"
+                  />
                   Setting up your account...
                 </>
               ) : (
                 <>
-                  <UIIcon hugeIconName="Reload01Icon" iconName="history" className="h-5 w-5 mr-2" />
+                  <UIIcon iconName="reload" className="h-5 w-5 mr-2" />
                   Set Up Account Now
                 </>
               )}

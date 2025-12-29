@@ -20,10 +20,7 @@ export async function POST() {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user already exists in database
@@ -50,12 +47,12 @@ export async function POST() {
       });
       return NextResponse.json(
         { error: 'Failed to fetch user details' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const email = clerkUser.emailAddresses.find(
-      (e) => e.id === clerkUser.primaryEmailAddressId
+      (e) => e.id === clerkUser.primaryEmailAddressId,
     )?.emailAddress;
 
     if (!email) {
@@ -64,7 +61,7 @@ export async function POST() {
       });
       return NextResponse.json(
         { error: 'No email address found' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,7 +84,7 @@ export async function POST() {
       },
       {
         onConflict: 'clerk_user_id',
-      }
+      },
     );
 
     if (upsertError) {
@@ -96,7 +93,7 @@ export async function POST() {
       });
       return NextResponse.json(
         { error: 'Failed to create user account' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -114,7 +111,7 @@ export async function POST() {
     });
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

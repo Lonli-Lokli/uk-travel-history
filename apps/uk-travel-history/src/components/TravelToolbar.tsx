@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   UIIcon,
+  toast,
 } from '@uth/ui';
 import { FeatureGateProvider, FeatureDropdownItem } from '@uth/widgets';
 import { FEATURES } from '@uth/features';
@@ -28,6 +29,18 @@ export const TravelToolbar = observer(({
   handleClipboardPaste,
   handleExport,
 }: TravelToolbarProps) => {
+  const handleExportClick = (type: 'ilr' | 'full') => {
+    if (travelStore.trips.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No trips to export',
+        description: 'Please add some trips first.',
+      });
+      return;
+    }
+    handleExport(type);
+  };
+
   return (
     <FeatureGateProvider
       monetizationStore={monetizationStore}
@@ -40,21 +53,20 @@ export const TravelToolbar = observer(({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
               disabled={travelStore.isLoading}
             >
               {travelStore.isLoading ? (
                 <UIIcon
                   iconName="loading"
-                  className="h-4 w-4 mr-1.5 animate-spin"
+                  className="h-4 w-4 mr-2 animate-spin"
                 />
               ) : (
-                <UIIcon iconName="import" className="h-4 w-4 mr-1.5" />
+                <UIIcon iconName="import" className="h-4 w-4 mr-2" />
               )}
-              <span className="hidden sm:inline">Import</span>
+              Import
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-[200px]">
             <DropdownMenuItem onClick={triggerFileInput}>
               <UIIcon iconName="pdf" className="h-4 w-4 shrink-0" />
               From PDF
@@ -74,25 +86,22 @@ export const TravelToolbar = observer(({
         {/* Export Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              disabled={travelStore.trips.length === 0}
-            >
-              <UIIcon iconName="export" className="h-4 w-4 mr-1.5" />
-              <span className="hidden sm:inline">Export</span>
+            <Button>
+              <UIIcon iconName="export" className="h-4 w-4 mr-2" />
+              Export
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-[240px]">
             <FeatureDropdownItem
               feature={FEATURES.EXCEL_EXPORT}
-              onClick={() => handleExport('ilr')}
+              onClick={() => handleExportClick('ilr')}
             >
               <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
               Travel history only
             </FeatureDropdownItem>
             <FeatureDropdownItem
               feature={FEATURES.EXCEL_EXPORT}
-              onClick={() => handleExport('full')}
+              onClick={() => handleExportClick('full')}
             >
               <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
               Full backup

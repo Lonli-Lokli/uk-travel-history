@@ -33,6 +33,8 @@ import {
   Upload01Icon,
   X,
   Xls02Icon,
+  CircleArrowReload01Icon,
+  Chart01Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
@@ -74,32 +76,15 @@ export type IconName =
   | 'drag-drop'
   | 'alert-triangle'
   | 'menu'
-  | 'close';
+  | 'close'
+  | 'reload'
+  | 'line-chart';
 
 export const UIIcon: FC<{
   iconName: IconName;
   className?: string;
-  /**
-   * Alternative: Pass a Hugeicons icon name directly (e.g., 'Lock01Icon', 'Star01Icon')
-   * This allows using any icon from @hugeicons/core-free-icons without pre-mapping
-   */
-  hugeIconName?: string;
-}> = ({ iconName, className, hugeIconName }) => {
-  // If hugeIconName is provided, try to load it dynamically
-  let iconElement: IconSvgElement | null = null;
-
-  if (hugeIconName) {
-    try {
-      // Dynamic import support for any Hugeicons icon
-      const icons = require('@hugeicons/core-free-icons');
-      iconElement = icons[hugeIconName] || null;
-    } catch {
-      // Fall back to iconName mapping
-      iconElement = null;
-    }
-  }
-
-  const icon = iconElement || getIconByName(iconName);
+}> = ({ iconName, className }) => {
+  const icon = getIconByName(iconName);
   return <HugeiconsIcon icon={icon} className={className} />;
 };
 
@@ -177,6 +162,10 @@ function getIconByName(iconName: IconName): IconSvgElement {
       return Menu01Icon;
     case 'close':
       return Cancel01Icon;
+    case 'reload':
+      return CircleArrowReload01Icon;
+    case 'line-chart':
+      return Chart01Icon;
     default:
       throw new NeverError(iconName);
   }

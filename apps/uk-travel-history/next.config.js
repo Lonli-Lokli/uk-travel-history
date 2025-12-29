@@ -52,9 +52,8 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   // Sentry webpack configuration
   webpack: {
     treeshake: {
-      removeDebugLogging: true
+      removeDebugLogging: true,
     },
     automaticVercelMonitors: true,
   },
-
 });
