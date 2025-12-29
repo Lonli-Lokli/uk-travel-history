@@ -94,8 +94,8 @@ describe('Navbar', () => {
       const logoLink = screen.getByRole('link', {
         name: 'UK Travel Parser home',
       });
-      expect(logoLink.className).toContain('focus:outline-none');
-      expect(logoLink.className).toContain('focus:ring-2');
+      expect(logoLink.className).toContain('focus-visible:outline-none');
+      expect(logoLink.className).toContain('focus-visible:ring-1');
     });
   });
 
@@ -351,8 +351,8 @@ describe('Navbar', () => {
     it('should have focus styles on all interactive elements', () => {
       render(<Navbar />);
       const homeLink = screen.getByRole('link', { name: 'Home' });
-      expect(homeLink.className).toContain('focus:outline-none');
-      expect(homeLink.className).toContain('focus:ring-2');
+      expect(homeLink.className).toContain('focus-visible:outline-none');
+      expect(homeLink.className).toContain('focus-visible:ring-1');
     });
 
     it('should support keyboard navigation', () => {
@@ -517,36 +517,7 @@ describe('Navbar', () => {
   });
 
   describe('Conditional Navigation', () => {
-    it('should hide navigation on About page', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/about');
-
-      render(<Navbar />);
-
-      // Navigation should not be visible
-      expect(screen.queryByRole('link', { name: 'Home' })).toBeFalsy();
-      expect(screen.queryByRole('link', { name: 'Travel' })).toBeFalsy();
-
-      // Menu button should not be visible
-      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeFalsy();
-    });
-
-    it('should hide navigation on Terms page', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/terms');
-
-      render(<Navbar />);
-
-      // Navigation should not be visible
-      expect(screen.queryByRole('link', { name: 'Home' })).toBeFalsy();
-      expect(screen.queryByRole('link', { name: 'About' })).toBeFalsy();
-      expect(screen.queryByRole('link', { name: 'Travel' })).toBeFalsy();
-
-      // Menu button should not be visible
-      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeFalsy();
-    });
-
-    it('should show navigation on other pages', async () => {
+    it('should show navigation on all pages', async () => {
       const { usePathname } = vi.mocked(await import('next/navigation'));
       usePathname.mockReturnValue('/travel');
 

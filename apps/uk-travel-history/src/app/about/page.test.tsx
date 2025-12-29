@@ -8,13 +8,6 @@ describe('AboutPage', () => {
     expect(screen.getByText('About UK Travel History Parser')).toBeTruthy();
   });
 
-  it('should have a back button', () => {
-    render(<AboutPage />);
-    const backButton = screen.getByRole('link', { name: /back to home/i });
-    expect(backButton).toBeTruthy();
-    expect(backButton.getAttribute('href')).toBe('/');
-  });
-
   it('should render all main sections', () => {
     render(<AboutPage />);
 

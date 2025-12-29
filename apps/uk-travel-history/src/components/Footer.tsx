@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Popover, PopoverTrigger, PopoverContent, UIIcon } from '@uth/ui';
+import { Popover, PopoverTrigger, PopoverContent } from '@uth/ui';
 
 export function Footer() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
