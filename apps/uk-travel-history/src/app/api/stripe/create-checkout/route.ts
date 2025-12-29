@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
-import { verifyToken } from '@uth/auth-server';
 import { logger } from '@uth/utils';
-import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -12,57 +11,27 @@ interface CheckoutRequest {
   billingPeriod: 'monthly' | 'annual' | 'once';
 }
 
+/**
+ * POST /api/stripe/create-checkout
+ * Creates a Stripe checkout session for authenticated users
+ *
+ * FEATURE: PAYMENTS (requires authentication when enabled)
+ * Enforces feature access via assertFeatureAccess with full validation
+ */
 export async function POST(request: NextRequest) {
   try {
-    // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
-    if (!stripeEnabled) {
-      logger.warn('Stripe checkout feature is disabled', undefined);
-      return NextResponse.json(
-        { error: 'Stripe checkout is not available' },
-        { status: 403 },
-      );
-    }
+    // Enforce feature access - Payments feature
+    // This validates: feature enabled, tier requirement, rollout percentage, allowlist/denylist
+    // Also extracts and validates user context (authentication, subscription tier)
+    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.PAYMENTS);
 
-    // Verify authentication using SDK
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-
-    let tokenClaims;
-    try {
-      tokenClaims = await verifyToken(token);
-    } catch (authError) {
-      // Track auth failures
-      logger.error('Token verification failed', authError, {
-        tags: {
-          service: 'auth',
-          operation: 'verify_token',
-          endpoint: 'create-checkout',
-        },
-        contexts: {
-          auth: {
-            hasAuthHeader: !!authHeader,
-            tokenLength: token?.length,
-          },
-        },
-      });
-      return NextResponse.json(
-        { error: 'Invalid authentication token' },
-        { status: 401 },
-      );
-    }
-
-    const userId = tokenClaims.uid;
-    const userEmail = tokenClaims.email;
+    const userId = userContext.userId;
+    const userEmail = userContext.email;
 
     // Set Sentry user context for error tracking
-    logger.setUser({ id: userId, email: userEmail ?? undefined });
+    logger.setUser({ id: userId ?? undefined, email: userEmail ?? undefined });
 
-    if (!userEmail) {
+    if (!userId || !userEmail) {
       return NextResponse.json(
         { error: 'User email not found' },
         { status: 400 },

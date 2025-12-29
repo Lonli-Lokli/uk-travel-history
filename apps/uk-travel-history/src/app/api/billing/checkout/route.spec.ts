@@ -1,11 +1,13 @@
 /**
  * Tests for /api/billing/checkout endpoint
+ * Updated to test feature access control enforcement
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { configureRouteLogger } from '@uth/flow';
+import { TIERS } from '@uth/features';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -28,6 +30,16 @@ vi.mock('@uth/payments-server', () => ({
   },
 }));
 
+vi.mock('@uth/features/server', () => ({
+  assertFeatureAccess: vi.fn(),
+  FEATURE_KEYS: {
+    PAYMENTS: 'payments',
+    EXCEL_EXPORT: 'excel_export',
+    EXCEL_IMPORT: 'excel_import',
+    PDF_IMPORT: 'pdf_import',
+  },
+}));
+
 // Create mock logger for testing
 const mockLogger = {
   error: vi.fn(),
@@ -38,10 +50,12 @@ const mockLogger = {
 
 import { createPurchaseIntent, updatePurchaseIntent } from '@uth/db';
 import { createCheckoutSession } from '@uth/payments-server';
+import { assertFeatureAccess } from '@uth/features/server';
 
 const mockCreatePurchaseIntent = vi.mocked(createPurchaseIntent);
 const mockUpdatePurchaseIntent = vi.mocked(updatePurchaseIntent);
 const mockCreateCheckoutSession = vi.mocked(createCheckoutSession);
+const mockAssertFeatureAccess = vi.mocked(assertFeatureAccess);
 
 describe('POST /api/billing/checkout', () => {
   beforeEach(() => {
@@ -55,6 +69,13 @@ describe('POST /api/billing/checkout', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.STRIPE_LIFETIME_PRICE_ID = 'price_123';
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    // Mock assertFeatureAccess to return anonymous user context by default
+    mockAssertFeatureAccess.mockResolvedValue({
+      userId: null,
+      tier: TIERS.ANONYMOUS,
+      hasActiveSubscription: false,
+    });
 
     // Setup default mock implementations
     mockCreatePurchaseIntent.mockResolvedValue({
@@ -201,5 +222,59 @@ describe('POST /api/billing/checkout', () => {
     // Assert
     expect(response.status).toBe(500);
     expect(data.error).toBe('Payment price not configured');
+  });
+
+  it('should enforce feature access control', async () => {
+    // Arrange
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com' }),
+      },
+    );
+
+    // Act
+    await POST(request);
+
+    // Assert - verify assertFeatureAccess was called with correct params
+    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(
+      request,
+      'payments',
+    );
+  });
+
+  it('should return 404 when PAYMENTS feature is disabled', async () => {
+    // Arrange - assertFeatureAccess throws a NextResponse error
+    const errorResponse = NextResponse.json(
+      { error: 'Feature not available', code: 'feature_disabled' },
+      { status: 404 },
+    );
+    mockAssertFeatureAccess.mockRejectedValue(errorResponse);
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/billing/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com' }),
+      },
+    );
+
+    // Act - The route catches the thrown NextResponse and returns it
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Assert - assertFeatureAccess was called
+    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(
+      request,
+      'payments',
+    );
+
+    // The route should catch and return the error response
+    // Note: The actual behavior depends on try/catch in the route
+    // If assertFeatureAccess throws, it should be caught and handled
+    expect(response.status).toBe(404);
+    expect(data.error).toBe('Feature not available');
+    expect(data.code).toBe('feature_disabled');
   });
 });

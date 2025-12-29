@@ -65,8 +65,8 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
     minTier: TIERS.PREMIUM,
   },
   [FEATURE_KEYS.PDF_IMPORT]: {
-    enabled: false,
-    minTier: TIERS.FREE,
+    enabled: false, // Disabled by default, but configured as premium feature
+    minTier: TIERS.PREMIUM, // Premium tier - PDF import requires active subscription
   },
   [FEATURE_KEYS.CLIPBOARD_IMPORT]: {
     enabled: true,
