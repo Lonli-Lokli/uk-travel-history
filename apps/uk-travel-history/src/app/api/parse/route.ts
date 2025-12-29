@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { ParseResult } from '@uth/parser';
 import { format } from 'date-fns';
-import { assertFeatureAccess } from '@uth/features/server';
-import { FEATURES } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -45,7 +44,7 @@ async function initializePdfParser() {
 export async function POST(request: NextRequest) {
   try {
     // Enforce feature access - PDF import feature
-    await assertFeatureAccess(request, FEATURES.PDF_IMPORT);
+    await assertFeatureAccess(request, FEATURE_KEYS.PDF_IMPORT);
 
     // Initialize PDF parser if not already done
     await initializePdfParser();

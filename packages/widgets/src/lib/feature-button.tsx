@@ -52,7 +52,7 @@ export interface FeatureButtonProps {
  * @example
  * ```tsx
  * <FeatureButton
- *   feature={FEATURES.EXCEL_EXPORT}
+ *   feature={FEATURE_KEYS.EXCEL_EXPORT}
  *   onClick={handleExport}
  *   variant="default"
  * >

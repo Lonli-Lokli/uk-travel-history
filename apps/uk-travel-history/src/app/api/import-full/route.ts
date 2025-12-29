@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
 import { parse, format } from 'date-fns';
-import { assertFeatureAccess } from '@uth/features/server';
-import { FEATURES } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
-    // Enforce feature access - CSV/Excel import feature
-    await assertFeatureAccess(request, FEATURES.CSV_IMPORT);
+    // Enforce feature access - Excel import feature
+    await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_IMPORT);
 
     const formData = await request.formData();
     const file = formData.get('file') as File;

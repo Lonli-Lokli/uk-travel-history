@@ -42,7 +42,7 @@ export interface FeatureDropdownItemProps {
  * @example
  * ```tsx
  * <FeatureDropdownItem
- *   feature={FEATURES.EXCEL_EXPORT}
+ *   feature={FEATURE_KEYS.EXCEL_EXPORT}
  *   onClick={() => handleExport('full')}
  * >
  *   <UIIcon iconName="xlsx" />

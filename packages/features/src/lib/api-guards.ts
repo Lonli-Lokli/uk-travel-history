@@ -17,8 +17,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
 import { getUserByAuthId } from '@uth/db';
-import { isFeatureEnabled } from './edgeConfigFlags';
-import { FEATURES, type FeatureId, type TierId, TIERS } from './features';
+import {
+  getFeaturePolicy as getFeaturePolicyFromEdgeConfig,
+  type FeaturePolicy,
+} from './features';
+import { FeatureFlagKey, type TierId, TIERS } from './shapes';
 
 /**
  * Logger interface for dependency injection
@@ -90,86 +93,15 @@ const SubscriptionStatus = {
 };
 
 /**
- * Feature policy configuration (remote-configurable via Edge Config)
- * This allows changing feature behavior without code deployment
- */
-export interface FeaturePolicy {
-  /** Global kill switch - if false, feature is disabled for everyone */
-  enabled: boolean;
-  /** Feature mode - controls tier requirements */
-  mode: 'free' | 'paid';
-  /** Minimum tier required (only enforced if mode='paid') */
-  minTier: TierId;
-  /** Rollout percentage (0-100) for gradual feature rollout */
-  rolloutPercentage?: number;
-  /** Explicit allowlist of user IDs (bypasses tier check) */
-  allowlist?: string[];
-  /** Explicit denylist of user IDs (blocks access regardless of tier) */
-  denylist?: string[];
-}
-
-/**
- * Default feature policies (used as fallback if Edge Config unavailable)
- * Conservative defaults: features are enabled but require appropriate tier
- */
-export const DEFAULT_FEATURE_POLICIES: Record<FeatureId, FeaturePolicy> = {
-  [FEATURES.BASIC_CALCULATION]: {
-    enabled: true,
-    mode: 'free',
-    minTier: TIERS.FREE,
-  },
-  [FEATURES.PDF_IMPORT]: {
-    enabled: true,
-    mode: 'free',
-    minTier: TIERS.FREE,
-  },
-  [FEATURES.CSV_IMPORT]: {
-    enabled: true,
-    mode: 'free',
-    minTier: TIERS.FREE,
-  },
-  [FEATURES.MANUAL_ENTRY]: {
-    enabled: true,
-    mode: 'free',
-    minTier: TIERS.FREE,
-  },
-  [FEATURES.EXCEL_EXPORT]: {
-    enabled: true,
-    mode: 'paid',
-    minTier: TIERS.PREMIUM,
-  },
-  [FEATURES.PDF_EXPORT]: {
-    enabled: false, // Coming soon
-    mode: 'paid',
-    minTier: TIERS.PREMIUM,
-  },
-  [FEATURES.EMPLOYER_LETTERS]: {
-    enabled: false, // Coming soon
-    mode: 'paid',
-    minTier: TIERS.PREMIUM,
-  },
-  [FEATURES.CLOUD_SYNC]: {
-    enabled: false, // Coming soon
-    mode: 'paid',
-    minTier: TIERS.PREMIUM,
-  },
-  [FEATURES.ADVANCED_ANALYTICS]: {
-    enabled: false, // Coming soon
-    mode: 'paid',
-    minTier: TIERS.PREMIUM,
-  },
-};
-
-/**
  * User context for feature access checks
  * Contains all information needed to determine feature eligibility
  */
 export interface UserContext {
-  /** User ID from authentication provider (e.g., Clerk user ID) */
-  userId: string;
+  /** User ID from authentication provider (e.g., Clerk user ID) - null for anonymous */
+  userId: string | null;
   /** User's email (optional, for logging) */
   email?: string;
-  /** User's subscription tier */
+  /** User's subscription tier (ANONYMOUS if not authenticated) */
   tier: TierId;
   /** Whether user has an active subscription (for premium tier) */
   hasActiveSubscription: boolean;
@@ -200,11 +132,11 @@ export interface FeatureAccessResult {
  * This is the integration point with the authentication system
  *
  * @param request - Next.js request object (unused in Clerk mode, but kept for API compatibility)
- * @returns User context or null if not authenticated
+ * @returns User context (never null - returns ANONYMOUS tier if not authenticated)
  */
 export async function getUserContext(
   _request: NextRequest,
-): Promise<UserContext | null> {
+): Promise<UserContext> {
   try {
     // Determine auth provider from environment
     const authProvider = process.env.UTH_AUTH_PROVIDER || 'clerk';
@@ -228,7 +160,12 @@ export async function getUserContext(
     }
 
     if (!userId) {
-      return null;
+      // Not authenticated - return anonymous tier
+      return {
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      };
     }
 
     // Get user from database to check tier
@@ -262,7 +199,12 @@ export async function getUserContext(
     };
   } catch (error) {
     getLogger().error('[Feature Guards] Error extracting user context', error);
-    return null;
+    // Fail closed - return anonymous tier on error
+    return {
+      userId: null,
+      tier: TIERS.ANONYMOUS,
+      hasActiveSubscription: false,
+    };
   }
 }
 
@@ -270,30 +212,33 @@ export async function getUserContext(
  * Get feature policy from Edge Config or use default
  * This allows runtime control of feature behavior without redeployment
  *
- * @param featureId - The feature to check
+ * @param featureKey - The feature to check
  * @returns Feature policy
  */
 async function getFeaturePolicy(
-  featureId: FeatureId,
+  featureKey: FeatureFlagKey,
 ): Promise<FeaturePolicy> {
-  try {
-    // Check if feature is enabled via Edge Config
-    const isEnabled = await isFeatureEnabled(featureId as any);
+  // Delegate to edgeConfigFlags.ts which now handles full policy fetching
+  return getFeaturePolicyFromEdgeConfig(featureKey);
+}
 
-    // Get default policy
-    const defaultPolicy = DEFAULT_FEATURE_POLICIES[featureId];
-
-    // For now, we only override the 'enabled' flag from Edge Config
-    // Future enhancement: Store complete policy in Edge Config
-    return {
-      ...defaultPolicy,
-      enabled: isEnabled,
-    };
-  } catch (error) {
-    getLogger().warn('[Feature Guards] Error fetching feature policy, using defaults', {
-      extra: { featureId, error },
-    });
-    return DEFAULT_FEATURE_POLICIES[featureId];
+/**
+ * Get numeric tier level for comparison
+ * Higher number = higher tier
+ *
+ * @param tier - The tier to convert
+ * @returns Numeric tier level
+ */
+function getTierLevel(tier: TierId): number {
+  switch (tier) {
+    case TIERS.ANONYMOUS:
+      return 0;
+    case TIERS.FREE:
+      return 1;
+    case TIERS.PREMIUM:
+      return 2;
+    default:
+      return 0; // Fail closed
   }
 }
 
@@ -318,16 +263,16 @@ function hashUserIdForRollout(userId: string, featureId: string): number {
  * Check if a user has access to a feature
  * This is the core authorization logic
  *
- * @param featureId - The feature to check
- * @param userContext - User context (null if unauthenticated)
+ * @param featureKey - The feature to check
+ * @param userContext - User context (includes tier, never null)
  * @returns Access result with decision and reason
  */
 export async function checkFeatureAccess(
-  featureId: FeatureId,
-  userContext: UserContext | null,
+  featureKey: FeatureFlagKey,
+  userContext: UserContext,
 ): Promise<FeatureAccessResult> {
-  // Get feature policy
-  const policy = await getFeaturePolicy(featureId);
+  // Get feature policy from Edge Config
+  const policy = await getFeaturePolicy(featureKey);
 
   // 1. Check global kill switch
   if (!policy.enabled) {
@@ -340,7 +285,7 @@ export async function checkFeatureAccess(
   }
 
   // 2. Check denylist (takes precedence over everything else)
-  if (userContext && policy.denylist?.includes(userContext.userId)) {
+  if (userContext.userId && policy.denylist?.includes(userContext.userId)) {
     return {
       allowed: false,
       reason: 'denylisted',
@@ -350,44 +295,17 @@ export async function checkFeatureAccess(
   }
 
   // 3. Check allowlist (bypasses tier requirements)
-  if (userContext && policy.allowlist?.includes(userContext.userId)) {
+  if (userContext.userId && policy.allowlist?.includes(userContext.userId)) {
     return { allowed: true };
   }
 
-  // 4. Check if feature requires authentication
-  if (policy.mode === 'paid' && !userContext) {
-    return {
-      allowed: false,
-      reason: 'unauthenticated',
-      statusCode: 401,
-      message: 'Authentication required',
-    };
-  }
+  // 4. Check tier level
+  const userTierLevel = getTierLevel(userContext.tier);
+  const requiredTierLevel = getTierLevel(policy.minTier);
 
-  // 5. For free mode, allow all authenticated users (or all users if auth not required)
-  if (policy.mode === 'free') {
-    // Check rollout percentage if configured
-    if (
-      userContext &&
-      policy.rolloutPercentage !== undefined &&
-      policy.rolloutPercentage < 100
-    ) {
-      const hash = hashUserIdForRollout(userContext.userId, featureId);
-      if (hash >= policy.rolloutPercentage) {
-        return {
-          allowed: false,
-          reason: 'rollout_not_eligible',
-          statusCode: 404,
-          message: 'Feature not available',
-        };
-      }
-    }
-    return { allowed: true };
-  }
-
-  // 6. For paid mode, check tier and subscription
-  if (policy.mode === 'paid') {
-    if (!userContext) {
+  if (userTierLevel < requiredTierLevel) {
+    // Determine appropriate status code and message
+    if (policy.minTier === TIERS.FREE && userContext.tier === TIERS.ANONYMOUS) {
       return {
         allowed: false,
         reason: 'unauthenticated',
@@ -396,77 +314,65 @@ export async function checkFeatureAccess(
       };
     }
 
-    // Check if user's tier meets minimum requirement
-    const userTierLevel = userContext.tier === TIERS.PREMIUM ? 1 : 0;
-    const requiredTierLevel = policy.minTier === TIERS.PREMIUM ? 1 : 0;
-
-    if (userTierLevel < requiredTierLevel) {
-      return {
-        allowed: false,
-        reason: 'tier_restriction',
-        statusCode: 403,
-        message: 'Upgrade required to access this feature',
-      };
-    }
-
-    // For premium features, verify active subscription
-    if (policy.minTier === TIERS.PREMIUM && !userContext.hasActiveSubscription) {
-      return {
-        allowed: false,
-        reason: 'no_active_subscription',
-        statusCode: 403,
-        message: 'Active subscription required',
-      };
-    }
-
-    // Check rollout percentage if configured
-    if (
-      policy.rolloutPercentage !== undefined &&
-      policy.rolloutPercentage < 100
-    ) {
-      const hash = hashUserIdForRollout(userContext.userId, featureId);
-      if (hash >= policy.rolloutPercentage) {
-        return {
-          allowed: false,
-          reason: 'rollout_not_eligible',
-          statusCode: 404,
-          message: 'Feature not available',
-        };
-      }
-    }
-
-    return { allowed: true };
+    return {
+      allowed: false,
+      reason: 'tier_restriction',
+      statusCode: 403,
+      message: 'Upgrade required to access this feature',
+    };
   }
 
-  // Shouldn't reach here, but fail closed for safety
-  return {
-    allowed: false,
-    reason: 'feature_disabled',
-    statusCode: 403,
-    message: 'Feature not available',
-  };
+  // 5. For premium features, verify active subscription
+  if (policy.minTier === TIERS.PREMIUM && !userContext.hasActiveSubscription) {
+    return {
+      allowed: false,
+      reason: 'no_active_subscription',
+      statusCode: 403,
+      message: 'Active subscription required',
+    };
+  }
+
+  // 6. Check rollout percentage if configured
+  if (
+    userContext.userId &&
+    policy.rolloutPercentage !== undefined &&
+    policy.rolloutPercentage < 100
+  ) {
+    const hash = hashUserIdForRollout(userContext.userId, featureKey);
+    if (hash >= policy.rolloutPercentage) {
+      return {
+        allowed: false,
+        reason: 'rollout_not_eligible',
+        statusCode: 404,
+        message: 'Feature not available',
+      };
+    }
+  }
+
+  // All checks passed
+  return { allowed: true };
 }
 
 /**
  * Log feature access decision (for audit trail and security analysis)
  *
- * @param featureId - The feature being accessed
- * @param userContext - User context (null if unauthenticated)
+ * @param featureKey - The feature being accessed
+ * @param userContext - User context (includes tier, never null)
  * @param result - Access check result
  * @param requestPath - API route path
  * @param requestMethod - HTTP method
  */
 function logFeatureAccess(
-  featureId: FeatureId,
-  userContext: UserContext | null,
+  featureKey: FeatureFlagKey,
+  userContext: UserContext,
   result: FeatureAccessResult,
   requestPath: string,
   requestMethod: string,
 ) {
   const logData = {
-    featureId,
-    userId: userContext?.userId || 'anonymous',
-    tier: userContext?.tier || 'none',
+    featureKey,
+    userId: userContext.userId || 'anonymous',
+    tier: userContext.tier,
     allowed: result.allowed,
     reason: result.reason,
     path: requestPath,
@@ -488,30 +394,30 @@ function logFeatureAccess(
  * Returns user context if access granted
  *
  * @param request - Next.js request object
- * @param featureId - The feature to protect
- * @returns User context (or null for free features)
+ * @param featureKey - The feature to protect
+ * @returns User context (includes tier, never null)
  * @throws NextResponse with appropriate error if access denied
  *
  * @example
  * // In API route
  * export async function POST(request: NextRequest) {
- *   const userContext = await assertFeatureAccess(request, FEATURES.EXCEL_EXPORT);
+ *   const userContext = await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_EXPORT);
  *   // Continue with feature logic...
  * }
  */
 export async function assertFeatureAccess(
   request: NextRequest,
-  featureId: FeatureId,
-): Promise<UserContext | null> {
-  // Get user context
+  featureKey: FeatureFlagKey,
+): Promise<UserContext> {
+  // Get user context (never null - returns ANONYMOUS tier if not authenticated)
   const userContext = await getUserContext(request);
 
   // Check feature access
-  const result = await checkFeatureAccess(featureId, userContext);
+  const result = await checkFeatureAccess(featureKey, userContext);
 
   // Log access decision
   logFeatureAccess(
-    featureId,
+    featureKey,
     userContext,
     result,
     request.nextUrl.pathname,
@@ -542,30 +448,30 @@ export async function assertFeatureAccess(
  * This is a higher-order function that wraps your route handler
  * with automatic feature access enforcement
  *
- * @param featureId - The feature to protect
+ * @param featureKey - The feature to protect
  * @param handler - Your route handler function
  * @returns Wrapped handler with feature access enforcement
  *
  * @example
  * export const POST = withFeatureAccess(
- *   FEATURES.EXCEL_EXPORT,
+ *   FEATURE_KEYS.EXCEL_EXPORT,
  *   async (request, userContext) => {
  *     // Your handler logic here
- *     // userContext is guaranteed to be valid
+ *     // userContext is guaranteed to have passed access check
  *     return NextResponse.json({ success: true });
  *   }
  * );
  */
 export function withFeatureAccess(
-  featureId: FeatureId,
+  featureKey: FeatureFlagKey,
   handler: (
     request: NextRequest,
-    userContext: UserContext | null,
+    userContext: UserContext,
   ) => Promise<NextResponse>,
 ): (request: NextRequest) => Promise<NextResponse> {
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
-      const userContext = await assertFeatureAccess(request, featureId);
+      const userContext = await assertFeatureAccess(request, featureKey);
       return await handler(request, userContext);
     } catch (error) {
       // If error is a NextResponse (from assertFeatureAccess), return it
@@ -573,7 +479,10 @@ export function withFeatureAccess(
         return error;
       }
       // Otherwise, log and return generic error
-      getLogger().error('[Feature Access] Unexpected error in route handler', error);
+      getLogger().error(
+        '[Feature Access] Unexpected error in route handler',
+        error,
+      );
       return NextResponse.json(
         { error: 'Internal server error' },
         { status: 500 },

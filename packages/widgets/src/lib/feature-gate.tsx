@@ -76,18 +76,18 @@ export interface FeatureGateProps {
  * @example
  * ```tsx
  * // Hide content if no access
- * <FeatureGate feature={FEATURES.EXCEL_EXPORT} mode="hide">
+ * <FeatureGate feature={FEATURE_KEYS.EXCEL_EXPORT} mode="hide">
  *   <ExportButton />
  * </FeatureGate>
  *
  * // Disable interaction with blur
- * <FeatureGate feature={FEATURES.ADVANCED_ANALYTICS} mode="disable">
+ * <FeatureGate feature={FEATURE_KEYS.RISK_CHART} mode="disable">
  *   <AnalyticsPanel />
  * </FeatureGate>
  *
  * // Show custom fallback
  * <FeatureGate
- *   feature={FEATURES.CLOUD_SYNC}
+ *   feature={FEATURE_KEYS.EXCEL_EXPORT}
  *   mode="hide"
  *   fallback={<UpgradePrompt />}
  * >

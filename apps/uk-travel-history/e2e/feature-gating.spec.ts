@@ -26,7 +26,10 @@ test.describe('Feature Gating - UI Rendering', () => {
   }) => {
     await test.step('Open export dropdown', async () => {
       const exportButton = isMobile
-        ? page.locator('header button').filter({ has: page.locator('svg') }).nth(2)
+        ? page
+            .locator('header button')
+            .filter({ has: page.locator('svg') })
+            .nth(2)
         : page.getByRole('button', { name: /Export/i }).first();
 
       // Export should be disabled when no trips
@@ -43,7 +46,10 @@ test.describe('Feature Gating - UI Rendering', () => {
   }) => {
     await test.step('Open import dropdown', async () => {
       const importButton = isMobile
-        ? page.locator('header button').filter({ has: page.locator('svg') }).first()
+        ? page
+            .locator('header button')
+            .filter({ has: page.locator('svg') })
+            .first()
         : page.getByRole('button', { name: /Import/i }).first();
 
       await importButton.click();
@@ -154,7 +160,9 @@ test.describe('Feature Gating - API Authorization', () => {
     });
   });
 
-  test('should block unauthorized PDF import API calls', async ({ request }) => {
+  test('should block unauthorized PDF import API calls', async ({
+    request,
+  }) => {
     await test.step('Attempt PDF import without auth token', async () => {
       const formData = new FormData();
       // Create a minimal PDF-like file (not a real PDF, just for API testing)
@@ -332,7 +340,9 @@ test.describe('Feature Gating - Edge Config Integration', () => {
       await expect(page.locator('main')).toBeVisible();
 
       // Import button should be visible (free tier feature)
-      const importButton = page.getByRole('button', { name: /Import/i }).first();
+      const importButton = page
+        .getByRole('button', { name: /Import/i })
+        .first();
       await expect(importButton).toBeVisible();
     });
   });
@@ -371,8 +381,8 @@ test.describe('Feature Gating - Documentation Tests', () => {
       // This test serves as living documentation of the feature gating architecture
       // All premium features should be listed here:
 
-      // 1. PDF Import - gated by FEATURES.PDF_IMPORT
-      // 2. Excel Export - gated by FEATURES.EXCEL_EXPORT
+      // 1. PDF Import - gated by FEATURE_KEYS.PDF_IMPORT
+      // 2. Excel Export - gated by FEATURE_KEYS.EXCEL_EXPORT
 
       // Free features:
       // 1. CSV Import
@@ -386,8 +396,8 @@ test.describe('Feature Gating - Documentation Tests', () => {
 
     await test.step('Document server-side gating locations', async () => {
       // Server-side authorization happens in:
-      // - /api/export/route.ts:47 - requirePaidFeature(request, FEATURES.EXCEL_EXPORT)
-      // - /api/parse/route.ts:49 - requirePaidFeature(request, FEATURES.PDF_IMPORT)
+      // - /api/export/route.ts:47 - requirePaidFeature(request, FEATURE_KEYS.EXCEL_EXPORT)
+      // - /api/parse/route.ts:49 - requirePaidFeature(request, FEATURE_KEYS.PDF_IMPORT)
 
       // Client-side UI gating happens in:
       // - Header.tsx:185-198 - FeatureDropdownItem for export options

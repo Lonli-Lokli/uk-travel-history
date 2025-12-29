@@ -3,18 +3,20 @@
 import { observer } from 'mobx-react-lite';
 import { type ReactNode } from 'react';
 import { FeatureGate, type RenderMode } from './feature-gate';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import { useFeatureGateContext } from './feature-gate-context';
 
 /**
  * Premium-only features that require paid subscription
  */
 const PREMIUM_FEATURES = [
-  FEATURES.EXCEL_EXPORT,
-  FEATURES.PDF_EXPORT,
-  FEATURES.EMPLOYER_LETTERS,
-  FEATURES.CLOUD_SYNC,
-  FEATURES.ADVANCED_ANALYTICS,
+  FEATURE_KEYS.EXCEL_EXPORT,
+  FEATURE_KEYS.EXCEL_IMPORT,
+  // Future premium features:
+  // FEATURE_KEYS.PDF_EXPORT,
+  // FEATURE_KEYS.EMPLOYER_LETTERS,
+  // FEATURE_KEYS.CLOUD_SYNC,
+  // FEATURE_KEYS.ADVANCED_ANALYTICS,
 ] as const;
 
 export interface PremiumGateProps {
@@ -84,7 +86,7 @@ const PremiumGateComponent = ({
 
   return (
     <FeatureGate
-      feature={FEATURES.EXCEL_EXPORT}
+      feature={FEATURE_KEYS.EXCEL_EXPORT}
       mode={mode}
       fallback={fallback}
       onUpgradeClick={onUpgradeClick}

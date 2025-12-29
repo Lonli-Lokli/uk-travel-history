@@ -10,7 +10,7 @@ import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
 import { FeatureButton } from '@uth/widgets';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import { ProvidersWrapper } from './ProvidersWrapper';
 
 export const LandingPage = () => {
@@ -223,7 +223,7 @@ export const LandingPage = () => {
                 </h3>
                 <div className="space-y-2">
                   <FeatureButton
-                    feature={FEATURES.PDF_IMPORT}
+                    feature={FEATURE_KEYS.PDF_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handlePdfImportClick}
@@ -245,7 +245,7 @@ export const LandingPage = () => {
                     )}
                   </FeatureButton>
                   <FeatureButton
-                    feature={FEATURES.CSV_IMPORT}
+                    feature={FEATURE_KEYS.EXCEL_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleCsvImportClick}
@@ -267,7 +267,7 @@ export const LandingPage = () => {
                     )}
                   </FeatureButton>
                   <FeatureButton
-                    feature={FEATURES.CSV_IMPORT}
+                    feature={FEATURE_KEYS.CLIPBOARD_IMPORT}
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleClipboardImportClick}
@@ -290,7 +290,7 @@ export const LandingPage = () => {
                   </FeatureButton>
                   <div className="border-t border-slate-200 my-2 pt-2">
                     <FeatureButton
-                      feature={FEATURES.MANUAL_ENTRY}
+                      feature={FEATURE_KEYS.CLIPBOARD_IMPORT}
                       variant="ghost"
                       className="w-full justify-start text-slate-600"
                       onClick={handleAddManually}

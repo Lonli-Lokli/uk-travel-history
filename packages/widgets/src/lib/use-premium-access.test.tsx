@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePremiumAccess } from './use-premium-access';
 import { FeatureGateProvider } from './feature-gate-context';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import type { MonetizationStore, AuthStore, PaymentStore } from './feature-gate-context';
 
 describe('usePremiumAccess', () => {
@@ -65,7 +65,7 @@ describe('usePremiumAccess', () => {
       renderHook(() => usePremiumAccess(), { wrapper });
 
       expect(mockMonetizationStore.hasFeatureAccess).toHaveBeenCalledWith(
-        FEATURES.EXCEL_EXPORT
+        FEATURE_KEYS.EXCEL_EXPORT
       );
     });
   });

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format, parseISO } from 'date-fns';
-import { assertFeatureAccess } from '@uth/features/server';
-import { FEATURES } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 import { getRouteLogger } from '@uth/flow';
 
 export const runtime = 'nodejs';
@@ -40,7 +39,7 @@ interface ExportData {
 export async function POST(request: NextRequest) {
   try {
     // Enforce feature access - Excel export requires premium tier
-    await assertFeatureAccess(request, FEATURES.EXCEL_EXPORT);
+    await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_EXPORT);
 
     const formData = await request.formData();
     const tripsDataStr = formData.get('tripsData') as string;

@@ -13,7 +13,7 @@ import {
   toast,
 } from '@uth/ui';
 import { FeatureGateProvider, FeatureDropdownItem } from '@uth/widgets';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import { authStore, monetizationStore, paymentStore } from '@uth/stores';
 
 interface TravelToolbarProps {
@@ -93,14 +93,14 @@ export const TravelToolbar = observer(({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[240px]">
             <FeatureDropdownItem
-              feature={FEATURES.EXCEL_EXPORT}
+              feature={FEATURE_KEYS.EXCEL_EXPORT}
               onClick={() => handleExportClick('ilr')}
             >
               <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
               Travel history only
             </FeatureDropdownItem>
             <FeatureDropdownItem
-              feature={FEATURES.EXCEL_EXPORT}
+              feature={FEATURE_KEYS.EXCEL_EXPORT}
               onClick={() => handleExportClick('full')}
             >
               <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />

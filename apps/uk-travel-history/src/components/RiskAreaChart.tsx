@@ -24,7 +24,7 @@ import {
 import { FeatureChart } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
 import { travelStore } from '@uth/stores';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 
 type TimelinePoint = {
   id: string;
@@ -676,7 +676,7 @@ export const RiskAreaChart: React.FC = observer(() => {
           </div>
         </div>
 
-        <FeatureChart feature={FEATURES.ADVANCED_ANALYTICS}>
+        <FeatureChart feature={FEATURE_KEYS.RISK_CHART}>
           {/* Risk area chart */}
           <div className="mb-4">
             <HighchartsReact

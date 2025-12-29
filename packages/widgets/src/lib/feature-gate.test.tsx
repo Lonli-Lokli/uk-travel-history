@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FeatureGate } from './feature-gate';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 
 describe('FeatureGate', () => {
   const mockMonetizationStore = {
@@ -32,7 +32,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
@@ -55,7 +55,7 @@ describe('FeatureGate', () => {
       modes.forEach((mode) => {
         const { unmount } = render(
           <FeatureGate
-            feature={FEATURES.EXCEL_EXPORT}
+            feature={FEATURE_KEYS.EXCEL_EXPORT}
             mode={mode}
             monetizationStore={mockMonetizationStore}
           >
@@ -75,7 +75,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="hide"
           fallback={<div>Loading...</div>}
           monetizationStore={mockMonetizationStore}
@@ -93,7 +93,7 @@ describe('FeatureGate', () => {
 
       const { container } = render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="hide"
           monetizationStore={mockMonetizationStore}
         >
@@ -109,7 +109,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           monetizationStore={mockMonetizationStore}
         >
@@ -128,7 +128,7 @@ describe('FeatureGate', () => {
     it('should return null when access denied without fallback', () => {
       const { container } = render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="hide"
           monetizationStore={mockMonetizationStore}
         >
@@ -142,7 +142,7 @@ describe('FeatureGate', () => {
     it('should show fallback when access denied with fallback', () => {
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="hide"
           fallback={<div>Upgrade to Premium</div>}
           monetizationStore={mockMonetizationStore}
@@ -160,7 +160,7 @@ describe('FeatureGate', () => {
     it('should render blurred content when access denied', () => {
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="blur"
           monetizationStore={mockMonetizationStore}
         >
@@ -182,7 +182,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="blur"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -204,7 +204,7 @@ describe('FeatureGate', () => {
     it('should render disabled blurred content when access denied', () => {
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           monetizationStore={mockMonetizationStore}
         >
@@ -225,7 +225,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -245,7 +245,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           monetizationStore={mockMonetizationStore}
           paymentStore={mockPaymentStore}
@@ -268,7 +268,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="paywall"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -290,7 +290,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           onLoginClick={onLoginClick}
           monetizationStore={mockMonetizationStore}
@@ -312,7 +312,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -337,7 +337,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="blur"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -358,7 +358,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="disable"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -379,7 +379,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="paywall"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -400,7 +400,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="paywall"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -421,7 +421,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="blur"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -442,7 +442,7 @@ describe('FeatureGate', () => {
 
       render(
         <FeatureGate
-          feature={FEATURES.EXCEL_EXPORT}
+          feature={FEATURE_KEYS.EXCEL_EXPORT}
           mode="paywall"
           onUpgradeClick={onUpgradeClick}
           monetizationStore={mockMonetizationStore}
@@ -467,7 +467,7 @@ describe('FeatureGate', () => {
       render(
         <div onClick={parentClick}>
           <FeatureGate
-            feature={FEATURES.EXCEL_EXPORT}
+            feature={FEATURE_KEYS.EXCEL_EXPORT}
             mode="disable"
             onUpgradeClick={childClick}
             monetizationStore={mockMonetizationStore}

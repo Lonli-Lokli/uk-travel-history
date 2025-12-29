@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PremiumGate } from './premium-gate';
 import { FeatureGateProvider } from './feature-gate-context';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import type { MonetizationStore, AuthStore, PaymentStore } from './feature-gate-context';
 
 describe('PremiumGate', () => {
@@ -50,7 +50,7 @@ describe('PremiumGate', () => {
 
       expect(screen.getByText('Premium Content')).toBeTruthy();
       expect(mockMonetizationStore.hasFeatureAccess).toHaveBeenCalledWith(
-        FEATURES.EXCEL_EXPORT
+        FEATURE_KEYS.EXCEL_EXPORT
       );
     });
 
@@ -224,7 +224,7 @@ describe('PremiumGate', () => {
       );
 
       expect(mockMonetizationStore.hasFeatureAccess).toHaveBeenCalledWith(
-        FEATURES.EXCEL_EXPORT
+        FEATURE_KEYS.EXCEL_EXPORT
       );
     });
   });

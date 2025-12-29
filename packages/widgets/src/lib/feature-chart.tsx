@@ -25,7 +25,7 @@ export interface FeatureChartProps {
  *
  * @example
  * ```tsx
- * <FeatureChart feature={FEATURES.ADVANCED_ANALYTICS}>
+ * <FeatureChart feature={FEATURE_KEYS.RISK_CHART}>
  *   <RiskAreaChart />
  * </FeatureChart>
  * ```

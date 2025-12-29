@@ -26,15 +26,15 @@ describe('MonetizationStore', () => {
       monetizationStore.setTier(TIERS.FREE);
 
       expect(
-        monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION),
+        monetizationStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION),
       ).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_IMPORT)).toBe(
         true,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CSV_IMPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CSV_IMPORT)).toBe(
         true,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.MANUAL_ENTRY)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.MANUAL_ENTRY)).toBe(
         true,
       );
     });
@@ -42,13 +42,13 @@ describe('MonetizationStore', () => {
     it('should deny premium features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(
         false,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(
         false,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(
         false,
       );
     });
@@ -57,15 +57,15 @@ describe('MonetizationStore', () => {
       monetizationStore.setTier(TIERS.PREMIUM);
 
       expect(
-        monetizationStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION),
+        monetizationStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION),
       ).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(
         true,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(
         true,
       );
-      expect(monetizationStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(
         true,
       );
     });
@@ -187,15 +187,15 @@ describe('MonetizationStore', () => {
 
     it('should deny premium features by default', () => {
       const newStore = new (monetizationStore.constructor as any)();
-      expect(newStore.hasFeatureAccess(FEATURES.EXCEL_EXPORT)).toBe(false);
-      expect(newStore.hasFeatureAccess(FEATURES.PDF_EXPORT)).toBe(false);
-      expect(newStore.hasFeatureAccess(FEATURES.CLOUD_SYNC)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(false);
     });
 
     it('should allow free features by default', () => {
       const newStore = new (monetizationStore.constructor as any)();
-      expect(newStore.hasFeatureAccess(FEATURES.BASIC_CALCULATION)).toBe(true);
-      expect(newStore.hasFeatureAccess(FEATURES.PDF_IMPORT)).toBe(true);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION)).toBe(true);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.PDF_IMPORT)).toBe(true);
     });
   });
 });

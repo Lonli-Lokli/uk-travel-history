@@ -7,11 +7,9 @@ import {
   isEdgeConfigAvailable,
   setCachedFlags,
   getCachedFlags,
-  FEATURE_KEYS,
-  type EdgeConfigFlags,
-  type FeatureFlagKey,
-  DEFAULT_FEATURE_STATES,
-} from './edgeConfigFlags';
+  DEFAULT_FEATURE_POLICIES,
+} from './features';
+import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
 
 // Mock @vercel/edge-config
 vi.mock('@vercel/edge-config', () => ({
@@ -44,7 +42,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return false when feature is not in Edge Config', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         other_feature: { enabled: true },
       };
       vi.mocked(get).mockResolvedValue(flags);
@@ -54,7 +52,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return false when feature is disabled in Edge Config', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.AUTH]: { enabled: false },
       };
       vi.mocked(get).mockResolvedValue(flags);
@@ -64,7 +62,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return true when feature is enabled without restrictions', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.AUTH]: { enabled: true },
       };
       vi.mocked(get).mockResolvedValue(flags);
@@ -74,7 +72,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return true for beta users even if rollout is 0%', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 0,
@@ -91,7 +89,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should not enable for non-beta users when rollout is 0%', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 0,
@@ -108,7 +106,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should respect rollout percentage', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 50,
@@ -129,7 +127,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return true when rollout is 100%', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 100,
@@ -152,7 +150,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should handle missing userId gracefully', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 50,
@@ -166,7 +164,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should produce consistent hashes for same userId and featureKey', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 50,
@@ -189,7 +187,7 @@ describe('Edge Config Feature Flags', () => {
 
   describe('getAllFeatureFlags', () => {
     it('should return all flags evaluated for a user', async () => {
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [FEATURE_KEYS.AUTH]: { enabled: true },
         [FEATURE_KEYS.MONETIZATION]: { enabled: false },
       };
@@ -209,7 +207,7 @@ describe('Edge Config Feature Flags', () => {
       const result = await getAllFeatureFlags();
 
       Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(result[key]).toBe(DEFAULT_FEATURE_STATES[key]);
+        expect(result[key]).toBe(DEFAULT_FEATURE_POLICIES[key].enabled);
       });
     });
   });
@@ -240,7 +238,7 @@ describe('Edge Config Feature Flags', () => {
       const cached = getCachedFlags();
 
       Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(cached[key]).toBe(DEFAULT_FEATURE_STATES[key]);
+        expect(cached[key]).toBe(DEFAULT_FEATURE_POLICIES[key].enabled);
       });
     });
   });
@@ -302,7 +300,7 @@ describe('Edge Config Feature Flags', () => {
     it('should enforce FeatureFlagKey type', async () => {
       const validKey: FeatureFlagKey = FEATURE_KEYS.MONETIZATION;
 
-      const flags: EdgeConfigFlags = {
+      const flags = {
         [validKey]: { enabled: true },
       };
       vi.mocked(get).mockResolvedValue(flags);

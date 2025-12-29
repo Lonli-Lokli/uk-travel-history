@@ -1,7 +1,7 @@
 'use client';
 
 import { useFeatureGateContext } from './feature-gate-context';
-import { FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 
 /**
  * MobX-based hook for checking premium access
@@ -30,7 +30,7 @@ export function usePremiumAccess() {
 
   // Check access to any premium feature (using EXCEL_EXPORT as representative)
   const hasPremiumAccess = monetizationStore.hasFeatureAccess(
-    FEATURES.EXCEL_EXPORT,
+    FEATURE_KEYS.EXCEL_EXPORT,
   );
 
   const isLoading = monetizationStore.isLoading;

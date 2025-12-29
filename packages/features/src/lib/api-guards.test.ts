@@ -11,16 +11,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   checkFeatureAccess,
-  DEFAULT_FEATURE_POLICIES,
   getUserContext,
   assertFeatureAccess,
   withFeatureAccess,
   configureApiGuards,
   type UserContext,
 } from './api-guards';
-import { FEATURES, TIERS } from './features';
 import { getUserByAuthId } from '@uth/db';
-import * as edgeConfigFlags from './edgeConfigFlags';
+import { DEFAULT_FEATURE_POLICIES } from './features';
+import { TIERS, FEATURE_KEYS } from './shapes';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -56,11 +55,6 @@ beforeEach(() => {
   // Spy on db methods
   vi.mocked(getUserByAuthId).mockResolvedValue(null);
 
-  // Spy on edge config
-  vi.spyOn(edgeConfigFlags, 'isFeatureEnabled').mockImplementation(async (featureId: string) => {
-    const policy = DEFAULT_FEATURE_POLICIES[featureId];
-    return policy ? policy.enabled : false;
-  });
 });
 
 describe('API Feature Guards', () => {
@@ -77,11 +71,17 @@ describe('API Feature Guards', () => {
         };
 
         // With default policies, premium users can access EXCEL_EXPORT
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
         expect(result.allowed).toBe(true);
 
         // Test with a disabled feature (PDF_EXPORT is disabled by default)
-        const result2 = await checkFeatureAccess(FEATURES.PDF_EXPORT, userContext);
+        const result2 = await checkFeatureAccess(
+          FEATURE_KEYS.PDF_IMPORT,
+          userContext,
+        );
         expect(result2.allowed).toBe(false);
         expect(result2.reason).toBe('feature_disabled');
         expect(result2.statusCode).toBe(404);
@@ -94,8 +94,11 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: true,
         };
 
-        // PDF_EXPORT is disabled by default
-        const result = await checkFeatureAccess(FEATURES.PDF_EXPORT, userContext);
+        // PDF_IMPORT is disabled by default
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.PDF_IMPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('feature_disabled');
@@ -110,7 +113,10 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: false,
         };
 
-        const result = await checkFeatureAccess(FEATURES.PDF_IMPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.PDF_IMPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(true);
         expect(result.reason).toBeUndefined();
@@ -123,13 +129,16 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: true,
         };
 
-        const result = await checkFeatureAccess(FEATURES.PDF_IMPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.PDF_IMPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(true);
       });
 
       it('should allow access to free features for unauthenticated users', async () => {
-        const result = await checkFeatureAccess(FEATURES.PDF_IMPORT, null);
+        const result = await checkFeatureAccess(FEATURE_KEYS.PDF_IMPORT, null as any);
 
         expect(result.allowed).toBe(true);
       });
@@ -143,7 +152,10 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: false,
         };
 
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('tier_restriction');
@@ -158,13 +170,19 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: true,
         };
 
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(true);
       });
 
       it('should deny access to premium features for unauthenticated users', async () => {
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, null);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          null as any,
+        );
 
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('unauthenticated');
@@ -180,7 +198,10 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: false, // Subscription expired
         };
 
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(false);
         expect(result.reason).toBe('no_active_subscription');
@@ -195,7 +216,10 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: true,
         };
 
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
 
         expect(result.allowed).toBe(true);
       });
@@ -216,7 +240,10 @@ describe('API Feature Guards', () => {
 
         // Note: This requires mocking getFeaturePolicy to return custom policy
         // For now, this is a documentation test showing the intended behavior
-        const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, userContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.EXCEL_EXPORT,
+          userContext,
+        );
 
         // With current defaults, this should fail
         expect(result.allowed).toBe(false);
@@ -236,7 +263,8 @@ describe('API Feature Guards', () => {
         };
 
         // Mock getFeaturePolicy to return a policy with denylist
-        const { checkFeatureAccess: checkFeatureAccessImport } = await import('./api-guards');
+        const { checkFeatureAccess: checkFeatureAccessImport } =
+          await import('./api-guards');
 
         // We need to test this by directly using the internal logic
         // Since getFeaturePolicy is not exported, we test via the full flow
@@ -277,39 +305,45 @@ describe('API Feature Guards', () => {
   describe('Default Feature Policies', () => {
     it('should have correct default policies for all features', () => {
       // Verify free features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.PDF_IMPORT]).toMatchObject({
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
+        enabled: true,
+        mode: '',
+        minTier: TIERS.FREE,
+      });
+
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT]).toMatchObject({
         enabled: true,
         mode: 'free',
         minTier: TIERS.FREE,
       });
 
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.CSV_IMPORT]).toMatchObject({
-        enabled: true,
-        mode: 'free',
-        minTier: TIERS.FREE,
-      });
-
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.MANUAL_ENTRY]).toMatchObject({
-        enabled: true,
-        mode: 'free',
-        minTier: TIERS.FREE,
-      });
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH]).toMatchObject(
+        {
+          enabled: true,
+          mode: 'free',
+          minTier: TIERS.FREE,
+        },
+      );
 
       // Verify premium features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.EXCEL_EXPORT]).toMatchObject({
-        enabled: true,
-        mode: 'paid',
-        minTier: TIERS.PREMIUM,
-      });
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT]).toMatchObject(
+        {
+          enabled: true,
+          mode: 'paid',
+          minTier: TIERS.PREMIUM,
+        },
+      );
 
       // Verify coming soon features are disabled
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.PDF_EXPORT]).toMatchObject({
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS]).toMatchObject({
         enabled: false,
         mode: 'paid',
         minTier: TIERS.PREMIUM,
       });
 
-      expect(DEFAULT_FEATURE_POLICIES[FEATURES.EMPLOYER_LETTERS]).toMatchObject({
+      expect(
+        DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.RISK_CHART],
+      ).toMatchObject({
         enabled: false,
         mode: 'paid',
         minTier: TIERS.PREMIUM,
@@ -329,7 +363,10 @@ describe('API Feature Guards', () => {
       };
 
       // Free user should NOT get premium features by default
-      const result = await checkFeatureAccess(FEATURES.EXCEL_EXPORT, freeUser);
+      const result = await checkFeatureAccess(
+        FEATURE_KEYS.EXCEL_EXPORT,
+        freeUser,
+      );
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('tier_restriction');
@@ -342,8 +379,11 @@ describe('API Feature Guards', () => {
         hasActiveSubscription: true,
       };
 
-      // PDF_EXPORT is disabled by default
-      const result = await checkFeatureAccess(FEATURES.PDF_EXPORT, userContext);
+      // PDF_IMPORT is disabled by default
+      const result = await checkFeatureAccess(
+        FEATURE_KEYS.PDF_IMPORT,
+        userContext,
+      );
 
       // Should return 404 (not found) instead of 403 (forbidden)
       // to avoid leaking information about feature existence
@@ -497,7 +537,9 @@ describe('API Feature Guards', () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
       const { getSessionFromRequest } = await import('@uth/auth-server');
-      (getSessionFromRequest as any).mockRejectedValue(new Error('Invalid token'));
+      (getSessionFromRequest as any).mockRejectedValue(
+        new Error('Invalid token'),
+      );
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -517,7 +559,7 @@ describe('API Feature Guards', () => {
       expect(context).toBeNull();
       expect(mockLogger.error).toHaveBeenCalledWith(
         '[Feature Guards] Error extracting user context',
-        expect.any(Error)
+        expect.any(Error),
       );
     });
   });
@@ -544,7 +586,10 @@ describe('API Feature Guards', () => {
       });
 
       const request = new NextRequest('http://localhost/api/export');
-      const context = await assertFeatureAccess(request, FEATURES.EXCEL_EXPORT);
+      const context = await assertFeatureAccess(
+        request,
+        FEATURE_KEYS.EXCEL_EXPORT,
+      );
 
       expect(context).toBeTruthy();
       expect(context?.userId).toBe('user-123');
@@ -552,10 +597,10 @@ describe('API Feature Guards', () => {
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURES.EXCEL_EXPORT,
+            featureId: FEATURE_KEYS.EXCEL_EXPORT,
             allowed: true,
           }),
-        })
+        }),
       );
     });
 
@@ -578,18 +623,18 @@ describe('API Feature Guards', () => {
       const request = new NextRequest('http://localhost/api/export');
 
       await expect(
-        assertFeatureAccess(request, FEATURES.EXCEL_EXPORT)
+        assertFeatureAccess(request, FEATURE_KEYS.EXCEL_EXPORT),
       ).rejects.toThrow();
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         '[Feature Access] Denied',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURES.EXCEL_EXPORT,
+            featureId: FEATURE_KEYS.EXCEL_EXPORT,
             allowed: false,
             reason: expect.any(String),
           }),
-        })
+        }),
       );
     });
 
@@ -602,19 +647,22 @@ describe('API Feature Guards', () => {
       });
 
       // PDF_IMPORT is a free feature, so it should allow access even without auth
-      const context = await assertFeatureAccess(request, FEATURES.PDF_IMPORT);
+      const context = await assertFeatureAccess(
+        request,
+        FEATURE_KEYS.PDF_IMPORT,
+      );
 
       // Should log access decision
       expect(mockLogger.info).toHaveBeenCalledWith(
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURES.PDF_IMPORT,
+            featureId: FEATURE_KEYS.PDF_IMPORT,
             allowed: true,
             path: '/api/parse',
             method: 'POST',
           }),
-        })
+        }),
       );
       expect(context).toBeNull(); // No user context for unauthenticated users
     });
@@ -641,11 +689,14 @@ describe('API Feature Guards', () => {
         status: 'active',
       });
 
-      const mockHandler = vi.fn().mockResolvedValue(
-        NextResponse.json({ success: true })
-      );
+      const mockHandler = vi
+        .fn()
+        .mockResolvedValue(NextResponse.json({ success: true }));
 
-      const wrappedHandler = withFeatureAccess(FEATURES.EXCEL_EXPORT, mockHandler);
+      const wrappedHandler = withFeatureAccess(
+        FEATURE_KEYS.EXCEL_EXPORT,
+        mockHandler,
+      );
       const request = new NextRequest('http://localhost/api/export');
 
       const response = await wrappedHandler(request);
@@ -655,7 +706,7 @@ describe('API Feature Guards', () => {
         expect.objectContaining({
           userId: 'user-123',
           tier: TIERS.PREMIUM,
-        })
+        }),
       );
       expect(response.status).toBe(200);
     });
@@ -665,7 +716,10 @@ describe('API Feature Guards', () => {
       (auth as any).mockResolvedValue({ userId: null });
 
       const mockHandler = vi.fn();
-      const wrappedHandler = withFeatureAccess(FEATURES.EXCEL_EXPORT, mockHandler);
+      const wrappedHandler = withFeatureAccess(
+        FEATURE_KEYS.EXCEL_EXPORT,
+        mockHandler,
+      );
       const request = new NextRequest('http://localhost/api/export');
 
       const response = await wrappedHandler(request);
@@ -691,7 +745,10 @@ describe('API Feature Guards', () => {
       (getSubscription as any).mockResolvedValue(null);
 
       const mockHandler = vi.fn().mockRejectedValue(new Error('Handler error'));
-      const wrappedHandler = withFeatureAccess(FEATURES.PDF_IMPORT, mockHandler);
+      const wrappedHandler = withFeatureAccess(
+        FEATURE_KEYS.PDF_IMPORT,
+        mockHandler,
+      );
       const request = new NextRequest('http://localhost/api/parse');
 
       const response = await wrappedHandler(request);
@@ -699,7 +756,7 @@ describe('API Feature Guards', () => {
       expect(response.status).toBe(500);
       expect(mockLogger.error).toHaveBeenCalledWith(
         '[Feature Access] Unexpected error in route handler',
-        expect.any(Error)
+        expect.any(Error),
       );
     });
 
@@ -707,11 +764,14 @@ describe('API Feature Guards', () => {
       const { auth } = await import('@clerk/nextjs/server');
       (auth as any).mockResolvedValue({ userId: null });
 
-      const mockHandler = vi.fn().mockResolvedValue(
-        NextResponse.json({ success: true })
-      );
+      const mockHandler = vi
+        .fn()
+        .mockResolvedValue(NextResponse.json({ success: true }));
 
-      const wrappedHandler = withFeatureAccess(FEATURES.PDF_IMPORT, mockHandler);
+      const wrappedHandler = withFeatureAccess(
+        FEATURE_KEYS.PDF_IMPORT,
+        mockHandler,
+      );
       const request = new NextRequest('http://localhost/api/parse');
 
       const response = await wrappedHandler(request);
@@ -721,3 +781,4 @@ describe('API Feature Guards', () => {
     });
   });
 });
+

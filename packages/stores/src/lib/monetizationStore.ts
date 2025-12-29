@@ -9,17 +9,22 @@
 
 import { makeAutoObservable } from 'mobx';
 import { authStore } from './authStore';
-import { TIERS, TIER_CONFIG, type FeatureId, type TierId } from '@uth/features';
+import { TIERS, type TierId } from '@uth/features';
+import { DEFAULT_FEATURE_POLICIES, type FeatureFlagKey } from '@uth/features/edgeConfigFlags';
 
 // Type guard to validate tier values
 function isValidTier(value: unknown): value is TierId {
-  return value === TIERS.FREE || value === TIERS.PREMIUM;
+  return (
+    value === TIERS.ANONYMOUS ||
+    value === TIERS.FREE ||
+    value === TIERS.PREMIUM
+  );
 }
 
 class MonetizationStore {
   // Subscription state
-  // Always defaults to FREE for security (fail-closed)
-  tier: TierId = TIERS.FREE;
+  // Defaults to ANONYMOUS for unauthenticated users (fail-closed)
+  tier: TierId = TIERS.ANONYMOUS;
 
   constructor() {
     makeAutoObservable(this);
@@ -29,11 +34,25 @@ class MonetizationStore {
    * Check if user has access to a specific feature
    *
    * NOTE: This is for UI/UX only! Server-side validation is the real security.
-   * Client-side checks can be bypassed, so all API routes must use requirePaidFeature()
+   * Client-side checks can be bypassed, so all API routes must use assertFeatureAccess()
    */
-  hasFeatureAccess(featureId: FeatureId): boolean {
-    const tierFeatures = TIER_CONFIG[this.tier];
-    return tierFeatures.includes(featureId);
+  hasFeatureAccess(featureKey: FeatureFlagKey): boolean {
+    const policy = DEFAULT_FEATURE_POLICIES[featureKey];
+    if (!policy || !policy.enabled) {
+      return false;
+    }
+
+    // Check tier level
+    const tierLevels: Record<TierId, number> = {
+      [TIERS.ANONYMOUS]: 0,
+      [TIERS.FREE]: 1,
+      [TIERS.PREMIUM]: 2,
+    };
+
+    const userLevel = tierLevels[this.tier];
+    const requiredLevel = tierLevels[policy.minTier];
+
+    return userLevel >= requiredLevel;
   }
 
   /**
@@ -48,6 +67,13 @@ class MonetizationStore {
    */
   get isAuthenticated(): boolean {
     return !!authStore.user;
+  }
+
+  /**
+   * Check if user is anonymous (not authenticated)
+   */
+  get isAnonymous(): boolean {
+    return this.tier === TIERS.ANONYMOUS;
   }
 
   /**
@@ -67,19 +93,19 @@ class MonetizationStore {
     if (isValidTier(tier)) {
       this.tier = tier;
     } else {
-      // Fail-closed: invalid tier defaults to FREE
+      // Fail-closed: invalid tier defaults to ANONYMOUS
       console.warn(
-        `[MonetizationStore] Invalid tier value: ${tier}, defaulting to FREE`,
+        `[MonetizationStore] Invalid tier value: ${tier}, defaulting to ANONYMOUS`,
       );
-      this.tier = TIERS.FREE;
+      this.tier = TIERS.ANONYMOUS;
     }
   }
 
   /**
-   * Reset to default state
+   * Reset to default state (anonymous)
    */
   reset(): void {
-    this.tier = TIERS.FREE;
+    this.tier = TIERS.ANONYMOUS;
   }
 }
 

@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   UIIcon,
 } from '@uth/ui';
-import { FEATURE_KEYS, FEATURES } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 import { useFeatureFlags, FeatureDropdownItem } from '@uth/widgets';
 import { travelStore } from '@uth/stores';
 
@@ -183,14 +183,14 @@ export const Header = observer(
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <FeatureDropdownItem
-                    feature={FEATURES.EXCEL_EXPORT}
+                    feature={FEATURE_KEYS.EXCEL_EXPORT}
                     onClick={() => onExportClick('ilr')}
                   >
                     <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                     Travel history only
                   </FeatureDropdownItem>
                   <FeatureDropdownItem
-                    feature={FEATURES.EXCEL_EXPORT}
+                    feature={FEATURE_KEYS.EXCEL_EXPORT}
                     onClick={() => onExportClick('full')}
                   >
                     <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
@@ -212,14 +212,14 @@ export const Header = observer(
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <FeatureDropdownItem
-                    feature={FEATURES.EXCEL_EXPORT}
+                    feature={FEATURE_KEYS.EXCEL_EXPORT}
                     onClick={() => onExportClick('ilr')}
                   >
                     <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
                     Travel history only
                   </FeatureDropdownItem>
                   <FeatureDropdownItem
-                    feature={FEATURES.EXCEL_EXPORT}
+                    feature={FEATURE_KEYS.EXCEL_EXPORT}
                     onClick={() => onExportClick('full')}
                   >
                     <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />

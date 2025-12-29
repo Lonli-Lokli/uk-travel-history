@@ -6,8 +6,7 @@ import {
   getAccessibleFeatures,
   type UserTier,
 } from './server-validation';
-import { FEATURES } from './features';
-import type { EdgeConfigFlags } from './edgeConfigFlags';
+import { FEATURE_KEYS } from './shapes';
 
 // Mock @vercel/edge-config
 vi.mock('@vercel/edge-config', () => ({
@@ -18,16 +17,16 @@ describe('Server-Side Feature Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Enable all features by default
-    const allFeatures: EdgeConfigFlags = {
-      [FEATURES.BASIC_CALCULATION]: { enabled: true },
-      [FEATURES.PDF_IMPORT]: { enabled: true },
-      [FEATURES.CSV_IMPORT]: { enabled: true },
-      [FEATURES.MANUAL_ENTRY]: { enabled: true },
-      [FEATURES.EXCEL_EXPORT]: { enabled: true },
-      [FEATURES.PDF_EXPORT]: { enabled: true },
-      [FEATURES.EMPLOYER_LETTERS]: { enabled: true },
-      [FEATURES.CLOUD_SYNC]: { enabled: true },
-      [FEATURES.ADVANCED_ANALYTICS]: { enabled: true },
+    const allFeatures = {
+      [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true },
+      [FEATURE_KEYS.PDF_IMPORT]: { enabled: true },
+      [FEATURE_KEYS.CSV_IMPORT]: { enabled: true },
+      [FEATURE_KEYS.MANUAL_ENTRY]: { enabled: true },
+      [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: true },
+      [FEATURE_KEYS.PDF_EXPORT]: { enabled: true },
+      [FEATURE_KEYS.EMPLOYER_LETTERS]: { enabled: true },
+      [FEATURE_KEYS.CLOUD_SYNC]: { enabled: true },
+      [FEATURE_KEYS.ADVANCED_ANALYTICS]: { enabled: true },
     };
     vi.mocked(get).mockResolvedValue(allFeatures);
   });
@@ -41,7 +40,7 @@ describe('Server-Side Feature Validation', () => {
 
       it('should allow access to free features', async () => {
         const result = await validateFeatureAccess(
-          FEATURES.BASIC_CALCULATION,
+          FEATURE_KEYS.BASIC_CALCULATION,
           freeUser,
         );
         expect(result.allowed).toBe(true);
@@ -50,7 +49,7 @@ describe('Server-Side Feature Validation', () => {
 
       it('should deny access to premium features', async () => {
         const result = await validateFeatureAccess(
-          FEATURES.EXCEL_EXPORT,
+          FEATURE_KEYS.EXCEL_EXPORT,
           freeUser,
         );
         expect(result.allowed).toBe(false);
@@ -59,10 +58,10 @@ describe('Server-Side Feature Validation', () => {
 
       it('should allow all free tier features', async () => {
         const freeFeatures = [
-          FEATURES.BASIC_CALCULATION,
-          FEATURES.PDF_IMPORT,
-          FEATURES.CSV_IMPORT,
-          FEATURES.MANUAL_ENTRY,
+          FEATURE_KEYS.BASIC_CALCULATION,
+          FEATURE_KEYS.PDF_IMPORT,
+          FEATURE_KEYS.CSV_IMPORT,
+          FEATURE_KEYS.MANUAL_ENTRY,
         ];
 
         for (const feature of freeFeatures) {
@@ -73,11 +72,11 @@ describe('Server-Side Feature Validation', () => {
 
       it('should deny all premium-only features', async () => {
         const premiumFeatures = [
-          FEATURES.EXCEL_EXPORT,
-          FEATURES.PDF_EXPORT,
-          FEATURES.EMPLOYER_LETTERS,
-          FEATURES.CLOUD_SYNC,
-          FEATURES.ADVANCED_ANALYTICS,
+          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_EXPORT,
+          FEATURE_KEYS.EMPLOYER_LETTERS,
+          FEATURE_KEYS.CLOUD_SYNC,
+          FEATURE_KEYS.ADVANCED_ANALYTICS,
         ];
 
         for (const feature of premiumFeatures) {
@@ -112,7 +111,7 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const result = await validateFeatureAccess(
-          FEATURES.EXCEL_EXPORT,
+          FEATURE_KEYS.EXCEL_EXPORT,
           inactiveUser,
         );
         expect(result.allowed).toBe(false);
@@ -127,7 +126,7 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const result = await validateFeatureAccess(
-          FEATURES.BASIC_CALCULATION,
+          FEATURE_KEYS.BASIC_CALCULATION,
           inactiveUser,
         );
         // Free features don't require subscription
@@ -138,7 +137,7 @@ describe('Server-Side Feature Validation', () => {
     describe('Feature flag disabled', () => {
       it('should deny access when feature is disabled in Edge Config', async () => {
         vi.mocked(get).mockResolvedValue({
-          [FEATURES.EXCEL_EXPORT]: { enabled: false },
+          [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
         });
 
         const premiumUser: UserTier = {
@@ -148,7 +147,7 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const result = await validateFeatureAccess(
-          FEATURES.EXCEL_EXPORT,
+          FEATURE_KEYS.EXCEL_EXPORT,
           premiumUser,
         );
         expect(result.allowed).toBe(false);
@@ -157,7 +156,7 @@ describe('Server-Side Feature Validation', () => {
 
       it('should deny access to all users when feature is disabled', async () => {
         vi.mocked(get).mockResolvedValue({
-          [FEATURES.BASIC_CALCULATION]: { enabled: false },
+          [FEATURE_KEYS.BASIC_CALCULATION]: { enabled: false },
         });
 
         const freeUser: UserTier = { userId: 'user123', tier: 'free' };
@@ -168,11 +167,11 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const freeResult = await validateFeatureAccess(
-          FEATURES.BASIC_CALCULATION,
+          FEATURE_KEYS.BASIC_CALCULATION,
           freeUser,
         );
         const premiumResult = await validateFeatureAccess(
-          FEATURES.BASIC_CALCULATION,
+          FEATURE_KEYS.BASIC_CALCULATION,
           premiumUser,
         );
 
@@ -186,7 +185,7 @@ describe('Server-Side Feature Validation', () => {
     describe('Beta users and rollout', () => {
       it('should allow beta users even with 0% rollout', async () => {
         vi.mocked(get).mockResolvedValue({
-          [FEATURES.EXCEL_EXPORT]: {
+          [FEATURE_KEYS.EXCEL_EXPORT]: {
             enabled: true,
             rolloutPercentage: 0,
             betaUsers: ['beta_user'],
@@ -200,7 +199,7 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const result = await validateFeatureAccess(
-          FEATURES.EXCEL_EXPORT,
+          FEATURE_KEYS.EXCEL_EXPORT,
           betaUser,
         );
         expect(result.allowed).toBe(true);
@@ -208,7 +207,7 @@ describe('Server-Side Feature Validation', () => {
 
       it('should respect rollout percentage for non-beta users', async () => {
         vi.mocked(get).mockResolvedValue({
-          [FEATURES.EXCEL_EXPORT]: {
+          [FEATURE_KEYS.EXCEL_EXPORT]: {
             enabled: true,
             rolloutPercentage: 0,
           },
@@ -221,7 +220,7 @@ describe('Server-Side Feature Validation', () => {
         };
 
         const result = await validateFeatureAccess(
-          FEATURES.EXCEL_EXPORT,
+          FEATURE_KEYS.EXCEL_EXPORT,
           normalUser,
         );
         expect(result.allowed).toBe(false);
@@ -232,18 +231,18 @@ describe('Server-Side Feature Validation', () => {
 
   describe('isPremiumFeature', () => {
     it('should return false for free tier features', () => {
-      expect(isPremiumFeature(FEATURES.BASIC_CALCULATION)).toBe(false);
-      expect(isPremiumFeature(FEATURES.PDF_IMPORT)).toBe(false);
-      expect(isPremiumFeature(FEATURES.CSV_IMPORT)).toBe(false);
-      expect(isPremiumFeature(FEATURES.MANUAL_ENTRY)).toBe(false);
+      expect(isPremiumFeature(FEATURE_KEYS.BASIC_CALCULATION)).toBe(false);
+      expect(isPremiumFeature(FEATURE_KEYS.PDF_IMPORT)).toBe(false);
+      expect(isPremiumFeature(FEATURE_KEYS.CSV_IMPORT)).toBe(false);
+      expect(isPremiumFeature(FEATURE_KEYS.MANUAL_ENTRY)).toBe(false);
     });
 
     it('should return true for premium-only features', () => {
-      expect(isPremiumFeature(FEATURES.EXCEL_EXPORT)).toBe(true);
-      expect(isPremiumFeature(FEATURES.PDF_EXPORT)).toBe(true);
-      expect(isPremiumFeature(FEATURES.EMPLOYER_LETTERS)).toBe(true);
-      expect(isPremiumFeature(FEATURES.CLOUD_SYNC)).toBe(true);
-      expect(isPremiumFeature(FEATURES.ADVANCED_ANALYTICS)).toBe(true);
+      expect(isPremiumFeature(FEATURE_KEYS.EXCEL_EXPORT)).toBe(true);
+      expect(isPremiumFeature(FEATURE_KEYS.PDF_EXPORT)).toBe(true);
+      expect(isPremiumFeature(FEATURE_KEYS.EMPLOYER_LETTERS)).toBe(true);
+      expect(isPremiumFeature(FEATURE_KEYS.CLOUD_SYNC)).toBe(true);
+      expect(isPremiumFeature(FEATURE_KEYS.ADVANCED_ANALYTICS)).toBe(true);
     });
   });
 
@@ -256,11 +255,11 @@ describe('Server-Side Feature Validation', () => {
 
       const features = await getAccessibleFeatures(freeUser);
 
-      expect(features).toContain(FEATURES.BASIC_CALCULATION);
-      expect(features).toContain(FEATURES.PDF_IMPORT);
-      expect(features).toContain(FEATURES.CSV_IMPORT);
-      expect(features).toContain(FEATURES.MANUAL_ENTRY);
-      expect(features).not.toContain(FEATURES.EXCEL_EXPORT);
+      expect(features).toContain(FEATURE_KEYS.BASIC_CALCULATION);
+      expect(features).toContain(FEATURE_KEYS.PDF_IMPORT);
+      expect(features).toContain(FEATURE_KEYS.CSV_IMPORT);
+      expect(features).toContain(FEATURE_KEYS.MANUAL_ENTRY);
+      expect(features).not.toContain(FEATURE_KEYS.EXCEL_EXPORT);
       expect(features.length).toBe(4);
     });
 
@@ -281,10 +280,10 @@ describe('Server-Side Feature Validation', () => {
 
     it('should exclude disabled features', async () => {
       vi.mocked(get).mockResolvedValue({
-        [FEATURES.BASIC_CALCULATION]: { enabled: true },
-        [FEATURES.PDF_IMPORT]: { enabled: false }, // Disabled
-        [FEATURES.CSV_IMPORT]: { enabled: true },
-        [FEATURES.MANUAL_ENTRY]: { enabled: true },
+        [FEATURE_KEYS.BASIC_CALCULATION]: { enabled: true },
+        [FEATURE_KEYS.PDF_IMPORT]: { enabled: false }, // Disabled
+        [FEATURE_KEYS.CSV_IMPORT]: { enabled: true },
+        [FEATURE_KEYS.MANUAL_ENTRY]: { enabled: true },
       });
 
       const freeUser: UserTier = {
@@ -294,18 +293,18 @@ describe('Server-Side Feature Validation', () => {
 
       const features = await getAccessibleFeatures(freeUser);
 
-      expect(features).toContain(FEATURES.BASIC_CALCULATION);
-      expect(features).not.toContain(FEATURES.PDF_IMPORT);
-      expect(features).toContain(FEATURES.CSV_IMPORT);
-      expect(features).toContain(FEATURES.MANUAL_ENTRY);
+      expect(features).toContain(FEATURE_KEYS.BASIC_CALCULATION);
+      expect(features).not.toContain(FEATURE_KEYS.PDF_IMPORT);
+      expect(features).toContain(FEATURE_KEYS.CSV_IMPORT);
+      expect(features).toContain(FEATURE_KEYS.MANUAL_ENTRY);
     });
 
     it('should return empty array if all features are disabled', async () => {
       vi.mocked(get).mockResolvedValue({
-        [FEATURES.BASIC_CALCULATION]: { enabled: false },
-        [FEATURES.PDF_IMPORT]: { enabled: false },
-        [FEATURES.CSV_IMPORT]: { enabled: false },
-        [FEATURES.MANUAL_ENTRY]: { enabled: false },
+        [FEATURE_KEYS.BASIC_CALCULATION]: { enabled: false },
+        [FEATURE_KEYS.PDF_IMPORT]: { enabled: false },
+        [FEATURE_KEYS.CSV_IMPORT]: { enabled: false },
+        [FEATURE_KEYS.MANUAL_ENTRY]: { enabled: false },
       });
 
       const freeUser: UserTier = {
@@ -319,7 +318,7 @@ describe('Server-Side Feature Validation', () => {
 
     it('should respect beta users', async () => {
       vi.mocked(get).mockResolvedValue({
-        [FEATURES.EXCEL_EXPORT]: {
+        [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 0,
           betaUsers: ['beta_user'],
@@ -333,7 +332,7 @@ describe('Server-Side Feature Validation', () => {
       };
 
       const features = await getAccessibleFeatures(betaUser);
-      expect(features).toContain(FEATURES.EXCEL_EXPORT);
+      expect(features).toContain(FEATURE_KEYS.EXCEL_EXPORT);
     });
   });
 
@@ -346,9 +345,9 @@ describe('Server-Side Feature Validation', () => {
       };
 
       const premiumFeatures = [
-        FEATURES.EXCEL_EXPORT,
-        FEATURES.PDF_EXPORT,
-        FEATURES.EMPLOYER_LETTERS,
+        FEATURE_KEYS.EXCEL_EXPORT,
+        FEATURE_KEYS.PDF_EXPORT,
+        FEATURE_KEYS.EMPLOYER_LETTERS,
       ];
 
       for (const feature of premiumFeatures) {
@@ -366,7 +365,7 @@ describe('Server-Side Feature Validation', () => {
       };
 
       const result = await validateFeatureAccess(
-        FEATURES.EXCEL_EXPORT,
+        FEATURE_KEYS.EXCEL_EXPORT,
         expiredUser,
       );
       expect(result.allowed).toBe(false);

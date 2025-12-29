@@ -1,16 +1,20 @@
 // Server-Side Feature Validation
 // CRITICAL: Always validate premium features on the server to prevent client-side bypass
 // Client-side checks are for UX only - server must be the source of truth
+//
+// DEPRECATED: This module is deprecated in favor of api-guards.ts
+// Use assertFeatureAccess() or withFeatureAccess() from api-guards.ts instead
 
-import { isFeatureEnabled as isFeatureEnabledEdgeConfig } from './edgeConfigFlags';
-import { TIER_CONFIG, TIERS, type FeatureId } from './features';
+import { getFeaturePolicy, type FeatureFlagKey } from './edgeConfigFlags';
+import { TIERS, type TierId } from './features';
 
 /**
  * User tier information
+ * @deprecated Use UserContext from api-guards.ts instead
  */
 export interface UserTier {
   userId: string;
-  tier: 'free' | 'premium';
+  tier: TierId; // Changed from 'free' | 'premium' to support ANONYMOUS
   subscriptionActive?: boolean;
 }
 
@@ -23,12 +27,31 @@ export interface FeatureAccessResult {
 }
 
 /**
+ * Get numeric tier level for comparison
+ * Higher number = higher tier
+ */
+function getTierLevel(tier: TierId): number {
+  switch (tier) {
+    case TIERS.ANONYMOUS:
+      return 0;
+    case TIERS.FREE:
+      return 1;
+    case TIERS.PREMIUM:
+      return 2;
+    default:
+      return 0; // Fail closed
+  }
+}
+
+/**
  * SERVER-SIDE ONLY: Validate if a user can access a premium feature
+ *
+ * @deprecated Use assertFeatureAccess() or checkFeatureAccess() from api-guards.ts instead
  *
  * This function should be called on ALL API routes that provide premium functionality.
  * Client-side checks can be bypassed - NEVER trust client-side feature flags for access control.
  *
- * @param featureId - The feature to check
+ * @param featureKey - The feature to check
  * @param userTier - The user's tier information (from your auth/database)
  * @returns Promise<FeatureAccessResult> indicating if access is allowed
  *
@@ -38,7 +61,7 @@ export interface FeatureAccessResult {
  *   const { userId } = await getAuthUser(request);
  *   const userTier = await getUserTier(userId);
  *
- *   const access = await validateFeatureAccess(FEATURES.EXCEL_EXPORT, userTier);
+ *   const access = await validateFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT, userTier);
  *   if (!access.allowed) {
  *     return new Response('Unauthorized', { status: 403 });
  *   }
@@ -47,40 +70,33 @@ export interface FeatureAccessResult {
  * }
  */
 export async function validateFeatureAccess(
-  featureId: FeatureId,
+  featureKey: FeatureFlagKey,
   userTier: UserTier,
 ): Promise<FeatureAccessResult> {
+  // Get feature policy from Edge Config
+  const policy = await getFeaturePolicy(featureKey);
+
   // 1. Check if feature is enabled via feature flags
-  // Note: featureId from FEATURES uses snake_case which matches FEATURE_KEYS
-  const isEnabled = await isFeatureEnabledEdgeConfig(
-    featureId as any,
-    userTier.userId,
-  );
-  if (!isEnabled) {
+  if (!policy.enabled) {
     return {
       allowed: false,
       reason: 'feature_disabled',
     };
   }
 
-  // 2. Check if user's tier includes this feature
-  const requiredFeatures = TIER_CONFIG[userTier.tier];
-  if (!requiredFeatures.includes(featureId)) {
+  // 2. Check tier level
+  const userTierLevel = getTierLevel(userTier.tier);
+  const requiredTierLevel = getTierLevel(policy.minTier);
+
+  if (userTierLevel < requiredTierLevel) {
     return {
       allowed: false,
       reason: 'tier_restriction',
     };
   }
 
-  // 3. For premium-only features, verify subscription is active
-  const freeFeatures = TIER_CONFIG[TIERS.FREE];
-  const isPremiumOnlyFeature = !freeFeatures.includes(featureId);
-
-  if (
-    isPremiumOnlyFeature &&
-    userTier.tier === TIERS.PREMIUM &&
-    !userTier.subscriptionActive
-  ) {
+  // 3. For premium features, verify subscription is active
+  if (policy.minTier === TIERS.PREMIUM && !userTier.subscriptionActive) {
     return {
       allowed: false,
       reason: 'no_subscription',
@@ -93,19 +109,23 @@ export async function validateFeatureAccess(
 /**
  * SERVER-SIDE ONLY: Check if a feature is premium-only
  *
- * @param featureId - The feature to check
- * @returns boolean indicating if the feature requires premium tier
+ * @deprecated Use getFeaturePolicy() from edgeConfigFlags.ts and check policy.minTier instead
+ *
+ * @param featureKey - The feature to check
+ * @returns Promise<boolean> indicating if the feature requires premium tier
  */
-export function isPremiumFeature(featureId: FeatureId): boolean {
-  const freeFeatures = TIER_CONFIG[TIERS.FREE];
-  return !freeFeatures.includes(featureId);
+export async function isPremiumFeature(featureKey: FeatureFlagKey): Promise<boolean> {
+  const policy = await getFeaturePolicy(featureKey);
+  return policy.minTier === TIERS.PREMIUM;
 }
 
 /**
  * SERVER-SIDE ONLY: Get list of features accessible to a user
  *
+ * @deprecated Use getAllFeaturePolicies() from edgeConfigFlags.ts and filter based on tier
+ *
  * @param userTier - The user's tier information
- * @returns Promise<FeatureId[]> list of accessible features
+ * @returns Promise<FeatureFlagKey[]> list of accessible features
  *
  * @example
  * const features = await getAccessibleFeatures(userTier);
@@ -113,18 +133,15 @@ export function isPremiumFeature(featureId: FeatureId): boolean {
  */
 export async function getAccessibleFeatures(
   userTier: UserTier,
-): Promise<FeatureId[]> {
-  const tierFeatures = TIER_CONFIG[userTier.tier];
+): Promise<FeatureFlagKey[]> {
+  const { FEATURE_KEYS } = await import('./edgeConfigFlags');
+  const accessibleFeatures: FeatureFlagKey[] = [];
 
-  // Filter by enabled feature flags
-  const accessibleFeatures: FeatureId[] = [];
-  for (const feature of tierFeatures) {
-    const isEnabled = await isFeatureEnabledEdgeConfig(
-      feature as any,
-      userTier.userId,
-    );
-    if (isEnabled) {
-      accessibleFeatures.push(feature);
+  // Check each feature using the new policy-based system
+  for (const featureKey of Object.values(FEATURE_KEYS)) {
+    const result = await validateFeatureAccess(featureKey, userTier);
+    if (result.allowed) {
+      accessibleFeatures.push(featureKey);
     }
   }
 
