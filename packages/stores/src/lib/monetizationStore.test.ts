@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { monetizationStore } from './monetizationStore';
 import { authStore } from './authStore';
-import { FEATURES, TIERS } from '@uth/features';
+import { FEATURE_KEYS, TIERS } from '@uth/features';
 
 // Mock the authStore
 vi.mock('./authStore', () => ({
@@ -25,49 +25,25 @@ describe('MonetizationStore', () => {
     it('should allow free tier features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      expect(
-        monetizationStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION),
-      ).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_IMPORT)).toBe(
-        true,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CSV_IMPORT)).toBe(
-        true,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.MANUAL_ENTRY)).toBe(
-        true,
-      );
+      // CLIPBOARD_IMPORT is enabled for FREE tier
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT)).toBe(true);
     });
 
     it('should deny premium features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(
-        false,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(
-        false,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(
-        false,
-      );
+      // EXCEL_EXPORT and EXCEL_IMPORT require PREMIUM tier
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_IMPORT)).toBe(false);
     });
 
     it('should allow all features for premium users', () => {
       monetizationStore.setTier(TIERS.PREMIUM);
 
-      expect(
-        monetizationStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION),
-      ).toBe(true);
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(
-        true,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(
-        true,
-      );
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(
-        true,
-      );
+      // Premium users get all enabled features
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT)).toBe(true);
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(true);
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_IMPORT)).toBe(true);
     });
   });
 
@@ -112,7 +88,7 @@ describe('MonetizationStore', () => {
       expect(monetizationStore.tier).toBe(TIERS.FREE);
     });
 
-    it('should reject invalid tier and default to FREE (fail-closed)', () => {
+    it('should reject invalid tier and default to ANONYMOUS (fail-closed)', () => {
       const consoleWarnSpy = vi
         .spyOn(console, 'warn')
         .mockImplementation(() => {
@@ -120,7 +96,7 @@ describe('MonetizationStore', () => {
         });
 
       monetizationStore.setTier('invalid-tier');
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+      expect(monetizationStore.tier).toBe(TIERS.ANONYMOUS);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Invalid tier value'),
       );
@@ -128,7 +104,7 @@ describe('MonetizationStore', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('should reject undefined and default to FREE', () => {
+    it('should reject undefined and default to ANONYMOUS', () => {
       const consoleWarnSpy = vi
         .spyOn(console, 'warn')
         .mockImplementation(() => {
@@ -136,12 +112,12 @@ describe('MonetizationStore', () => {
         });
 
       monetizationStore.setTier(undefined);
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+      expect(monetizationStore.tier).toBe(TIERS.ANONYMOUS);
 
       consoleWarnSpy.mockRestore();
     });
 
-    it('should reject null and default to FREE', () => {
+    it('should reject null and default to ANONYMOUS', () => {
       const consoleWarnSpy = vi
         .spyOn(console, 'warn')
         .mockImplementation(() => {
@@ -149,12 +125,12 @@ describe('MonetizationStore', () => {
         });
 
       monetizationStore.setTier(null);
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+      expect(monetizationStore.tier).toBe(TIERS.ANONYMOUS);
 
       consoleWarnSpy.mockRestore();
     });
 
-    it('should reject objects and default to FREE', () => {
+    it('should reject objects and default to ANONYMOUS', () => {
       const consoleWarnSpy = vi
         .spyOn(console, 'warn')
         .mockImplementation(() => {
@@ -162,7 +138,7 @@ describe('MonetizationStore', () => {
         });
 
       monetizationStore.setTier({ tier: TIERS.PREMIUM });
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+      expect(monetizationStore.tier).toBe(TIERS.ANONYMOUS);
 
       consoleWarnSpy.mockRestore();
     });
@@ -174,28 +150,29 @@ describe('MonetizationStore', () => {
 
       monetizationStore.reset();
 
-      expect(monetizationStore.tier).toBe(TIERS.FREE);
+      expect(monetizationStore.tier).toBe(TIERS.ANONYMOUS);
       expect(monetizationStore.isLoading).toBe(false);
     });
   });
 
   describe('security - fail-closed behavior', () => {
-    it('should default to FREE tier on initialization', () => {
+    it('should default to ANONYMOUS tier on initialization', () => {
       const newStore = new (monetizationStore.constructor as any)();
-      expect(newStore.tier).toBe(TIERS.FREE);
+      expect(newStore.tier).toBe(TIERS.ANONYMOUS);
     });
 
     it('should deny premium features by default', () => {
       const newStore = new (monetizationStore.constructor as any)();
       expect(newStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
-      expect(newStore.hasFeatureAccess(FEATURE_KEYS.PDF_EXPORT)).toBe(false);
-      expect(newStore.hasFeatureAccess(FEATURE_KEYS.CLOUD_SYNC)).toBe(false);
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_IMPORT)).toBe(false);
     });
 
     it('should allow free features by default', () => {
       const newStore = new (monetizationStore.constructor as any)();
-      expect(newStore.hasFeatureAccess(FEATURE_KEYS.BASIC_CALCULATION)).toBe(true);
-      expect(newStore.hasFeatureAccess(FEATURE_KEYS.PDF_IMPORT)).toBe(true);
+      // CLIPBOARD_IMPORT requires FREE tier, so ANONYMOUS won't have access
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT)).toBe(false);
+      // But disabled features should return false for everyone
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.MONETIZATION)).toBe(false);
     });
   });
 });

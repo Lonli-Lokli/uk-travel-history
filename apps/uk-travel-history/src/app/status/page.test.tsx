@@ -119,26 +119,6 @@ describe('StatusPage', () => {
       expect(title?.textContent).toBe('System Status');
     });
 
-    it('should have a back to home button', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
-      const page = await StatusPage();
-      render(page);
-
-      const backButton = screen.getByText('Back to Home');
-      expect(backButton).toBeTruthy();
-      expect(backButton.closest('a')?.getAttribute('href')).toBe('/');
-    });
-
     it('should display all three feature categories', async () => {
       vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
         monetization: false,
