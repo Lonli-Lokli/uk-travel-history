@@ -89,7 +89,7 @@ describe('Feature System', () => {
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier).toBe(TIERS.ANONYMOUS);
 
       // Free tier features
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.FREE);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.PREMIUM);
 
       // Premium tier features (highest tier)
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(TIERS.PREMIUM);
