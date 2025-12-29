@@ -32,7 +32,7 @@ export default appFlow.page<void>(async function* AccountPage() {
   // Handle missing database user: show error UI instead of redirecting
   // This can happen if webhook failed or database record was deleted
   if (!dbUser) {
-    logger.error('User exists in Clerk but not in database', {
+    logger.error('User exists in Clerk but not in database', undefined, {
       extra: {
         userId: user.uid,
         email: user.email,
