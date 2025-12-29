@@ -90,35 +90,72 @@ EDGE_CONFIG=https://edge-config.vercel.com/...
 
 ## Edge Config Format
 
+The feature policies are stored under the `feature-policies` key in Vercel Edge Config.
+
 ```json
 {
-  "feature_flags": {
+  "feature-policies": {
     "auth": {
       "enabled": true,
-      "rollout_percentage": 100
+      "minTier": "anonymous",
+      "rolloutPercentage": 100
     },
-    "export_premium": {
+    "pdf_import": {
       "enabled": true,
-      "rollout_percentage": 50,
-      "beta_users": ["user_123", "user_456"]
+      "minTier": "premium",
+      "rolloutPercentage": 50,
+      "betaUsers": ["user_123", "user_456"],
+      "allowlist": ["admin_user_id"],
+      "denylist": ["blocked_user_id"]
     }
   }
 }
 ```
 
+### Policy Fields
+
+- **enabled** (boolean): Global kill switch - if false, feature is disabled for everyone
+- **minTier** (string): Minimum tier required - "anonymous", "free", or "premium"
+- **rolloutPercentage** (number, optional): Percentage of users to enable (0-100)
+- **betaUsers** (string[], optional): User IDs to bypass all restrictions
+- **allowlist** (string[], optional): User IDs to bypass tier requirements
+- **denylist** (string[], optional): User IDs to block regardless of tier
+
 ## API Reference
+
+### Server-Side Access Control (IMPORTANT)
+
+⚠️ **Security Warning**: Functions in this package check feature flags but **DO NOT** validate user tier or subscription status. For proper access control in API routes, use the guards from `@uth/features/server`:
+
+```typescript
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+
+export async function POST(request: NextRequest) {
+  // This validates tier, subscription, and all feature policies
+  const userContext = await assertFeatureAccess(request, FEATURE_KEYS.PDF_IMPORT);
+
+  // Safe to proceed - user has been validated
+  return processPdfImport();
+}
+```
 
 ### `isFeatureEnabled(key, userId?): Promise<boolean>`
 
 Check if a feature is enabled for a user.
 
+**WARNING**: Does NOT check user tier or subscription. For access control, use `assertFeatureAccess()` from `@uth/features/server`.
+
 ### `getAllFeatureFlags(userId?): Promise<Record<FeatureFlagKey, boolean>>`
 
 Get all feature flags as an object.
 
-### `getFeatureFlagValue(key): Promise<FeatureFlagConfig | null>`
+**WARNING**: Does NOT check user tier or subscription. For access control, use `assertFeatureAccess()` from `@uth/features/server`.
 
-Get raw feature flag configuration.
+### `getFeaturePolicy(key): Promise<FeaturePolicy>`
+
+Get raw feature policy configuration from Edge Config.
+
+**WARNING**: Does NOT validate user tier or subscription. For access control, use `checkFeatureAccess()` from `@uth/features/server`.
 
 ## Rollout Strategy
 

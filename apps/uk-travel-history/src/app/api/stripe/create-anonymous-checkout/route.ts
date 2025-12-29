@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { logger } from '@uth/utils';
-import { isFeatureEnabled, FEATURE_KEYS } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -12,6 +12,9 @@ interface AnonymousCheckoutRequest {
 
 /**
  * Create Stripe Checkout session for anonymous users (payment before registration).
+ *
+ * FEATURE: PAYMENTS (ANONYMOUS tier when enabled)
+ * Enforces feature access via assertFeatureAccess with full validation
  *
  * SECURITY: This endpoint does NOT require authentication.
  * Users pay first, then create account on return from Stripe.
@@ -26,18 +29,10 @@ interface AnonymousCheckoutRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check if Stripe checkout is enabled via feature flags
-    const stripeEnabled = await isFeatureEnabled(FEATURE_KEYS.PAYMENTS);
-    if (!stripeEnabled) {
-      logger.warn(
-        '[Anonymous Checkout] Stripe checkout feature is disabled',
-        undefined,
-      );
-      return NextResponse.json(
-        { error: 'Stripe checkout is not available' },
-        { status: 403 },
-      );
-    }
+    // Enforce feature access - Payments feature
+    // This validates: feature enabled, rollout percentage, allowlist/denylist
+    // For anonymous users, userContext.tier will be ANONYMOUS
+    await assertFeatureAccess(request, FEATURE_KEYS.PAYMENTS);
 
     const body = (await request.json()) as AnonymousCheckoutRequest;
     const { billingPeriod } = body;

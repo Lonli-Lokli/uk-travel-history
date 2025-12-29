@@ -49,7 +49,7 @@ describe('Feature System', () => {
         .filter(([_, policy]) => policy.minTier === TIERS.FREE)
         .map(([featureKey]) => featureKey);
 
-      expect(freeFeatures).toContain(FEATURE_KEYS.PDF_IMPORT);
+      expect(freeFeatures).not.toContain(FEATURE_KEYS.PDF_IMPORT);
       // CLIPBOARD_IMPORT is now ANONYMOUS tier, not FREE
     });
 
@@ -89,7 +89,7 @@ describe('Feature System', () => {
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier).toBe(TIERS.ANONYMOUS);
 
       // Free tier features
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.FREE);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.PREMIUM);
 
       // Premium tier features (highest tier)
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(TIERS.PREMIUM);

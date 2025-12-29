@@ -2,6 +2,9 @@
  * POST /api/billing/checkout
  * Creates a checkout session for one-time payment
  * Creates purchase_intent record and redirects to payment provider
+ *
+ * FEATURE: PAYMENTS (ANONYMOUS tier when enabled)
+ * Enforces feature access via assertFeatureAccess
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,11 +15,16 @@ import {
 } from '@uth/db';
 import { createCheckoutSession, PaymentPlan } from '@uth/payments-server';
 import { getRouteLogger } from '@uth/flow';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce feature access - Payments feature
+    // This validates against Edge Config and prevents bypass attempts
+    await assertFeatureAccess(request, FEATURE_KEYS.PAYMENTS);
+
     const body = await request.json();
     const { email } = body;
 
@@ -89,6 +97,11 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
+    // If assertFeatureAccess throws a NextResponse, return it directly
+    if (error instanceof NextResponse) {
+      return error;
+    }
+
     getRouteLogger().error('Checkout error', error);
     return NextResponse.json(
       { error: 'Failed to create checkout session' },

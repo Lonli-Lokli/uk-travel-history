@@ -320,13 +320,13 @@ describe('Edge Config Feature Flags', () => {
       await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
       // Logger.error now formats the output differently:
-      // logger.error(message, error, { featureKey }) results in:
-      // console.error(message, { error, featureKey })
+      // The error is now logged in loadPoliciesFromEdgeConfig()
+      // logger.error(message, error) results in:
+      // console.error(message, { error })
       expect(consoleSpy).toHaveBeenCalledWith(
-        '[Feature Flags] Error checking feature flag',
+        '[Feature Policies] Error loading from Edge Config',
         expect.objectContaining({
           error: expect.any(Error),
-          featureKey: FEATURE_KEYS.AUTH,
         }),
       );
 
