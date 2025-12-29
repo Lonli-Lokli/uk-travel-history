@@ -77,7 +77,7 @@ describe('API Feature Guards', () => {
         );
         expect(result.allowed).toBe(true);
 
-        // Test with a disabled feature (PDF_EXPORT is disabled by default)
+        // Test with a disabled feature (PDF_IMPORT is disabled by default)
         const result2 = await checkFeatureAccess(
           FEATURE_KEYS.PDF_IMPORT,
           userContext,
@@ -114,7 +114,7 @@ describe('API Feature Guards', () => {
         };
 
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.PDF_IMPORT,
+          FEATURE_KEYS.CLIPBOARD_IMPORT,
           userContext,
         );
 
@@ -130,15 +130,20 @@ describe('API Feature Guards', () => {
         };
 
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.PDF_IMPORT,
+          FEATURE_KEYS.CLIPBOARD_IMPORT,
           userContext,
         );
 
         expect(result.allowed).toBe(true);
       });
 
-      it('should allow access to free features for unauthenticated users', async () => {
-        const result = await checkFeatureAccess(FEATURE_KEYS.PDF_IMPORT, null as any);
+      it('should allow access to ANONYMOUS features for unauthenticated users', async () => {
+        const anonymousContext: UserContext = {
+          userId: null,
+          tier: TIERS.ANONYMOUS,
+          hasActiveSubscription: false,
+        };
+        const result = await checkFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT, anonymousContext);
 
         expect(result.allowed).toBe(true);
       });
@@ -179,14 +184,19 @@ describe('API Feature Guards', () => {
       });
 
       it('should deny access to premium features for unauthenticated users', async () => {
+        const anonymousContext: UserContext = {
+          userId: null,
+          tier: TIERS.ANONYMOUS,
+          hasActiveSubscription: false,
+        };
         const result = await checkFeatureAccess(
           FEATURE_KEYS.EXCEL_EXPORT,
-          null as any,
+          anonymousContext,
         );
 
         expect(result.allowed).toBe(false);
-        expect(result.reason).toBe('unauthenticated');
-        expect(result.statusCode).toBe(401);
+        expect(result.reason).toBe('tier_restriction');
+        expect(result.statusCode).toBe(403);
       });
     });
 
@@ -304,49 +314,48 @@ describe('API Feature Guards', () => {
 
   describe('Default Feature Policies', () => {
     it('should have correct default policies for all features', () => {
-      // Verify free features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
+      // Verify ANONYMOUS tier features are configured correctly
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT]).toMatchObject({
         enabled: true,
-        mode: '',
+        minTier: TIERS.ANONYMOUS,
+      });
+
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH]).toMatchObject({
+        enabled: false,
+        minTier: TIERS.ANONYMOUS,
+      });
+
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION]).toMatchObject({
+        enabled: false,
+        minTier: TIERS.ANONYMOUS,
+      });
+
+      // Verify FREE tier features are configured correctly
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
+        enabled: false,
         minTier: TIERS.FREE,
+      });
+
+      // Verify PREMIUM tier features are configured correctly
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT]).toMatchObject({
+        enabled: true,
+        minTier: TIERS.PREMIUM,
       });
 
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT]).toMatchObject({
         enabled: true,
-        mode: 'free',
-        minTier: TIERS.FREE,
+        minTier: TIERS.PREMIUM,
       });
 
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH]).toMatchObject(
-        {
-          enabled: true,
-          mode: 'free',
-          minTier: TIERS.FREE,
-        },
-      );
+      // Verify disabled UI features
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.RISK_CHART]).toMatchObject({
+        enabled: false,
+        minTier: TIERS.ANONYMOUS,
+      });
 
-      // Verify premium features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT]).toMatchObject(
-        {
-          enabled: true,
-          mode: 'paid',
-          minTier: TIERS.PREMIUM,
-        },
-      );
-
-      // Verify coming soon features are disabled
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS]).toMatchObject({
         enabled: false,
-        mode: 'paid',
-        minTier: TIERS.PREMIUM,
-      });
-
-      expect(
-        DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.RISK_CHART],
-      ).toMatchObject({
-        enabled: false,
-        mode: 'paid',
-        minTier: TIERS.PREMIUM,
+        minTier: TIERS.ANONYMOUS,
       });
     });
   });
@@ -495,7 +504,7 @@ describe('API Feature Guards', () => {
       expect(context?.hasActiveSubscription).toBe(true);
     });
 
-    it('should return null for unauthenticated Clerk user', async () => {
+    it('should return ANONYMOUS tier for unauthenticated Clerk user', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
       const { auth } = await import('@clerk/nextjs/server');
@@ -504,7 +513,11 @@ describe('API Feature Guards', () => {
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
 
-      expect(context).toBeNull();
+      expect(context).toEqual({
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      });
     });
 
     it('should handle Firebase auth mode', async () => {
@@ -533,7 +546,7 @@ describe('API Feature Guards', () => {
       expect(context?.userId).toBe('firebase-user-123');
     });
 
-    it('should return null when Firebase auth fails', async () => {
+    it('should return ANONYMOUS tier when Firebase auth fails', async () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
       const { getSessionFromRequest } = await import('@uth/auth-server');
@@ -544,10 +557,14 @@ describe('API Feature Guards', () => {
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
 
-      expect(context).toBeNull();
+      expect(context).toEqual({
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      });
     });
 
-    it('should return null when getUserContext throws error', async () => {
+    it('should return ANONYMOUS tier when getUserContext throws error', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
       const { auth } = await import('@clerk/nextjs/server');
@@ -556,7 +573,11 @@ describe('API Feature Guards', () => {
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
 
-      expect(context).toBeNull();
+      expect(context).toEqual({
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      });
       expect(mockLogger.error).toHaveBeenCalledWith(
         '[Feature Guards] Error extracting user context',
         expect.any(Error),
@@ -597,7 +618,7 @@ describe('API Feature Guards', () => {
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURE_KEYS.EXCEL_EXPORT,
+            featureKey: FEATURE_KEYS.EXCEL_EXPORT,
             allowed: true,
           }),
         }),
@@ -630,7 +651,7 @@ describe('API Feature Guards', () => {
         '[Feature Access] Denied',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURE_KEYS.EXCEL_EXPORT,
+            featureKey: FEATURE_KEYS.EXCEL_EXPORT,
             allowed: false,
             reason: expect.any(String),
           }),
@@ -646,10 +667,10 @@ describe('API Feature Guards', () => {
         method: 'POST',
       });
 
-      // PDF_IMPORT is a free feature, so it should allow access even without auth
+      // CLIPBOARD_IMPORT is an ANONYMOUS feature, so it should allow access even without auth
       const context = await assertFeatureAccess(
         request,
-        FEATURE_KEYS.PDF_IMPORT,
+        FEATURE_KEYS.CLIPBOARD_IMPORT,
       );
 
       // Should log access decision
@@ -657,14 +678,18 @@ describe('API Feature Guards', () => {
         '[Feature Access] Allowed',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureId: FEATURE_KEYS.PDF_IMPORT,
+            featureKey: FEATURE_KEYS.CLIPBOARD_IMPORT,
             allowed: true,
             path: '/api/parse',
             method: 'POST',
           }),
         }),
       );
-      expect(context).toBeNull(); // No user context for unauthenticated users
+      expect(context).toEqual({
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      }); // ANONYMOUS tier for unauthenticated users
     });
   });
 
@@ -725,7 +750,7 @@ describe('API Feature Guards', () => {
       const response = await wrappedHandler(request);
 
       expect(mockHandler).not.toHaveBeenCalled();
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403); // tier_restriction, not unauthenticated
       const body = await response.json();
       expect(body).toHaveProperty('error');
       expect(body).toHaveProperty('code');
@@ -746,7 +771,7 @@ describe('API Feature Guards', () => {
 
       const mockHandler = vi.fn().mockRejectedValue(new Error('Handler error'));
       const wrappedHandler = withFeatureAccess(
-        FEATURE_KEYS.PDF_IMPORT,
+        FEATURE_KEYS.CLIPBOARD_IMPORT,
         mockHandler,
       );
       const request = new NextRequest('http://localhost/api/parse');
@@ -760,7 +785,7 @@ describe('API Feature Guards', () => {
       );
     });
 
-    it('should pass null user context for free features accessed without auth', async () => {
+    it('should pass ANONYMOUS user context for ANONYMOUS features accessed without auth', async () => {
       const { auth } = await import('@clerk/nextjs/server');
       (auth as any).mockResolvedValue({ userId: null });
 
@@ -769,14 +794,18 @@ describe('API Feature Guards', () => {
         .mockResolvedValue(NextResponse.json({ success: true }));
 
       const wrappedHandler = withFeatureAccess(
-        FEATURE_KEYS.PDF_IMPORT,
+        FEATURE_KEYS.CLIPBOARD_IMPORT,
         mockHandler,
       );
       const request = new NextRequest('http://localhost/api/parse');
 
       const response = await wrappedHandler(request);
 
-      expect(mockHandler).toHaveBeenCalledWith(request, null);
+      expect(mockHandler).toHaveBeenCalledWith(request, {
+        userId: null,
+        tier: TIERS.ANONYMOUS,
+        hasActiveSubscription: false,
+      });
       expect(response.status).toBe(200);
     });
   });

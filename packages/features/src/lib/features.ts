@@ -70,7 +70,7 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
   },
   [FEATURE_KEYS.CLIPBOARD_IMPORT]: {
     enabled: true,
-    minTier: TIERS.FREE,
+    minTier: TIERS.ANONYMOUS,
   },
 
   // UI features (ANONYMOUS - available to all)
