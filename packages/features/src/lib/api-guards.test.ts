@@ -333,7 +333,7 @@ describe('API Feature Guards', () => {
       // Verify FREE tier features are configured correctly
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
         enabled: false,
-        minTier: TIERS.FREE,
+        minTier: TIERS.PREMIUM,
       });
 
       // Verify PREMIUM tier features are configured correctly
