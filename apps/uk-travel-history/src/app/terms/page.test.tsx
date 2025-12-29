@@ -8,13 +8,6 @@ describe('TermsPage', () => {
     expect(screen.getByText('Terms and Conditions')).toBeTruthy();
   });
 
-  it('should have a back button', () => {
-    render(<TermsPage />);
-    const backButton = screen.getByRole('link', { name: /back to home/i });
-    expect(backButton).toBeTruthy();
-    expect(backButton.getAttribute('href')).toBe('/');
-  });
-
   it('should have last updated date', () => {
     render(<TermsPage />);
     expect(screen.getByText(/Last updated:/i)).toBeTruthy();

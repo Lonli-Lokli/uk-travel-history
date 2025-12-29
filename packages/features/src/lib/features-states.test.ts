@@ -50,7 +50,7 @@ describe('Feature System', () => {
         .map(([featureKey]) => featureKey);
 
       expect(freeFeatures).toContain(FEATURE_KEYS.PDF_IMPORT);
-      expect(freeFeatures).toContain(FEATURE_KEYS.CLIPBOARD_IMPORT);
+      // CLIPBOARD_IMPORT is now ANONYMOUS tier, not FREE
     });
 
     it('should define premium tier features', () => {
@@ -86,10 +86,10 @@ describe('Feature System', () => {
       // Master switches - ANONYMOUS (lowest tier)
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].minTier).toBe(TIERS.ANONYMOUS);
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH].minTier).toBe(TIERS.ANONYMOUS);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier).toBe(TIERS.ANONYMOUS);
 
       // Free tier features
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.FREE);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier).toBe(TIERS.FREE);
 
       // Premium tier features (highest tier)
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(TIERS.PREMIUM);

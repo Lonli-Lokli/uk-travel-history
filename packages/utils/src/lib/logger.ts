@@ -211,7 +211,13 @@ function buildSentryScope(
  * Get current environment
  */
 export const getEnvironment = (): 'production' | 'development' => {
-  switch (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) {
+  // Priority: NEXT_PUBLIC_VERCEL_ENV > VERCEL_ENV > NODE_ENV
+  const env =
+    process.env.NEXT_PUBLIC_VERCEL_ENV ??
+    process.env.VERCEL_ENV ??
+    process.env.NODE_ENV;
+
+  switch (env) {
     case 'production':
       return 'production';
     default:

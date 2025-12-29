@@ -1,15 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
-import { configureRouteLogger } from '@/lib/routeLogger';
+import { configureRouteLogger } from '@uth/flow';
 
 // Mock dependencies
 vi.mock('@uth/features/server', () => ({
   assertFeatureAccess: vi.fn(),
-}));
-
-vi.mock('@uth/features', () => ({
-  FEATURES: {
+  FEATURE_KEYS: {
     EXCEL_EXPORT: 'excel_export',
   },
 }));

@@ -5,8 +5,8 @@
 // DEPRECATED: This module is deprecated in favor of api-guards.ts
 // Use assertFeatureAccess() or withFeatureAccess() from api-guards.ts instead
 
-import { getFeaturePolicy, type FeatureFlagKey } from './edgeConfigFlags';
-import { TIERS, type TierId } from './features';
+import { getFeaturePolicy } from './features';
+import { TIERS, type TierId, type FeatureFlagKey } from './shapes';
 
 /**
  * User tier information
@@ -134,7 +134,7 @@ export async function isPremiumFeature(featureKey: FeatureFlagKey): Promise<bool
 export async function getAccessibleFeatures(
   userTier: UserTier,
 ): Promise<FeatureFlagKey[]> {
-  const { FEATURE_KEYS } = await import('./edgeConfigFlags');
+  const { FEATURE_KEYS } = await import('./shapes');
   const accessibleFeatures: FeatureFlagKey[] = [];
 
   // Check each feature using the new policy-based system
@@ -162,7 +162,7 @@ export async function getAccessibleFeatures(
  * });
  */
 export function withFeatureAccess(
-  _featureId: FeatureId,
+  _featureId: FeatureFlagKey,
   _handler: (request: Request) => Promise<Response>,
 ) {
   return async (_request: Request): Promise<Response> => {

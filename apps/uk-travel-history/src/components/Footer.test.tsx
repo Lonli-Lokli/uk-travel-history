@@ -22,11 +22,9 @@ describe('Footer', () => {
 
     it('should have navigation links', () => {
       render(<Footer />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
       const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
       const statusLink = screen.getByRole('link', { name: 'Status' });
 
-      expect(aboutLink).toBeTruthy();
       expect(termsLink).toBeTruthy();
       expect(statusLink).toBeTruthy();
     });
@@ -39,12 +37,6 @@ describe('Footer', () => {
   });
 
   describe('Navigation Links', () => {
-    it('should have correct href for About link', () => {
-      render(<Footer />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
-      expect(aboutLink.getAttribute('href')).toBe('/about');
-    });
-
     it('should have correct href for Terms link', () => {
       render(<Footer />);
       const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
@@ -59,8 +51,8 @@ describe('Footer', () => {
 
     it('should have proper hover states on links', () => {
       render(<Footer />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
-      expect(aboutLink.className).toContain('hover:text-slate-900');
+      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      expect(termsLink.className).toContain('hover:text-slate-900');
     });
   });
 
@@ -139,20 +131,20 @@ describe('Footer', () => {
       expect(trigger.getAttribute('aria-label')).toBe('View build information');
     });
 
-    it('should show info icon in trigger', () => {
+    it('should show copyright year in trigger', () => {
       render(<Footer />);
       const trigger = screen.getByRole('button', { name: /view build information/i });
-      const icon = trigger.querySelector('svg') || trigger.querySelector('.h-3\\.5');
-      expect(icon).toBeTruthy();
+      const currentYear = new Date().getFullYear();
+      expect(trigger.textContent).toContain(`© ${currentYear}`);
     });
   });
 
   describe('Accessibility', () => {
     it('should have focus styles on navigation links', () => {
       render(<Footer />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
-      expect(aboutLink.className).toContain('focus:outline-none');
-      expect(aboutLink.className).toContain('focus:ring-2');
+      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      expect(termsLink.className).toContain('focus:outline-none');
+      expect(termsLink.className).toContain('focus:ring-2');
     });
 
     it('should have focus styles on developer info trigger', () => {
@@ -164,8 +156,8 @@ describe('Footer', () => {
 
     it('should have proper color contrast', () => {
       render(<Footer />);
-      const aboutLink = screen.getByRole('link', { name: 'About' });
-      expect(aboutLink.className).toContain('text-slate-600');
+      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      expect(termsLink.className).toContain('text-slate-600');
     });
   });
 
@@ -191,8 +183,12 @@ describe('Footer', () => {
       render(<Footer />);
       const trigger = screen.getByRole('button', { name: /view build information/i });
 
-      // Should fall back to 'dev'
-      expect(trigger.textContent).toContain('dev');
+      // Open popover to check commit hash inside
+      fireEvent.click(trigger);
+
+      // Should fall back to 'dev' in popover content
+      const commitCode = screen.getByText('dev');
+      expect(commitCode).toBeTruthy();
 
       process.env.NEXT_PUBLIC_GIT_COMMIT_HASH = originalEnv;
     });
@@ -219,8 +215,12 @@ describe('Footer', () => {
       render(<Footer />);
       const trigger = screen.getByRole('button', { name: /view build information/i });
 
-      // Should display first 7 characters
-      expect(trigger.textContent).toContain('abc123d');
+      // Open popover to check commit hash
+      fireEvent.click(trigger);
+
+      // Should display first 7 characters in popover content
+      const commitCode = screen.getByText('abc123d');
+      expect(commitCode).toBeTruthy();
 
       process.env.NEXT_PUBLIC_GIT_COMMIT_HASH = originalEnv;
     });

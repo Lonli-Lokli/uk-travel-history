@@ -2,7 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { type ReactNode, type MouseEvent } from 'react';
-import type { FeatureId } from '@uth/features';
+import type { FeatureFlagKey } from '@uth/features';
 
 export type RenderMode = 'hide' | 'disable' | 'blur' | 'paywall';
 
@@ -10,7 +10,7 @@ export interface FeatureGateProps {
   /**
    * Feature ID to check access for
    */
-  feature: FeatureId;
+  feature: FeatureFlagKey;
 
   /**
    * Render mode when access is denied
@@ -42,7 +42,7 @@ export interface FeatureGateProps {
    * Must be provided from parent
    */
   monetizationStore: {
-    hasFeatureAccess: (featureId: FeatureId) => boolean;
+    hasFeatureAccess: (featureId: FeatureFlagKey) => boolean;
     isLoading: boolean;
     isAuthenticated: boolean;
   };

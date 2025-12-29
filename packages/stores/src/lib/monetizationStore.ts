@@ -9,8 +9,7 @@
 
 import { makeAutoObservable } from 'mobx';
 import { authStore } from './authStore';
-import { TIERS, type TierId } from '@uth/features';
-import { DEFAULT_FEATURE_POLICIES, type FeatureFlagKey } from '@uth/features/edgeConfigFlags';
+import { TIERS, type TierId, DEFAULT_FEATURE_POLICIES, type FeatureFlagKey } from '@uth/features';
 
 // Type guard to validate tier values
 function isValidTier(value: unknown): value is TierId {

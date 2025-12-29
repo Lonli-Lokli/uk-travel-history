@@ -2,14 +2,14 @@
 
 import { observer } from 'mobx-react-lite';
 import { type ReactNode, type MouseEvent } from 'react';
-import type { FeatureId } from '@uth/features';
+import type { FeatureFlagKey } from '@uth/features';
 import { useFeatureGate } from './feature-gate-context';
 
 export interface FeatureChartProps {
   /**
    * Feature ID to check access for
    */
-  feature: FeatureId;
+  feature: FeatureFlagKey;
 
   /**
    * Children to render (chart content)
