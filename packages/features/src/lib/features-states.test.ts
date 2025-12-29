@@ -49,7 +49,7 @@ describe('Feature System', () => {
         .filter(([_, policy]) => policy.minTier === TIERS.FREE)
         .map(([featureKey]) => featureKey);
 
-      expect(freeFeatures).toContain(FEATURE_KEYS.PDF_IMPORT);
+      expect(freeFeatures).not.toContain(FEATURE_KEYS.PDF_IMPORT);
       // CLIPBOARD_IMPORT is now ANONYMOUS tier, not FREE
     });
 
