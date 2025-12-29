@@ -167,10 +167,10 @@ describe('MonetizationStore', () => {
       expect(newStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_IMPORT)).toBe(false);
     });
 
-    it('should allow free features by default', () => {
+    it('should allow anonymous tier features by default', () => {
       const newStore = new (monetizationStore.constructor as any)();
-      // CLIPBOARD_IMPORT requires FREE tier, so ANONYMOUS won't have access
-      expect(newStore.hasFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT)).toBe(false);
+      // CLIPBOARD_IMPORT is available at ANONYMOUS tier
+      expect(newStore.hasFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT)).toBe(true);
       // But disabled features should return false for everyone
       expect(newStore.hasFeatureAccess(FEATURE_KEYS.MONETIZATION)).toBe(false);
     });
