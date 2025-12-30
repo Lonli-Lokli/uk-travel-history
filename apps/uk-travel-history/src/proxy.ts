@@ -142,7 +142,6 @@ const routeProtectionMiddleware = async (
     '/terms',
     '/status',
     '/travel', // Free tier access to travel tracker
-    '/api/monitoring', // Sentry monitoring landing
     '/api/parse',
     '/api/export',
     '/api/billing/checkout',
@@ -238,7 +237,7 @@ export default proxy;
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!monitoring|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],

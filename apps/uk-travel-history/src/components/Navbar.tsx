@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { observer } from 'mobx-react-lite';
 import {
@@ -58,17 +59,21 @@ export const Navbar = observer(() => {
       <div className="max-w-6xl mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full gap-4">
           {/* Logo/Branding */}
+
           <Link
             href="/"
             className="flex items-center gap-2 hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 rounded shrink-0"
             aria-label="UK Travel Parser home"
           >
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-              <UIIcon iconName="airplane" className="w-3.5 h-3.5 text-white" />
+            <div className="w-200 h-200 rounded-lg flex items-center justify-center">
+              <Image
+                src="/logo.svg"
+                alt="UK Travel Parser Logo"
+                width={200}
+                height={200}
+                className="w-200 h-200"
+              />
             </div>
-            <span className="font-semibold text-slate-900 text-sm hidden sm:inline">
-              UK Travel Parser
-            </span>
           </Link>
 
           {/* Desktop Navigation and Auth */}

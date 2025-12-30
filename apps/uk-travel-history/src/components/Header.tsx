@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { observer } from 'mobx-react-lite';
 import { SignedIn, SignedOut, UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
@@ -44,10 +45,13 @@ export const Header = observer(
               href="/"
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-                <UIIcon
-                  iconName="airplane"
-                  className="w-3.5 h-3.5 text-white"
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center">
+                <Image
+                  src="/logo.svg"
+                  alt="UK Travel Parser Logo"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7"
                 />
               </div>
               <div>

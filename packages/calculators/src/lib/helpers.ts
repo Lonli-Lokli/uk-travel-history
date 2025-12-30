@@ -64,6 +64,6 @@ export function calculateTripDurations(
       calendarDays,
       fullDays,
       isIncomplete,
-    };
+    } satisfies TripWithCalculations;
   });
 }

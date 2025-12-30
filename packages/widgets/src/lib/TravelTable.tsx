@@ -21,11 +21,8 @@ export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  // Memoize data to ensure it updates when trips change
-  const data = useMemo(
-    () => travelStore.tripsWithCalculations,
-    [travelStore.tripsWithCalculations],
-  );
+  // Access observable first so MobX tracks it
+  const data = travelStore.tripsWithCalculations;
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
