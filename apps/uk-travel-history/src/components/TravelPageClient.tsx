@@ -6,9 +6,8 @@ import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
 import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
-import { ImportPreviewDialog } from './ImportPreviewDialog';
-import { FullDataImportDialog } from './FullDataImportDialog';
 import { TravelToolbar } from './TravelToolbar';
+import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
 import {
   useClearAll,
   useCsvImport,

@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
-import { FeatureGateProvider } from '@uth/widgets';
+import { FeatureGateProvider, PaymentModal } from '@uth/widgets';
 import { authStore, monetizationStore, paymentStore } from '@uth/stores';
 import { type FeatureFlagKey } from '@uth/features';
 import type { FeaturePolicy } from '@uth/features';
@@ -17,6 +17,7 @@ interface ProvidersProps {
  * Initializes:
  * - Feature policies in monetization store (for tier-based access control)
  * - Feature gate context (provides stores to all child components)
+ * - Payment modal (global subscription modal)
  *
  * Note: Feature flags are no longer passed via provider. Instead, the useFeatureFlags
  * hook computes flags dynamically based on user tier and feature policies.
@@ -36,6 +37,7 @@ export function Providers({ children, featurePolicies }: ProvidersProps) {
       paymentStore={paymentStore}
     >
       {children}
+      <PaymentModal />
     </FeatureGateProvider>
   );
 }

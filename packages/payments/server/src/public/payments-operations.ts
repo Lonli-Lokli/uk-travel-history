@@ -12,6 +12,7 @@ import type {
   PriceIds,
   CheckoutSessionDetails,
   SubscriptionDetails,
+  PriceDetails,
 } from '../types/domain';
 import { PaymentPlan } from '../types/domain';
 import { getPaymentsProvider } from '../internal/provider-resolver';
@@ -77,6 +78,16 @@ export function isPaymentsConfigured(): boolean {
 export function getPriceIds(): PriceIds {
   const provider = getPaymentsProvider();
   return provider.getPriceIds();
+}
+
+/**
+ * Get detailed price information for all plans
+ * @returns Object with price details for each plan
+ * @throws PaymentsError if prices cannot be retrieved
+ */
+export async function getPriceDetails(): Promise<PriceDetails> {
+  const provider = getPaymentsProvider();
+  return provider.getPriceDetails();
 }
 
 /**

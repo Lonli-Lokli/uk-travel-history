@@ -25,7 +25,6 @@ import { FeatureChart, useFeatureGate } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
 import { travelStore } from '@uth/stores';
 import { FEATURE_KEYS } from '@uth/features';
-import { addDays, format } from 'date-fns';
 
 type TimelinePoint = {
   id: string;
@@ -222,7 +221,7 @@ export const RiskAreaChart: React.FC = observer(() => {
     points: TimelinePoint[];
     rowCount: number;
   }>(() => {
-    if (!displayTripBars || displayTripBars.length === 0) {
+    if (!displayTripBars || displayTripBars.length === 0 || !hasAccess) {
       return { points: [], rowCount: 0 };
     }
 

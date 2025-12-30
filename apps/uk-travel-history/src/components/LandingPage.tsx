@@ -4,12 +4,10 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, toast, UIIcon } from '@uth/ui';
 import { useCsvImport } from './hooks/useCsvImport';
 import { useClipboardImport } from './hooks/useClipboardImport';
-import { ImportPreviewDialog } from './ImportPreviewDialog';
-import { FullDataImportDialog } from './FullDataImportDialog';
 import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
-import { FeatureButton } from '@uth/widgets';
+import { FeatureButton, ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 
 export const LandingPage = () => {

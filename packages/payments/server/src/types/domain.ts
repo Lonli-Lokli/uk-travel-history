@@ -211,6 +211,29 @@ export interface PriceIds {
 }
 
 /**
+ * Price details for a single plan
+ */
+export interface PriceDetail {
+  /** Price ID */
+  id: string;
+  /** Amount in the smallest currency unit (e.g., cents for USD) */
+  unitAmount: number;
+  /** Currency code (e.g., 'usd', 'eur') */
+  currency: string;
+  /** Human-readable amount (unitAmount / 100) */
+  amount: number;
+}
+
+/**
+ * All price details for available plans
+ */
+export interface PriceDetails {
+  monthly: PriceDetail;
+  annual: PriceDetail;
+  lifetime: PriceDetail;
+}
+
+/**
  * Checkout session details (provider-agnostic)
  */
 export interface CheckoutSessionDetails {

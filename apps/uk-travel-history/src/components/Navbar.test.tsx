@@ -30,7 +30,9 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: vi.fn(() => ({ isLoaded: true, isSignedIn: false })),
   SignedIn: ({ children }: { children: React.ReactNode }) => null,
   SignedOut: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignInButton: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   UserButton: () => null,
 }));
 
@@ -238,7 +240,8 @@ describe('Navbar', () => {
     it('should have menu icon in trigger button', () => {
       render(<Navbar />);
       const menuButton = screen.getByRole('button', { name: 'Open menu' });
-      const icon = menuButton.querySelector('svg') || menuButton.querySelector('.h-5');
+      const icon =
+        menuButton.querySelector('svg') || menuButton.querySelector('.h-5');
       expect(icon).toBeTruthy();
     });
 
@@ -346,9 +349,7 @@ describe('Navbar', () => {
       const logoLink = screen.getByRole('link', {
         name: 'UK Travel Parser home',
       });
-      expect(logoLink.getAttribute('aria-label')).toBe(
-        'UK Travel Parser home'
-      );
+      expect(logoLink.getAttribute('aria-label')).toBe('UK Travel Parser home');
     });
 
     it('should have proper aria-label on mobile menu trigger', () => {
@@ -555,21 +556,21 @@ describe('Navbar', () => {
       usePathname.mockReturnValue('/about');
       const { rerender } = render(<Navbar />);
       expect(
-        screen.getByRole('link', { name: 'UK Travel Parser home' })
+        screen.getByRole('link', { name: 'UK Travel Parser home' }),
       ).toBeTruthy();
 
       // Test on Terms page
       usePathname.mockReturnValue('/terms');
       rerender(<Navbar />);
       expect(
-        screen.getByRole('link', { name: 'UK Travel Parser home' })
+        screen.getByRole('link', { name: 'UK Travel Parser home' }),
       ).toBeTruthy();
 
       // Test on regular page
       usePathname.mockReturnValue('/');
       rerender(<Navbar />);
       expect(
-        screen.getByRole('link', { name: 'UK Travel Parser home' })
+        screen.getByRole('link', { name: 'UK Travel Parser home' }),
       ).toBeTruthy();
     });
   });

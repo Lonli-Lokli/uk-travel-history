@@ -5,7 +5,19 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { authStore } from './authStore';
 import { logger } from '@uth/utils';
 
-type BillingPeriod = 'monthly' | 'annual';
+type BillingPeriod = 'monthly' | 'annual' | 'once';
+
+interface PriceData {
+  id: string;
+  amount: number;
+  currency: string;
+}
+
+interface StripePrices {
+  monthly: PriceData;
+  annual: PriceData;
+  lifetime: PriceData;
+}
 
 class PaymentStore {
   // Payment Modal State
@@ -20,8 +32,44 @@ class PaymentStore {
   isCompletingRegistration = false;
   registrationError: string | null = null;
 
+  // Price Data (GBP fallbacks)
+  private _monthlyPrice = 3.9;
+  private _annualPrice = 39.9;
+  private _lifetimePrice = 69.9;
+  private _currency = 'gbp';
+  pricesLoaded = false;
+
   constructor() {
     makeAutoObservable(this);
+    this.fetchPrices(); // Load prices on initialization
+  }
+
+  /**
+   * Fetch prices from API
+   */
+  async fetchPrices(): Promise<void> {
+    try {
+      const response = await fetch('/api/stripe/prices');
+      if (!response.ok) {
+        throw new Error('Failed to fetch prices');
+      }
+
+      const prices: StripePrices = await response.json();
+
+      runInAction(() => {
+        this._monthlyPrice = prices.monthly.amount;
+        this._annualPrice = prices.annual.amount;
+        this._lifetimePrice = prices.lifetime.amount;
+        this._currency = prices.monthly.currency; // All prices should have same currency
+        this.pricesLoaded = true;
+      });
+    } catch (err) {
+      logger.error('Failed to fetch prices, using fallback values', err);
+      // Keep fallback values
+      runInAction(() => {
+        this.pricesLoaded = true;
+      });
+    }
   }
 
   /**
@@ -61,14 +109,28 @@ class PaymentStore {
    * Get monthly price
    */
   get monthlyPrice(): number {
-    return 9.99;
+    return this._monthlyPrice;
   }
 
   /**
    * Get annual price
    */
   get annualPrice(): number {
-    return 99.0;
+    return this._annualPrice;
+  }
+
+  /**
+   * Get lifetime price
+   */
+  get lifetimePrice(): number {
+    return this._lifetimePrice;
+  }
+
+  /**
+   * Get currency code
+   */
+  get currency(): string {
+    return this._currency;
   }
 
   /**
@@ -93,14 +155,19 @@ class PaymentStore {
   /**
    * Handle subscribe button click
    * Creates Stripe checkout session and redirects
+   * @param useAuthenticated - If true, use authenticated checkout (requires signed-in user)
    */
-  async handleSubscribe(): Promise<void> {
+  async handleSubscribe(useAuthenticated = false): Promise<void> {
     this.isProcessing = true;
     this.error = null;
 
     try {
-      // Create anonymous checkout session
-      const response = await fetch('/api/stripe/create-anonymous-checkout', {
+      // Use authenticated or anonymous checkout based on parameter
+      const endpoint = useAuthenticated
+        ? '/api/stripe/create-checkout'
+        : '/api/stripe/create-anonymous-checkout';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,22 +182,7 @@ class PaymentStore {
         throw new Error(errorData.error || 'Failed to create checkout session');
       }
 
-      const { sessionId } = await response.json();
-
-      // Load Stripe.js
-      const { loadStripe } = await import('@stripe/stripe-js');
-      const stripePublishableKey =
-        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
-      if (!stripePublishableKey) {
-        throw new Error('Stripe publishable key not configured');
-      }
-
-      const stripeInstance = await loadStripe(stripePublishableKey);
-
-      if (!stripeInstance) {
-        throw new Error('Failed to load Stripe');
-      }
+      const { sessionId, url } = await response.json();
 
       // Track checkout initiation
       logger.addBreadcrumb('User initiated checkout', 'payment', {
@@ -138,22 +190,13 @@ class PaymentStore {
         sessionId,
       });
 
-      // Redirect to Stripe Checkout
-      // TypeScript has issues with Stripe.js types, so we use type assertion
-      const result = await (stripeInstance as any).redirectToCheckout({
-        sessionId,
-      });
-
-      const stripeError = result?.error;
-
-      if (stripeError) {
-        throw stripeError;
+      // Redirect to Stripe Checkout URL
+      // Modern approach: redirect directly to the URL (redirectToCheckout is deprecated)
+      if (!url) {
+        throw new Error('No checkout URL returned from server');
       }
 
-      // If we reach here, redirect failed - set processing to false
-      runInAction(() => {
-        this.isProcessing = false;
-      });
+      window.location.href = url;
     } catch (err) {
       runInAction(() => {
         this.error =

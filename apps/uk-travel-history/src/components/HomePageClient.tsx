@@ -8,8 +8,6 @@ import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { EmptyState } from './EmptyState';
-import { ImportPreviewDialog } from './ImportPreviewDialog';
-import { FullDataImportDialog } from './FullDataImportDialog';
 import {
   useFileUpload,
   useExport,
@@ -17,6 +15,7 @@ import {
   useCsvImport,
   useClipboardImport,
 } from './hooks';
+import { FullDataImportDialog, ImportPreviewDialog } from '@uth/widgets';
 
 export const HomePageClient = observer(() => {
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();

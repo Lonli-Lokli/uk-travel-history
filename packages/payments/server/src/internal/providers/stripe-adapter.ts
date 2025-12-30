@@ -18,6 +18,7 @@ import type {
   PriceIds,
   CheckoutSessionDetails,
   SubscriptionDetails,
+  PriceDetails,
 } from '../../types/domain';
 import {
   PaymentsError,
@@ -102,6 +103,49 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       PREMIUM_ANNUAL: this.priceIds[PaymentPlan.PREMIUM_ANNUAL] || '',
       PREMIUM_ONCE: this.priceIds[PaymentPlan.PREMIUM_ONCE] || '',
     };
+  }
+
+  async getPriceDetails(): Promise<PriceDetails> {
+    const stripe = this.ensureConfigured();
+
+    try {
+      const priceIds = this.getPriceIds();
+
+      // Fetch all prices in parallel
+      const [monthlyPrice, annualPrice, lifetimePrice] = await Promise.all([
+        stripe.prices.retrieve(priceIds.PREMIUM_MONTHLY),
+        stripe.prices.retrieve(priceIds.PREMIUM_ANNUAL),
+        stripe.prices.retrieve(priceIds.PREMIUM_ONCE),
+      ]);
+
+      return {
+        monthly: {
+          id: monthlyPrice.id,
+          unitAmount: monthlyPrice.unit_amount || 0,
+          currency: monthlyPrice.currency,
+          amount: (monthlyPrice.unit_amount || 0) / 100,
+        },
+        annual: {
+          id: annualPrice.id,
+          unitAmount: annualPrice.unit_amount || 0,
+          currency: annualPrice.currency,
+          amount: (annualPrice.unit_amount || 0) / 100,
+        },
+        lifetime: {
+          id: lifetimePrice.id,
+          unitAmount: lifetimePrice.unit_amount || 0,
+          currency: lifetimePrice.currency,
+          amount: (lifetimePrice.unit_amount || 0) / 100,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to retrieve price details from Stripe', error);
+      throw new PaymentsError(
+        PaymentsErrorCode.PROVIDER_ERROR,
+        'Failed to retrieve price details',
+        error,
+      );
+    }
   }
 
   async retrieveCheckoutSession(

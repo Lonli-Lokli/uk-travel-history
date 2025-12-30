@@ -422,9 +422,11 @@ export function createFlow(defaultOptions: FlowOptions): Flow {
         const promise = executeFlow<P, ReactNode>(gen, props, ctx);
 
         return (
-          <Suspense fallback={ctx.pending}>
-            <FlowPageInner promise={promise} />
-          </Suspense>
+          <div suppressHydrationWarning>
+            <Suspense fallback={ctx.pending}>
+              <FlowPageInner promise={promise} />
+            </Suspense>
+          </div>
         );
       };
     },

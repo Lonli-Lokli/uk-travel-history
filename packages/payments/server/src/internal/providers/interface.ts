@@ -11,6 +11,7 @@ import type {
   PriceIds,
   CheckoutSessionDetails,
   SubscriptionDetails,
+  PriceDetails,
 } from '../../types/domain';
 
 /**
@@ -76,6 +77,13 @@ export interface PaymentsServerProvider {
    * @returns Object with all price IDs
    */
   getPriceIds(): PriceIds;
+
+  /**
+   * Get detailed price information for all plans
+   * @returns Object with price details for each plan
+   * @throws PaymentsError if prices cannot be retrieved
+   */
+  getPriceDetails(): Promise<PriceDetails>;
 
   /**
    * Retrieve checkout session details

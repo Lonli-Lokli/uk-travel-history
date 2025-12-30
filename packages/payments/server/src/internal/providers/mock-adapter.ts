@@ -15,6 +15,7 @@ import type {
   PriceIds,
   CheckoutSessionDetails,
   SubscriptionDetails,
+  PriceDetails,
 } from '../../types/domain';
 import {
   PaymentsError,
@@ -57,6 +58,30 @@ export class MockPaymentsServerAdapter implements PaymentsServerProvider {
       PREMIUM_MONTHLY: 'price_mock_monthly',
       PREMIUM_ANNUAL: 'price_mock_annual',
       PREMIUM_ONCE: 'price_mock_once',
+    };
+  }
+
+  async getPriceDetails(): Promise<PriceDetails> {
+    // Return mock price details in GBP
+    return {
+      monthly: {
+        id: 'price_mock_monthly',
+        unitAmount: 999, // £9.99
+        currency: 'gbp',
+        amount: 9.99,
+      },
+      annual: {
+        id: 'price_mock_annual',
+        unitAmount: 9900, // £99.00
+        currency: 'gbp',
+        amount: 99.0,
+      },
+      lifetime: {
+        id: 'price_mock_once',
+        unitAmount: 24900, // £249.00
+        currency: 'gbp',
+        amount: 249.0,
+      },
     };
   }
 

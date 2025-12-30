@@ -15,6 +15,8 @@ export type {
   WebhookEventResult,
   WebhookHandlerInput,
   PriceIds,
+  PriceDetails,
+  PriceDetail,
   CheckoutSessionDetails,
   SubscriptionDetails,
 } from './types/domain';
@@ -33,6 +35,7 @@ export {
   handleWebhook,
   isPaymentsConfigured,
   getPriceIds,
+  getPriceDetails,
   retrieveCheckoutSession,
   retrieveSubscription,
   constructWebhookEvent,
