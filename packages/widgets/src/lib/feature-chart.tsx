@@ -31,7 +31,7 @@ export interface FeatureChartProps {
  * ```
  */
 const FeatureChartComponent = ({ feature, children }: FeatureChartProps) => {
-  const { hasAccess, isLoading, handleUpgrade } = useFeatureGate(feature);
+  const { hasAccess, isLoading, requiresSignUp, requiresUpgrade, handleUpgrade } = useFeatureGate(feature);
 
   // If loading, show blurred content
   if (isLoading) {
@@ -46,7 +46,7 @@ const FeatureChartComponent = ({ feature, children }: FeatureChartProps) => {
     return <>{children}</>;
   }
 
-  // No access - show blurred content with premium badge
+  // No access - show blurred content with appropriate badge
   const handleClick = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -54,15 +54,20 @@ const FeatureChartComponent = ({ feature, children }: FeatureChartProps) => {
   };
 
   return (
-    <div className="relative group">
-      <div
-        className="blur-[3px] select-none pointer-events-none grayscale"
-        aria-hidden="true"
-      >
+    <div className="relative">
+      {/* Content layer - maintains layout */}
+      <div className="relative">
         {children}
       </div>
+
+      {/* Overlay positioned absolutely on top */}
       <div
-        className="absolute inset-0 cursor-pointer flex items-center justify-center bg-gradient-to-br from-slate-900/10 via-transparent to-slate-900/10 hover:from-slate-900/20 hover:to-slate-900/20 transition-all"
+        className="absolute inset-0 cursor-pointer flex items-center justify-center transition-all"
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
         onClick={handleClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -71,22 +76,24 @@ const FeatureChartComponent = ({ feature, children }: FeatureChartProps) => {
         }}
         role="button"
         tabIndex={0}
-        aria-label="Upgrade to access this feature"
+        aria-label={requiresSignUp ? "Sign up to access this feature" : "Upgrade to access this feature"}
       >
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full shadow-xl backdrop-blur-md border border-white/20 transform group-hover:scale-105 transition-transform">
-          <div className="flex items-center gap-2">
+        {/* Badge - matching FeatureButton style */}
+        {requiresSignUp ? (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 border-2 border-blue-300 bg-blue-50 px-3 py-2 rounded-lg shadow-lg">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
-            <span className="text-sm font-semibold tracking-wide">
-              Premium Feature
-            </span>
-          </div>
-        </div>
+            <span>Sign up</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 border-2 border-amber-300 bg-amber-50 px-3 py-2 rounded-lg shadow-lg">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd" />
+            </svg>
+            <span>PRO</span>
+          </span>
+        )}
       </div>
     </div>
   );

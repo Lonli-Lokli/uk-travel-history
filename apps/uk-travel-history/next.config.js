@@ -55,9 +55,6 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   // Hide source maps from public access for security
   hideSourceMaps: true,
 
-  // Disable Sentry logger during Webpack build to reduce noise
-  disableLogger: true,
-
   // Sentry webpack configuration
   webpack: {
     treeshake: {

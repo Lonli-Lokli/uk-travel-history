@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@uth/ui';
-import { getAllFeatureFlags } from '@uth/features';
+import { getAllFeatureFlags, getAllFeaturePolicies } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
@@ -123,15 +123,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch feature flags from Vercel Edge Config
+  // Fetch feature flags and policies from Supabase
   const flags = await getAllFeatureFlags();
+  const policies = await getAllFeaturePolicies();
 
   return (
     <ClerkProvider>
       <html lang="en" className={geist.className}>
         <body className="min-h-screen bg-slate-50 flex flex-col">
           <FeatureFlagsProvider flags={flags}>
-            <LayoutClient>{children}</LayoutClient>
+            <LayoutClient featurePolicies={policies}>{children}</LayoutClient>
             <Footer />
             <Toaster />
           </FeatureFlagsProvider>

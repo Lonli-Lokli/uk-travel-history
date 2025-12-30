@@ -138,6 +138,7 @@ const routeProtectionMiddleware = async (
   // Per issue #100: landing, pricing, docs/blog, public previews, free features
   const isPublicRoute = createRouteMatcher([
     '/',
+    '/monitoring', // Sentry monitoring landing
     '/about',
     '/terms',
     '/status',

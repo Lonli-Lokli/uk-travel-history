@@ -21,10 +21,11 @@ import {
   CardTitle,
   UIIcon,
 } from '@uth/ui';
-import { FeatureChart } from '@uth/widgets';
+import { FeatureChart, useFeatureGate } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/calculators';
 import { travelStore } from '@uth/stores';
 import { FEATURE_KEYS } from '@uth/features';
+import { addDays, format } from 'date-fns';
 
 type TimelinePoint = {
   id: string;
@@ -32,6 +33,74 @@ type TimelinePoint = {
   start: number;
   end: number;
   y: number;
+};
+
+// Fixed fake placeholder data for premium preview (to avoid hydration errors)
+const FAKE_PLACEHOLDER_DATA = {
+  rollingData: [
+    { date: '2020-01-01', rollingDays: 50, daysToExpire: 10, nextExpirationDate: '2020-01-31' },
+    { date: '2020-03-01', rollingDays: 70, daysToExpire: 15, nextExpirationDate: '2020-03-31' },
+    { date: '2020-05-01', rollingDays: 85, daysToExpire: 20, nextExpirationDate: '2020-05-31' },
+    { date: '2020-07-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2020-07-31' },
+    { date: '2020-09-01', rollingDays: 95, daysToExpire: 18, nextExpirationDate: '2020-09-30' },
+    { date: '2020-11-01', rollingDays: 80, daysToExpire: 12, nextExpirationDate: '2020-11-30' },
+    { date: '2021-01-01', rollingDays: 65, daysToExpire: 10, nextExpirationDate: '2021-01-31' },
+    { date: '2021-03-01', rollingDays: 75, daysToExpire: 15, nextExpirationDate: '2021-03-31' },
+    { date: '2021-05-01', rollingDays: 90, daysToExpire: 20, nextExpirationDate: '2021-05-31' },
+    { date: '2021-07-01', rollingDays: 105, daysToExpire: 22, nextExpirationDate: '2021-07-31' },
+    { date: '2021-09-01', rollingDays: 120, daysToExpire: 28, nextExpirationDate: '2021-09-30' },
+    { date: '2021-11-01', rollingDays: 100, daysToExpire: 15, nextExpirationDate: '2021-11-30' },
+    { date: '2022-01-01', rollingDays: 85, daysToExpire: 12, nextExpirationDate: '2022-01-31' },
+    { date: '2022-03-01', rollingDays: 95, daysToExpire: 18, nextExpirationDate: '2022-03-31' },
+    { date: '2022-05-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2022-05-31' },
+    { date: '2022-07-01', rollingDays: 130, daysToExpire: 30, nextExpirationDate: '2022-07-31' },
+    { date: '2022-09-01', rollingDays: 145, daysToExpire: 28, nextExpirationDate: '2022-09-30' },
+    { date: '2022-11-01', rollingDays: 125, daysToExpire: 20, nextExpirationDate: '2022-11-30' },
+    { date: '2023-01-01', rollingDays: 105, daysToExpire: 15, nextExpirationDate: '2023-01-31' },
+    { date: '2023-03-01', rollingDays: 90, daysToExpire: 18, nextExpirationDate: '2023-03-31' },
+    { date: '2023-05-01', rollingDays: 75, daysToExpire: 12, nextExpirationDate: '2023-05-31' },
+    { date: '2023-07-01', rollingDays: 95, daysToExpire: 20, nextExpirationDate: '2023-07-31' },
+    { date: '2023-09-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2023-09-30' },
+    { date: '2023-11-01', rollingDays: 125, daysToExpire: 22, nextExpirationDate: '2023-11-30' },
+    { date: '2024-01-01', rollingDays: 115, daysToExpire: 18, nextExpirationDate: '2024-01-31' },
+    { date: '2024-03-01', rollingDays: 105, daysToExpire: 15, nextExpirationDate: '2024-03-31' },
+    { date: '2024-05-01', rollingDays: 120, daysToExpire: 20, nextExpirationDate: '2024-05-31' },
+    { date: '2024-07-01', rollingDays: 135, daysToExpire: 28, nextExpirationDate: '2024-07-31' },
+    { date: '2024-09-01', rollingDays: 140, daysToExpire: 25, nextExpirationDate: '2024-09-30' },
+    { date: '2024-11-01', rollingDays: 130, daysToExpire: 20, nextExpirationDate: '2024-11-30' },
+  ] as RollingDataPoint[],
+  trips: [
+    {
+      outDate: '2020-06-15',
+      inDate: '2020-07-20',
+      tripLabel: 'Trip 1',
+      fullDaysOutside: 34,
+    },
+    {
+      outDate: '2021-12-20',
+      inDate: '2022-01-10',
+      tripLabel: 'Trip 2',
+      fullDaysOutside: 20,
+    },
+    {
+      outDate: '2022-08-01',
+      inDate: '2022-09-15',
+      tripLabel: 'Trip 3',
+      fullDaysOutside: 44,
+    },
+    {
+      outDate: '2023-03-10',
+      inDate: '2023-04-05',
+      tripLabel: 'Trip 4',
+      fullDaysOutside: 25,
+    },
+    {
+      outDate: '2024-07-01',
+      inDate: '2024-08-30',
+      tripLabel: 'Trip 5',
+      fullDaysOutside: 59,
+    },
+  ] as TripBar[],
 };
 
 export const RiskAreaChart: React.FC = observer(() => {
@@ -43,19 +112,24 @@ export const RiskAreaChart: React.FC = observer(() => {
     autoDateUsed,
   } = travelStore;
 
+  const { hasAccess } = useFeatureGate(FEATURE_KEYS.RISK_CHART);
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
+
+  // Use fake data if no access, otherwise use real data
+  const displayRollingData = hasAccess ? rollingAbsenceData : FAKE_PLACEHOLDER_DATA.rollingData;
+  const displayTripBars = hasAccess ? tripBars : FAKE_PLACEHOLDER_DATA.trips;
 
   // -------- Shared x-domain (dates) -----------------------------------------
 
   const chartDomain = useMemo(() => {
     const ts: number[] = [];
 
-    rollingAbsenceData.forEach((d: RollingDataPoint) => {
+    displayRollingData.forEach((d: RollingDataPoint) => {
       ts.push(parseISO(d.date).getTime());
     });
 
-    tripBars.forEach((trip: TripBar) => {
+    displayTripBars.forEach((trip: TripBar) => {
       const s = parseISO(trip.outDate).getTime();
       const e = parseISO(trip.inDate).getTime();
       if (!Number.isNaN(s)) ts.push(s);
@@ -66,7 +140,7 @@ export const RiskAreaChart: React.FC = observer(() => {
     const max = Math.max(...ts);
 
     return { min, max };
-  }, [rollingAbsenceData, tripBars]);
+  }, [displayRollingData, displayTripBars]);
 
   // -------- Risk area chart data --------------------------------------------
 
@@ -74,16 +148,16 @@ export const RiskAreaChart: React.FC = observer(() => {
     // Filter data to only show up to the effective application date (if eligible with auto date)
     // This ensures the chart shows risk based on the calculated/auto application date
     const effectiveEndDate =
-      effectiveApplicationDate && autoDateUsed
+      effectiveApplicationDate && autoDateUsed && hasAccess
         ? parseISO(effectiveApplicationDate).getTime()
         : null;
 
     const filteredData = effectiveEndDate
-      ? rollingAbsenceData.filter(
+      ? displayRollingData.filter(
           (d: RollingDataPoint) =>
             parseISO(d.date).getTime() <= effectiveEndDate,
         )
-      : rollingAbsenceData;
+      : displayRollingData;
 
     // Cap risk at 180 days - if eligible with future date, risk cannot exceed 180
     // (otherwise the calculated date would have been pushed further out)
@@ -96,7 +170,7 @@ export const RiskAreaChart: React.FC = observer(() => {
 
       return [timestamp, rollingDays];
     });
-  }, [rollingAbsenceData, effectiveApplicationDate, autoDateUsed]);
+  }, [displayRollingData, effectiveApplicationDate, autoDateUsed, hasAccess]);
 
   const maxRolling = riskSeriesData.reduce((acc, [, y]) => Math.max(acc, y), 0);
   const yMax = Math.max(maxRolling, 180);
@@ -128,11 +202,11 @@ export const RiskAreaChart: React.FC = observer(() => {
     points: TimelinePoint[];
     rowCount: number;
   }>(() => {
-    if (!tripBars || tripBars.length === 0) {
+    if (!displayTripBars || displayTripBars.length === 0) {
       return { points: [], rowCount: 0 };
     }
 
-    const parsed = tripBars
+    const parsed = displayTripBars
       .map((trip: TripBar, index: number) => {
         const start = parseISO(trip.outDate).getTime();
         const end = parseISO(trip.inDate).getTime();
@@ -169,7 +243,7 @@ export const RiskAreaChart: React.FC = observer(() => {
     });
 
     return { points, rowCount: trackEndTimes.length };
-  }, [tripBars]);
+  }, [displayTripBars]);
 
   // -------- Axis sync between area & gantt ----------------------------------
 
@@ -258,7 +332,7 @@ export const RiskAreaChart: React.FC = observer(() => {
           const dateLabel = x > 0 ? Highcharts.dateFormat('%e %b %Y', x) : '';
 
           // Find the data point to get nextExpirationDate info
-          const dataPoint = rollingAbsenceData.find(
+          const dataPoint = displayRollingData.find(
             (d: RollingDataPoint) => parseISO(d.date).getTime() === x,
           );
 
@@ -415,7 +489,7 @@ export const RiskAreaChart: React.FC = observer(() => {
       yMax,
       syncExtremes,
       crossoverPoints,
-      rollingAbsenceData,
+      displayRollingData,
     ],
   );
 
@@ -578,18 +652,89 @@ export const RiskAreaChart: React.FC = observer(() => {
 
   // -------- Render ----------------------------------------------------------
 
-  if (!rollingAbsenceData || rollingAbsenceData.length === 0) {
+  // Chart header component (always visible)
+  const ChartHeader = () => (
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <UIIcon
+          iconName="line-chart"
+          className="w-4 h-4 text-muted-foreground"
+        />
+        180-Day Rolling Absence Risk Timeline
+      </CardTitle>
+    </CardHeader>
+  );
+
+  // Chart legend component (always visible)
+  const ChartLegend = () => (
+    <div className="mb-3">
+      <div className="flex flex-wrap gap-3 text-xs">
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-3 h-3 rounded"
+            style={{ backgroundColor: '#3b82f6' }}
+          />
+          <span className="text-slate-600">Days Absent (&lt;180)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-3 h-3 rounded"
+            style={{ backgroundColor: '#ef4444' }}
+          />
+          <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
+        </div>
+        {crossoverPoints.length > 0 && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="7"
+                  fill="#ef4444"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M5 5L11 11M11 5L5 11"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="text-slate-600">Limit Breached</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="7"
+                  fill="#059669"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M5 8L7 10L11 6"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="text-slate-600">Limit Recovered</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // Show empty state only if user has access but no real data
+  if (hasAccess && (!rollingAbsenceData || rollingAbsenceData.length === 0)) {
     return (
       <Card className="bg-white mb-3">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <UIIcon
-              iconName="line-chart"
-              className="w-4 h-4 text-muted-foreground"
-            />
-            180-Day Rolling Absence Risk Timeline
-          </CardTitle>
-        </CardHeader>
+        <ChartHeader />
         <CardContent>
           <div className="text-center py-6 text-slate-500">
             <p className="text-sm">
@@ -602,79 +747,13 @@ export const RiskAreaChart: React.FC = observer(() => {
     );
   }
 
+  // If no access, we'll show fake data which will be blurred by FeatureChart
+
   return (
     <Card className="bg-white mb-3">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <UIIcon
-            iconName="line-chart"
-            className="w-4 h-4 text-muted-foreground"
-          />
-          180-Day Rolling Absence Risk Timeline
-        </CardTitle>
-      </CardHeader>
+      <ChartHeader />
       <CardContent>
-        <div className="mb-3">
-          <div className="flex flex-wrap gap-3 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: '#3b82f6' }}
-              />
-              <span className="text-slate-600">Days Absent (&lt;180)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: '#ef4444' }}
-              />
-              <span className="text-slate-600">Exceeded Limit (≥180 days)</span>
-            </div>
-            {crossoverPoints.length > 0 && (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle
-                      cx="8"
-                      cy="8"
-                      r="7"
-                      fill="#ef4444"
-                      stroke="#ffffff"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M5 5L11 11M11 5L5 11"
-                      stroke="#ffffff"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="text-slate-600">Limit Breached</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle
-                      cx="8"
-                      cy="8"
-                      r="7"
-                      fill="#059669"
-                      stroke="#ffffff"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M5 8L7 10L11 6"
-                      stroke="#ffffff"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="text-slate-600">Limit Recovered</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <ChartLegend />
 
         <FeatureChart feature={FEATURE_KEYS.RISK_CHART}>
           {/* Risk area chart */}

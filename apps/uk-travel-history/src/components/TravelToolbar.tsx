@@ -67,19 +67,19 @@ export const TravelToolbar = observer(({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[200px]">
-            <DropdownMenuItem onClick={triggerFileInput}>
+            <FeatureDropdownItem onClick={triggerFileInput} feature={FEATURE_KEYS.PDF_IMPORT}>
               <UIIcon iconName="pdf" className="h-4 w-4 shrink-0" />
               From PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={triggerCsvFileInput}>
+            </FeatureDropdownItem>
+            <FeatureDropdownItem onClick={triggerCsvFileInput} feature={FEATURE_KEYS.EXCEL_IMPORT}>
               <UIIcon iconName="xlsx" className="h-4 w-4 shrink-0" />
               From Excel
-            </DropdownMenuItem>
+            </FeatureDropdownItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleClipboardPaste}>
+            <FeatureDropdownItem onClick={handleClipboardPaste} feature={FEATURE_KEYS.CLIPBOARD_IMPORT}>
               <UIIcon iconName="clipboard" className="h-4 w-4 shrink-0" />
               From Clipboard
-            </DropdownMenuItem>
+            </FeatureDropdownItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

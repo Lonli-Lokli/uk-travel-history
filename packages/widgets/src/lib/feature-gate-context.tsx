@@ -8,6 +8,7 @@ import type { FeatureFlagKey } from '@uth/features';
  */
 export interface MonetizationStore {
   hasFeatureAccess: (featureId: FeatureFlagKey) => boolean;
+  getMinimumTier: (featureId: FeatureFlagKey) => 'anonymous' | 'free' | 'premium' | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -79,6 +80,13 @@ export function useFeatureGate(feature: FeatureFlagKey) {
   const hasAccess = monetizationStore.hasFeatureAccess(feature);
   const isLoading = monetizationStore.isLoading;
   const isAuthenticated = monetizationStore.isAuthenticated || !!authStore.user;
+  const minTier = monetizationStore.getMinimumTier(feature);
+
+  // Determine what action is needed
+  // Premium features always show Premium badge (whether anonymous or authenticated)
+  // Free tier features show "Sign up" badge only for anonymous users
+  const requiresSignUp = !isAuthenticated && minTier === 'free' && !hasAccess;
+  const requiresUpgrade = minTier === 'premium' && !hasAccess;
 
   const handleUpgrade = () => {
     if (!isAuthenticated) {
@@ -93,6 +101,9 @@ export function useFeatureGate(feature: FeatureFlagKey) {
     hasAccess,
     isLoading,
     isAuthenticated,
+    minTier,
+    requiresSignUp,
+    requiresUpgrade,
     handleUpgrade,
   };
 }

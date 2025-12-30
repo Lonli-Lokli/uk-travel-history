@@ -7,9 +7,9 @@
 // - Defaults to FREE tier to keep UI simple and safe
 // - Server validates all premium feature access with Firebase tokens
 
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, reaction } from 'mobx';
 import { authStore } from './authStore';
-import { TIERS, type TierId, DEFAULT_FEATURE_POLICIES, type FeatureFlagKey } from '@uth/features';
+import { TIERS, type TierId, DEFAULT_FEATURE_POLICIES, type FeatureFlagKey, type FeaturePolicy } from '@uth/features';
 
 // Type guard to validate tier values
 function isValidTier(value: unknown): value is TierId {
@@ -25,8 +25,23 @@ class MonetizationStore {
   // Defaults to ANONYMOUS for unauthenticated users (fail-closed)
   tier: TierId = TIERS.ANONYMOUS;
 
+  // Server-loaded feature policies
+  // These are passed from the server to ensure consistency
+  featurePolicies: Record<FeatureFlagKey, FeaturePolicy> = DEFAULT_FEATURE_POLICIES;
+
   constructor() {
     makeAutoObservable(this);
+
+    // Auto-update tier when auth state changes
+    // This ensures registered users automatically get FREE tier
+    if (typeof window !== 'undefined') {
+      reaction(
+        () => authStore.user,
+        (user) => {
+          this.updateTierFromAuth();
+        }
+      );
+    }
   }
 
   /**
@@ -36,7 +51,7 @@ class MonetizationStore {
    * Client-side checks can be bypassed, so all API routes must use assertFeatureAccess()
    */
   hasFeatureAccess(featureKey: FeatureFlagKey): boolean {
-    const policy = DEFAULT_FEATURE_POLICIES[featureKey];
+    const policy = this.featurePolicies[featureKey];
     if (!policy || !policy.enabled) {
       return false;
     }
@@ -55,6 +70,18 @@ class MonetizationStore {
   }
 
   /**
+   * Get the minimum tier required for a feature
+   * Used by feature gate components to show appropriate badges
+   */
+  getMinimumTier(featureKey: FeatureFlagKey): TierId | null {
+    const policy = this.featurePolicies[featureKey];
+    if (!policy) {
+      return null;
+    }
+    return policy.minTier;
+  }
+
+  /**
    * Check if user is premium
    */
   get isPremium(): boolean {
@@ -67,6 +94,7 @@ class MonetizationStore {
   get isAuthenticated(): boolean {
     return !!authStore.user;
   }
+  
 
   /**
    * Check if user is anonymous (not authenticated)
@@ -84,6 +112,16 @@ class MonetizationStore {
   }
 
   /**
+   * Set feature policies from server
+   * Should be called when loading the app with server-provided policies
+   *
+   * @param policies - Feature policies loaded from server
+   */
+  setFeaturePolicies(policies: Record<FeatureFlagKey, FeaturePolicy>): void {
+    this.featurePolicies = policies;
+  }
+
+  /**
    * Manually set tier (for testing or future subscription integration)
    *
    * @param tier - The tier to set (must be valid TierId)
@@ -96,6 +134,18 @@ class MonetizationStore {
       console.warn(
         `[MonetizationStore] Invalid tier value: ${tier}, defaulting to ANONYMOUS`,
       );
+      this.tier = TIERS.ANONYMOUS;
+    }
+  }
+
+  /**
+   * Update tier based on authentication status
+   * If user is authenticated but no explicit tier is set, default to FREE
+   */
+  updateTierFromAuth(): void {
+    if (this.isAuthenticated && this.tier === TIERS.ANONYMOUS) {
+      this.tier = TIERS.FREE;
+    } else if (!this.isAuthenticated && this.tier !== TIERS.ANONYMOUS) {
       this.tier = TIERS.ANONYMOUS;
     }
   }
