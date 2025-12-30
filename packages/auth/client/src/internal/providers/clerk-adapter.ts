@@ -177,11 +177,13 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
       let currentUser = clerk.user;
 
       // Call callback immediately with current state
-      if (currentUser) {
-        callback(ClerkAuthClientAdapter.normalizeUser(currentUser));
-      } else {
-        callback(null);
-      }
+      const user = currentUser
+        ? ClerkAuthClientAdapter.normalizeUser(currentUser)
+        : null;
+      callback({
+        user,
+        loading: false,
+      });
 
       // Listen for session changes
       const handleSessionChange = () => {
@@ -191,11 +193,13 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
         if (newUser?.id !== currentUser?.id) {
           currentUser = newUser;
 
-          if (newUser) {
-            callback(ClerkAuthClientAdapter.normalizeUser(newUser));
-          } else {
-            callback(null);
-          }
+          const user = newUser
+            ? ClerkAuthClientAdapter.normalizeUser(newUser)
+            : null;
+          callback({
+            user,
+            loading: false,
+          });
         }
       };
 
@@ -213,6 +217,8 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
         error.code === AuthErrorCode.CONFIG_ERROR
       ) {
         logger.warn('Clerk not loaded, onAuthStateChanged will not work');
+        // Call callback with loading state
+        callback({ user: null, loading: true });
         return () => {
           /* no-op */
         };
