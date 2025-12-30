@@ -160,7 +160,7 @@ describe('Server-Side Feature Validation', () => {
       it('should deny access when feature is disabled in Edge Config', async () => {
         vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
-        });
+        }));
 
         const premiumUser: UserTier = {
           userId: 'user456',
@@ -179,7 +179,7 @@ describe('Server-Side Feature Validation', () => {
       it('should deny access to all users when feature is disabled', async () => {
         vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
-        });
+        }));
 
         const freeUser: UserTier = { userId: 'user123', tier: 'free' };
         const premiumUser: UserTier = {
@@ -212,7 +212,7 @@ describe('Server-Side Feature Validation', () => {
             rolloutPercentage: 0,
             betaUsers: ['beta_user'],
           },
-        });
+        }));
 
         const betaUser: UserTier = {
           userId: 'beta_user',
@@ -233,7 +233,7 @@ describe('Server-Side Feature Validation', () => {
             enabled: true,
             rolloutPercentage: 0,
           },
-        });
+        }));
 
         const normalUser: UserTier = {
           userId: 'user999',
@@ -248,7 +248,7 @@ describe('Server-Side Feature Validation', () => {
         expect(result.allowed).toBe(true); // Rollout is per-feature tier check, not global disable
       });
     });
-  }));
+  });
 
   describe('isPremiumFeature', () => {
     it('should return false for free tier features', async () => {
@@ -262,7 +262,7 @@ describe('Server-Side Feature Validation', () => {
       expect(await isPremiumFeature(FEATURE_KEYS.EXCEL_EXPORT)).toBe(true);
       expect(await isPremiumFeature(FEATURE_KEYS.EXCEL_IMPORT)).toBe(true);
     });
-  }));
+  });
 
   describe('getAccessibleFeatures', () => {
     it('should return only free features for free users', async () => {
@@ -297,7 +297,7 @@ describe('Server-Side Feature Validation', () => {
       vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true },
         [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
-      });
+      }));
 
       const freeUser: UserTier = {
         userId: 'user123',
@@ -320,7 +320,7 @@ describe('Server-Side Feature Validation', () => {
         [FEATURE_KEYS.PDF_IMPORT]: { enabled: false },
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
         [FEATURE_KEYS.RISK_CHART]: { enabled: false },
-      });
+      }));
 
       const freeUser: UserTier = {
         userId: 'user123',
@@ -338,7 +338,7 @@ describe('Server-Side Feature Validation', () => {
           rolloutPercentage: 0,
           betaUsers: ['beta_user'],
         },
-      });
+      }));
 
       const betaUser: UserTier = {
         userId: 'beta_user',
@@ -349,7 +349,7 @@ describe('Server-Side Feature Validation', () => {
       const features = await getAccessibleFeatures(betaUser);
       expect(features).toContain(FEATURE_KEYS.EXCEL_EXPORT);
     });
-  }));
+  });
 
   describe('Security Tests', () => {
     it('should never allow premium features for free users regardless of flags', async () => {
@@ -385,5 +385,5 @@ describe('Server-Side Feature Validation', () => {
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe('no_subscription');
     });
-  }));
-}));
+  });
+});
