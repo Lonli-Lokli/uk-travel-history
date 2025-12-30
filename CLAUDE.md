@@ -136,6 +136,195 @@ The application uses a **three-layer defense** strategy for access control:
 - ONLY use `createAdminClient()` in webhook handlers (bypasses RLS)
 - Webhook handlers MUST verify signatures before processing
 
+### SDK Usage Guidelines
+
+This project uses abstraction packages to encapsulate third-party services. **You MUST use these SDKs instead of importing underlying client libraries directly.** This provides better encapsulation, testability, and flexibility.
+
+#### General Principles
+
+1. **NEVER import third-party clients directly** in application code:
+   - ❌ `import { createClient } from '@supabase/supabase-js'`
+   - ❌ `import { currentUser } from '@clerk/nextjs'`
+   - ❌ `import Stripe from 'stripe'`
+
+2. **ALWAYS use the SDK packages** provided in this monorepo:
+   - ✅ `import { db } from '@uth/db'`
+   - ✅ `import { getCurrentUser } from '@uth/auth-server'`
+   - ✅ `import { getStripeClient } from '@uth/payments'`
+
+3. **DO NOT expose underlying types** from SDKs:
+   - ❌ Exporting Supabase-specific types from `@uth/db`
+   - ✅ Define domain types in SDK packages and export those instead
+
+#### Auth Package (`@uth/auth-server`, `@uth/auth-client`)
+
+**Server-Side Usage**:
+```typescript
+import { getCurrentUser, requireAuth } from '@uth/auth-server';
+
+// Get current user (returns null if not authenticated)
+const user = await getCurrentUser();
+
+// Require authentication (throws if not authenticated)
+const user = await requireAuth();
+```
+
+**Client-Side Usage**:
+```typescript
+import { useUser, useAuth } from '@uth/auth-client';
+
+// Access user in React components
+const { user, isLoaded } = useUser();
+const { signOut } = useAuth();
+```
+
+**What NOT to do**:
+```typescript
+// ❌ Don't import Clerk directly
+import { auth, currentUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
+
+// ❌ Don't expose Clerk types
+export type { User } from '@clerk/nextjs/server';
+```
+
+#### Database Package (`@uth/db`)
+
+**Reading Data**:
+```typescript
+import { db } from '@uth/db';
+
+// Get all feature policies
+const policies = await db.getAllFeaturePolicies();
+
+// Get specific feature policy
+const policy = await db.getFeaturePolicyByKey('premium-export');
+
+// Get user profile
+const profile = await db.getUserProfile(userId);
+```
+
+**Writing Data**:
+```typescript
+import { db } from '@uth/db';
+
+// Update user profile
+await db.updateUserProfile(userId, {
+  subscription_tier: 'monthly',
+});
+
+// Create records
+await db.createPurchaseIntent({
+  user_id: userId,
+  stripe_checkout_session_id: sessionId,
+});
+```
+
+**What NOT to do**:
+```typescript
+// ❌ Don't create Supabase clients directly
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(url, key);
+
+// ❌ Don't import Supabase types
+import type { Database } from '@uth/db/internal/providers/supabase.types';
+
+// ❌ Don't expose Supabase client from functions
+export function getClient() {
+  return createClient(url, key); // WRONG!
+}
+
+// ✅ Use DB operations instead
+import { db } from '@uth/db';
+const data = await db.getSomething();
+```
+
+**Type Safety**:
+```typescript
+// ✅ Use domain types from SDK
+import type { FeaturePolicy, UserProfile } from '@uth/db';
+
+// ❌ Don't import internal Supabase types
+import type { Tables } from '@uth/db/internal/providers/supabase.types';
+```
+
+#### Payments Package (`@uth/payments`)
+
+**Server-Side Usage**:
+```typescript
+import { getStripeClient, createCheckoutSession } from '@uth/payments';
+
+// Create checkout session
+const session = await createCheckoutSession({
+  userId: user.id,
+  priceId: 'price_xyz',
+  successUrl: '/success',
+  cancelUrl: '/cancel',
+});
+
+// Access Stripe client (only when SDK doesn't provide needed operation)
+const stripe = getStripeClient();
+const customer = await stripe.customers.retrieve(customerId);
+```
+
+**What NOT to do**:
+```typescript
+// ❌ Don't create Stripe client directly
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+// ❌ Don't expose Stripe types
+export type { Stripe } from 'stripe';
+```
+
+#### Benefits of Using SDKs
+
+1. **Encapsulation**: Implementation details (Supabase, Clerk, Stripe) are hidden
+2. **Testability**: Easy to mock SDK functions in tests
+3. **Flexibility**: Can swap underlying providers without changing application code
+4. **Type Safety**: Domain types are consistent across the codebase
+5. **Security**: SDK enforces correct client usage (user-scoped vs admin)
+
+#### Migration Pattern
+
+When refactoring code to use SDKs:
+
+1. **Identify direct imports** of third-party clients
+2. **Find corresponding SDK operation** (or add it if missing)
+3. **Update imports** to use SDK package
+4. **Replace client calls** with SDK function calls
+5. **Update tests** to mock SDK instead of third-party client
+
+**Example Migration**:
+```typescript
+// Before (❌ Direct Supabase usage)
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(url, key);
+const { data } = await supabase
+  .from('feature_policies')
+  .select('*')
+  .eq('key', 'premium-export')
+  .single();
+
+// After (✅ Using DB SDK)
+import { db } from '@uth/db';
+
+const policy = await db.getFeaturePolicyByKey('premium-export');
+```
+
+#### When to Extend SDKs
+
+If you need an operation not provided by the SDK:
+
+1. **Add the operation to the SDK package** (preferred)
+2. **Update the provider interface** to include the new operation
+3. **Implement in all adapters** (Supabase, Mock, etc.)
+4. **Export from SDK public API**
+5. **Use in application code**
+
+**DO NOT** bypass the SDK by importing the underlying client directly.
+
 ### Code Style
 
 - Use TypeScript for type safety
