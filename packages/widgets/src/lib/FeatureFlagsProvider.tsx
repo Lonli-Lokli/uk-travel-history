@@ -1,68 +1,37 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import {
-  setCachedFlags,
-  isFeatureEnabledClient,
   type FeatureFlagKey,
+  FEATURE_KEYS,
 } from '@uth/features';
-import { logger } from '@uth/utils';
+import { useFeatureGateContext } from './feature-gate-context';
 
 /**
- * Feature flags context
+ * Feature flags context value
  */
 interface FeatureFlagsContextValue {
   isFeatureEnabled: (key: FeatureFlagKey) => boolean;
   flags: Record<FeatureFlagKey, boolean>;
 }
 
-const FeatureFlagsContext = createContext<FeatureFlagsContextValue | null>(
-  null,
-);
-
 /**
- * Feature flags provider component
- * This should wrap your app at the root level
- *
- * @param flags - Feature flags from server (fetched via getAllFeatureFlags)
- * @param children - React children
- *
- * @example
- * // In layout.tsx (server component)
- * const flags = await getAllFeatureFlags(userId);
- *
- * return (
- *   <FeatureFlagsProvider flags={flags}>
- *     {children}
- *   </FeatureFlagsProvider>
- * );
+ * @deprecated FeatureFlagsProvider is no longer needed. Flags are now computed from user tier.
+ * This component is kept for backward compatibility but does nothing.
  */
 export function FeatureFlagsProvider({
-  flags,
   children,
 }: {
-  flags: Record<FeatureFlagKey, boolean>;
+  flags?: Record<FeatureFlagKey, boolean>;
   children: ReactNode;
 }) {
-  // Cache flags on mount
-  React.useEffect(() => {
-    setCachedFlags(flags);
-  }, [flags]);
-
-  const contextValue: FeatureFlagsContextValue = {
-    isFeatureEnabled: isFeatureEnabledClient,
-    flags,
-  };
-
-  return (
-    <FeatureFlagsContext.Provider value={contextValue}>
-      {children}
-    </FeatureFlagsContext.Provider>
-  );
+  return <>{children}</>;
 }
 
 /**
  * Hook to access feature flags in client components
+ * This hook computes flags based on the user's tier and feature policies
+ * from the monetizationStore, rather than using a context provider.
  *
  * @returns FeatureFlagsContextValue with isFeatureEnabled function and flags object
  *
@@ -78,20 +47,26 @@ export function FeatureFlagsProvider({
  * }
  */
 export function useFeatureFlags(): FeatureFlagsContextValue {
-  const context = useContext(FeatureFlagsContext);
+  const { monetizationStore } = useFeatureGateContext();
 
-  if (!context) {
-    // Fallback: return a safe default that disables all features
-    logger.warn(
-      'useFeatureFlags called outside FeatureFlagsProvider, defaulting all flags to false',
-    );
-    return {
-      isFeatureEnabled: () => false,
-      flags: {} as Record<FeatureFlagKey, boolean>,
-    };
-  }
+  // Compute flags based on user tier and feature policies
+  const flags = useMemo(() => {
+    const result = {} as Record<FeatureFlagKey, boolean>;
 
-  return context;
+    // Iterate through all feature keys and compute access
+    for (const key of Object.values(FEATURE_KEYS)) {
+      result[key] = monetizationStore.hasFeatureAccess(key);
+    }
+
+    return result;
+  }, [monetizationStore.tier, monetizationStore.isLoading]);
+
+  return {
+    isFeatureEnabled: (key: FeatureFlagKey) => {
+      return monetizationStore.hasFeatureAccess(key);
+    },
+    flags,
+  };
 }
 
 /**

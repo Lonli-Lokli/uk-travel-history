@@ -19,11 +19,11 @@ interface LayoutClientProps {
 export function LayoutClient({ children, featurePolicies }: LayoutClientProps) {
   return (
     <ProvidersWrapper featurePolicies={featurePolicies}>
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar />
-        <div className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           {children}
-        </div>
+        </main>
       </div>
     </ProvidersWrapper>
   );

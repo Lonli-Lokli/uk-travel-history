@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@uth/ui';
-import { getAllFeatureFlags, getAllFeaturePolicies } from '@uth/features';
+import { getAllFeaturePolicies } from '@uth/features';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
-import { FeatureFlagsProvider } from '@uth/widgets';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Footer } from '../components/Footer';
-import { LayoutClient } from './LayoutClient';
+import { Navbar } from '../components/Navbar';
+import { Providers } from '../components/Providers';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
@@ -124,18 +124,20 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   // Fetch feature flags and policies from Supabase
-  const flags = await getAllFeatureFlags();
   const policies = await getAllFeaturePolicies();
 
   return (
     <ClerkProvider>
       <html lang="en" className={geist.className}>
-        <body className="min-h-screen bg-slate-50 flex flex-col">
-          <FeatureFlagsProvider flags={flags}>
-            <LayoutClient featurePolicies={policies}>{children}</LayoutClient>
+        <body className="h-screen bg-slate-50 flex flex-col">
+          <Providers featurePolicies={policies}>
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <Navbar />
+              <main className="flex-1 overflow-y-auto">{children}</main>
+            </div>
             <Footer />
             <Toaster />
-          </FeatureFlagsProvider>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

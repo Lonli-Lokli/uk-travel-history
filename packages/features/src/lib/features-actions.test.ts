@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   isFeatureEnabled,
   isFeatureEnabledClient,
-  getAllFeatureFlags,
   isSupabaseFeaturePoliciesAvailable,
-  setCachedFlags,
-  getCachedFlags,
   DEFAULT_FEATURE_POLICIES,
 } from './features';
 import { FEATURE_KEYS, FeatureFlagKey } from './shapes';

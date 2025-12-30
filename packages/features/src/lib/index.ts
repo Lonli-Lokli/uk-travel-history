@@ -1,15 +1,11 @@
 // Unified feature flag system (Supabase-backed)
 export {
   isFeatureEnabled,
-  getAllFeatureFlags,
-  isFeatureEnabledClient,
-  setCachedFlags,
   DEFAULT_FEATURE_POLICIES,
   type FeaturePolicy,
   type SupabasePolicies,
   getFeaturePolicy,
   getAllFeaturePolicies,
-  getCachedFlags,
   isSupabaseFeaturePoliciesAvailable,
 } from './features';
 

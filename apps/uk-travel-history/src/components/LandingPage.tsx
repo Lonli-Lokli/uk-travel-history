@@ -11,7 +11,6 @@ import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
 import { FeatureButton } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
-import { ProvidersWrapper } from './ProvidersWrapper';
 
 export const LandingPage = () => {
   const router = useRouter();
@@ -139,7 +138,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <ProvidersWrapper>
+    <>
       {/* Hidden File Inputs */}
       <input
         ref={pdfFileInputRef}
@@ -194,9 +193,9 @@ export const LandingPage = () => {
         />
       )}
 
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="bg-gradient-to-b from-slate-50 to-slate-100">
         {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
           <Card className="bg-white">
             <CardContent className="p-6 sm:p-8">
               {/* Header */}
@@ -433,9 +432,9 @@ export const LandingPage = () => {
               </div>
             </CardContent>
           </Card>
-        </main>
+        </div>
       </div>
-    </ProvidersWrapper>
+    </>
   );
 };
 

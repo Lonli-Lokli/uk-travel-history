@@ -6,6 +6,7 @@
 import { unstable_cache } from 'next/cache';
 import { logger } from '@uth/utils';
 import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
 
 
@@ -83,41 +84,6 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
   },
 };
 
-
-/**
- * In-memory cache for feature flags (used client-side)
- * This is populated by server components and passed to client
- */
-let cachedFlags: Record<FeatureFlagKey, boolean> | null = null;
-
-/**
- * Set cached feature flags (called from server components)
- * @param flags - The flags to cache (or null to clear cache)
- */
-export function setCachedFlags(
-  flags: Record<FeatureFlagKey, boolean> | null,
-): void {
-  cachedFlags = flags;
-}
-
-/**
- * Get cached feature flags (used client-side)
- * @returns The cached flags or default values
- */
-export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
-  if (cachedFlags) {
-    return cachedFlags;
-  }
-
-  // Default all flags to false if not cached
-  return Object.values(FEATURE_KEYS).reduce(
-    (acc, key) => {
-      acc[key] = DEFAULT_FEATURE_POLICIES[key].enabled;
-      return acc;
-    },
-    {} as Record<FeatureFlagKey, boolean>,
-  );
-}
 
 /**
  * INTERNAL: Load all feature policies from Supabase (uncached)
@@ -259,54 +225,6 @@ function hashUserId(userId: string, featureKey: string): number {
     hash |= 0; // Convert to 32-bit integer
   }
   return Math.abs(hash);
-}
-
-/**
- * SERVER-SIDE ONLY: Get all feature flags from Edge Config
- * Useful for server components that need to pass flags to client
- *
- * @param userId - Optional user ID for personalized flag evaluation
- * @returns Promise<Record<FeatureFlagKey, boolean>> All feature flags evaluated
- *
- * @example
- * // In server component
- * const flags = await getAllFeatureFlags(userId);
- * return <ClientComponent flags={flags} />;
- */
-export async function getAllFeatureFlags(
-  userId?: string,
-): Promise<Record<FeatureFlagKey, boolean>> {
-  const result: Record<FeatureFlagKey, boolean> = {} as Record<
-    FeatureFlagKey,
-    boolean
-  >;
-
-  for (const key of Object.values(FEATURE_KEYS)) {
-    result[key] = await isFeatureEnabled(key, userId);
-  }
-
-  return result;
-}
-
-/**
- * CLIENT-SIDE: Check if a feature is enabled using cached flags
- *
- * This must be used on the client-side. Cached flags are set by server components.
- * If flags are not cached, defaults to false (disabled).
- *
- * @param featureKey - The feature identifier to check
- * @returns boolean indicating if the feature is enabled
- *
- * @example
- * // In client component
- * const isEnabled = isFeatureEnabledClient('firebase_auth_enabled');
- * if (isEnabled) {
- *   return <LoginButton />;
- * }
- */
-export function isFeatureEnabledClient(featureKey: FeatureFlagKey): boolean {
-  const flags = getCachedFlags();
-  return flags[featureKey] ?? false;
 }
 
 /**

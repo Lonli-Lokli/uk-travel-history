@@ -61,7 +61,7 @@ export const HomePageClient = observer(() => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="bg-gradient-to-b from-slate-50 to-slate-100">
       <input
         ref={fileInputRef}
         type="file"
@@ -85,7 +85,7 @@ export const HomePageClient = observer(() => {
         onExportClick={handleExport}
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+      <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
         {!hasTrips ? (
           <EmptyState
             onImportClick={triggerFileInput}
@@ -102,7 +102,7 @@ export const HomePageClient = observer(() => {
             </div>
           </>
         )}
-      </main>
+      </div>
 
       {/* CSV Import Preview Dialog */}
       {csvPreviewData && (

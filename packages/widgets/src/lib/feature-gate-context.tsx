@@ -11,6 +11,7 @@ export interface MonetizationStore {
   getMinimumTier: (featureId: FeatureFlagKey) => 'anonymous' | 'free' | 'premium' | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  tier: 'anonymous' | 'free' | 'premium';
 }
 
 export interface AuthStore {

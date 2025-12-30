@@ -50,7 +50,7 @@ export function PageWrapper({
   };
 
   return (
-    <div className={cn('min-h-screen', backgroundClasses[variant])}>
+    <div className={cn(backgroundClasses[variant])}>
       <main
         className={cn(
           maxWidthClasses[maxWidth],

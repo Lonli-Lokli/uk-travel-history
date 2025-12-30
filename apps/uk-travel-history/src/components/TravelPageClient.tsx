@@ -9,7 +9,6 @@ import { TravelHistoryCard } from './TravelHistoryCard';
 import { ImportPreviewDialog } from './ImportPreviewDialog';
 import { FullDataImportDialog } from './FullDataImportDialog';
 import { TravelToolbar } from './TravelToolbar';
-import { ProvidersWrapper } from './ProvidersWrapper';
 import {
   useClearAll,
   useCsvImport,
@@ -52,8 +51,8 @@ export const TravelPageClient = observer(() => {
   } = useClipboardImport();
 
   return (
-    <ProvidersWrapper>
-      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+    <>
+      <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
         {/* Page Toolbar */}
         <div className="mb-4 flex justify-end">
           {/* Hidden file inputs */}
@@ -84,7 +83,7 @@ export const TravelPageClient = observer(() => {
         <ValidationStatusCard />
         <RiskAreaChart />
         <TravelHistoryCard onClearAll={handleClearAll} />
-      </main>
+      </div>
 
       {/* CSV Import Preview Dialog */}
       {csvPreviewData && (
@@ -118,7 +117,7 @@ export const TravelPageClient = observer(() => {
           onCancel={cancelFullDataImport}
         />
       )}
-    </ProvidersWrapper>
+    </>
   );
 });
 
