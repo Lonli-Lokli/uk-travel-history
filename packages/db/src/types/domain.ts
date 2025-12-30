@@ -271,3 +271,33 @@ export interface CreateWebhookEventData {
   /** Event payload (JSON) */
   payload: Record<string, unknown>;
 }
+
+// ============================================================================
+// Feature Policy Types
+// ============================================================================
+
+/**
+ * Represents a feature policy configuration
+ */
+export interface FeaturePolicy {
+  /** Unique identifier */
+  id: string;
+  /** Feature key identifier */
+  featureKey: string;
+  /** Global kill switch - if false, feature is disabled for everyone */
+  enabled: boolean;
+  /** Minimum tier required to access this feature */
+  minTier: string;
+  /** Rollout percentage (0-100) for gradual feature rollout */
+  rolloutPercentage: number | null;
+  /** Explicit allowlist of user IDs (bypasses tier check) */
+  allowlist: string[] | null;
+  /** Explicit denylist of user IDs (blocks access regardless of tier) */
+  denylist: string[] | null;
+  /** Explicit list of beta users who get access regardless of tier */
+  betaUsers: string[] | null;
+  /** When the policy was created */
+  createdAt: Date;
+  /** When the policy was last updated */
+  updatedAt: Date;
+}

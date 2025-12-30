@@ -12,6 +12,7 @@ import type {
   UpdatePurchaseIntentData,
   WebhookEvent,
   CreateWebhookEventData,
+  FeaturePolicy,
 } from '../../types/domain';
 
 /**
@@ -144,4 +145,21 @@ export interface DbProvider {
    * @returns The created webhook event record
    */
   recordWebhookEvent(data: CreateWebhookEventData): Promise<WebhookEvent>;
+
+  // ============================================================================
+  // Feature Policy Operations
+  // ============================================================================
+
+  /**
+   * Get all feature policies
+   * @returns Array of all feature policies
+   */
+  getAllFeaturePolicies(): Promise<FeaturePolicy[]>;
+
+  /**
+   * Get a feature policy by feature key
+   * @param featureKey - The feature key
+   * @returns The feature policy, or null if not found
+   */
+  getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null>;
 }

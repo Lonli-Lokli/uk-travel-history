@@ -12,6 +12,7 @@ import type {
   UpdatePurchaseIntentData,
   WebhookEvent,
   CreateWebhookEventData,
+  FeaturePolicy,
 } from '../types/domain';
 import { getDbProvider } from '../internal/provider-resolver';
 
@@ -197,4 +198,29 @@ export async function recordWebhookEvent(
 ): Promise<WebhookEvent> {
   const provider = getDbProvider();
   return provider.recordWebhookEvent(data);
+}
+
+// ============================================================================
+// Feature Policy Operations
+// ============================================================================
+
+/**
+ * Get all feature policies
+ * @returns Array of all feature policies
+ */
+export async function getAllFeaturePolicies(): Promise<FeaturePolicy[]> {
+  const provider = getDbProvider();
+  return provider.getAllFeaturePolicies();
+}
+
+/**
+ * Get a feature policy by feature key
+ * @param featureKey - The feature key
+ * @returns The feature policy, or null if not found
+ */
+export async function getFeaturePolicyByKey(
+  featureKey: string,
+): Promise<FeaturePolicy | null> {
+  const provider = getDbProvider();
+  return provider.getFeaturePolicyByKey(featureKey);
 }

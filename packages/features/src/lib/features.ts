@@ -3,11 +3,10 @@
 // Supports both client-side and server-side usage
 // Uses Next.js caching with midnight revalidation to minimize database reads
 
-import { createClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@uth/utils';
 import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
-import type { Database } from '@uth/db/internal/providers/supabase.types';
+import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
 
 
 /**
@@ -121,48 +120,17 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
 }
 
 /**
- * Create a Supabase client for reading feature policies
- * Uses anon key since feature policies have public read access via RLS
- */
-function createSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
-    );
-  }
-
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
-/**
  * INTERNAL: Load all feature policies from Supabase (uncached)
- * Single source of truth for Supabase access
+ * Single source of truth for Supabase access via DB SDK
  *
  * @returns Promise<EdgeConfigPolicies | null> All policies or null if unavailable
  */
 async function loadPoliciesFromSupabaseUncached(): Promise<EdgeConfigPolicies | null> {
   try {
-    const supabase = createSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('feature_policies')
-      .select('*');
-
-    if (error) {
-      logger.error('[Feature Policies] Error loading from Supabase', error);
-      return null;
-    }
+    const data = await dbGetAllFeaturePolicies();
 
     if (!data || data.length === 0) {
-      logger.warn('[Feature Policies] No feature policies found in Supabase');
+      logger.warn('[Feature Policies] No feature policies found in database');
       return null;
     }
 
@@ -170,19 +138,19 @@ async function loadPoliciesFromSupabaseUncached(): Promise<EdgeConfigPolicies | 
     const policies: EdgeConfigPolicies = {} as EdgeConfigPolicies;
 
     for (const row of data) {
-      policies[row.feature_key as FeatureFlagKey] = {
+      policies[row.featureKey as FeatureFlagKey] = {
         enabled: row.enabled,
-        minTier: row.min_tier as TierId,
-        rolloutPercentage: row.rollout_percentage ?? undefined,
+        minTier: row.minTier as TierId,
+        rolloutPercentage: row.rolloutPercentage ?? undefined,
         allowlist: row.allowlist ?? undefined,
         denylist: row.denylist ?? undefined,
-        betaUsers: row.beta_users ?? undefined,
+        betaUsers: row.betaUsers ?? undefined,
       };
     }
 
     return policies;
   } catch (error) {
-    logger.error('[Feature Policies] Error loading from Supabase', error);
+    logger.error('[Feature Policies] Error loading from database', error);
     return null;
   }
 }

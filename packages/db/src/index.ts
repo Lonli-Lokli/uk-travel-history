@@ -16,6 +16,7 @@ export type {
   UpdatePurchaseIntentData,
   WebhookEvent,
   CreateWebhookEventData,
+  FeaturePolicy,
 } from './types/domain';
 
 export {
@@ -48,6 +49,9 @@ export {
   // Webhook event operations
   hasWebhookEventBeenProcessed,
   recordWebhookEvent,
+  // Feature policy operations
+  getAllFeaturePolicies,
+  getFeaturePolicyByKey,
 } from './public/db-operations';
 
 // Export testing utilities (for internal use only - consumers should use public API)
