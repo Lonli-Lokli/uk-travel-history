@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
 
       // Check if this is an authenticated checkout (new Clerk flow)
       const userId = session.metadata?.userId || session.client_reference_id;
-      const isAuthenticatedCheckout = userId && !session.metadata?.purchase_intent_id;
+      const isAuthenticatedCheckout =
+        userId && !session.metadata?.purchase_intent_id;
 
       if (isAuthenticatedCheckout) {
         // Authenticated checkout - user already exists via Clerk
@@ -468,9 +469,13 @@ async function handleSubscriptionChange(
       const existingUsersResult = await getUsersByEmail(customerEmail);
 
       if (existingUsersResult.users.length === 0) {
-        getRouteLogger().error('No auth user found for subscription', undefined, {
-          extra: { email: customerEmail, subscriptionId },
-        });
+        getRouteLogger().error(
+          'No auth user found for subscription',
+          undefined,
+          {
+            extra: { email: customerEmail, subscriptionId },
+          },
+        );
         return;
       }
 
@@ -490,9 +495,13 @@ async function handleSubscriptionChange(
     if (!dbUser) {
       // User should already exist (created by Clerk webhook)
       // Log error but don't fail - this might be a timing issue
-      getRouteLogger().error('User not found in database for subscription', undefined, {
-        extra: { authUserId, subscriptionId, hasEmail: !!customerEmail },
-      });
+      getRouteLogger().error(
+        'User not found in database for subscription',
+        undefined,
+        {
+          extra: { authUserId, subscriptionId, hasEmail: !!customerEmail },
+        },
+      );
 
       // If we have email, try to create the user
       if (customerEmail) {

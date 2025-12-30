@@ -155,18 +155,14 @@ class PaymentStore {
   /**
    * Handle subscribe button click
    * Creates Stripe checkout session and redirects
-   * @param useAuthenticated - If true, use authenticated checkout (requires signed-in user)
    */
-  async handleSubscribe(useAuthenticated = false): Promise<void> {
+  async handleSubscribe(): Promise<void> {
     this.isProcessing = true;
     this.error = null;
 
     try {
-      // Use authenticated or anonymous checkout based on parameter
-      const endpoint = useAuthenticated
-        ? '/api/stripe/create-checkout'
-        : '/api/stripe/create-anonymous-checkout';
-
+      // Use always authenticated checkout
+      const endpoint =  '/api/stripe/create-checkout'
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {

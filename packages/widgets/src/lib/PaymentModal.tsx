@@ -20,9 +20,10 @@ const formatCurrency = (amount: number, currency: string): string => {
 };
 
 export const PaymentModal = observer(() => {
-  const { isPaymentModalOpen, billingPeriod, isProcessing, error } =
+  const { isPaymentModalOpen, billingPeriod, isProcessing, error } = 
     paymentStore;
   const isAuthenticated = !!authStore.user;
+  const areChangesAllowed = !isProcessing && isAuthenticated;
 
   const handleClose = () => {
     if (!isProcessing) {
@@ -33,7 +34,7 @@ export const PaymentModal = observer(() => {
   const handleSubscribe = async () => {
     try {
       // Use authenticated checkout if user is signed in
-      await paymentStore.handleSubscribe(isAuthenticated);
+      await paymentStore.handleSubscribe();
     } catch (err) {
       // Error is already handled in the store
       logger.error('Subscription error:', err);
@@ -225,7 +226,7 @@ export const PaymentModal = observer(() => {
           {/* Subscribe Button */}
           <Button
             onClick={handleSubscribe}
-            disabled={isProcessing}
+            disabled={!areChangesAllowed}
             className="w-full"
             size="lg"
           >
@@ -237,12 +238,16 @@ export const PaymentModal = observer(() => {
                 />
                 Processing...
               </>
-            ) : (
+            ) : isAuthenticated ? (
               <>
                 <UIIcon iconName="arrow-up" className="h-5 w-5 mr-2" />
                 Subscribe Now
               </>
-            )}
+            ) : (
+              <>
+                <UIIcon iconName="x" className="h-5 w-5 mr-2" />
+                Sign In first
+              </>)}
           </Button>
 
           <p className="text-xs text-center text-slate-500">

@@ -3,7 +3,8 @@
  * Handles server-side auth operations using Clerk Backend SDK
  */
 
-import { clerkClient, currentUser } from '@clerk/nextjs/server';
+import { createClerkClient } from '@clerk/backend';
+import { currentUser } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
 import { logger } from '@uth/utils';
 import {
@@ -31,6 +32,7 @@ import { AuthError, AuthErrorCode } from '../../types/domain';
 export class ClerkAuthServerAdapter implements AuthServerProvider {
   private configured = false;
   private initError?: Error;
+  private client: ReturnType<typeof createClerkClient> | null = null;
 
   initialize(config: AuthServerProviderConfig): void {
     // Check for Clerk secret key
@@ -45,6 +47,11 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
       return;
     }
 
+    // Create Clerk client instance
+    this.client = createClerkClient({
+      secretKey,
+    });
+
     this.configured = true;
   }
 
@@ -52,8 +59,8 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     return this.configured;
   }
 
-  private ensureConfigured(): void {
-    if (!this.configured) {
+  private ensureConfigured(): ReturnType<typeof createClerkClient> {
+    if (!this.configured || !this.client) {
       if (this.initError) {
         throw new AuthError(
           AuthErrorCode.CONFIG_ERROR,
@@ -66,17 +73,17 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
         'Clerk not initialized. Set CLERK_SECRET_KEY environment variable.',
       );
     }
+    return this.client;
   }
 
   async verifyToken(
     token: string,
     checkRevoked = true,
   ): Promise<AuthTokenClaims> {
-    this.ensureConfigured();
+    const client = this.ensureConfigured();
 
     try {
       // Verify the session token with Clerk
-      const client = await clerkClient();
       const session = await client.sessions.verifySession(token, token);
 
       if (!session) {
@@ -121,7 +128,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
       const user = await client.users.getUser(uid);
 
       return {
@@ -158,7 +165,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
       await client.users.deleteUser(uid);
     } catch (error: any) {
       if (error.status === 404) {
@@ -184,7 +191,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
       await client.users.updateUser(uid, {
         publicMetadata: claims,
       });
@@ -287,7 +294,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
       const user = await client.users.createUser({
         emailAddress: [data.email],
         skipPasswordRequirement: data.skipPasswordRequirement ?? false,
@@ -320,7 +327,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
       const response = await client.users.getUserList({
         emailAddress: [email],
       });
@@ -359,7 +366,7 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     this.ensureConfigured();
 
     try {
-      const client = await clerkClient();
+      const client = this.ensureConfigured();
 
       // Get current user to merge metadata
       const currentUser = await client.users.getUser(uid);

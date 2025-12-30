@@ -15,12 +15,11 @@ import { AuthError, AuthErrorCode } from '../../types/domain';
 /**
  * Clerk client adapter
  *
- * Note: Clerk uses a React hook-based architecture, so some methods
- * are implemented as stubs that throw errors directing users to use hooks.
- * This adapter primarily serves to:
- * 1. Provide passkey support check
- * 2. Normalize Clerk user data to our domain types
- * 3. Provide error mapping
+ * Uses the global Clerk instance (window.Clerk) which is initialized by ClerkProvider.
+ * Provides methods to access Clerk functionality in a provider-agnostic way.
+ *
+ * Note: Some methods (like sign-in UI) are better handled through Clerk components
+ * and hooks, so they throw errors directing users to the appropriate approach.
  */
 export class ClerkAuthClientAdapter implements AuthClientProvider {
   private configured = false;
@@ -45,18 +44,57 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
     this.configured = true;
   }
 
+  /**
+   * Get the Clerk instance from window
+   * @private
+   */
+  private getClerk(): any {
+    if (typeof window === 'undefined') {
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Clerk is only available in browser environment',
+      );
+    }
+
+    const clerk = (window as any).Clerk;
+
+    if (!clerk) {
+      throw new AuthError(
+        AuthErrorCode.CONFIG_ERROR,
+        'Clerk is not initialized. Ensure ClerkProvider is mounted in your app.',
+      );
+    }
+
+    return clerk;
+  }
+
   isConfigured(): boolean {
     return this.configured;
   }
 
   /**
-   * Get current user - Note: In Clerk architecture, use useUser() hook instead
+   * Get current user from Clerk
    */
   getCurrentUser(): AuthUser | null {
-    throw new AuthError(
-      AuthErrorCode.CONFIG_ERROR,
-      'getCurrentUser is not available with Clerk. Use the useAuth() hook from @uth/auth-client instead.',
-    );
+    try {
+      const clerk = this.getClerk();
+      const clerkUser = clerk.user;
+
+      if (!clerkUser) {
+        return null;
+      }
+
+      return ClerkAuthClientAdapter.normalizeUser(clerkUser);
+    } catch (error) {
+      // If Clerk is not yet loaded, return null (not authenticated)
+      if (
+        error instanceof AuthError &&
+        error.code === AuthErrorCode.CONFIG_ERROR
+      ) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -72,33 +110,116 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   }
 
   /**
-   * Sign out - Note: In Clerk architecture, use signOut from useClerk() hook
+   * Sign out current user
    */
   async signOut(): Promise<void> {
-    throw new AuthError(
-      AuthErrorCode.CONFIG_ERROR,
-      'signOut is not available with Clerk. Use the signOut method from useClerk() hook instead.',
-    );
+    try {
+      const clerk = this.getClerk();
+      await clerk.signOut();
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Sign out failed: ${error.message || 'Unknown error'}`,
+        error,
+      );
+    }
   }
 
   /**
-   * Get ID token - Note: In Clerk architecture, use getToken from useAuth() hook
+   * Get ID token from Clerk session
    */
-  async getIdToken(_forceRefresh = false): Promise<string> {
-    throw new AuthError(
-      AuthErrorCode.CONFIG_ERROR,
-      'getIdToken is not available with Clerk. Use the getToken method from useAuth() hook instead.',
-    );
+  async getIdToken(forceRefresh = false): Promise<string> {
+    try {
+      const clerk = this.getClerk();
+
+      if (!clerk.session) {
+        throw new AuthError(
+          AuthErrorCode.UNAUTHENTICATED,
+          'No active session. User must be signed in to get token.',
+        );
+      }
+
+      // Get session token from Clerk
+      const token = await clerk.session.getToken({
+        template: forceRefresh ? undefined : 'default',
+      });
+
+      if (!token) {
+        throw new AuthError(
+          AuthErrorCode.PROVIDER_ERROR,
+          'Failed to retrieve session token',
+        );
+      }
+
+      return token;
+    } catch (error: any) {
+      if (error instanceof AuthError) {
+        throw error;
+      }
+
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to get ID token: ${error.message || 'Unknown error'}`,
+        error,
+      );
+    }
   }
 
   /**
-   * Subscribe to auth state changes - Note: Clerk handles this via React hooks
+   * Subscribe to auth state changes
+   * Listens to Clerk's session changes and notifies callback
    */
-  onAuthStateChanged(_callback: AuthStateChangeCallback): () => void {
-    throw new AuthError(
-      AuthErrorCode.CONFIG_ERROR,
-      'onAuthStateChanged is not available with Clerk. Use the useAuth() hook which provides reactive state.',
-    );
+  onAuthStateChanged(callback: AuthStateChangeCallback): () => void {
+    try {
+      const clerk = this.getClerk();
+
+      // Track current user to detect changes
+      let currentUser = clerk.user;
+
+      // Call callback immediately with current state
+      if (currentUser) {
+        callback(ClerkAuthClientAdapter.normalizeUser(currentUser));
+      } else {
+        callback(null);
+      }
+
+      // Listen for session changes
+      const handleSessionChange = () => {
+        const newUser = clerk.user;
+
+        // Only trigger callback if user changed
+        if (newUser?.id !== currentUser?.id) {
+          currentUser = newUser;
+
+          if (newUser) {
+            callback(ClerkAuthClientAdapter.normalizeUser(newUser));
+          } else {
+            callback(null);
+          }
+        }
+      };
+
+      // Clerk emits events we can listen to
+      clerk.addListener(handleSessionChange);
+
+      // Return unsubscribe function
+      return () => {
+        clerk.removeListener(handleSessionChange);
+      };
+    } catch (error: any) {
+      // If Clerk not loaded, return no-op unsubscribe
+      if (
+        error instanceof AuthError &&
+        error.code === AuthErrorCode.CONFIG_ERROR
+      ) {
+        logger.warn('Clerk not loaded, onAuthStateChanged will not work');
+        return () => {
+          /* no-op */
+        };
+      }
+
+      throw error;
+    }
   }
 
   /**
