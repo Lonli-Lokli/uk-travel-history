@@ -6,6 +6,26 @@
 export interface Database {
   public: {
     Tables: {
+      subscription_statuses: {
+        Row: {
+          code: string;
+          description: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          code: string;
+          description: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          code?: string;
+          description?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
       purchase_intents: {
         Row: {
           id: string;
@@ -57,7 +77,8 @@ export interface Database {
             | 'canceled'
             | 'trialing'
             | 'incomplete'
-            | 'unpaid';
+            | 'unpaid'
+            | null; // NULL = free/non-paid user
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           stripe_price_id: string | null;
@@ -76,7 +97,8 @@ export interface Database {
             | 'canceled'
             | 'trialing'
             | 'incomplete'
-            | 'unpaid';
+            | 'unpaid'
+            | null; // NULL = free/non-paid user
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
@@ -95,7 +117,8 @@ export interface Database {
             | 'canceled'
             | 'trialing'
             | 'incomplete'
-            | 'unpaid';
+            | 'unpaid'
+            | null; // NULL = free/non-paid user
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;

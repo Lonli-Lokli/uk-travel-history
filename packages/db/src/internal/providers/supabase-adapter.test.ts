@@ -261,7 +261,7 @@ describe('SupabaseDbAdapter', () => {
         email: 'test@example.com',
         passkey_enrolled: false,
         subscription_tier: 'free',
-        subscription_status: 'active',
+        subscription_status: null, // Free tier users have NULL status
         stripe_customer_id: null,
         stripe_subscription_id: null,
         stripe_price_id: null,
@@ -281,6 +281,7 @@ describe('SupabaseDbAdapter', () => {
 
       expect(user).not.toBeNull();
       expect(user?.id).toBe('user-uuid');
+      expect(user?.subscriptionStatus).toBe(null); // Free tier = NULL status
       expect(mockQuery.eq).toHaveBeenCalledWith('id', 'user-uuid');
     });
 
@@ -364,7 +365,7 @@ describe('SupabaseDbAdapter', () => {
         email: 'minimal@example.com',
         passkey_enrolled: false,
         subscription_tier: 'free',
-        subscription_status: 'active',
+        subscription_status: null, // Free tier users have NULL status
         stripe_customer_id: null,
         stripe_subscription_id: null,
         stripe_price_id: null,
@@ -389,10 +390,12 @@ describe('SupabaseDbAdapter', () => {
 
       expect(user.passkeyEnrolled).toBe(false);
       expect(user.subscriptionTier).toBe(SubscriptionTier.FREE);
+      expect(user.subscriptionStatus).toBe(null); // Free tier = NULL status
       expect(mockQuery.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           passkey_enrolled: false,
           subscription_tier: 'free',
+          subscription_status: null, // NULL for free tier
         }),
       );
     });
@@ -476,7 +479,7 @@ describe('SupabaseDbAdapter', () => {
         email: 'test@example.com',
         passkey_enrolled: true,
         subscription_tier: 'free',
-        subscription_status: 'active',
+        subscription_status: null, // Free tier users have NULL status
         stripe_customer_id: null,
         stripe_subscription_id: null,
         stripe_price_id: null,

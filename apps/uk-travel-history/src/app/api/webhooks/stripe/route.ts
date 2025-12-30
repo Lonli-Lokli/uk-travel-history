@@ -537,12 +537,16 @@ async function handleSubscriptionCancellation(
 
     const authUserId = existingUsersResult.users[0].uid;
 
-    // Update user to free tier with canceled status
+    // Update user to free tier with NULL status
+    // Preserve current_period_end for grace period access
     await updateUserByAuthId(authUserId, {
       subscriptionTier: SubscriptionTier.FREE,
-      subscriptionStatus: SubscriptionStatus.CANCELED,
+      subscriptionStatus: null, // NULL for free tier (enforced by DB constraint)
       stripeSubscriptionId: null, // Clear subscription ID
-      currentPeriodEnd: null,
+      // Keep current_period_end to allow grace period access
+      currentPeriodEnd: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000)
+        : null,
     });
 
     getRouteLogger().info('Downgraded user to free tier after cancellation', {

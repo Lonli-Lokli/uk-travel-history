@@ -184,12 +184,21 @@ export class SupabaseDbAdapter implements DbProvider {
   async createUser(data: CreateUserData): Promise<User> {
     const client = this.ensureConfigured();
 
+    // Compute tier first to use in status logic
+    const tier = data.subscriptionTier ?? SubscriptionTier.FREE;
+
     const insertData = {
       clerk_user_id: data.authUserId,
       email: data.email,
       passkey_enrolled: data.passkeyEnrolled ?? false,
-      subscription_tier: data.subscriptionTier ?? SubscriptionTier.FREE,
-      subscription_status: data.subscriptionStatus ?? SubscriptionStatus.ACTIVE,
+      subscription_tier: tier,
+      // NULL status for free tier, ACTIVE for paid tiers (unless explicitly set)
+      subscription_status:
+        data.subscriptionStatus !== undefined
+          ? data.subscriptionStatus
+          : tier === SubscriptionTier.FREE
+            ? null
+            : SubscriptionStatus.ACTIVE,
       stripe_customer_id: data.stripeCustomerId ?? null,
       stripe_subscription_id: data.stripeSubscriptionId ?? null,
       stripe_price_id: data.stripePriceId ?? null,
@@ -453,8 +462,10 @@ export class SupabaseDbAdapter implements DbProvider {
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
       subscriptionTier: (row.subscription_tier as SubscriptionTier) ?? SubscriptionTier.FREE,
-      subscriptionStatus:
-        (row.subscription_status as SubscriptionStatus) ?? SubscriptionStatus.ACTIVE,
+      // NULL status is valid for free tier users, only default to ACTIVE for non-null values
+      subscriptionStatus: row.subscription_status
+        ? (row.subscription_status as SubscriptionStatus)
+        : null,
       stripeCustomerId: row.stripe_customer_id ?? null,
       stripeSubscriptionId: row.stripe_subscription_id ?? null,
       stripePriceId: row.stripe_price_id ?? null,
