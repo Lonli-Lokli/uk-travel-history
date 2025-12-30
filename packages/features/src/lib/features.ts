@@ -123,9 +123,9 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
  * INTERNAL: Load all feature policies from Supabase (uncached)
  * Single source of truth for Supabase access via DB SDK
  *
- * @returns Promise<EdgeConfigPolicies | null> All policies or null if unavailable
+ * @returns Promise<SupabasePolicies | null> All policies or null if unavailable
  */
-async function loadPoliciesFromSupabaseUncached(): Promise<EdgeConfigPolicies | null> {
+async function loadPoliciesFromSupabaseUncached(): Promise<SupabasePolicies | null> {
   try {
     const data = await dbGetAllFeaturePolicies();
 
@@ -134,8 +134,8 @@ async function loadPoliciesFromSupabaseUncached(): Promise<EdgeConfigPolicies | 
       return null;
     }
 
-    // Convert database rows to EdgeConfigPolicies format
-    const policies: EdgeConfigPolicies = {} as EdgeConfigPolicies;
+    // Convert database rows to SupabasePolicies format
+    const policies: SupabasePolicies = {} as SupabasePolicies;
 
     for (const row of data) {
       policies[row.featureKey as FeatureFlagKey] = {
@@ -163,7 +163,7 @@ async function loadPoliciesFromSupabaseUncached(): Promise<EdgeConfigPolicies | 
  * The cache will revalidate every 12 hours (43200 seconds), which is a reasonable compromise
  * for feature flag updates.
  *
- * @returns Promise<EdgeConfigPolicies | null> All policies or null if unavailable
+ * @returns Promise<SupabasePolicies | null> All policies or null if unavailable
  */
 const loadPoliciesFromSupabase = unstable_cache(
   loadPoliciesFromSupabaseUncached,
@@ -324,19 +324,10 @@ export async function isSupabaseFeaturePoliciesAvailable(): Promise<boolean> {
 }
 
 /**
- * @deprecated Use isSupabaseFeaturePoliciesAvailable() instead
- * Kept for backward compatibility
- */
-export async function isEdgeConfigAvailable(): Promise<boolean> {
-  return isSupabaseFeaturePoliciesAvailable();
-}
-
-/**
  * Supabase schema for feature policies
  * Stored in the 'feature_policies' table in Supabase
- * @deprecated Name kept for backward compatibility, now uses Supabase
  */
-export type EdgeConfigPolicies = Record<FeatureFlagKey, FeaturePolicy>;
+export type SupabasePolicies = Record<FeatureFlagKey, FeaturePolicy>;
 
 /**
  * SERVER-SIDE ONLY: Get feature policy from Supabase or use default

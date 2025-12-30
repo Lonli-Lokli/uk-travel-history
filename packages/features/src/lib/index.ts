@@ -1,4 +1,4 @@
-// Unified feature flag system (Vercel Edge Config only)
+// Unified feature flag system (Supabase-backed)
 export {
   isFeatureEnabled,
   getAllFeatureFlags,
@@ -6,11 +6,11 @@ export {
   setCachedFlags,
   DEFAULT_FEATURE_POLICIES,
   type FeaturePolicy,
-  type EdgeConfigPolicies,
+  type SupabasePolicies,
   getFeaturePolicy,
   getAllFeaturePolicies,
   getCachedFlags,
-  isEdgeConfigAvailable,
+  isSupabaseFeaturePoliciesAvailable,
 } from './features';
 
 // Feature keys and types

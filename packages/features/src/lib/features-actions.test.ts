@@ -3,7 +3,7 @@ import {
   isFeatureEnabled,
   isFeatureEnabledClient,
   getAllFeatureFlags,
-  isEdgeConfigAvailable,
+  isSupabaseFeaturePoliciesAvailable,
   setCachedFlags,
   getCachedFlags,
   DEFAULT_FEATURE_POLICIES,
@@ -305,20 +305,20 @@ describe('Edge Config Feature Flags', () => {
     });
   });
 
-  describe('isEdgeConfigAvailable', () => {
-    it('should return true when Edge Config is accessible', async () => {
+  describe('isSupabaseFeaturePoliciesAvailable', () => {
+    it('should return true when Supabase is accessible', async () => {
       vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.AUTH]: { enabled: true },
       }));
 
-      const result = await isEdgeConfigAvailable();
+      const result = await isSupabaseFeaturePoliciesAvailable();
       expect(result).toBe(true);
     });
 
-    it('should return false when Edge Config throws error', async () => {
+    it('should return false when Supabase throws error', async () => {
       vi.mocked(dbGetAllFeaturePolicies).mockRejectedValue(new Error('Not configured'));
 
-      const result = await isEdgeConfigAvailable();
+      const result = await isSupabaseFeaturePoliciesAvailable();
       expect(result).toBe(false);
     });
   });
