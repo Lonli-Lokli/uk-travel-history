@@ -9,6 +9,9 @@ export async function register() {
     // Then pass it to your feature flag functions
   }
 
+  // Note: Client-side initialization is handled by sentry.client.config.ts
+  // which is automatically loaded by Next.js
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config');
   }

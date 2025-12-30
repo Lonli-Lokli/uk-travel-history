@@ -1,6 +1,5 @@
-// This file configures the initialization of Sentry for edge features (middleware, edge routes, and so on).
-// The config you add here will be used whenever one of the edge features is loaded.
-// Note that this config is unrelated to the Vercel Edge Runtime and is also required when running locally.
+// This file configures the initialization of Sentry on the client.
+// The added config here will be used whenever a users loads a page in their browser.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from '@sentry/nextjs';
@@ -11,9 +10,12 @@ const environment = getEnvironment();
 
 // Only log in development to avoid noise in production
 if (environment === 'development') {
-  console.log('[Sentry Edge Init] Environment:', environment);
-  console.log('[Sentry Edge Init] VERCEL_ENV:', process.env.VERCEL_ENV);
-  console.log('[Sentry Edge Init] NODE_ENV:', process.env.NODE_ENV);
+  console.log('[Sentry Client Init] Environment:', environment);
+  console.log(
+    '[Sentry Client Init] NEXT_PUBLIC_VERCEL_ENV:',
+    process.env.NEXT_PUBLIC_VERCEL_ENV,
+  );
+  console.log('[Sentry Client Init] NODE_ENV:', process.env.NODE_ENV);
 }
 
 Sentry.init({
@@ -21,7 +23,11 @@ Sentry.init({
   environment,
 
   // Adjust sample rate based on environment
+  // In production, sample all errors (1.0) but reduce transaction sampling
+  // In development, don't send anything to Sentry to avoid noise
   tracesSampleRate: environment === 'production' ? 0.1 : 0,
+
+  // Sample rate for profiling (if enabled)
   profilesSampleRate: environment === 'production' ? 0.1 : 0,
 
   // Only enable in production to avoid development noise
@@ -35,7 +41,7 @@ Sentry.init({
   sendDefaultPii: true,
 
   // Improve error grouping
-  beforeSend(event) {
+  beforeSend(event, hint) {
     // Filter out localhost errors in production (shouldn't happen, but just in case)
     if (event.request?.url?.includes('localhost')) {
       return null;

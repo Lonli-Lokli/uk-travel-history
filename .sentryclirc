@@ -1,0 +1,14 @@
+[auth]
+# Authentication token for Sentry CLI
+# This should be set via environment variable SENTRY_AUTH_TOKEN in production
+# Get your auth token from: https://sentry.io/settings/account/api/auth-tokens/
+# token=YOUR_AUTH_TOKEN_HERE
+
+[defaults]
+# Sentry organization and project
+org=echo-xl
+project=uk-travel-history
+
+# Upload source maps to Sentry
+# This is used during the build process
+url=https://sentry.io/

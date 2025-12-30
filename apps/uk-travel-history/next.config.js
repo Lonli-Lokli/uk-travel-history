@@ -34,6 +34,11 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   org: 'echo-xl',
   project: 'uk-travel-history',
 
+  // Authentication token for uploading source maps
+  // This should be set via SENTRY_AUTH_TOKEN environment variable in Vercel
+  // Get token from: https://sentry.io/settings/account/api/auth-tokens/
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
@@ -42,6 +47,18 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
+
+  // Automatically annotate React components for better debugging
+  reactComponentAnnotation: {
+    enabled: true,
+  },
+
+  // Hide source maps from being publicly accessible
+  // Source maps are uploaded to Sentry but not served to browsers
+  hideSourceMaps: true,
+
+  // Disable Sentry during development builds to speed up the dev server
+  disableLogger: true,
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
