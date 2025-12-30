@@ -6,6 +6,7 @@ import { FEATURE_KEYS } from '@uth/features';
 describe('FeatureGate', () => {
   const mockMonetizationStore = {
     hasFeatureAccess: vi.fn(),
+    getMinimumTier: vi.fn(),
     isLoading: false,
     isAuthenticated: false,
   };
@@ -23,6 +24,7 @@ describe('FeatureGate', () => {
     mockMonetizationStore.isLoading = false;
     mockMonetizationStore.isAuthenticated = false;
     mockMonetizationStore.hasFeatureAccess.mockReturnValue(false);
+    mockMonetizationStore.getMinimumTier.mockReturnValue('premium');
     mockAuthStore.user = null;
   });
 

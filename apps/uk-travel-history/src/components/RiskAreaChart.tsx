@@ -71,34 +71,54 @@ const FAKE_PLACEHOLDER_DATA = {
   ] as RollingDataPoint[],
   trips: [
     {
+      date: '2020-06-15',
       outDate: '2020-06-15',
       inDate: '2020-07-20',
+      tripStart: 1592179200000, // 2020-06-15
+      tripEnd: 1595203200000, // 2020-07-20
+      tripDuration: 34,
       tripLabel: 'Trip 1',
-      fullDaysOutside: 34,
+      formattedDate: '15 Jun 2020',
     },
     {
+      date: '2021-12-20',
       outDate: '2021-12-20',
       inDate: '2022-01-10',
+      tripStart: 1639958400000, // 2021-12-20
+      tripEnd: 1641772800000, // 2022-01-10
+      tripDuration: 20,
       tripLabel: 'Trip 2',
-      fullDaysOutside: 20,
+      formattedDate: '20 Dec 2021',
     },
     {
+      date: '2022-08-01',
       outDate: '2022-08-01',
       inDate: '2022-09-15',
+      tripStart: 1659312000000, // 2022-08-01
+      tripEnd: 1663200000000, // 2022-09-15
+      tripDuration: 44,
       tripLabel: 'Trip 3',
-      fullDaysOutside: 44,
+      formattedDate: '01 Aug 2022',
     },
     {
+      date: '2023-03-10',
       outDate: '2023-03-10',
       inDate: '2023-04-05',
+      tripStart: 1678406400000, // 2023-03-10
+      tripEnd: 1680652800000, // 2023-04-05
+      tripDuration: 25,
       tripLabel: 'Trip 4',
-      fullDaysOutside: 25,
+      formattedDate: '10 Mar 2023',
     },
     {
+      date: '2024-07-01',
       outDate: '2024-07-01',
       inDate: '2024-08-30',
+      tripStart: 1719792000000, // 2024-07-01
+      tripEnd: 1724976000000, // 2024-08-30
+      tripDuration: 59,
       tripLabel: 'Trip 5',
-      fullDaysOutside: 59,
+      formattedDate: '01 Jul 2024',
     },
   ] as TripBar[],
 };

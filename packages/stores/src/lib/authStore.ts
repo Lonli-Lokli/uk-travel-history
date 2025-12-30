@@ -19,7 +19,9 @@ import { logger } from '@uth/utils';
 
 class AuthStore {
   user: AuthUser | null = null;
-  isLoading = true;
+  // Start with isLoading = false to match server-side rendering
+  // This prevents hydration errors since Clerk auth runs client-side only
+  isLoading = false;
   isAuthenticating = false;
   error: string | null = null;
 
@@ -42,10 +44,8 @@ class AuthStore {
         // If auth is not available, set loading to false immediately
         this.isLoading = false;
       }
-    } else {
-      // Server-side, set loading to false immediately
-      this.isLoading = false;
     }
+    // Server-side: isLoading is already false from initial state
   }
 
   /**

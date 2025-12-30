@@ -17,6 +17,7 @@ describe('Premium Feature Integration', () => {
   beforeEach(() => {
     mockMonetizationStore = {
       hasFeatureAccess: vi.fn(),
+      getMinimumTier: vi.fn().mockReturnValue('premium'),
       isLoading: false,
       isAuthenticated: false,
     };
