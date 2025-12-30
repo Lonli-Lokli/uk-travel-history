@@ -1,10 +1,12 @@
-// Unified Feature Flag System with Vercel Edge Config
+// Unified Feature Flag System with Supabase
 // Single source of truth for feature flags with type safety
 // Supports both client-side and server-side usage
+// Uses Next.js caching with midnight revalidation to minimize database reads
 
-import { get } from '@vercel/edge-config';
+import { unstable_cache } from 'next/cache';
 import { logger } from '@uth/utils';
 import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
+import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
 
 
 /**
@@ -12,7 +14,8 @@ import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
  * This allows changing feature tier requirements without code deployment
  *
  * IMPORTANT: This is the source of truth for feature tier configuration
- * - Configure via Vercel Edge Config for runtime control
+ * - Stored in Supabase feature_policies table
+ * - Cached with Next.js unstable_cache until midnight
  * - Prevents client-side bypass with server-side enforcement
  * - Supports three access levels: anonymous, free, premium
  */
@@ -117,23 +120,64 @@ export function getCachedFlags(): Record<FeatureFlagKey, boolean> {
 }
 
 /**
- * INTERNAL: Load all feature policies from Edge Config
- * Single source of truth for Edge Config access
+ * INTERNAL: Load all feature policies from Supabase (uncached)
+ * Single source of truth for Supabase access via DB SDK
  *
- * @returns Promise<EdgeConfigPolicies | null> All policies or null if unavailable
+ * @returns Promise<SupabasePolicies | null> All policies or null if unavailable
  */
-async function loadPoliciesFromEdgeConfig(): Promise<EdgeConfigPolicies | null> {
+async function loadPoliciesFromSupabaseUncached(): Promise<SupabasePolicies | null> {
   try {
-    const policies = await get<EdgeConfigPolicies>('feature-policies');
-    return policies || null;
+    const data = await dbGetAllFeaturePolicies();
+
+    if (!data || data.length === 0) {
+      logger.warn('[Feature Policies] No feature policies found in database');
+      return null;
+    }
+
+    // Convert database rows to SupabasePolicies format
+    const policies: SupabasePolicies = {} as SupabasePolicies;
+
+    for (const row of data) {
+      policies[row.featureKey as FeatureFlagKey] = {
+        enabled: row.enabled,
+        minTier: row.minTier as TierId,
+        rolloutPercentage: row.rolloutPercentage ?? undefined,
+        allowlist: row.allowlist ?? undefined,
+        denylist: row.denylist ?? undefined,
+        betaUsers: row.betaUsers ?? undefined,
+      };
+    }
+
+    return policies;
   } catch (error) {
-    logger.error('[Feature Policies] Error loading from Edge Config', error);
+    logger.error('[Feature Policies] Error loading from database', error);
     return null;
   }
 }
 
 /**
- * SERVER-SIDE ONLY: Check if a feature is enabled via Vercel Edge Config
+ * INTERNAL: Load all feature policies from Supabase with Next.js caching
+ * Cached until midnight to minimize database reads
+ *
+ * NOTE: We use a fixed revalidation time since unstable_cache doesn't support dynamic values.
+ * The cache will revalidate every 12 hours (43200 seconds), which is a reasonable compromise
+ * for feature flag updates.
+ *
+ * @returns Promise<SupabasePolicies | null> All policies or null if unavailable
+ */
+const loadPoliciesFromSupabase = unstable_cache(
+  loadPoliciesFromSupabaseUncached,
+  ['feature-policies'],
+  {
+    // Revalidate every 12 hours (43200 seconds)
+    // This ensures feature flags are refreshed at least twice a day
+    revalidate: 43200,
+    tags: ['feature-policies'],
+  }
+);
+
+/**
+ * SERVER-SIDE ONLY: Check if a feature is enabled via Supabase
  *
  * WARNING: This function does NOT check user tier or subscription status.
  * For access control, use checkFeatureAccess() or assertFeatureAccess() from api-guards.ts
@@ -149,7 +193,7 @@ async function loadPoliciesFromEdgeConfig(): Promise<EdgeConfigPolicies | null> 
  *
  * @example
  * // Server-side usage (for display purposes only, NOT for access control)
- * const isEnabled = await isFeatureEnabled('excel_export_premium', userId);
+ * const isEnabled = await isFeatureEnabled('excel_export', userId);
  * if (isEnabled) {
  *   // Show UI element (but still enforce access control on API routes!)
  * }
@@ -159,12 +203,12 @@ export async function isFeatureEnabled(
   userId?: string,
 ): Promise<boolean> {
   try {
-    const flags = await loadPoliciesFromEdgeConfig();
+    const flags = await loadPoliciesFromSupabase();
 
     if (!flags) {
-      // Edge Config not configured, default to disabled for safety
+      // Supabase not configured, default to disabled for safety
       logger.warn(
-        `Edge Config not configured, defaulting ${featureKey} to disabled`,
+        `Supabase feature policies not available, defaulting ${featureKey} to default policy`,
       );
       return DEFAULT_FEATURE_POLICIES[featureKey].enabled;
     }
@@ -266,13 +310,13 @@ export function isFeatureEnabledClient(featureKey: FeatureFlagKey): boolean {
 }
 
 /**
- * Check if Edge Config is available and working
+ * Check if Supabase feature policies are available and working
  *
- * @returns Promise<boolean> indicating if Edge Config is accessible
+ * @returns Promise<boolean> indicating if Supabase is accessible
  */
-export async function isEdgeConfigAvailable(): Promise<boolean> {
+export async function isSupabaseFeaturePoliciesAvailable(): Promise<boolean> {
   try {
-    const policies = await loadPoliciesFromEdgeConfig();
+    const policies = await loadPoliciesFromSupabase();
     return policies !== null;
   } catch {
     return false;
@@ -280,13 +324,13 @@ export async function isEdgeConfigAvailable(): Promise<boolean> {
 }
 
 /**
- * Edge Config schema for feature policies
- * Stored under the 'featurePolicies' key in Edge Config
+ * Supabase schema for feature policies
+ * Stored in the 'feature_policies' table in Supabase
  */
-export type EdgeConfigPolicies = Record<FeatureFlagKey, FeaturePolicy>;
+export type SupabasePolicies = Record<FeatureFlagKey, FeaturePolicy>;
 
 /**
- * SERVER-SIDE ONLY: Get feature policy from Edge Config or use default
+ * SERVER-SIDE ONLY: Get feature policy from Supabase or use default
  * This allows runtime control of feature behavior without redeployment
  *
  * WARNING: This function does NOT validate user tier or subscription.
@@ -306,8 +350,8 @@ export async function getFeaturePolicy(
   featureKey: FeatureFlagKey,
 ): Promise<FeaturePolicy> {
   try {
-    // Fetch all policies from Edge Config using centralized method
-    const policies = await loadPoliciesFromEdgeConfig();
+    // Fetch all policies from Supabase using centralized method
+    const policies = await loadPoliciesFromSupabase();
 
     if (policies && policies[featureKey]) {
       // Merge with defaults to ensure all required fields are present
@@ -328,7 +372,7 @@ export async function getFeaturePolicy(
 }
 
 /**
- * SERVER-SIDE ONLY: Get all feature policies from Edge Config
+ * SERVER-SIDE ONLY: Get all feature policies from Supabase
  * Useful for batch operations and caching
  *
  * WARNING: This function does NOT validate user tier or subscription.
@@ -345,14 +389,14 @@ export async function getAllFeaturePolicies(): Promise<
   Record<FeatureFlagKey, FeaturePolicy>
 > {
   try {
-    // Fetch all policies from Edge Config using centralized method
-    const policies = await loadPoliciesFromEdgeConfig();
+    // Fetch all policies from Supabase using centralized method
+    const policies = await loadPoliciesFromSupabase();
 
     if (!policies) {
       return DEFAULT_FEATURE_POLICIES;
     }
 
-    // Merge Edge Config policies with defaults
+    // Merge Supabase policies with defaults
     const result: Record<FeatureFlagKey, FeaturePolicy> = { ...DEFAULT_FEATURE_POLICIES };
 
     for (const featureKey of Object.keys(DEFAULT_FEATURE_POLICIES) as FeatureFlagKey[]) {

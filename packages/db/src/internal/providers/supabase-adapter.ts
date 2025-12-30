@@ -15,6 +15,7 @@ import type {
   UpdatePurchaseIntentData,
   WebhookEvent,
   CreateWebhookEventData,
+  FeaturePolicy,
 } from '../../types/domain';
 import {
   DbError,
@@ -500,6 +501,67 @@ export class SupabaseDbAdapter implements DbProvider {
       type: row.type,
       payload: row.payload,
       processedAt: new Date(row.processed_at),
+    };
+  }
+
+  // ============================================================================
+  // Feature Policy Operations
+  // ============================================================================
+
+  async getAllFeaturePolicies(): Promise<FeaturePolicy[]> {
+    const client = this.ensureConfigured();
+
+    const { data, error } = await client
+      .from('feature_policies')
+      .select('*');
+
+    if (error) {
+      this.handleError('getAllFeaturePolicies', error);
+    }
+
+    return (data || []).map((row) => this.mapFeaturePolicyFromDb(row));
+  }
+
+  async getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null> {
+    const client = this.ensureConfigured();
+
+    try {
+      const { data, error } = await client
+        .from('feature_policies')
+        .select('*')
+        .eq('feature_key', featureKey)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        this.handleError('getFeaturePolicyByKey', error);
+      }
+
+      return this.mapFeaturePolicyFromDb(data);
+    } catch (error) {
+      if (error instanceof DbError && error.is(DbErrorCode.NOT_FOUND)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private mapFeaturePolicyFromDb(
+    row: Database['public']['Tables']['feature_policies']['Row'],
+  ): FeaturePolicy {
+    return {
+      id: row.id,
+      featureKey: row.feature_key,
+      enabled: row.enabled,
+      minTier: row.min_tier,
+      rolloutPercentage: row.rollout_percentage,
+      allowlist: row.allowlist,
+      denylist: row.denylist,
+      betaUsers: row.beta_users,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 }

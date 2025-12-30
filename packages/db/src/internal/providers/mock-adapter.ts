@@ -13,6 +13,7 @@ import type {
   UpdatePurchaseIntentData,
   WebhookEvent,
   CreateWebhookEventData,
+  FeaturePolicy,
 } from '../../types/domain';
 import {
   DbError,
@@ -30,6 +31,7 @@ export class MockDbAdapter implements DbProvider {
   private users: Map<string, User> = new Map();
   private purchaseIntents: Map<string, PurchaseIntent> = new Map();
   private webhookEvents: Map<string, WebhookEvent> = new Map();
+  private featurePolicies: Map<string, FeaturePolicy> = new Map();
   private idCounter = 1;
 
   initialize(_config: DbProviderConfig): void {
@@ -51,6 +53,7 @@ export class MockDbAdapter implements DbProvider {
     this.users.clear();
     this.purchaseIntents.clear();
     this.webhookEvents.clear();
+    this.featurePolicies.clear();
     this.idCounter = 1;
   }
 
@@ -267,5 +270,22 @@ export class MockDbAdapter implements DbProvider {
 
     this.webhookEvents.set(event.id, event);
     return event;
+  }
+
+  // ============================================================================
+  // Feature Policy Operations
+  // ============================================================================
+
+  async getAllFeaturePolicies(): Promise<FeaturePolicy[]> {
+    return Array.from(this.featurePolicies.values());
+  }
+
+  async getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null> {
+    for (const policy of this.featurePolicies.values()) {
+      if (policy.featureKey === featureKey) {
+        return policy;
+      }
+    }
+    return null;
   }
 }

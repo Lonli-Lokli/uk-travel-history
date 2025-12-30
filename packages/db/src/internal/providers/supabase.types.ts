@@ -149,6 +149,44 @@ export interface Database {
           processed_at?: string;
         };
       };
+      feature_policies: {
+        Row: {
+          id: string;
+          feature_key: string;
+          enabled: boolean;
+          min_tier: 'anonymous' | 'free' | 'premium';
+          rollout_percentage: number | null;
+          allowlist: string[];
+          denylist: string[];
+          beta_users: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          feature_key: string;
+          enabled?: boolean;
+          min_tier?: 'anonymous' | 'free' | 'premium';
+          rollout_percentage?: number | null;
+          allowlist?: string[];
+          denylist?: string[];
+          beta_users?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          feature_key?: string;
+          enabled?: boolean;
+          min_tier?: 'anonymous' | 'free' | 'premium';
+          rollout_percentage?: number | null;
+          allowlist?: string[];
+          denylist?: string[];
+          beta_users?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       keepalive: {
