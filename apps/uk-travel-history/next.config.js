@@ -34,6 +34,9 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   org: 'echo-xl',
   project: 'uk-travel-history',
 
+  // Authentication token for source maps upload (configured in Vercel)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
@@ -48,6 +51,12 @@ module.exports = withSentryConfig(composePlugins(...plugins)(nextConfig), {
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
   tunnelRoute: '/monitoring',
+
+  // Hide source maps from public access for security
+  hideSourceMaps: true,
+
+  // Disable Sentry logger during Webpack build to reduce noise
+  disableLogger: true,
 
   // Sentry webpack configuration
   webpack: {

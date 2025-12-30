@@ -5,15 +5,17 @@
 import * as Sentry from '@sentry/nextjs';
 import { getEnvironment } from '@uth/utils';
 
-// Diagnostic logging for environment detection
 const environment = getEnvironment();
-console.log('[Sentry Server Init] Environment:', environment);
-console.log('[Sentry Server Init] VERCEL_ENV:', process.env.VERCEL_ENV);
-console.log('[Sentry Server Init] NODE_ENV:', process.env.NODE_ENV);
 
 Sentry.init({
   dsn: 'https://2186d0cfc8bc7dd8a2e86abf68f70c42@o473632.ingest.us.sentry.io/4510512015409152',
   environment,
+
+  // Only enable Sentry in production to avoid reporting localhost errors
+  enabled: environment === 'production',
+
+  // Adjust sample rates for performance monitoring
+  tracesSampleRate: 0.1, // 10% of transactions
 
   // Enable logs to be sent to Sentry
   enableLogs: true,
