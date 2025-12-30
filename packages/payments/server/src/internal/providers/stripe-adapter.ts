@@ -278,6 +278,7 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
 
         if (intent.customerEmail) {
           sessionParams.customer_email = intent.customerEmail;
+          sessionParams.metadata!.email = intent.customerEmail;
         }
       }
 
@@ -286,6 +287,7 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         sessionParams.subscription_data = {
           metadata: {
             userId: intent.userId,
+            email: intent.customerEmail || '',
           },
         };
       } else if (intent.plan !== PaymentPlan.PREMIUM_ONCE) {

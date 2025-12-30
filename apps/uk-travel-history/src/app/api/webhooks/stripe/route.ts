@@ -96,7 +96,20 @@ export async function POST(request: NextRequest) {
         extra: { sessionId: session.id },
       });
 
-      // Get purchase intent via client_reference_id or metadata
+      // Check if this is an authenticated checkout (new Clerk flow)
+      const userId = session.metadata?.userId || session.client_reference_id;
+      const isAuthenticatedCheckout = userId && !session.metadata?.purchase_intent_id;
+
+      if (isAuthenticatedCheckout) {
+        // Authenticated checkout - user already exists via Clerk
+        // Subscription webhooks will handle entitlement updates
+        getRouteLogger().info('Authenticated checkout completed', {
+          extra: { sessionId: session.id, userId },
+        });
+        return NextResponse.json({ received: true, authenticated: true });
+      }
+
+      // Legacy purchase intent flow (for backwards compatibility)
       const purchaseIntentId =
         session.client_reference_id || session.metadata?.purchase_intent_id;
 
@@ -434,12 +447,13 @@ async function handleSubscriptionChange(
   const tier = mapPriceToTier(priceId);
   const subscriptionStatus = mapStripeStatus(status);
 
-  // Get customer email from subscription metadata or customer object
+  // Get userId directly from metadata (new flow) or find by email (legacy flow)
+  let authUserId = subscription.metadata?.userId;
   const customerEmail = subscription.metadata?.email;
 
-  if (!customerEmail) {
+  if (!authUserId && !customerEmail) {
     getRouteLogger().error(
-      'No customer email in subscription metadata',
+      'No userId or email in subscription metadata',
       undefined,
       {
         extra: { subscriptionId, customerId },
@@ -449,38 +463,57 @@ async function handleSubscriptionChange(
   }
 
   try {
-    // Find user by email
-    const existingUsersResult = await getUsersByEmail(customerEmail);
+    // If no userId, try to find user by email
+    if (!authUserId && customerEmail) {
+      const existingUsersResult = await getUsersByEmail(customerEmail);
 
-    if (existingUsersResult.users.length === 0) {
-      getRouteLogger().error('No auth user found for subscription', undefined, {
-        extra: { email: customerEmail, subscriptionId },
+      if (existingUsersResult.users.length === 0) {
+        getRouteLogger().error('No auth user found for subscription', undefined, {
+          extra: { email: customerEmail, subscriptionId },
+        });
+        return;
+      }
+
+      authUserId = existingUsersResult.users[0].uid;
+    }
+
+    if (!authUserId) {
+      getRouteLogger().error('Could not determine auth user ID', undefined, {
+        extra: { subscriptionId, customerEmail },
       });
       return;
     }
-
-    const authUserId = existingUsersResult.users[0].uid;
 
     // Check if user exists in database
     const dbUser = await getUserByAuthId(authUserId);
 
     if (!dbUser) {
-      // Create user with subscription entitlements
-      await createDbUser({
-        authUserId,
-        email: customerEmail,
-        passkeyEnrolled: false,
-        subscriptionTier: tier,
-        subscriptionStatus,
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        stripePriceId: priceId,
-        currentPeriodEnd,
+      // User should already exist (created by Clerk webhook)
+      // Log error but don't fail - this might be a timing issue
+      getRouteLogger().error('User not found in database for subscription', undefined, {
+        extra: { authUserId, subscriptionId, hasEmail: !!customerEmail },
       });
 
-      getRouteLogger().info(`Created user with ${tier} subscription`, {
-        extra: { authUserId, subscriptionId },
-      });
+      // If we have email, try to create the user
+      if (customerEmail) {
+        await createDbUser({
+          authUserId,
+          email: customerEmail,
+          passkeyEnrolled: false,
+          subscriptionTier: tier,
+          subscriptionStatus,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripePriceId: priceId,
+          currentPeriodEnd,
+        });
+
+        getRouteLogger().info(`Created user with ${tier} subscription`, {
+          extra: { authUserId, subscriptionId },
+        });
+      } else {
+        return; // Cannot create user without email
+      }
     } else {
       // Update user with subscription entitlements
       await updateUserByAuthId(authUserId, {
@@ -511,11 +544,12 @@ async function handleSubscriptionCancellation(
   subscription: any,
 ): Promise<void> {
   const subscriptionId = subscription.id;
+  let authUserId = subscription.metadata?.userId;
   const customerEmail = subscription.metadata?.email;
 
-  if (!customerEmail) {
+  if (!authUserId && !customerEmail) {
     getRouteLogger().error(
-      'No customer email in subscription metadata',
+      'No userId or email in subscription metadata',
       undefined,
       {
         extra: { subscriptionId },
@@ -525,17 +559,26 @@ async function handleSubscriptionCancellation(
   }
 
   try {
-    // Find user by email
-    const existingUsersResult = await getUsersByEmail(customerEmail);
+    // If no userId, try to find user by email
+    if (!authUserId && customerEmail) {
+      const existingUsersResult = await getUsersByEmail(customerEmail);
 
-    if (existingUsersResult.users.length === 0) {
-      getRouteLogger().warn('No auth user found for cancelled subscription', {
-        extra: { email: customerEmail, subscriptionId },
+      if (existingUsersResult.users.length === 0) {
+        getRouteLogger().warn('No auth user found for cancelled subscription', {
+          extra: { email: customerEmail, subscriptionId },
+        });
+        return;
+      }
+
+      authUserId = existingUsersResult.users[0].uid;
+    }
+
+    if (!authUserId) {
+      getRouteLogger().error('Could not determine auth user ID', undefined, {
+        extra: { subscriptionId, customerEmail },
       });
       return;
     }
-
-    const authUserId = existingUsersResult.users[0].uid;
 
     // Update user to free tier with NULL status
     // Preserve current_period_end for grace period access
