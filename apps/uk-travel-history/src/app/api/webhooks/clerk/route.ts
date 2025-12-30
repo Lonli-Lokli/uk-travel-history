@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
             email: email,
             passkey_enrolled: false,
             subscription_tier: 'free' as const,
-            subscription_status: null,
+            subscription_status: 'active' as const,
             stripe_customer_id: null,
             stripe_subscription_id: null,
             stripe_price_id: null,
