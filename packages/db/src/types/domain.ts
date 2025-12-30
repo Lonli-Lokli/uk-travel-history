@@ -108,8 +108,8 @@ export interface User {
   passkeyEnrolled: boolean;
   /** Subscription tier for entitlement enforcement */
   subscriptionTier: SubscriptionTier;
-  /** Subscription status */
-  subscriptionStatus: SubscriptionStatus;
+  /** Subscription status (null for free/non-paid users) */
+  subscriptionStatus: SubscriptionStatus | null;
   /** Stripe customer ID (if user has purchased) */
   stripeCustomerId: string | null;
   /** Stripe subscription ID (if user has recurring subscription) */
@@ -134,8 +134,8 @@ export interface CreateUserData {
   passkeyEnrolled?: boolean;
   /** Subscription tier (optional, defaults to FREE) */
   subscriptionTier?: SubscriptionTier;
-  /** Subscription status (optional, defaults to ACTIVE) */
-  subscriptionStatus?: SubscriptionStatus;
+  /** Subscription status (optional, defaults to null for FREE tier, ACTIVE for paid tiers) */
+  subscriptionStatus?: SubscriptionStatus | null;
   /** Stripe customer ID (optional) */
   stripeCustomerId?: string | null;
   /** Stripe subscription ID (optional) */
@@ -156,8 +156,8 @@ export interface UpdateUserData {
   passkeyEnrolled?: boolean;
   /** Subscription tier */
   subscriptionTier?: SubscriptionTier;
-  /** Subscription status */
-  subscriptionStatus?: SubscriptionStatus;
+  /** Subscription status (null for free/non-paid users) */
+  subscriptionStatus?: SubscriptionStatus | null;
   /** Stripe customer ID */
   stripeCustomerId?: string | null;
   /** Stripe subscription ID */

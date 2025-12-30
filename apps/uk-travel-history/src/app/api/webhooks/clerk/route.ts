@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         // Use upsert to handle race conditions (Stripe webhook may create user first)
         // If user exists from Stripe webhook, preserve existing tier/status
         // Note: Using type assertion here because Supabase client types aren't inferring correctly
+        // subscription_status is NULL for free tier users (no paid subscription)
         const { error: upsertError } = await (
           supabase.from('users').upsert as any
         )(
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
             email: email,
             passkey_enrolled: false,
             subscription_tier: 'free' as const,
-            subscription_status: null,
+            subscription_status: null, // NULL = free/non-paid user
             stripe_customer_id: null,
             stripe_subscription_id: null,
             stripe_price_id: null,
