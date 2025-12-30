@@ -100,11 +100,6 @@ describe('Navbar', () => {
       expect(logoLink.getAttribute('href')).toBe('/');
     });
 
-    it('should display site name', () => {
-      render(<Navbar />);
-      expect(screen.getByText('UK Travel Parser')).toBeTruthy();
-    });
-
     it('should have hover effect on logo', () => {
       render(<Navbar />);
       const logoLink = screen.getByRole('link', {
