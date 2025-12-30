@@ -184,16 +184,19 @@ export class SupabaseDbAdapter implements DbProvider {
   async createUser(data: CreateUserData): Promise<User> {
     const client = this.ensureConfigured();
 
+    // Compute tier first to use in status logic
+    const tier = data.subscriptionTier ?? SubscriptionTier.FREE;
+
     const insertData = {
       clerk_user_id: data.authUserId,
       email: data.email,
       passkey_enrolled: data.passkeyEnrolled ?? false,
-      subscription_tier: data.subscriptionTier ?? SubscriptionTier.FREE,
+      subscription_tier: tier,
       // NULL status for free tier, ACTIVE for paid tiers (unless explicitly set)
       subscription_status:
         data.subscriptionStatus !== undefined
           ? data.subscriptionStatus
-          : data.subscriptionTier === SubscriptionTier.FREE
+          : tier === SubscriptionTier.FREE
             ? null
             : SubscriptionStatus.ACTIVE,
       stripe_customer_id: data.stripeCustomerId ?? null,

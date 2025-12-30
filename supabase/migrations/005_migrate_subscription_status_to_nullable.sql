@@ -81,21 +81,28 @@ CREATE INDEX IF NOT EXISTS idx_users_subscription_status
 -- Step 8: Update helper function for premium access check
 -- ============================================================================
 
--- Update has_premium_access function to handle NULL status
--- NULL status means free user, so they don't have premium access
+-- Update has_premium_access function to handle NULL status and grace period
+-- NULL status means free user, but they may have grace period access
+-- Grace period: after cancellation, user keeps access until current_period_end
 CREATE OR REPLACE FUNCTION has_premium_access(user_row users)
 RETURNS BOOLEAN AS $$
 BEGIN
-  -- Free tier users have NULL status and no premium access
+  -- Free tier users with NULL status
   IF user_row.subscription_status IS NULL THEN
-    RETURN FALSE;
+    -- Check if they have a valid grace period
+    -- Grace period allows access even after downgrade to free tier
+    IF user_row.current_period_end IS NOT NULL
+       AND user_row.current_period_end > NOW() THEN
+      RETURN TRUE;  -- Grace period still active
+    END IF;
+    RETURN FALSE;  -- Fully free, no access
   END IF;
 
   -- Paid tier users must have active or trialing status
   RETURN user_row.subscription_tier IN ('monthly', 'yearly', 'lifetime')
     AND user_row.subscription_status IN ('active', 'trialing');
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;  -- Changed from IMMUTABLE because uses NOW()
 
 -- ============================================================================
 -- Comments for Documentation
