@@ -8,8 +8,7 @@ import { getEnvironment } from '@uth/utils';
 const environment = getEnvironment();
 
 Sentry.init({
-  dsn: 'https://2186d0cfc8bc7dd8a2e86abf68f70c42@o473632.ingest.us.sentry.io/4510512015409152',
-  environment,
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Only enable Sentry in production to avoid reporting localhost errors
   enabled: environment === 'production',

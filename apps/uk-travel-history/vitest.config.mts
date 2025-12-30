@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-env: {
+    env: {
       NODE_ENV: 'test' as const
     },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],

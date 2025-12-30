@@ -135,9 +135,9 @@ const loadPoliciesFromSupabase = unstable_cache(
   loadPoliciesFromSupabaseUncached,
   ['feature-policies'],
   {
-    // Revalidate every 12 hours (43200 seconds)
-    // This ensures feature flags are refreshed at least twice a day
-    revalidate: 43200,
+    // Revalidate every  hour
+    // This ensures feature flags are refreshed daily without excessive DB reads
+    revalidate: 3600, // 1 hour
     tags: ['feature-policies'],
   }
 );

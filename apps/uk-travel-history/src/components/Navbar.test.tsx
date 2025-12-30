@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import React from 'react';
 import { Navbar } from './Navbar';
 import { navigationStore } from '@uth/stores';
 
@@ -31,6 +32,29 @@ vi.mock('@clerk/nextjs', () => ({
   SignedOut: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   UserButton: () => null,
+}));
+
+// Mock feature gate context
+vi.mock('@uth/widgets', () => ({
+  useFeatureFlags: vi.fn(() => ({
+    isFeatureEnabled: vi.fn(() => false),
+    flags: {},
+  })),
+  useFeatureGateContext: vi.fn(() => ({
+    monetizationStore: {
+      hasFeatureAccess: vi.fn(() => false),
+      getMinimumTier: vi.fn(() => 'anonymous'),
+      isLoading: false,
+      isAuthenticated: false,
+      tier: 'anonymous',
+    },
+    authStore: {
+      user: null,
+    },
+    paymentStore: {
+      openPaymentModal: vi.fn(),
+    },
+  })),
 }));
 
 describe('Navbar', () => {

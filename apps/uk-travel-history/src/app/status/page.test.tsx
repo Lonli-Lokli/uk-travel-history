@@ -2,135 +2,65 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import StatusPage from './page';
 import * as features from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
 
 // Mock the features module
 vi.mock('@uth/features', async () => {
   const actual = await vi.importActual('@uth/features');
   return {
     ...actual,
-    getAllFeatureFlags: vi.fn(),
+    getAllFeaturePolicies: vi.fn(),
+    isSupabaseFeaturePoliciesAvailable: vi.fn(),
   };
 });
 
-// Mock the flow library
-vi.mock('@uth/flow', () => ({
-  appFlow: {
-    page: (generatorFn: any) => {
-      return async () => {
-        const gen = generatorFn();
-        let lastValue: any;
-        let result = await gen.next();
-
-        while (!result.done) {
-          const step = result.value;
-
-          // Handle CallStep structure (has _tag, fn, and policy)
-          if (step && typeof step === 'object' && '_tag' in step && step._tag === 'CallStep') {
-            try {
-              // Execute the fn from the CallStep
-              lastValue = await step.fn();
-            } catch (error) {
-              // If fn fails and there's a policy, apply it
-              if (step.policy) {
-                if (step.policy.type === 'optional') {
-                  lastValue = step.policy.fallback;
-                } else if (step.policy.type === 'ui') {
-                  // For UI policy, return the fallback as the final result
-                  return step.policy.fallback;
-                } else {
-                  throw error;
-                }
-              } else {
-                throw error;
-              }
-            }
-          } else {
-            // Fallback for simple values (shouldn't happen with real flow code)
-            lastValue = await step;
-          }
-
-          result = await gen.next(lastValue);
-        }
-
-        return result.value;
-      };
+// Mock feature gate context
+vi.mock('@uth/widgets', () => ({
+  useFeatureGateContext: vi.fn(() => ({
+    monetizationStore: {
+      hasFeatureAccess: vi.fn(() => false),
+      getMinimumTier: vi.fn(() => 'anonymous'),
+      isLoading: false,
+      isAuthenticated: false,
+      tier: 'anonymous',
     },
-  },
-  call: (fn: any, ...args: any[]) => {
-    const step: any = {
-      _tag: 'CallStep',
-      fn: () => (typeof fn === 'function' ? fn(...args) : fn),
-      step: fn?.name || 'anonymous',
-      policy: undefined,
-      *[Symbol.iterator]() {
-        return yield step;
-      },
-      orUI(fallback: any, message?: string) {
-        return {
-          ...step,
-          policy: { type: 'ui', fallback, message },
-        };
-      },
-      orRedirect(url: string, message?: string) {
-        return {
-          ...step,
-          policy: { type: 'redirect', url, message },
-        };
-      },
-      optional(fallback: any, message?: string) {
-        return {
-          ...step,
-          policy: { type: 'optional', fallback, message },
-        };
-      },
-      orThrow(message?: string) {
-        return {
-          ...step,
-          policy: { type: 'throw', message },
-        };
-      },
-    };
-    return step;
-  },
+    authStore: {
+      user: null,
+    },
+    paymentStore: {
+      openPaymentModal: vi.fn(),
+    },
+  })),
 }));
 
 describe('StatusPage', () => {
+  const mockPolicies = {
+    [FEATURE_KEYS.MONETIZATION]: { enabled: false, minTier: 'anonymous' as const },
+    [FEATURE_KEYS.AUTH]: { enabled: false, minTier: 'anonymous' as const },
+    [FEATURE_KEYS.PAYMENTS]: { enabled: false, minTier: 'anonymous' as const },
+    [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: true, minTier: 'premium' as const },
+    [FEATURE_KEYS.EXCEL_IMPORT]: { enabled: true, minTier: 'premium' as const },
+    [FEATURE_KEYS.PDF_IMPORT]: { enabled: false, minTier: 'premium' as const },
+    [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true, minTier: 'anonymous' as const },
+    [FEATURE_KEYS.RISK_CHART]: { enabled: false, minTier: 'anonymous' as const },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(features.getAllFeaturePolicies).mockResolvedValue(mockPolicies);
+    vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(true);
   });
 
   describe('Page Structure', () => {
     it('should render the page title', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       const { container } = render(page);
 
       const title = container.querySelector('h1');
-      expect(title?.textContent).toBe('System Status');
+      expect(title?.textContent).toBe('Feature Access Status');
     });
 
     it('should display all three feature categories', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       render(page);
 
@@ -142,17 +72,6 @@ describe('StatusPage', () => {
 
   describe('Feature Display', () => {
     it('should display all master switch features', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       render(page);
 
@@ -162,17 +81,6 @@ describe('StatusPage', () => {
     });
 
     it('should display all premium features', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       render(page);
 
@@ -183,17 +91,6 @@ describe('StatusPage', () => {
     });
 
     it('should display all UI features', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       render(page);
 
@@ -201,17 +98,6 @@ describe('StatusPage', () => {
     });
 
     it('should display feature keys as code elements', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       const { container } = render(page);
 
@@ -224,177 +110,61 @@ describe('StatusPage', () => {
     });
   });
 
-  describe('Feature Status Badges', () => {
-    it('should show "Enabled" badge for enabled features', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
+  describe('Data Source Indicator', () => {
+    it('should show database source when Supabase is available', async () => {
+      vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(true);
 
       const page = await StatusPage();
       render(page);
 
-      const enabledBadges = screen.getAllByText('Enabled');
-      expect(enabledBadges.length).toBeGreaterThan(0);
+      expect(screen.getByText(/Database \(live policies\)/)).toBeTruthy();
     });
 
-    it('should show "Disabled" badge for disabled features', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
+    it('should show fallback source when Supabase is unavailable', async () => {
+      vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(false);
 
       const page = await StatusPage();
       render(page);
 
-      const disabledBadges = screen.getAllByText('Disabled');
-      expect(disabledBadges.length).toBeGreaterThan(0);
-    });
-
-    it('should show "Default" badge for features using default state', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
-      const page = await StatusPage();
-      render(page);
-
-      const defaultBadges = screen.getAllByText('Default');
-      expect(defaultBadges.length).toBeGreaterThan(0);
+      expect(screen.getByText(/Using default fallback values/)).toBeTruthy();
     });
   });
 
   describe('Legend Section', () => {
-    it('should display the feature flag information legend', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
+    it('should display the feature access information legend', async () => {
       const page = await StatusPage();
       render(page);
 
-      expect(screen.getByText('Feature Flag Information')).toBeTruthy();
+      expect(screen.getByText('Feature Access Information')).toBeTruthy();
     });
 
-    it('should explain the Default badge', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
+    it('should explain tier requirements', async () => {
       const page = await StatusPage();
       const { container } = render(page);
 
       const legendText = container.textContent || '';
-      expect(legendText).toContain('Default:');
-      expect(legendText).toContain('default configuration');
-    });
-
-    it('should explain Edge Config', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
-      const page = await StatusPage();
-      const { container } = render(page);
-
-      const legendText = container.textContent || '';
-      expect(legendText).toContain('Edge Config:');
-      expect(legendText).toContain('Vercel Edge Config');
+      expect(legendText).toContain('Anonymous:');
+      expect(legendText).toContain('Free:');
+      expect(legendText).toContain('Premium:');
     });
   });
 
   describe('Feature State Detection', () => {
-    it('should correctly identify features with non-default states', async () => {
-      // Mock a state where excel_export is disabled (default is true)
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: false, // Changed from default (true)
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
-      const page = await StatusPage();
-      const { container } = render(page);
-
-      // The page should render without errors
-      expect(container.querySelector('h1')?.textContent).toBe('System Status');
-    });
-
-    it('should call getAllFeatureFlags on render', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
+    it('should call getAllFeaturePolicies on render', async () => {
       await StatusPage();
 
-      expect(features.getAllFeatureFlags).toHaveBeenCalledTimes(1);
+      expect(features.getAllFeaturePolicies).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call isSupabaseFeaturePoliciesAvailable on render', async () => {
+      await StatusPage();
+
+      expect(features.isSupabaseFeaturePoliciesAvailable).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Accessibility', () => {
     it('should have semantic HTML structure', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       const { container } = render(page);
 
@@ -404,17 +174,6 @@ describe('StatusPage', () => {
     });
 
     it('should have descriptive text for each feature', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       render(page);
 
@@ -425,41 +184,20 @@ describe('StatusPage', () => {
 
   describe('Responsive Design', () => {
     it('should have responsive layout classes', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       const { container } = render(page);
 
-      const mainContainer = container.querySelector('.max-w-4xl');
+      const mainContainer = container.querySelector('.max-w-6xl');
       expect(mainContainer).toBeTruthy();
     });
 
     it('should have proper padding and spacing', async () => {
-      vi.mocked(features.getAllFeatureFlags).mockResolvedValue({
-        monetization: false,
-        auth: false,
-        payments: false,
-        excel_export: true,
-        excel_import: true,
-        pdf_import: false,
-        clipboard_import: true,
-        risk_chart: false,
-      });
-
       const page = await StatusPage();
       const { container } = render(page);
 
-      const cards = container.querySelectorAll('.p-8');
-      expect(cards.length).toBeGreaterThan(0);
+      // Check for responsive padding classes
+      const paddedElements = container.querySelectorAll('[class*="p-4"], [class*="p-6"], [class*="p-8"]');
+      expect(paddedElements.length).toBeGreaterThan(0);
     });
   });
 });

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   isFeatureEnabled,
-  isFeatureEnabledClient,
   isSupabaseFeaturePoliciesAvailable,
   DEFAULT_FEATURE_POLICIES,
 } from './features';
@@ -207,100 +206,9 @@ describe('Edge Config Feature Flags', () => {
     });
   });
 
-  describe('getAllFeatureFlags', () => {
-    it('should return all flags evaluated for a user', async () => {
-      const flags = {
-        [FEATURE_KEYS.AUTH]: { enabled: true },
-        [FEATURE_KEYS.MONETIZATION]: { enabled: false },
-      };
-      vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat(flags));
-
-      const result = await getAllFeatureFlags('user123');
-
-      expect(result[FEATURE_KEYS.AUTH]).toBe(true);
-      expect(result[FEATURE_KEYS.MONETIZATION]).toBe(false);
-      // Other flags should default to false
-      expect(result[FEATURE_KEYS.EXCEL_EXPORT]).toBe(false);
-    });
-
-    it('should return all flags as default when Edge Config is not configured', async () => {
-      vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat(null));
-
-      const result = await getAllFeatureFlags();
-
-      Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(result[key]).toBe(DEFAULT_FEATURE_POLICIES[key].enabled);
-      });
-    });
-  });
-
-  describe('Client-side caching', () => {
-    it('should cache and retrieve flags', () => {
-      const testFlags: Record<FeatureFlagKey, boolean> = {
-        [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.AUTH]: true,
-        [FEATURE_KEYS.PAYMENTS]: false,
-        [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
-        [FEATURE_KEYS.EXCEL_IMPORT]: false,
-        [FEATURE_KEYS.PDF_IMPORT]: true,
-        [FEATURE_KEYS.RISK_CHART]: false,
-      };
-
-      setCachedFlags(testFlags);
-      const cached = getCachedFlags();
-
-      expect(cached).toEqual(testFlags);
-    });
-
-    it('should return default flags when no cache is set', () => {
-      // Clear any existing cache by setting to null
-      setCachedFlags(null);
-
-      const cached = getCachedFlags();
-
-      Object.values(FEATURE_KEYS).forEach((key) => {
-        expect(cached[key]).toBe(DEFAULT_FEATURE_POLICIES[key].enabled);
-      });
-    });
-  });
-
-  describe('isFeatureEnabledClient', () => {
-    it('should return cached flag value', () => {
-      const testFlags: Record<FeatureFlagKey, boolean> = {
-        [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.AUTH]: false,
-        [FEATURE_KEYS.PAYMENTS]: false,
-        [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
-        [FEATURE_KEYS.EXCEL_IMPORT]: false,
-        [FEATURE_KEYS.PDF_IMPORT]: false,
-        [FEATURE_KEYS.RISK_CHART]: false,
-      };
-
-      setCachedFlags(testFlags);
-
-      expect(isFeatureEnabledClient(FEATURE_KEYS.MONETIZATION)).toBe(true);
-      expect(isFeatureEnabledClient(FEATURE_KEYS.AUTH)).toBe(false);
-    });
-
-    it('should return false for uncached flags', () => {
-      const testFlags: Record<FeatureFlagKey, boolean> = {
-        [FEATURE_KEYS.MONETIZATION]: true,
-        [FEATURE_KEYS.AUTH]: false,
-        [FEATURE_KEYS.PAYMENTS]: false,
-        [FEATURE_KEYS.EXCEL_EXPORT]: false,
-        [FEATURE_KEYS.EXCEL_IMPORT]: false,
-        [FEATURE_KEYS.CLIPBOARD_IMPORT]: false,
-        [FEATURE_KEYS.PDF_IMPORT]: false,
-        [FEATURE_KEYS.RISK_CHART]: false,
-      };
-
-      setCachedFlags(testFlags);
-
-      expect(isFeatureEnabledClient(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
-    });
-  });
+  // Note: getAllFeatureFlags, client-side caching, and isFeatureEnabledClient
+  // have been removed in favor of tier-based feature access computed via hooks.
+  // Feature flags are now computed dynamically based on user tier via useFeatureFlags hook.
 
   describe('isSupabaseFeaturePoliciesAvailable', () => {
     it('should return true when Supabase is accessible', async () => {
