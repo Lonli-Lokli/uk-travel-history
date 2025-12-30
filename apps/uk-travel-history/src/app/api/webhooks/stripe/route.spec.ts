@@ -294,7 +294,7 @@ describe('Stripe Webhook Handler', () => {
       expect(response.status).toBe(200);
       expect(db.updateUserByAuthId).toHaveBeenCalledWith('user_123', {
         subscriptionTier: 'free',
-        subscriptionStatus: 'canceled',
+        subscriptionStatus: null,
         stripeSubscriptionId: null,
         currentPeriodEnd: null,
       });
