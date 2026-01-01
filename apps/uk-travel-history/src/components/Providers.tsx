@@ -1,12 +1,13 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { FeatureGateProvider, PaymentModal } from '@uth/widgets';
-import { authStore, monetizationStore, paymentStore } from '@uth/stores';
+import { authStore, monetizationStore, paymentStore, useRefreshAccessContext } from '@uth/stores';
 import { type FeatureFlagKey, TIERS } from '@uth/features';
 import type { FeaturePolicy } from '@uth/features';
 import type { AccessContext, SubscriptionTier } from '@uth/db';
 import type { AuthUser } from '@uth/auth-client';
+import { reaction } from 'mobx';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -62,12 +63,16 @@ function mapAccessContextUserToAuthUser(
  * - Client-side auth listeners will update state on subsequent changes
  */
 export function Providers({ children, featurePolicies, accessContext }: ProvidersProps) {
+  const refreshAccessContext = useRefreshAccessContext();
+  const previousUserRef = useRef<AuthUser | null>(null);
+
   // Hydrate stores with server-side access context on mount
   useEffect(() => {
     if (accessContext) {
       // Hydrate auth store with user data
       const authUser = mapAccessContextUserToAuthUser(accessContext.user);
       authStore.hydrate(authUser);
+      previousUserRef.current = authUser;
 
       // Hydrate monetization store with tier and policies
       const tierId = mapSubscriptionTierToTierId(accessContext.tier);
@@ -77,6 +82,31 @@ export function Providers({ children, featurePolicies, accessContext }: Provider
       monetizationStore.setFeaturePolicies(featurePolicies);
     }
   }, [accessContext, featurePolicies]);
+
+  // Refresh access context when user signs in or out
+  useEffect(() => {
+    const disposer = reaction(
+      () => authStore.user,
+      (currentUser) => {
+        const previousUser = previousUserRef.current;
+
+        // Trigger refresh when user signs in (null -> user)
+        if (!previousUser && currentUser) {
+          refreshAccessContext();
+        }
+
+        // Trigger refresh when user signs out (user -> null)
+        if (previousUser && !currentUser) {
+          refreshAccessContext();
+        }
+
+        // Update ref for next comparison
+        previousUserRef.current = currentUser;
+      }
+    );
+
+    return () => disposer();
+  }, [refreshAccessContext]);
 
   return (
     <FeatureGateProvider
