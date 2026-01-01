@@ -175,17 +175,12 @@ const routeProtectionMiddleware = async (
       return NextResponse.redirect(signInUrl);
     }
 
-    // Check if user has admin role
+    // Check if user has admin role using auth-server (which properly lazy-loads db)
     try {
-      const { getUserByAuthId } = await import('@uth/db');
-      const user = await getUserByAuthId(userId);
-
-      if (!user || user.role !== 'admin') {
-        // Not an admin - redirect to forbidden page
-        return NextResponse.redirect(new URL('/forbidden', req.url));
-      }
-    } catch (error) {
-      // Error checking role - deny access
+      const { requireAdmin } = await import('@uth/auth-server');
+      await requireAdmin();
+    } catch (error: any) {
+      // Not an admin or error checking role - redirect to forbidden page
       return NextResponse.redirect(new URL('/forbidden', req.url));
     }
   }
