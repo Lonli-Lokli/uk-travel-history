@@ -504,6 +504,99 @@ describe('API Feature Guards', () => {
       expect(context?.hasActiveSubscription).toBe(true);
     });
 
+    it('should treat cancelled subscription in grace period as active (cancelAtPeriodEnd = true, period not ended)', async () => {
+      process.env.UTH_AUTH_PROVIDER = 'clerk';
+
+      const { auth } = await import('@clerk/nextjs/server');
+      (auth as any).mockResolvedValue({ userId: 'user-123' });
+
+      const { getUserByAuthId } = await import('@uth/db');
+      (getUserByAuthId as any).mockResolvedValue({
+        id: 'db-user-1',
+        authId: 'user-123',
+        email: 'test@example.com',
+      });
+
+      // Subscription cancelled but still in grace period (ends in 30 days)
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+
+      const { getSubscription } = await import('@uth/auth-server');
+      (getSubscription as any).mockResolvedValue({
+        status: 'canceled',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: futureDate,
+      });
+
+      const request = new NextRequest('http://localhost/api/test');
+      const context = await getUserContext(request);
+
+      // Should have premium access during grace period
+      expect(context?.tier).toBe(TIERS.PREMIUM);
+      expect(context?.hasActiveSubscription).toBe(true);
+    });
+
+    it('should treat cancelled subscription after grace period as inactive (cancelAtPeriodEnd = true, period ended)', async () => {
+      process.env.UTH_AUTH_PROVIDER = 'clerk';
+
+      const { auth } = await import('@clerk/nextjs/server');
+      (auth as any).mockResolvedValue({ userId: 'user-123' });
+
+      const { getUserByAuthId } = await import('@uth/db');
+      (getUserByAuthId as any).mockResolvedValue({
+        id: 'db-user-1',
+        authId: 'user-123',
+        email: 'test@example.com',
+      });
+
+      // Subscription cancelled and grace period has ended (ended 1 day ago)
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
+
+      const { getSubscription } = await import('@uth/auth-server');
+      (getSubscription as any).mockResolvedValue({
+        status: 'canceled',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: pastDate,
+      });
+
+      const request = new NextRequest('http://localhost/api/test');
+      const context = await getUserContext(request);
+
+      // Should NOT have premium access after grace period
+      expect(context?.tier).toBe(TIERS.FREE);
+      expect(context?.hasActiveSubscription).toBe(false);
+    });
+
+    it('should treat immediately cancelled subscription as inactive (cancelAtPeriodEnd = false)', async () => {
+      process.env.UTH_AUTH_PROVIDER = 'clerk';
+
+      const { auth } = await import('@clerk/nextjs/server');
+      (auth as any).mockResolvedValue({ userId: 'user-123' });
+
+      const { getUserByAuthId } = await import('@uth/db');
+      (getUserByAuthId as any).mockResolvedValue({
+        id: 'db-user-1',
+        authId: 'user-123',
+        email: 'test@example.com',
+      });
+
+      // Subscription cancelled immediately (no grace period)
+      const { getSubscription } = await import('@uth/auth-server');
+      (getSubscription as any).mockResolvedValue({
+        status: 'canceled',
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: new Date(),
+      });
+
+      const request = new NextRequest('http://localhost/api/test');
+      const context = await getUserContext(request);
+
+      // Should NOT have premium access (no grace period)
+      expect(context?.tier).toBe(TIERS.FREE);
+      expect(context?.hasActiveSubscription).toBe(false);
+    });
+
     it('should return ANONYMOUS tier for unauthenticated Clerk user', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 

@@ -185,9 +185,16 @@ export async function getUserContext(
     const { getSubscription } = await import('@uth/auth-server');
     const subscription = await getSubscription(userId);
 
+    // User has active subscription if:
+    // 1. Status is 'active' or 'trialing'
+    // 2. OR subscription is cancelled but still in grace period (cancelAtPeriodEnd = true, currentPeriodEnd > now)
+    const now = new Date();
     const hasActiveSubscription =
       subscription?.status === SubscriptionStatus.ACTIVE ||
-      subscription?.status === SubscriptionStatus.TRIALING;
+      subscription?.status === SubscriptionStatus.TRIALING ||
+      (subscription?.cancelAtPeriodEnd === true &&
+        subscription?.currentPeriodEnd &&
+        subscription.currentPeriodEnd > now);
 
     const tier: TierId = hasActiveSubscription ? TIERS.PREMIUM : TIERS.FREE;
 
