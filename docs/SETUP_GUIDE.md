@@ -139,6 +139,8 @@ All should return `rowsecurity = true`.
    - `invoice.payment_failed`
 4. Copy **Signing Secret** → set as `STRIPE_WEBHOOK_SECRET` env var
 
+**For detailed webhook configuration and troubleshooting, see [STRIPE_WEBHOOK_SETUP.md](./STRIPE_WEBHOOK_SETUP.md)**
+
 ### Get API Keys
 
 1. Go to **Stripe Dashboard** → **Developers** → **API Keys**
