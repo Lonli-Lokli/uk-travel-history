@@ -11,13 +11,13 @@
  * SOURCE OF TRUTH RULES
  * ---------------------
  * - Stripe webhooks are the SINGLE source of truth for subscription state
- * - checkout.session.completed provisions NEW users (legacy flow only)
+ * - Clerk webhook creates users; Stripe webhooks update subscription entitlements
+ * - checkout.session.completed handles authenticated checkouts only
  * - customer.subscription.* events UPDATE subscription entitlements
- * - Clerk webhook creates users in modern flow; Stripe only updates entitlements
  *
  * WEBHOOK EVENT COVERAGE
  * ----------------------
- * ✅ checkout.session.completed - One-time purchases & authenticated checkouts
+ * ✅ checkout.session.completed - Authenticated checkouts only
  * ✅ customer.subscription.created - New subscription provisioning
  * ✅ customer.subscription.updated - Tier changes, status changes, pauses, scheduled cancellations
  * ✅ customer.subscription.deleted - Final cancellation/expiration
@@ -52,7 +52,6 @@
  * - Webhook events tracked in webhook_events table by Stripe event ID
  * - Duplicate events skipped before processing
  * - Safe for Stripe retries and out-of-order delivery
- * - Purchase intents prevent duplicate user creation (legacy flow)
  *
  * DATABASE GUARANTEES
  * -------------------
@@ -71,7 +70,7 @@
  * 4. Handler updates user: tier=monthly/yearly/lifetime, status=active
  * 5. User cancels → subscription.updated (cancel_at_period_end=true, status still active)
  * 6. Period ends → subscription.deleted (tier=free, status=null, preserve period_end)
- * 7. User renews → new checkout session → subscription.created (repeat from step 3)
+ * 7. User renews → new checkout session → subscription.created (repeat from step 2)
  *
  * LOGGING
  * -------
@@ -85,29 +84,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   hasWebhookEventBeenProcessed,
   recordWebhookEvent,
-  getPurchaseIntentById,
-  updatePurchaseIntent,
   createUser as createDbUser,
   updateUserByAuthId,
   getUserByAuthId,
-  PurchaseIntentStatus,
   SubscriptionTier,
   SubscriptionStatus,
 } from '@uth/db';
 import { constructWebhookEvent } from '@uth/payments-server';
-import {
-  createUser as createAuthUser,
-  getUsersByEmail,
-} from '@uth/auth-server';
+import { getUsersByEmail } from '@uth/auth-server';
 import { getRouteLogger } from '@uth/flow';
-
-/**
- * Validate email format
- */
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -173,180 +158,15 @@ export async function POST(request: NextRequest) {
         extra: { sessionId: session.id },
       });
 
-      // Check if this is an authenticated checkout (new Clerk flow)
+      // Authenticated checkout - user already exists via Clerk
+      // Subscription webhooks will handle entitlement updates
       const userId = session.metadata?.userId || session.client_reference_id;
-      const isAuthenticatedCheckout =
-        userId && !session.metadata?.purchase_intent_id;
 
-      if (isAuthenticatedCheckout) {
-        // Authenticated checkout - user already exists via Clerk
-        // Subscription webhooks will handle entitlement updates
-        getRouteLogger().info('Authenticated checkout completed', {
-          extra: { sessionId: session.id, userId },
-        });
-        return NextResponse.json({ received: true, authenticated: true });
-      }
-
-      // Legacy purchase intent flow (for backwards compatibility)
-      const purchaseIntentId =
-        session.client_reference_id || session.metadata?.purchase_intent_id;
-
-      if (!purchaseIntentId) {
-        getRouteLogger().error('No purchase_intent_id in session', undefined, {
-          extra: {
-            sessionId: session.id,
-          },
-        });
-        return NextResponse.json(
-          { error: 'Missing purchase intent ID' },
-          { status: 400 },
-        );
-      }
-
-      // Fetch purchase intent
-      const purchaseIntent = await getPurchaseIntentById(purchaseIntentId);
-
-      if (!purchaseIntent) {
-        getRouteLogger().error('Purchase intent not found', undefined, {
-          extra: { purchaseIntentId },
-        });
-        return NextResponse.json(
-          { error: 'Purchase intent not found' },
-          { status: 404 },
-        );
-      }
-
-      // If already provisioned, skip (idempotency)
-      if (purchaseIntent.status === PurchaseIntentStatus.PROVISIONED) {
-        getRouteLogger().info(
-          `Purchase intent ${purchaseIntentId} already provisioned`,
-        );
-        return NextResponse.json({ received: true, alreadyProvisioned: true });
-      }
-
-      // Mark as paid
-      await updatePurchaseIntent(purchaseIntentId, {
-        status: PurchaseIntentStatus.PAID,
-        stripePaymentIntentId: session.payment_intent as string,
+      getRouteLogger().info('Authenticated checkout completed', {
+        extra: { sessionId: session.id, userId },
       });
 
-      // Extract customer email
-      const customerEmail = session.customer_email || purchaseIntent.email;
-
-      // Validate email format
-      if (!customerEmail || !isValidEmail(customerEmail)) {
-        getRouteLogger().error('Invalid customer email', undefined, {
-          extra: { email: customerEmail },
-        });
-        return NextResponse.json(
-          { error: 'Invalid customer email' },
-          { status: 400 },
-        );
-      }
-
-      // Create or find auth user (idempotent - check if user already exists)
-      let authUserId: string | undefined;
-
-      try {
-        // Check if user with this email already exists
-        const existingUsersResult = await getUsersByEmail(customerEmail);
-
-        if (existingUsersResult.users.length > 0) {
-          authUserId = existingUsersResult.users[0].uid;
-          getRouteLogger().info(`Auth user already exists: ${authUserId}`);
-        } else {
-          // Create new user with retry logic
-          let retryCount = 0;
-          const maxRetries = 3;
-
-          while (retryCount < maxRetries) {
-            try {
-              const authUser = await createAuthUser({
-                email: customerEmail,
-                skipPasswordRequirement: true,
-                skipPasswordChecks: true,
-              });
-              authUserId = authUser.uid;
-              getRouteLogger().info(`Created auth user: ${authUserId}`);
-              break;
-            } catch (createError: any) {
-              retryCount++;
-
-              // Don't retry for permanent errors
-              if (createError.code === 'INVALID_INPUT') {
-                getRouteLogger().error(
-                  'Auth user creation failed (permanent error)',
-                  createError,
-                  {
-                    extra: {
-                      email: customerEmail,
-                      error: createError.message,
-                    },
-                  },
-                );
-                throw createError;
-              }
-
-              // Retry for transient errors
-              if (retryCount < maxRetries) {
-                getRouteLogger().warn(
-                  `Auth user creation failed, retrying (${retryCount}/${maxRetries})`,
-                  {
-                    extra: {
-                      error: createError.message,
-                    },
-                  },
-                );
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 1000 * retryCount),
-                );
-              } else {
-                throw createError;
-              }
-            }
-          }
-        }
-
-        // Ensure authUserId was assigned
-        if (!authUserId) {
-          throw new Error('Failed to create or retrieve auth user ID');
-        }
-
-        // Update purchase intent with auth user ID
-        await updatePurchaseIntent(purchaseIntentId, {
-          authUserId: authUserId,
-        });
-
-        // Insert into users table (idempotent)
-        try {
-          await createDbUser({
-            authUserId: authUserId,
-            email: customerEmail,
-            passkeyEnrolled: false,
-          });
-        } catch (error: any) {
-          // Ignore if user already exists (duplicate auth user ID)
-          if (error.code !== 'UNIQUE_VIOLATION') {
-            throw error;
-          }
-        }
-
-        // Mark purchase intent as provisioned
-        await updatePurchaseIntent(purchaseIntentId, {
-          status: PurchaseIntentStatus.PROVISIONED,
-        });
-
-        getRouteLogger().info(
-          `Successfully provisioned user for ${customerEmail}`,
-        );
-      } catch (error: any) {
-        getRouteLogger().error('Failed to provision auth user', error);
-        // Don't mark as failed - retry can happen
-        return NextResponse.json(
-          { error: 'Failed to provision user' },
-          { status: 500 },
-        );
-      }
+      return NextResponse.json({ received: true, authenticated: true });
     }
 
     // Handle customer.subscription.created event
