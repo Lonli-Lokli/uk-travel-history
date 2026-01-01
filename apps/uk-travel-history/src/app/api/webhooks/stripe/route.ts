@@ -90,7 +90,10 @@ import {
   SubscriptionTier,
   SubscriptionStatus,
 } from '@uth/db';
-import { constructWebhookEvent } from '@uth/payments-server';
+import {
+  constructWebhookEvent,
+  retrieveSubscription,
+} from '@uth/payments-server';
 import { getUsersByEmail } from '@uth/auth-server';
 import { getRouteLogger } from '@uth/flow';
 
@@ -560,10 +563,22 @@ async function handleSubscriptionCancellation(
 
 /**
  * Handle successful invoice payment
+ *
+ * When a payment succeeds (especially after 3D Secure), we fetch the current
+ * subscription from Stripe to ensure we have the latest status (active).
+ * This handles the race condition where subscription.updated might not have
+ * fired yet or arrived out of order.
  */
 async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
   const subscriptionId = invoice.subscription;
   const customerEmail = invoice.customer_email;
+
+  if (!subscriptionId) {
+    getRouteLogger().warn('No subscription ID in invoice', {
+      extra: { invoiceId: invoice.id },
+    });
+    return;
+  }
 
   if (!customerEmail) {
     getRouteLogger().error('No customer email in invoice', undefined, {
@@ -573,40 +588,32 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
   }
 
   try {
-    // Find user by email
-    const existingUsersResult = await getUsersByEmail(customerEmail);
+    // Fetch the CURRENT subscription from Stripe to get latest status
+    // This is more reliable than waiting for subscription.updated event
+    getRouteLogger().info('Fetching subscription from Stripe after payment', {
+      extra: { subscriptionId, invoiceId: invoice.id },
+    });
 
-    if (existingUsersResult.users.length === 0) {
-      getRouteLogger().warn('No auth user found for invoice payment', {
-        extra: { email: customerEmail, subscriptionId },
+    const subscription = await retrieveSubscription(subscriptionId);
+
+    if (!subscription) {
+      getRouteLogger().error('Failed to retrieve subscription from Stripe', undefined, {
+        extra: { subscriptionId, invoiceId: invoice.id },
       });
       return;
     }
 
-    const authUserId = existingUsersResult.users[0].uid;
-    const dbUser = await getUserByAuthId(authUserId);
+    // Process the subscription using the existing handler
+    // This ensures consistent logic with subscription.created/updated events
+    await handleSubscriptionChange(subscription, 'updated');
 
-    if (!dbUser) {
-      getRouteLogger().warn('No database user found for invoice payment', {
-        extra: { authUserId, subscriptionId },
-      });
-      return;
-    }
-
-    // If user was past_due, unpaid, or incomplete, reactivate them
-    if (
-      dbUser.subscriptionStatus === SubscriptionStatus.PAST_DUE ||
-      dbUser.subscriptionStatus === SubscriptionStatus.UNPAID ||
-      dbUser.subscriptionStatus === SubscriptionStatus.INCOMPLETE
-    ) {
-      await updateUserByAuthId(authUserId, {
-        subscriptionStatus: SubscriptionStatus.ACTIVE,
-      });
-
-      getRouteLogger().info('Reactivated user subscription after payment', {
-        extra: { authUserId, subscriptionId, previousStatus: dbUser.subscriptionStatus },
-      });
-    }
+    getRouteLogger().info('Updated subscription after invoice payment', {
+      extra: {
+        subscriptionId,
+        invoiceId: invoice.id,
+        status: subscription.status,
+      },
+    });
   } catch (error: any) {
     getRouteLogger().error(
       'Failed to handle invoice payment succeeded',
