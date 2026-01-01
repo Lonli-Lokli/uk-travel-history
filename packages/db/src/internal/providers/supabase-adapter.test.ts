@@ -337,7 +337,7 @@ describe('SupabaseDbAdapter', () => {
         authUserId: 'clerk_new',
         email: 'new@example.com',
         passkeyEnrolled: true,
-        subscriptionTier: SubscriptionTier.MONTHLY,
+        subscriptionTier: SubscriptionTier.PREMIUM,
         subscriptionStatus: SubscriptionStatus.ACTIVE,
         stripeCustomerId: 'cus_new',
         stripeSubscriptionId: 'sub_new',

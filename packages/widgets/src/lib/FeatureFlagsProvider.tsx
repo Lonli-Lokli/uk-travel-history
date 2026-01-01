@@ -59,7 +59,7 @@ export function useFeatureFlags(): FeatureFlagsContextValue {
     }
 
     return result;
-  }, [monetizationStore]);
+  }, [monetizationStore.tier, monetizationStore.isLoading]);
 
   return {
     isFeatureEnabled: (key: FeatureFlagKey) => {

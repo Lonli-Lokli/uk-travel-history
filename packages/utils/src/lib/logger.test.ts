@@ -14,15 +14,6 @@ vi.mock('@sentry/nextjs', () => ({
   addBreadcrumb: vi.fn(),
 }));
 
-// Helper functions to work around TypeScript's readonly NODE_ENV restriction
-const setNodeEnv = (value: string) => {
-  (process.env as { NODE_ENV?: string }).NODE_ENV = value;
-};
-
-const deleteNodeEnv = () => {
-  delete (process.env as { NODE_ENV?: string }).NODE_ENV;
-};
-
 describe('Logger', () => {
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
@@ -49,9 +40,9 @@ describe('Logger', () => {
   afterEach(() => {
     // Restore environment
     if (originalEnv !== undefined) {
-      setNodeEnv(originalEnv);
+      process.env.NODE_ENV = originalEnv;
     } else {
-      deleteNodeEnv();
+      delete process.env.NODE_ENV;
     }
 
     // Restore console methods
@@ -62,48 +53,48 @@ describe('Logger', () => {
 
   describe('getEnvironment', () => {
     it('returns production when NODE_ENV is production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       expect(getEnvironment()).toBe('production');
     });
 
     it('returns development when NODE_ENV is development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       expect(getEnvironment()).toBe('development');
     });
 
     it('returns development when NODE_ENV is not set', () => {
-      deleteNodeEnv();
+      delete process.env.NODE_ENV;
       expect(getEnvironment()).toBe('development');
     });
 
     it('prioritizes NEXT_PUBLIC_VERCEL_ENV over NODE_ENV', () => {
       process.env.NEXT_PUBLIC_VERCEL_ENV = 'production';
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       expect(getEnvironment()).toBe('production');
     });
 
     it('prioritizes VERCEL_ENV over NODE_ENV but after NEXT_PUBLIC_VERCEL_ENV', () => {
       process.env.VERCEL_ENV = 'production';
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       expect(getEnvironment()).toBe('production');
     });
   });
 
   describe('debug', () => {
     it('logs to console in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.debug('Debug message');
       expect(consoleLogSpy).toHaveBeenCalledWith('Debug message');
     });
 
     it('does not log to console in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.debug('Debug message');
       expect(consoleLogSpy).not.toHaveBeenCalled();
     });
 
     it('logs with options in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.debug('Debug message', {
         tags: { feature: 'test' },
         extra: { data: 'value' },
@@ -115,7 +106,7 @@ describe('Logger', () => {
     });
 
     it('never sends to Sentry', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.debug('Debug message');
       expect(Sentry.captureMessage).not.toHaveBeenCalled();
     });
@@ -123,13 +114,13 @@ describe('Logger', () => {
 
   describe('info', () => {
     it('logs to console in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.info('Info message');
       expect(consoleLogSpy).toHaveBeenCalledWith('Info message');
     });
 
     it('logs to console in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.info('Info message');
       expect(consoleLogSpy).toHaveBeenCalledWith('Info message');
     });
@@ -146,7 +137,7 @@ describe('Logger', () => {
     });
 
     it('never sends to Sentry', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.info('Info message');
       expect(Sentry.captureMessage).not.toHaveBeenCalled();
     });
@@ -154,25 +145,25 @@ describe('Logger', () => {
 
   describe('warn', () => {
     it('logs to console in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.warn('Warning message');
       expect(consoleWarnSpy).toHaveBeenCalledWith('Warning message');
     });
 
     it('logs to console in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.warn('Warning message');
       expect(consoleWarnSpy).toHaveBeenCalledWith('Warning message');
     });
 
     it('does not send to Sentry in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.warn('Warning message');
       expect(Sentry.captureMessage).not.toHaveBeenCalled();
     });
 
     it('sends to Sentry in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.warn('Warning message');
       expect(Sentry.captureMessage).toHaveBeenCalledWith('Warning message', {
         level: 'warning',
@@ -184,7 +175,7 @@ describe('Logger', () => {
     });
 
     it('sends to Sentry with tags and contexts in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.warn('Warning message', {
         tags: { feature: 'payment', flow: 'signup' },
         contexts: { payment: { billingPeriod: 'monthly' } },
@@ -203,7 +194,7 @@ describe('Logger', () => {
 
   describe('error', () => {
     it('logs to console in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.error('Error message');
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error message', {
         error: undefined,
@@ -211,7 +202,7 @@ describe('Logger', () => {
     });
 
     it('logs to console in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.error('Error message');
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error message', {
         error: undefined,
@@ -227,14 +218,14 @@ describe('Logger', () => {
     });
 
     it('does not send to Sentry in development', () => {
-      setNodeEnv('development');
+      process.env.NODE_ENV = 'development';
       logger.error('Error message');
       expect(Sentry.captureException).not.toHaveBeenCalled();
       expect(Sentry.captureMessage).not.toHaveBeenCalled();
     });
 
     it('sends Error to Sentry.captureException in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       const error = new Error('Test error');
       logger.error('Error occurred', error);
       expect(Sentry.captureException).toHaveBeenCalledWith(error, {
@@ -247,7 +238,7 @@ describe('Logger', () => {
     });
 
     it('sends non-Error to Sentry.captureMessage in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       logger.error('Error occurred', 'string error');
       expect(Sentry.captureMessage).toHaveBeenCalledWith('Error occurred', {
         level: 'error',
@@ -259,7 +250,7 @@ describe('Logger', () => {
     });
 
     it('sends to Sentry with tags and contexts in production', () => {
-      setNodeEnv('production');
+      process.env.NODE_ENV = 'production';
       const error = new Error('Payment failed');
       logger.error('Checkout error', error, {
         tags: { service: 'payment', operation: 'create_checkout' },
