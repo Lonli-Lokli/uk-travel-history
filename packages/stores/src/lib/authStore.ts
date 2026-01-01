@@ -177,6 +177,17 @@ class AuthStore {
   }
 
   /**
+   * Hydrate store with initial server-side user data
+   * Used during SSR/RSC to prevent flicker on initial render
+   *
+   * @param initialUser - User data from server-side access context
+   */
+  hydrate(initialUser: AuthUser | null): void {
+    this.user = initialUser;
+    this.isLoading = false;
+  }
+
+  /**
    * Sign out the current user
    */
   async signOut(): Promise<void> {

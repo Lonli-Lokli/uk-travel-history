@@ -1,6 +1,9 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useRefreshAccessContext } from '@uth/stores';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -23,6 +26,26 @@ import {
  */
 export const TravelPageClient = observer(() => {
   const { handleClearAll } = useClearAll();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const refreshAccessContext = useRefreshAccessContext();
+
+  // Refresh access context after successful checkout
+  // This ensures the UI updates with the new subscription tier
+  useEffect(() => {
+    const checkoutStatus = searchParams.get('checkout');
+
+    if (checkoutStatus === 'success') {
+      // Refresh access context to load new subscription from server
+      refreshAccessContext();
+
+      // Clear the query parameter to prevent re-triggering on refresh
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('checkout');
+      const query = params.toString();
+      router.replace(`/travel${query ? `?${query}` : ''}`, { scroll: false });
+    }
+  }, [searchParams, router, refreshAccessContext]);
 
   // Hooks for toolbar functionality
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();

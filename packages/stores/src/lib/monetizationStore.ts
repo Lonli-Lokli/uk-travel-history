@@ -151,6 +151,18 @@ class MonetizationStore {
   }
 
   /**
+   * Hydrate store with server-side access context
+   * Used during SSR/RSC to prevent flicker on initial render
+   *
+   * @param tier - User's subscription tier from server
+   * @param policies - Feature policies from server
+   */
+  hydrate(tier: TierId, policies: Record<FeatureFlagKey, FeaturePolicy>): void {
+    this.tier = tier;
+    this.featurePolicies = policies;
+  }
+
+  /**
    * Reset to default state (anonymous)
    */
   reset(): void {

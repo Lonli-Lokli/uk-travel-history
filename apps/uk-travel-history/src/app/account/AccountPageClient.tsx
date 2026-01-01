@@ -2,8 +2,9 @@
 
 import { observer } from 'mobx-react-lite';
 import { Button, UIIcon } from '@uth/ui';
-import { paymentStore } from '@uth/stores';
-import { useState } from 'react';
+import { paymentStore, useRefreshAccessContext } from '@uth/stores';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface AccountPageClientProps {
@@ -18,11 +19,33 @@ interface AccountPageClientProps {
 
 export const AccountPageClient = observer(({ user }: AccountPageClientProps) => {
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const refreshAccessContext = useRefreshAccessContext();
 
   const isPremium = ['monthly', 'yearly', 'lifetime'].includes(
     user.subscriptionTier,
   );
   const isActive = user.subscriptionStatus === 'active';
+
+  // Refresh access context when returning from billing portal
+  // This ensures the UI updates with any subscription changes made in the portal
+  useEffect(() => {
+    // Check if we just returned from the billing portal or checkout
+    // Stripe Customer Portal doesn't add query params, but we trigger refresh on mount
+    // to catch any changes made in the portal
+    const hasJustMounted = searchParams.get('refresh') === 'true';
+
+    if (hasJustMounted) {
+      refreshAccessContext();
+
+      // Clear the refresh parameter
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('refresh');
+      const query = params.toString();
+      router.replace(`/account${query ? `?${query}` : ''}`, { scroll: false });
+    }
+  }, [searchParams, router, refreshAccessContext]);
 
   const handleUpgrade = () => {
     paymentStore.openPaymentModal();
@@ -33,6 +56,9 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
 
     setIsLoadingPortal(true);
     try {
+      // Include refresh=true in return URL to trigger access context refresh
+      const returnUrl = `${window.location.origin}/account?refresh=true`;
+
       const response = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
         headers: {
@@ -40,7 +66,7 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
         },
         body: JSON.stringify({
           customerId: user.stripeCustomerId,
-          returnUrl: window.location.href,
+          returnUrl,
         }),
       });
 

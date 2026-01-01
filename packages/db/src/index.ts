@@ -17,6 +17,7 @@ export type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
+  AccessContext,
 } from './types/domain';
 
 export {
@@ -25,6 +26,7 @@ export {
   PurchaseIntentStatus,
   SubscriptionTier,
   SubscriptionStatus,
+  UserRole,
 } from './types/domain';
 
 // Export client factory functions
