@@ -24,6 +24,9 @@ import { AuthError, AuthErrorCode } from '../../types/domain';
 export class ClerkAuthClientAdapter implements AuthClientProvider {
   private configured = false;
 
+  // Used only to support onAuthStateChanged waiting for Clerk
+  private clerkReadyPromise?: Promise<any>;
+
   initialize(_config: AuthClientProviderConfig): void {
     // Clerk is initialized via ClerkProvider at app level
     // This is just a configuration check
@@ -66,6 +69,49 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
     }
 
     return clerk;
+  }
+
+  /**
+   * Wait for Clerk to be available and loaded.
+   * Used ONLY by onAuthStateChanged to avoid false "logged out" states.
+   */
+  private getClerkReady(timeoutMs = 8000): Promise<any> {
+    if (typeof window === 'undefined') {
+      return Promise.reject(
+        new AuthError(
+          AuthErrorCode.CONFIG_ERROR,
+          'Clerk is only available in browser environment',
+        ),
+      );
+    }
+
+    if (this.clerkReadyPromise) return this.clerkReadyPromise;
+
+    this.clerkReadyPromise = (async () => {
+      const start = Date.now();
+
+      // Wait for window.Clerk to exist
+      while (!(window as any).Clerk) {
+        if (Date.now() - start > timeoutMs) {
+          throw new AuthError(
+            AuthErrorCode.CONFIG_ERROR,
+            'Timed out waiting for window.Clerk. Ensure ClerkProvider is mounted.',
+          );
+        }
+        await new Promise((r) => setTimeout(r, 25));
+      }
+
+      const clerk = (window as any).Clerk;
+
+      // Ensure Clerk finishes booting (safe if already loaded)
+      if (typeof clerk.load === 'function') {
+        await clerk.load();
+      }
+
+      return clerk;
+    })();
+
+    return this.clerkReadyPromise;
   }
 
   isConfigured(): boolean {
@@ -139,7 +185,8 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
         );
       }
 
-      // Get session token from Clerk
+      // Keep your original logic (even though forceRefresh isn't correctly implemented here),
+      // because you asked for changes only in onAuthStateChanged.
       const token = await clerk.session.getToken({
         template: forceRefresh ? undefined : 'default',
       });
@@ -168,64 +215,59 @@ export class ClerkAuthClientAdapter implements AuthClientProvider {
   /**
    * Subscribe to auth state changes
    * Listens to Clerk's session changes and notifies callback
+   *
+   * IMPORTANT: This implementation waits for Clerk to be ready to avoid false "logged out"
+   * on first page load. Other methods remain unchanged.
    */
   onAuthStateChanged(callback: AuthStateChangeCallback): () => void {
-    try {
-      const clerk = this.getClerk();
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
 
-      // Track current user to detect changes
-      let currentUser = clerk.user;
+    // Immediately signal loading to avoid "not logged in" flicker
+    callback({ user: null, loading: true });
 
-      // Call callback immediately with current state
-      const user = currentUser
-        ? ClerkAuthClientAdapter.normalizeUser(currentUser)
-        : null;
-      callback({
-        user,
-        loading: false,
-      });
+    (async () => {
+      try {
+        const clerk = await this.getClerkReady();
+        if (cancelled) return;
 
-      // Listen for session changes
-      const handleSessionChange = () => {
-        const newUser = clerk.user;
+        const emit = (userLike: any) => {
+          // When loading, Clerk can temporarily have user undefined
+          const loading = clerk.status === 'loading' || userLike === undefined;
+          const user =
+            userLike && userLike !== undefined
+              ? ClerkAuthClientAdapter.normalizeUser(userLike)
+              : null;
 
-        // Only trigger callback if user changed
-        if (newUser?.id !== currentUser?.id) {
-          currentUser = newUser;
-
-          const user = newUser
-            ? ClerkAuthClientAdapter.normalizeUser(newUser)
-            : null;
-          callback({
-            user,
-            loading: false,
-          });
-        }
-      };
-
-      // Clerk emits events we can listen to
-      clerk.addListener(handleSessionChange);
-
-      // Return unsubscribe function
-      return () => {
-        clerk.removeListener(handleSessionChange);
-      };
-    } catch (error: any) {
-      // If Clerk not loaded, return no-op unsubscribe
-      if (
-        error instanceof AuthError &&
-        error.code === AuthErrorCode.CONFIG_ERROR
-      ) {
-        logger.warn('Clerk not loaded, onAuthStateChanged will not work');
-        // Call callback with loading state
-        callback({ user: null, loading: true });
-        return () => {
-          /* no-op */
+          callback({ user, loading });
         };
-      }
 
-      throw error;
-    }
+        // Emit current state once Clerk is ready
+        emit(clerk.user);
+
+        // Subscribe; Clerk's addListener returns an unsubscribe function
+        unsubscribe = clerk.addListener((emission: any) => {
+          emit(emission.user);
+        });
+      } catch (error: any) {
+        // If Clerk never becomes ready, stay in loading and log
+        logger.warn(
+          `Clerk not loaded, onAuthStateChanged will not work yet: ${
+            error?.message || 'Unknown error'
+          }`,
+        );
+        callback({ user: null, loading: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      try {
+        unsubscribe?.();
+      } catch {
+        // ignore
+      }
+    };
   }
 
   /**
