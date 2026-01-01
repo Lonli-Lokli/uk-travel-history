@@ -78,11 +78,14 @@ export interface Database {
             | 'trialing'
             | 'incomplete'
             | 'unpaid'
+            | 'paused'
             | null; // NULL = free/non-paid user
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           stripe_price_id: string | null;
           current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          pause_resumes_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -98,11 +101,14 @@ export interface Database {
             | 'trialing'
             | 'incomplete'
             | 'unpaid'
+            | 'paused'
             | null; // NULL = free/non-paid user
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
           current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          pause_resumes_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -118,11 +124,14 @@ export interface Database {
             | 'trialing'
             | 'incomplete'
             | 'unpaid'
+            | 'paused'
             | null; // NULL = free/non-paid user
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
           current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          pause_resumes_at?: string | null;
           created_at?: string;
         };
       };

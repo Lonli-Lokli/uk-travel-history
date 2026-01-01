@@ -213,6 +213,8 @@ describe('Stripe Webhook Handler', () => {
         stripeSubscriptionId: 'sub_123',
         stripePriceId: 'price_monthly',
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
 
@@ -261,6 +263,8 @@ describe('Stripe Webhook Handler', () => {
         stripeSubscriptionId: 'sub_123',
         stripePriceId: 'price_yearly',
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
 
@@ -297,6 +301,8 @@ describe('Stripe Webhook Handler', () => {
         subscriptionStatus: null,
         stripeSubscriptionId: null,
         currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
   });
@@ -401,6 +407,152 @@ describe('Stripe Webhook Handler', () => {
 
       expect(response.status).toBe(200);
       expect(db.updateUserByAuthId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Subscription Lifecycle', () => {
+    it('should handle paused subscription with resume date', async () => {
+      const resumeTimestamp = 1738368000; // 2025-02-01
+      const subscription = {
+        id: 'sub_123',
+        customer: 'cus_123',
+        status: 'active',
+        items: {
+          data: [{ price: { id: 'price_monthly' } }],
+        },
+        current_period_end: 1735689600, // 2025-01-01
+        pause_collection: {
+          behavior: 'void',
+          resumes_at: resumeTimestamp,
+        },
+        metadata: { email: 'test@example.com' },
+      };
+
+      vi.mocked(paymentsServer.constructWebhookEvent).mockReturnValue({
+        id: 'evt_123',
+        type: 'customer.subscription.updated',
+        data: { object: subscription },
+      });
+
+      vi.mocked(db.hasWebhookEventBeenProcessed).mockResolvedValue(false);
+      vi.mocked(db.recordWebhookEvent).mockResolvedValue({} as any);
+      vi.mocked(authServer.getUsersByEmail).mockResolvedValue({
+        users: [{ uid: 'user_123', email: 'test@example.com' }],
+      } as any);
+      vi.mocked(db.getUserByAuthId).mockResolvedValue({
+        id: 'db_user_123',
+        authUserId: 'user_123',
+      } as any);
+      vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
+
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'valid_sig' },
+        body: JSON.stringify({}),
+      });
+
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(db.updateUserByAuthId).toHaveBeenCalledWith('user_123', {
+        subscriptionTier: 'monthly',
+        subscriptionStatus: 'paused',
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_monthly',
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: new Date(resumeTimestamp * 1000),
+      });
+    });
+
+    it('should handle scheduled cancellation with grace period', async () => {
+      const subscription = {
+        id: 'sub_123',
+        customer: 'cus_123',
+        status: 'active',
+        items: {
+          data: [{ price: { id: 'price_yearly' } }],
+        },
+        current_period_end: 1767225600, // 2026-01-01
+        cancel_at_period_end: true,
+        metadata: { email: 'test@example.com' },
+      };
+
+      vi.mocked(paymentsServer.constructWebhookEvent).mockReturnValue({
+        id: 'evt_123',
+        type: 'customer.subscription.updated',
+        data: { object: subscription },
+      });
+
+      vi.mocked(db.hasWebhookEventBeenProcessed).mockResolvedValue(false);
+      vi.mocked(db.recordWebhookEvent).mockResolvedValue({} as any);
+      vi.mocked(authServer.getUsersByEmail).mockResolvedValue({
+        users: [{ uid: 'user_123', email: 'test@example.com' }],
+      } as any);
+      vi.mocked(db.getUserByAuthId).mockResolvedValue({
+        id: 'db_user_123',
+        authUserId: 'user_123',
+      } as any);
+      vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
+
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'valid_sig' },
+        body: JSON.stringify({}),
+      });
+
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(db.updateUserByAuthId).toHaveBeenCalledWith('user_123', {
+        subscriptionTier: 'yearly',
+        subscriptionStatus: 'active',
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        stripePriceId: 'price_yearly',
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: true,
+        pauseResumesAt: null,
+      });
+    });
+
+    it('should clear cancellation flags on subscription.deleted', async () => {
+      const subscription = {
+        id: 'sub_123',
+        metadata: { email: 'test@example.com' },
+      };
+
+      vi.mocked(paymentsServer.constructWebhookEvent).mockReturnValue({
+        id: 'evt_123',
+        type: 'customer.subscription.deleted',
+        data: { object: subscription },
+      });
+
+      vi.mocked(db.hasWebhookEventBeenProcessed).mockResolvedValue(false);
+      vi.mocked(db.recordWebhookEvent).mockResolvedValue({} as any);
+      vi.mocked(authServer.getUsersByEmail).mockResolvedValue({
+        users: [{ uid: 'user_123', email: 'test@example.com' }],
+      } as any);
+      vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
+
+      const request = new NextRequest('http://localhost/api/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'valid_sig' },
+        body: JSON.stringify({}),
+      });
+
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(db.updateUserByAuthId).toHaveBeenCalledWith('user_123', {
+        subscriptionTier: 'free',
+        subscriptionStatus: null,
+        stripeSubscriptionId: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
+      });
     });
   });
 

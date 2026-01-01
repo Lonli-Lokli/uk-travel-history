@@ -204,6 +204,8 @@ export class SupabaseDbAdapter implements DbProvider {
       stripe_subscription_id: data.stripeSubscriptionId ?? null,
       stripe_price_id: data.stripePriceId ?? null,
       current_period_end: data.currentPeriodEnd?.toISOString() ?? null,
+      cancel_at_period_end: data.cancelAtPeriodEnd ?? false,
+      pause_resumes_at: data.pauseResumesAt?.toISOString() ?? null,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -242,6 +244,10 @@ export class SupabaseDbAdapter implements DbProvider {
       updateData.stripe_price_id = updates.stripePriceId;
     if (updates.currentPeriodEnd !== undefined)
       updateData.current_period_end = updates.currentPeriodEnd?.toISOString() ?? null;
+    if (updates.cancelAtPeriodEnd !== undefined)
+      updateData.cancel_at_period_end = updates.cancelAtPeriodEnd;
+    if (updates.pauseResumesAt !== undefined)
+      updateData.pause_resumes_at = updates.pauseResumesAt?.toISOString() ?? null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from('users') as any)
@@ -471,6 +477,8 @@ export class SupabaseDbAdapter implements DbProvider {
       stripeSubscriptionId: row.stripe_subscription_id ?? null,
       stripePriceId: row.stripe_price_id ?? null,
       currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
+      cancelAtPeriodEnd: row.cancel_at_period_end ?? false,
+      pauseResumesAt: row.pause_resumes_at ? new Date(row.pause_resumes_at) : null,
       createdAt: new Date(row.created_at),
     };
   }
