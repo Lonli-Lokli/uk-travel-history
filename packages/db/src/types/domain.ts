@@ -315,3 +315,70 @@ export interface FeaturePolicy {
   /** When the policy was last updated */
   updatedAt: Date;
 }
+
+// ============================================================================
+// Access Context Types (Server-authoritative)
+// ============================================================================
+
+/**
+ * User role for authorization
+ */
+export enum UserRole {
+  /** Standard user with tier-based access */
+  STANDARD = 'standard',
+  /** Administrator with full access */
+  ADMIN = 'admin',
+}
+
+/**
+ * Server-computed access context containing auth, tier, role, and entitlements.
+ * This is the single source of truth for access control, computed server-side
+ * and hydrated to the client to prevent flicker and ensure consistency.
+ *
+ * All fields are serializable for RSC → client hydration.
+ */
+export interface AccessContext {
+  /**
+   * Authenticated user (null if not signed in)
+   * Minimal serializable subset - does NOT include full AuthUser
+   */
+  user: {
+    uid: string;
+    email?: string;
+    emailVerified: boolean;
+  } | null;
+
+  /**
+   * Current subscription tier
+   * Defaults to FREE for authenticated users, ANONYMOUS for unauthenticated
+   */
+  tier: SubscriptionTier;
+
+  /**
+   * User role (standard or admin)
+   * Defaults to STANDARD for all users unless explicitly set
+   */
+  role: UserRole;
+
+  /**
+   * Feature entitlements computed from tier + feature policies
+   * Maps feature keys to boolean access flags
+   */
+  entitlements: Record<string, boolean>;
+
+  /**
+   * Subscription status (for paid users)
+   * Null for free tier users
+   */
+  subscriptionStatus: SubscriptionStatus | null;
+
+  /**
+   * When the current subscription period ends (null for free/lifetime)
+   */
+  currentPeriodEnd: Date | null;
+
+  /**
+   * True if subscription is scheduled to cancel at period end
+   */
+  cancelAtPeriodEnd: boolean;
+}
