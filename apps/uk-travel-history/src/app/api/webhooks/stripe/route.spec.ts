@@ -213,6 +213,8 @@ describe('Stripe Webhook Handler', () => {
         stripeSubscriptionId: 'sub_123',
         stripePriceId: 'price_monthly',
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
 
@@ -261,6 +263,8 @@ describe('Stripe Webhook Handler', () => {
         stripeSubscriptionId: 'sub_123',
         stripePriceId: 'price_yearly',
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
 
@@ -297,6 +301,8 @@ describe('Stripe Webhook Handler', () => {
         subscriptionStatus: null,
         stripeSubscriptionId: null,
         currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        pauseResumesAt: null,
       });
     });
   });

@@ -99,6 +99,8 @@ export class MockDbAdapter implements DbProvider {
       stripeSubscriptionId: data.stripeSubscriptionId ?? null,
       stripePriceId: data.stripePriceId ?? null,
       currentPeriodEnd: data.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? false,
+      pauseResumesAt: data.pauseResumesAt ?? null,
       createdAt: new Date(),
     };
 
@@ -129,6 +131,8 @@ export class MockDbAdapter implements DbProvider {
       stripeSubscriptionId: updates.stripeSubscriptionId !== undefined ? updates.stripeSubscriptionId : user.stripeSubscriptionId,
       stripePriceId: updates.stripePriceId !== undefined ? updates.stripePriceId : user.stripePriceId,
       currentPeriodEnd: updates.currentPeriodEnd !== undefined ? updates.currentPeriodEnd : user.currentPeriodEnd,
+      cancelAtPeriodEnd: updates.cancelAtPeriodEnd !== undefined ? updates.cancelAtPeriodEnd : user.cancelAtPeriodEnd,
+      pauseResumesAt: updates.pauseResumesAt !== undefined ? updates.pauseResumesAt : user.pauseResumesAt,
     };
 
     this.users.set(updated.id, updated);

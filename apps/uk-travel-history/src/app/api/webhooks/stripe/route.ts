@@ -1,7 +1,84 @@
 /**
  * POST /api/webhooks/stripe
- * Handles Stripe webhook events
- * Provisions users after successful one-time payment
+ * Handles Stripe webhook events for subscription lifecycle management
+ *
+ * SUBSCRIPTION LIFECYCLE DOCUMENTATION
+ * ====================================
+ *
+ * This handler implements a complete subscription lifecycle system following Stripe's
+ * recommended practices. It handles both recurring subscriptions and one-time purchases.
+ *
+ * SOURCE OF TRUTH RULES
+ * ---------------------
+ * - Stripe webhooks are the SINGLE source of truth for subscription state
+ * - checkout.session.completed provisions NEW users (legacy flow only)
+ * - customer.subscription.* events UPDATE subscription entitlements
+ * - Clerk webhook creates users in modern flow; Stripe only updates entitlements
+ *
+ * WEBHOOK EVENT COVERAGE
+ * ----------------------
+ * ✅ checkout.session.completed - One-time purchases & authenticated checkouts
+ * ✅ customer.subscription.created - New subscription provisioning
+ * ✅ customer.subscription.updated - Tier changes, status changes, pauses, scheduled cancellations
+ * ✅ customer.subscription.deleted - Final cancellation/expiration
+ * ✅ invoice.payment_succeeded - Recovery from past_due/unpaid
+ * ✅ invoice.payment_failed - Mark subscription as past_due
+ *
+ * SUBSCRIPTION STATE MAPPING (Stripe → Domain)
+ * ---------------------------------------------
+ * | Stripe Condition              | Domain Status | Access | End Date           | Flags                    |
+ * |-------------------------------|---------------|--------|--------------------| -------------------------|
+ * | status=active                 | active        | ✅     | current_period_end | cancel_at_period_end=false|
+ * | cancel_at_period_end=true     | active        | ✅     | current_period_end | cancel_at_period_end=true |
+ * | pause_collection != null      | paused        | ❌     | current_period_end | pause_resumes_at set      |
+ * | status=past_due               | past_due      | ❌     | current_period_end | -                         |
+ * | status=canceled               | canceled      | ❌     | deletion timestamp | -                         |
+ * | subscription.deleted          | free (null)   | ❌     | preserved for grace| cancel/pause flags cleared|
+ * | status=trialing               | trialing      | ✅     | trial_end          | -                         |
+ * | status=incomplete             | incomplete    | ❌     | current_period_end | -                         |
+ * | status=unpaid                 | unpaid        | ❌     | current_period_end | -                         |
+ * | Lifetime purchase             | active        | ✅     | null               | No subscription_id        |
+ *
+ * END DATE HANDLING
+ * -----------------
+ * - Recurring: current_period_end (updated on each renewal)
+ * - Scheduled cancellation: current_period_end (user retains access until then)
+ * - Paused: current_period_end (frozen during pause)
+ * - Deleted: preserved from last period (grace period access)
+ * - Lifetime: null (never expires)
+ *
+ * IDEMPOTENCY & DEDUPLICATION
+ * ----------------------------
+ * - Webhook events tracked in webhook_events table by Stripe event ID
+ * - Duplicate events skipped before processing
+ * - Safe for Stripe retries and out-of-order delivery
+ * - Purchase intents prevent duplicate user creation (legacy flow)
+ *
+ * DATABASE GUARANTEES
+ * -------------------
+ * - UNIQUE constraint on clerk_user_id (prevents duplicate users)
+ * - UNIQUE constraint on stripe_customer_id (prevents duplicate Stripe customers)
+ * - UNIQUE constraint on stripe_subscription_id (prevents duplicate subscriptions)
+ * - CHECK constraint: free tier must have NULL status
+ * - CHECK constraint: paid tier must have non-NULL status
+ * - CHECK constraint: paused status must have pause_resumes_at
+ *
+ * LIFECYCLE EVENT FLOW
+ * --------------------
+ * 1. User signs up via Clerk → Clerk webhook creates user (FREE tier)
+ * 2. User purchases subscription → checkout.session.completed (authenticated)
+ * 3. Stripe creates subscription → customer.subscription.created
+ * 4. Handler updates user: tier=monthly/yearly/lifetime, status=active
+ * 5. User cancels → subscription.updated (cancel_at_period_end=true, status still active)
+ * 6. Period ends → subscription.deleted (tier=free, status=null, preserve period_end)
+ * 7. User renews → new checkout session → subscription.created (repeat from step 3)
+ *
+ * LOGGING
+ * -------
+ * - All webhook events logged with event type and subscription ID
+ * - State transitions logged with before/after values
+ * - Errors logged with context (subscription ID, user ID, event type)
+ * - Warnings for unexpected states or missing metadata
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -401,7 +478,15 @@ function mapPriceToTier(priceId: string): SubscriptionTier {
 /**
  * Map Stripe subscription status to domain status
  */
-function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
+function mapStripeStatus(
+  stripeStatus: string,
+  pauseCollection: any,
+): SubscriptionStatus {
+  // Check if subscription is paused
+  if (pauseCollection && pauseCollection.behavior) {
+    return SubscriptionStatus.PAUSED;
+  }
+
   switch (stripeStatus) {
     case 'active':
       return SubscriptionStatus.ACTIVE;
@@ -415,6 +500,8 @@ function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
       return SubscriptionStatus.INCOMPLETE;
     case 'unpaid':
       return SubscriptionStatus.UNPAID;
+    case 'paused':
+      return SubscriptionStatus.PAUSED;
     default:
       getRouteLogger().warn('Unknown Stripe status, defaulting to active', {
         extra: { stripeStatus },
@@ -437,6 +524,12 @@ async function handleSubscriptionChange(
   const currentPeriodEnd = subscription.current_period_end
     ? new Date(subscription.current_period_end * 1000)
     : null;
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
+  const pauseCollection = subscription.pause_collection;
+  const pauseResumesAt =
+    pauseCollection?.resumes_at !== undefined && pauseCollection.resumes_at !== null
+      ? new Date(pauseCollection.resumes_at * 1000)
+      : null;
 
   if (!priceId) {
     getRouteLogger().error('No price ID in subscription', undefined, {
@@ -446,7 +539,7 @@ async function handleSubscriptionChange(
   }
 
   const tier = mapPriceToTier(priceId);
-  const subscriptionStatus = mapStripeStatus(status);
+  const subscriptionStatus = mapStripeStatus(status, pauseCollection);
 
   // Get userId directly from metadata (new flow) or find by email (legacy flow)
   let authUserId = subscription.metadata?.userId;
@@ -515,10 +608,12 @@ async function handleSubscriptionChange(
           stripeSubscriptionId: subscriptionId,
           stripePriceId: priceId,
           currentPeriodEnd,
+          cancelAtPeriodEnd,
+          pauseResumesAt,
         });
 
         getRouteLogger().info(`Created user with ${tier} subscription`, {
-          extra: { authUserId, subscriptionId },
+          extra: { authUserId, subscriptionId, cancelAtPeriodEnd, paused: !!pauseResumesAt },
         });
       } else {
         return; // Cannot create user without email
@@ -532,10 +627,12 @@ async function handleSubscriptionChange(
         stripeSubscriptionId: subscriptionId,
         stripePriceId: priceId,
         currentPeriodEnd,
+        cancelAtPeriodEnd,
+        pauseResumesAt,
       });
 
       getRouteLogger().info(`Updated user subscription to ${tier}`, {
-        extra: { authUserId, subscriptionId, action },
+        extra: { authUserId, subscriptionId, action, cancelAtPeriodEnd, paused: !!pauseResumesAt },
       });
     }
   } catch (error: any) {
@@ -590,7 +687,7 @@ async function handleSubscriptionCancellation(
     }
 
     // Update user to free tier with NULL status
-    // Preserve current_period_end for grace period access
+    // Clear subscription data but preserve current_period_end for grace period access
     await updateUserByAuthId(authUserId, {
       subscriptionTier: SubscriptionTier.FREE,
       subscriptionStatus: null, // NULL for free tier (enforced by DB constraint)
@@ -599,6 +696,8 @@ async function handleSubscriptionCancellation(
       currentPeriodEnd: subscription.current_period_end
         ? new Date(subscription.current_period_end * 1000)
         : null,
+      cancelAtPeriodEnd: false, // Clear cancellation flag
+      pauseResumesAt: null, // Clear pause flag
     });
 
     getRouteLogger().info('Downgraded user to free tier after cancellation', {

@@ -92,6 +92,8 @@ export enum SubscriptionStatus {
   INCOMPLETE = 'incomplete',
   /** Payment failed and grace period ended */
   UNPAID = 'unpaid',
+  /** Subscription payment collection is paused */
+  PAUSED = 'paused',
 }
 
 /**
@@ -118,6 +120,10 @@ export interface User {
   stripePriceId: string | null;
   /** End date of current subscription period (null for lifetime) */
   currentPeriodEnd: Date | null;
+  /** True if subscription is scheduled to cancel at period end */
+  cancelAtPeriodEnd: boolean;
+  /** When a paused subscription will resume (null if not paused) */
+  pauseResumesAt: Date | null;
   /** When the user record was created */
   createdAt: Date;
 }
@@ -144,6 +150,10 @@ export interface CreateUserData {
   stripePriceId?: string | null;
   /** Current period end (optional) */
   currentPeriodEnd?: Date | null;
+  /** True if subscription is scheduled to cancel at period end (optional, defaults to false) */
+  cancelAtPeriodEnd?: boolean;
+  /** When a paused subscription will resume (optional) */
+  pauseResumesAt?: Date | null;
 }
 
 /**
@@ -166,6 +176,10 @@ export interface UpdateUserData {
   stripePriceId?: string | null;
   /** Current period end */
   currentPeriodEnd?: Date | null;
+  /** True if subscription is scheduled to cancel at period end */
+  cancelAtPeriodEnd?: boolean;
+  /** When a paused subscription will resume */
+  pauseResumesAt?: Date | null;
 }
 
 // ============================================================================
