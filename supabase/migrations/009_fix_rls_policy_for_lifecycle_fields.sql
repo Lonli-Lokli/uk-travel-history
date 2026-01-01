@@ -5,6 +5,18 @@
 -- Related to Issue #128: Audit & Fix Subscription Lifecycle Handling
 -- ============================================================================
 
+-- Ensure the clerk_user_id() helper function exists
+-- This function is originally created in migration 003, but we recreate it here
+-- to make this migration more self-contained and idempotent
+CREATE OR REPLACE FUNCTION public.clerk_user_id()
+RETURNS TEXT AS $$
+BEGIN
+  -- Extract clerk user ID from JWT claims
+  -- Clerk stores user_id in the 'sub' claim
+  RETURN nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::text;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
 -- Drop the existing UPDATE policy
 DROP POLICY IF EXISTS users_update_own ON users;
 
