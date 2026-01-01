@@ -6,7 +6,7 @@
  * subscription requirements, and rollout percentages.
  */
 
-/* eslint-disable @nx/enforce-module-boundaries */
+ 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -20,6 +20,8 @@ import {
 import { getUserByAuthId } from '@uth/db';
 import { DEFAULT_FEATURE_POLICIES } from './features';
 import { TIERS, FEATURE_KEYS } from './shapes';
+import { auth } from '@clerk/nextjs/server';
+import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -273,9 +275,6 @@ describe('API Feature Guards', () => {
         };
 
         // Mock getFeaturePolicy to return a policy with denylist
-        const { checkFeatureAccess: checkFeatureAccessImport } =
-          await import('./api-guards');
-
         // We need to test this by directly using the internal logic
         // Since getFeaturePolicy is not exported, we test via the full flow
         // by mocking isFeatureEnabled to return a custom policy-like behavior
@@ -407,22 +406,19 @@ describe('API Feature Guards', () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
       // Mock Clerk auth
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'clerk-user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'clerk-user-123' } as any);
 
       // Mock DB user
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'clerk-user-123',
         email: 'test@example.com',
-      });
+      } as any);
 
       // Mock subscription
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'active',
-      });
+      } as any);
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -438,11 +434,9 @@ describe('API Feature Guards', () => {
     it('should return free tier for authenticated user without DB record', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'new-user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'new-user-123' } as any);
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue(null);
+      vi.mocked(getUserByAuthId).mockResolvedValue(null);
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -457,18 +451,15 @@ describe('API Feature Guards', () => {
     it('should return free tier when subscription is not active', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'canceled',
       });
 
@@ -482,18 +473,15 @@ describe('API Feature Guards', () => {
     it('should handle trialing subscription as active', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'trialing',
       });
 
@@ -507,11 +495,9 @@ describe('API Feature Guards', () => {
     it('should treat cancelled subscription in grace period as active (cancelAtPeriodEnd = true, period not ended)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
@@ -521,8 +507,7 @@ describe('API Feature Guards', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: futureDate,
@@ -539,11 +524,9 @@ describe('API Feature Guards', () => {
     it('should treat cancelled subscription after grace period as inactive (cancelAtPeriodEnd = true, period ended)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
@@ -553,8 +536,7 @@ describe('API Feature Guards', () => {
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 1);
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: pastDate,
@@ -571,19 +553,16 @@ describe('API Feature Guards', () => {
     it('should treat immediately cancelled subscription as inactive (cancelAtPeriodEnd = false)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
       // Subscription cancelled immediately (no grace period)
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: false,
         currentPeriodEnd: new Date(),
@@ -600,8 +579,7 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier for unauthenticated Clerk user', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: null });
+      vi.mocked(auth).mockResolvedValue({ userId: null });
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -616,20 +594,17 @@ describe('API Feature Guards', () => {
     it('should handle Firebase auth mode', async () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
-      const { getSessionFromRequest } = await import('@uth/auth-server');
-      (getSessionFromRequest as any).mockResolvedValue({
+      vi.mocked(getSessionFromRequest).mockResolvedValue({
         user: { uid: 'firebase-user-123' },
       });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'firebase-user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'active',
       });
 
@@ -642,8 +617,7 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier when Firebase auth fails', async () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
-      const { getSessionFromRequest } = await import('@uth/auth-server');
-      (getSessionFromRequest as any).mockRejectedValue(
+      vi.mocked(getSessionFromRequest).mockRejectedValue(
         new Error('Invalid token'),
       );
 
@@ -660,8 +634,7 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier when getUserContext throws error', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockRejectedValue(new Error('Auth error'));
+      vi.mocked(auth).mockRejectedValue(new Error('Auth error'));
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -684,18 +657,15 @@ describe('API Feature Guards', () => {
     });
 
     it('should return user context when access is allowed', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'active',
       });
 
@@ -719,18 +689,15 @@ describe('API Feature Guards', () => {
     });
 
     it('should throw NextResponse when access is denied', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'canceled', // No active subscription
       });
 
@@ -753,8 +720,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should log access decisions with request details', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: null });
+      vi.mocked(auth).mockResolvedValue({ userId: null });
 
       const request = new NextRequest('http://localhost/api/parse', {
         method: 'POST',
@@ -792,18 +758,15 @@ describe('API Feature Guards', () => {
     });
 
     it('should call handler when access is allowed', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
         email: 'test@example.com',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue({
+      vi.mocked(getSubscription).mockResolvedValue({
         status: 'active',
       });
 
@@ -830,8 +793,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should return error response when access is denied', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: null });
+      vi.mocked(auth).mockResolvedValue({ userId: null });
 
       const mockHandler = vi.fn();
       const wrappedHandler = withFeatureAccess(
@@ -850,17 +812,14 @@ describe('API Feature Guards', () => {
     });
 
     it('should handle handler errors gracefully', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
 
-      const { getUserByAuthId } = await import('@uth/db');
-      (getUserByAuthId as any).mockResolvedValue({
+      vi.mocked(getUserByAuthId).mockResolvedValue({
         id: 'db-user-1',
         authId: 'user-123',
       });
 
-      const { getSubscription } = await import('@uth/auth-server');
-      (getSubscription as any).mockResolvedValue(null);
+      vi.mocked(getSubscription).mockResolvedValue(null);
 
       const mockHandler = vi.fn().mockRejectedValue(new Error('Handler error'));
       const wrappedHandler = withFeatureAccess(
@@ -879,8 +838,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should pass ANONYMOUS user context for ANONYMOUS features accessed without auth', async () => {
-      const { auth } = await import('@clerk/nextjs/server');
-      (auth as any).mockResolvedValue({ userId: null });
+      vi.mocked(auth).mockResolvedValue({ userId: null });
 
       const mockHandler = vi
         .fn()

@@ -17,6 +17,7 @@ import type {
 import { AuthError, AuthErrorCode } from '../types/domain';
 import { getAuthProvider } from '../internal/provider-resolver';
 import type { IncomingHttpHeaders } from 'http';
+import { getUserByAuthId } from '@uth/db';
 
 /**
  * Extract token from Authorization header
@@ -123,8 +124,7 @@ export async function requireAdmin(): Promise<AuthUser> {
     );
   }
 
-  // Import UserRole from @uth/db to check role
-  const { getUserByAuthId } = await import('@uth/db');
+  // Get user from @uth/db to check role
   const dbUser = await getUserByAuthId(user.uid);
 
   if (!dbUser || dbUser.role !== 'admin') {

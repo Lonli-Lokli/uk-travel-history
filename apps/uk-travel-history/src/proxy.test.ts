@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-import proxy, { configureProxy } from './proxy';
+import proxy, { configureProxy, config } from './proxy';
+import { createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
 
 // Mock Clerk - this is still needed as it's a third-party dependency
 vi.mock('@clerk/nextjs/server', () => ({
@@ -8,8 +9,6 @@ vi.mock('@clerk/nextjs/server', () => ({
   createRouteMatcher: vi.fn(),
   clerkMiddleware: vi.fn(),
 }));
-
-import { createRouteMatcher, clerkMiddleware } from '@clerk/nextjs/server';
 
 describe('Proxy (Next.js 16 Middleware)', () => {
   const originalEnv = process.env;
@@ -177,9 +176,7 @@ describe('Proxy (Next.js 16 Middleware)', () => {
   });
 
   describe('Config Export', () => {
-    it('should export matcher configuration', async () => {
-      const { config } = await import('./proxy');
-
+    it('should export matcher configuration', () => {
       expect(config).toBeDefined();
       expect(config.matcher).toBeInstanceOf(Array);
       expect(config.matcher.length).toBeGreaterThan(0);

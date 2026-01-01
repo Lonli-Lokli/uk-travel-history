@@ -20,6 +20,11 @@ import type {
   WebhookVerificationResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
+import {
+  getPurchaseIntentsByAuthUserId,
+  getPurchaseIntentBySessionId,
+  PurchaseIntentStatus
+} from '@uth/db';
 
 /**
  * Clerk implementation of the auth server provider
@@ -227,9 +232,6 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
 
   async getSubscription(userId: string): Promise<Subscription | null> {
     try {
-      // Lazy-load db operations to respect module boundaries
-      const { getPurchaseIntentsByAuthUserId, PurchaseIntentStatus } = await import('@uth/db');
-
       // Get provisioned purchase intents for the user
       const intents = await getPurchaseIntentsByAuthUserId(userId);
       const provisioned = intents.find(
@@ -253,9 +255,6 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     sessionId: string,
   ): Promise<Subscription | null> {
     try {
-      // Lazy-load db operations to respect module boundaries
-      const { getPurchaseIntentBySessionId } = await import('@uth/db');
-
       const intent = await getPurchaseIntentBySessionId(sessionId);
 
       // Placeholder - one-time payment doesn't have subscription

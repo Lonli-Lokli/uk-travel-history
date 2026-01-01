@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { compose, logger, MiddlewareFunction, when } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { requireAdmin } from '@uth/auth-server';
 
 /**
  * Logger interface for dependency injection
@@ -132,8 +134,6 @@ const routeProtectionMiddleware = async (
   auth: any,
   req: NextRequest,
 ): Promise<NextResponse> => {
-  const { createRouteMatcher } = await import('@clerk/nextjs/server');
-
   // Define public routes that don't require authentication
   // Per issue #100: landing, pricing, docs/blog, public previews, free features
   const isPublicRoute = createRouteMatcher([
@@ -175,9 +175,8 @@ const routeProtectionMiddleware = async (
       return NextResponse.redirect(signInUrl);
     }
 
-    // Check if user has admin role using auth-server (which properly lazy-loads db)
+    // Check if user has admin role using auth-server
     try {
-      const { requireAdmin } = await import('@uth/auth-server');
       await requireAdmin();
     } catch (error: any) {
       // Not an admin or error checking role - redirect to forbidden page
@@ -205,7 +204,6 @@ const routeProtectionMiddleware = async (
 const clerkAuthMiddleware: MiddlewareFunction = async (
   req: NextRequest,
 ): Promise<NextResponse | null> => {
-  const { clerkMiddleware } = await import('@clerk/nextjs/server');
   const wrappedMiddleware = clerkMiddleware(routeProtectionMiddleware);
   const result = await wrappedMiddleware(req, {} as any);
   // Clerk middleware can return Response or undefined, convert to NextResponse | null
