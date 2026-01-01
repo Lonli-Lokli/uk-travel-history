@@ -88,6 +88,9 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
       past_due: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Past Due' },
       canceled: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Canceled' },
       trialing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Trial' },
+      incomplete: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Incomplete' },
+      unpaid: { bg: 'bg-red-100', text: 'text-red-800', label: 'Unpaid' },
+      paused: { bg: 'bg-slate-100', text: 'text-slate-800', label: 'Paused' },
     };
 
     const style = statusStyles[status] || {
@@ -157,6 +160,28 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
                 <div>{getStatusBadge(user.subscriptionStatus)}</div>
               )}
             </div>
+
+            {/* Status Message for Incomplete */}
+            {user.subscriptionStatus === 'incomplete' && (
+              <div className="pb-4 border-b border-slate-200">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <UIIcon
+                      iconName="alert-circle"
+                      className="h-5 w-5 text-orange-600 mr-3 flex-shrink-0 mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-orange-900 mb-1">
+                        Payment Confirmation Required
+                      </p>
+                      <p className="text-sm text-orange-800">
+                        Your subscription payment is being processed. This usually happens when additional authentication (like 3D Secure) is required. Once the payment is confirmed, your subscription will automatically activate.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Renewal Date */}
             {isPremium && user.currentPeriodEnd && isActive && (

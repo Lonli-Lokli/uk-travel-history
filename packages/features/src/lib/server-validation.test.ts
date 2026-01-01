@@ -18,7 +18,8 @@ vi.mock('next/cache', () => ({
   unstable_cache: vi.fn((fn) => fn),
 }));
 
-import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
+// Import the mocked function after mocking
+import { getAllFeaturePolicies as mockGetAllFeaturePolicies } from '@uth/db';
 
 // Helper to convert Edge Config format to DB format
 function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): FeaturePolicy[] | null {
@@ -52,7 +53,7 @@ describe('Server-Side Feature Validation', () => {
       [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true, minTier: 'anonymous' },
       [FEATURE_KEYS.RISK_CHART]: { enabled: false, minTier: 'anonymous' },
     };
-    vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat(allFeatures));
+    mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(allFeatures));
   });
 
   describe('validateFeatureAccess', () => {
@@ -158,7 +159,7 @@ describe('Server-Side Feature Validation', () => {
 
     describe('Feature flag disabled', () => {
       it('should deny access when feature is disabled in Edge Config', async () => {
-        vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
         }));
 
@@ -177,7 +178,7 @@ describe('Server-Side Feature Validation', () => {
       });
 
       it('should deny access to all users when feature is disabled', async () => {
-        vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
         }));
 
@@ -206,7 +207,7 @@ describe('Server-Side Feature Validation', () => {
 
     describe('Beta users and rollout', () => {
       it('should allow beta users even with 0% rollout', async () => {
-        vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.EXCEL_EXPORT]: {
             enabled: true,
             rolloutPercentage: 0,
@@ -228,7 +229,7 @@ describe('Server-Side Feature Validation', () => {
       });
 
       it('should respect rollout percentage for non-beta users', async () => {
-        vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
           [FEATURE_KEYS.EXCEL_EXPORT]: {
             enabled: true,
             rolloutPercentage: 0,
@@ -294,7 +295,7 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should exclude disabled features', async () => {
-      vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true },
         [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
       }));
@@ -311,7 +312,7 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should return empty array if all features are disabled', async () => {
-      vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.MONETIZATION]: { enabled: false },
         [FEATURE_KEYS.AUTH]: { enabled: false },
         [FEATURE_KEYS.PAYMENTS]: { enabled: false },
@@ -332,7 +333,7 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should respect beta users', async () => {
-      vi.mocked(dbGetAllFeaturePolicies).mockResolvedValue(convertToDbFormat({
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.EXCEL_EXPORT]: {
           enabled: true,
           rolloutPercentage: 0,

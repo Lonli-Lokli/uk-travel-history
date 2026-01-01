@@ -593,17 +593,18 @@ async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
       return;
     }
 
-    // If user was past_due or unpaid, reactivate them
+    // If user was past_due, unpaid, or incomplete, reactivate them
     if (
       dbUser.subscriptionStatus === SubscriptionStatus.PAST_DUE ||
-      dbUser.subscriptionStatus === SubscriptionStatus.UNPAID
+      dbUser.subscriptionStatus === SubscriptionStatus.UNPAID ||
+      dbUser.subscriptionStatus === SubscriptionStatus.INCOMPLETE
     ) {
       await updateUserByAuthId(authUserId, {
         subscriptionStatus: SubscriptionStatus.ACTIVE,
       });
 
       getRouteLogger().info('Reactivated user subscription after payment', {
-        extra: { authUserId, subscriptionId },
+        extra: { authUserId, subscriptionId, previousStatus: dbUser.subscriptionStatus },
       });
     }
   } catch (error: any) {
