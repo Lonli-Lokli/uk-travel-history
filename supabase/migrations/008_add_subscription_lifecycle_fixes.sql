@@ -6,13 +6,14 @@
 -- ============================================================================
 
 -- ============================================================================
--- Step 1: Add 'paused' status to subscription_status enum
+-- Step 1: Add 'paused' status to subscription_statuses table
 -- ============================================================================
 
--- Add new status value to existing enum
-ALTER TYPE subscription_status ADD VALUE IF NOT EXISTS 'paused';
-
-COMMENT ON TYPE subscription_status IS 'Stripe subscription statuses: active, past_due, canceled, trialing, incomplete, unpaid, paused';
+-- Add new status value to reference table (subscription_status is now TEXT with FK)
+-- Note: Migration 005 converted subscription_status from ENUM to TEXT with FK
+INSERT INTO subscription_statuses (code, description, is_active)
+VALUES ('paused', 'Subscription is paused and will resume later', FALSE)
+ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
 -- Step 2: Add unique constraints for Stripe identifiers
