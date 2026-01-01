@@ -78,6 +78,7 @@
  * - State transitions logged with before/after values
  * - Errors logged with context (subscription ID, user ID, event type)
  * - Warnings for unexpected states or missing metadata
+ * - Unknown/unhandled event types logged for debugging
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -260,6 +261,26 @@ export async function POST(request: NextRequest) {
           // Don't return error - event was recorded, can be retried
         }
       }
+    }
+
+    // Log unknown/unhandled events for debugging
+    const handledEvents = [
+      'checkout.session.completed',
+      'customer.subscription.created',
+      'customer.subscription.updated',
+      'customer.subscription.deleted',
+      'invoice.payment_succeeded',
+      'invoice.payment_failed',
+    ];
+
+    if (!handledEvents.includes(event.type)) {
+      getRouteLogger().warn('Received unhandled Stripe webhook event', {
+        extra: {
+          eventType: event.type,
+          eventId: event.id,
+          objectId: event.data.object?.id,
+        },
+      });
     }
 
     return NextResponse.json({ received: true });
