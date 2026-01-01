@@ -108,6 +108,36 @@ export async function requireAuth(
 }
 
 /**
+ * Require admin role for a request
+ * Throws AuthError if not authenticated or not an admin
+ * @returns The authenticated admin user
+ * @throws AuthError with UNAUTHENTICATED if not logged in, FORBIDDEN if not admin
+ */
+export async function requireAdmin(): Promise<AuthUser> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new AuthError(
+      AuthErrorCode.UNAUTHENTICATED,
+      'Authentication required',
+    );
+  }
+
+  // Import UserRole from @uth/db to check role
+  const { getUserByAuthId } = await import('@uth/db');
+  const dbUser = await getUserByAuthId(user.uid);
+
+  if (!dbUser || dbUser.role !== 'admin') {
+    throw new AuthError(
+      AuthErrorCode.FORBIDDEN,
+      'Admin access required',
+    );
+  }
+
+  return user;
+}
+
+/**
  * Get user information by user ID
  * @param uid - The user's unique identifier
  * @returns User information

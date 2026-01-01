@@ -70,6 +70,7 @@ export interface Database {
           clerk_user_id: string;
           email: string;
           passkey_enrolled: boolean;
+          role: 'standard' | 'admin';
           subscription_tier: 'free' | 'monthly' | 'yearly' | 'lifetime';
           subscription_status:
             | 'active'
@@ -93,6 +94,7 @@ export interface Database {
           clerk_user_id: string;
           email: string;
           passkey_enrolled?: boolean;
+          role?: 'standard' | 'admin';
           subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
           subscription_status?:
             | 'active'
@@ -116,6 +118,7 @@ export interface Database {
           clerk_user_id?: string;
           email?: string;
           passkey_enrolled?: boolean;
+          role?: 'standard' | 'admin';
           subscription_tier?: 'free' | 'monthly' | 'yearly' | 'lifetime';
           subscription_status?:
             | 'active'

@@ -3,12 +3,19 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@uth/ui';
+import type { UserRole } from '@uth/db';
 
-export function Footer() {
+interface FooterProps {
+  /** User role for conditionally showing admin-only links */
+  role?: UserRole;
+}
+
+export function Footer({ role }: FooterProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const commitHash = process.env.NEXT_PUBLIC_GIT_COMMIT_HASH || 'dev';
   const buildTime =
     process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString();
+  const isAdmin = role === 'admin';
 
   return (
     <footer className="bg-white border-t border-slate-200 mt-auto">
@@ -22,13 +29,17 @@ export function Footer() {
             >
               Terms and Conditions
             </Link>
-            <span className="text-slate-300">•</span>
-            <Link
-              href="/status"
-              className="text-slate-600 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-            >
-              Status
-            </Link>
+            {isAdmin && (
+              <>
+                <span className="text-slate-300">•</span>
+                <Link
+                  href="/status"
+                  className="text-slate-600 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                >
+                  Status
+                </Link>
+              </>
+            )}
             <span className="text-slate-300">•</span>
             {/* Developer Info Popover */}
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

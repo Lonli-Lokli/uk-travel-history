@@ -23,6 +23,7 @@ import {
   PurchaseIntentStatus,
   SubscriptionTier,
   SubscriptionStatus,
+  UserRole,
 } from '../../types/domain';
 import type { Database } from './supabase.types';
 
@@ -192,6 +193,7 @@ export class SupabaseDbAdapter implements DbProvider {
       clerk_user_id: data.authUserId,
       email: data.email,
       passkey_enrolled: data.passkeyEnrolled ?? false,
+      role: data.role ?? UserRole.STANDARD,
       subscription_tier: tier,
       // NULL status for free tier, ACTIVE for paid tiers (unless explicitly set)
       subscription_status:
@@ -232,6 +234,7 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.passkeyEnrolled !== undefined)
       updateData.passkey_enrolled = updates.passkeyEnrolled;
+    if (updates.role !== undefined) updateData.role = updates.role;
     if (updates.subscriptionTier !== undefined)
       updateData.subscription_tier = updates.subscriptionTier;
     if (updates.subscriptionStatus !== undefined)
@@ -468,6 +471,7 @@ export class SupabaseDbAdapter implements DbProvider {
       authUserId: row.clerk_user_id,
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
+      role: (row.role as UserRole) ?? UserRole.STANDARD,
       subscriptionTier: (row.subscription_tier as SubscriptionTier) ?? SubscriptionTier.FREE,
       // NULL status is valid for free tier users, only default to ACTIVE for non-null values
       subscriptionStatus: row.subscription_status

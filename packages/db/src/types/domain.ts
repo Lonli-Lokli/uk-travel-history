@@ -108,6 +108,8 @@ export interface User {
   email: string;
   /** Whether user has enrolled in passkey authentication */
   passkeyEnrolled: boolean;
+  /** User role for authorization (standard or admin) */
+  role: UserRole;
   /** Subscription tier for entitlement enforcement */
   subscriptionTier: SubscriptionTier;
   /** Subscription status (null for free/non-paid users) */
@@ -138,6 +140,8 @@ export interface CreateUserData {
   email: string;
   /** Whether user has enrolled in passkey authentication (optional, defaults to false) */
   passkeyEnrolled?: boolean;
+  /** User role (optional, defaults to STANDARD) */
+  role?: UserRole;
   /** Subscription tier (optional, defaults to FREE) */
   subscriptionTier?: SubscriptionTier;
   /** Subscription status (optional, defaults to null for FREE tier, ACTIVE for paid tiers) */
@@ -164,6 +168,8 @@ export interface UpdateUserData {
   email?: string;
   /** Whether user has enrolled in passkey authentication */
   passkeyEnrolled?: boolean;
+  /** User role (admin-only operation) */
+  role?: UserRole;
   /** Subscription tier */
   subscriptionTier?: SubscriptionTier;
   /** Subscription status (null for free/non-paid users) */

@@ -140,7 +140,7 @@ export default async function RootLayout({
               <Navbar />
               <main className="flex-1 overflow-y-auto">{children}</main>
             </div>
-            <Footer />
+            <Footer role={accessContext.role} />
             <Toaster />
           </Providers>
         </body>

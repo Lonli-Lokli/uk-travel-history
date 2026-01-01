@@ -140,7 +140,7 @@ const routeProtectionMiddleware = async (
     '/',
     '/about',
     '/terms',
-    '/status',
+    '/forbidden', // 403 error page
     '/travel', // Free tier access to travel tracker
     '/api/parse',
     '/api/export',
@@ -151,6 +151,10 @@ const routeProtectionMiddleware = async (
     '/api/user/provision', // Manual user provisioning fallback
   ]);
 
+  // Define admin-only routes that require admin role
+  // Per issue #126: Status page requires admin access
+  const isAdminRoute = createRouteMatcher(['/status']);
+
   // Define protected routes that require authentication
   // Per issue #100: member/premium routes redirect to /sign-in
   const isProtectedRoute = createRouteMatcher(['/api/billing/(.*)']);
@@ -160,6 +164,30 @@ const routeProtectionMiddleware = async (
   // Allow public routes without authentication
   if (isPublicRoute(req)) {
     return NextResponse.next();
+  }
+
+  // Admin routes require authentication AND admin role
+  if (isAdminRoute(req)) {
+    if (!userId) {
+      // Not authenticated - redirect to sign-in
+      const signInUrl = new URL('/sign-in', req.url);
+      signInUrl.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    // Check if user has admin role
+    try {
+      const { getUserByAuthId } = await import('@uth/db');
+      const user = await getUserByAuthId(userId);
+
+      if (!user || user.role !== 'admin') {
+        // Not an admin - redirect to forbidden page
+        return NextResponse.redirect(new URL('/forbidden', req.url));
+      }
+    } catch (error) {
+      // Error checking role - deny access
+      return NextResponse.redirect(new URL('/forbidden', req.url));
+    }
   }
 
   // Protected routes require authentication
