@@ -480,7 +480,7 @@ function mapPriceToTier(priceId: string): SubscriptionTier {
  */
 function mapStripeStatus(
   stripeStatus: string,
-  pauseCollection: any,
+  pauseCollection: { behavior?: string; resumes_at?: number } | null | undefined,
 ): SubscriptionStatus {
   // Check if subscription is paused
   if (pauseCollection && pauseCollection.behavior) {
@@ -508,6 +508,27 @@ function mapStripeStatus(
       });
       return SubscriptionStatus.ACTIVE;
   }
+}
+
+/**
+ * Create subscription state logging context
+ */
+function getSubscriptionLogContext(
+  authUserId: string,
+  subscriptionId: string,
+  cancelAtPeriodEnd: boolean,
+  pauseResumesAt: Date | null,
+  action?: 'created' | 'updated',
+): { extra: Record<string, any> } {
+  return {
+    extra: {
+      authUserId,
+      subscriptionId,
+      ...(action && { action }),
+      cancelAtPeriodEnd,
+      paused: !!pauseResumesAt,
+    },
+  };
 }
 
 /**
@@ -612,9 +633,10 @@ async function handleSubscriptionChange(
           pauseResumesAt,
         });
 
-        getRouteLogger().info(`Created user with ${tier} subscription`, {
-          extra: { authUserId, subscriptionId, cancelAtPeriodEnd, paused: !!pauseResumesAt },
-        });
+        getRouteLogger().info(
+          `Created user with ${tier} subscription`,
+          getSubscriptionLogContext(authUserId, subscriptionId, cancelAtPeriodEnd, pauseResumesAt),
+        );
       } else {
         return; // Cannot create user without email
       }
@@ -631,9 +653,10 @@ async function handleSubscriptionChange(
         pauseResumesAt,
       });
 
-      getRouteLogger().info(`Updated user subscription to ${tier}`, {
-        extra: { authUserId, subscriptionId, action, cancelAtPeriodEnd, paused: !!pauseResumesAt },
-      });
+      getRouteLogger().info(
+        `Updated user subscription to ${tier}`,
+        getSubscriptionLogContext(authUserId, subscriptionId, cancelAtPeriodEnd, pauseResumesAt, action),
+      );
     }
   } catch (error: any) {
     getRouteLogger().error('Failed to handle subscription change', error, {
