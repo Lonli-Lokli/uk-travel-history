@@ -315,6 +315,20 @@ describe('Stripe Webhook Handler', () => {
         customer_email: 'test@example.com',
       };
 
+      const subscription = {
+        id: 'sub_123',
+        status: 'active',
+        customer: 'cus_123',
+        metadata: {
+          userId: 'user_123',
+          email: 'test@example.com',
+        },
+        items: {
+          data: [{ price: { id: 'price_monthly' } }],
+        },
+        current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+      };
+
       vi.mocked(paymentsServer.constructWebhookEvent).mockReturnValue({
         id: 'evt_123',
         type: 'invoice.payment_succeeded',
@@ -331,6 +345,9 @@ describe('Stripe Webhook Handler', () => {
         authUserId: 'user_123',
         subscriptionStatus: 'past_due',
       } as any);
+      vi.mocked(paymentsServer.retrieveSubscription).mockResolvedValue(
+        subscription as any,
+      );
       vi.mocked(db.updateUserByAuthId).mockResolvedValue({} as any);
 
       const request = new NextRequest('http://localhost/api/webhooks/stripe', {
@@ -342,9 +359,13 @@ describe('Stripe Webhook Handler', () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      expect(db.updateUserByAuthId).toHaveBeenCalledWith('user_123', {
-        subscriptionStatus: 'active',
-      });
+      expect(paymentsServer.retrieveSubscription).toHaveBeenCalledWith('sub_123');
+      expect(db.updateUserByAuthId).toHaveBeenCalledWith(
+        'user_123',
+        expect.objectContaining({
+          subscriptionStatus: 'active',
+        }),
+      );
     });
 
     it('should mark user as past_due on payment_failed', async () => {
