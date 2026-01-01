@@ -8,15 +8,17 @@ import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
 import type { FeaturePolicy } from '@uth/db';
 
 // Mock @uth/db
-const dbGetAllFeaturePolicies = vi.fn();
 vi.mock('@uth/db', () => ({
-  getAllFeaturePolicies: dbGetAllFeaturePolicies,
+  getAllFeaturePolicies: vi.fn(),
 }));
 
 // Mock next/cache to avoid incrementalCache errors in tests
 vi.mock('next/cache', () => ({
   unstable_cache: vi.fn((fn) => fn),
 }));
+
+// Import the mocked function after mocking
+import { getAllFeaturePolicies as mockGetAllFeaturePolicies } from '@uth/db';
 
 // Helper to convert Edge Config format to DB format
 function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): FeaturePolicy[] | null {
@@ -55,7 +57,7 @@ describe('Edge Config Feature Flags', () => {
 
   describe('isFeatureEnabled (server-side)', () => {
     it('should return false when Edge Config is not configured', async () => {
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(null));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(null));
 
       const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
@@ -65,7 +67,7 @@ describe('Edge Config Feature Flags', () => {
       const flags = {
         other_feature: { enabled: true },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
@@ -75,7 +77,7 @@ describe('Edge Config Feature Flags', () => {
       const flags = {
         [FEATURE_KEYS.AUTH]: { enabled: false },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
@@ -85,7 +87,7 @@ describe('Edge Config Feature Flags', () => {
       const flags = {
         [FEATURE_KEYS.AUTH]: { enabled: true },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(true);
@@ -99,7 +101,7 @@ describe('Edge Config Feature Flags', () => {
           betaUsers: ['user123', 'user456'],
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(
         FEATURE_KEYS.EXCEL_EXPORT,
@@ -116,7 +118,7 @@ describe('Edge Config Feature Flags', () => {
           betaUsers: ['user123'],
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(
         FEATURE_KEYS.EXCEL_EXPORT,
@@ -132,7 +134,7 @@ describe('Edge Config Feature Flags', () => {
           rolloutPercentage: 50,
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       // Test with different user IDs to check distribution
       const results = await Promise.all([
@@ -153,7 +155,7 @@ describe('Edge Config Feature Flags', () => {
           rolloutPercentage: 100,
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(
         FEATURE_KEYS.EXCEL_EXPORT,
@@ -163,7 +165,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return false on Edge Config error (fail closed)', async () => {
-      dbGetAllFeaturePolicies.mockRejectedValue(new Error('Edge Config unavailable'));
+      mockGetAllFeaturePolicies.mockRejectedValue(new Error('Edge Config unavailable'));
 
       const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
       expect(result).toBe(false);
@@ -176,7 +178,7 @@ describe('Edge Config Feature Flags', () => {
           rolloutPercentage: 50,
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       // Without userId, rollout percentage should not apply
       const result = await isFeatureEnabled(FEATURE_KEYS.EXCEL_EXPORT);
@@ -190,7 +192,7 @@ describe('Edge Config Feature Flags', () => {
           rolloutPercentage: 50,
         },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result1 = await isFeatureEnabled(
         FEATURE_KEYS.EXCEL_EXPORT,
@@ -211,7 +213,7 @@ describe('Edge Config Feature Flags', () => {
 
   describe('isSupabaseFeaturePoliciesAvailable', () => {
     it('should return true when Supabase is accessible', async () => {
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
         [FEATURE_KEYS.AUTH]: { enabled: true },
       }));
 
@@ -220,7 +222,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should return false when Supabase throws error', async () => {
-      dbGetAllFeaturePolicies.mockRejectedValue(new Error('Not configured'));
+      mockGetAllFeaturePolicies.mockRejectedValue(new Error('Not configured'));
 
       const result = await isSupabaseFeaturePoliciesAvailable();
       expect(result).toBe(false);
@@ -234,7 +236,7 @@ describe('Edge Config Feature Flags', () => {
       const flags = {
         [validKey]: { enabled: true },
       };
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(flags));
 
       const result = await isFeatureEnabled(validKey);
       expect(typeof result).toBe('boolean');
@@ -246,7 +248,7 @@ describe('Edge Config Feature Flags', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Suppress console output during tests
       });
-      dbGetAllFeaturePolicies.mockRejectedValue(new Error('Test error'));
+      mockGetAllFeaturePolicies.mockRejectedValue(new Error('Test error'));
 
       await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
@@ -265,7 +267,7 @@ describe('Edge Config Feature Flags', () => {
     });
 
     it('should not throw errors on Edge Config failure', async () => {
-      dbGetAllFeaturePolicies.mockRejectedValue(new Error('Network error'));
+      mockGetAllFeaturePolicies.mockRejectedValue(new Error('Network error'));
 
       await expect(isFeatureEnabled(FEATURE_KEYS.AUTH)).resolves.toBeDefined();
     });
@@ -274,7 +276,7 @@ describe('Edge Config Feature Flags', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
         // Suppress console output during tests
       });
-      dbGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(null));
+      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(null));
 
       await isFeatureEnabled(FEATURE_KEYS.AUTH);
 
