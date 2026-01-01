@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { compose, logger, MiddlewareFunction, when } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { requireAdmin } from '@uth/auth-server';
 
 /**
  * Logger interface for dependency injection
@@ -132,15 +134,13 @@ const routeProtectionMiddleware = async (
   auth: any,
   req: NextRequest,
 ): Promise<NextResponse> => {
-  const { createRouteMatcher } = await import('@clerk/nextjs/server');
-
   // Define public routes that don't require authentication
   // Per issue #100: landing, pricing, docs/blog, public previews, free features
   const isPublicRoute = createRouteMatcher([
     '/',
     '/about',
     '/terms',
-    '/status',
+    '/forbidden', // 403 error page
     '/travel', // Free tier access to travel tracker
     '/api/parse',
     '/api/export',
@@ -151,6 +151,10 @@ const routeProtectionMiddleware = async (
     '/api/user/provision', // Manual user provisioning fallback
   ]);
 
+  // Define admin-only routes that require admin role
+  // Per issue #126: Status page requires admin access
+  const isAdminRoute = createRouteMatcher(['/status']);
+
   // Define protected routes that require authentication
   // Per issue #100: member/premium routes redirect to /sign-in
   const isProtectedRoute = createRouteMatcher(['/api/billing/(.*)']);
@@ -160,6 +164,24 @@ const routeProtectionMiddleware = async (
   // Allow public routes without authentication
   if (isPublicRoute(req)) {
     return NextResponse.next();
+  }
+
+  // Admin routes require authentication AND admin role
+  if (isAdminRoute(req)) {
+    if (!userId) {
+      // Not authenticated - redirect to sign-in
+      const signInUrl = new URL('/sign-in', req.url);
+      signInUrl.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    // Check if user has admin role using auth-server
+    try {
+      await requireAdmin();
+    } catch (error: any) {
+      // Not an admin or error checking role - redirect to forbidden page
+      return NextResponse.redirect(new URL('/forbidden', req.url));
+    }
   }
 
   // Protected routes require authentication
@@ -182,7 +204,6 @@ const routeProtectionMiddleware = async (
 const clerkAuthMiddleware: MiddlewareFunction = async (
   req: NextRequest,
 ): Promise<NextResponse | null> => {
-  const { clerkMiddleware } = await import('@clerk/nextjs/server');
   const wrappedMiddleware = clerkMiddleware(routeProtectionMiddleware);
   const result = await wrappedMiddleware(req, {} as any);
   // Clerk middleware can return Response or undefined, convert to NextResponse | null

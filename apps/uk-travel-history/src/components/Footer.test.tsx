@@ -20,8 +20,17 @@ describe('Footer', () => {
       expect(footer?.tagName).toBe('FOOTER');
     });
 
-    it('should have navigation links', () => {
+    it('should have Terms link but not Status link for non-admin users', () => {
       render(<Footer />);
+      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      const statusLink = screen.queryByRole('link', { name: 'Status' });
+
+      expect(termsLink).toBeTruthy();
+      expect(statusLink).toBeFalsy();
+    });
+
+    it('should have both Terms and Status links for admin users', () => {
+      render(<Footer role="admin" />);
       const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
       const statusLink = screen.getByRole('link', { name: 'Status' });
 
@@ -43,10 +52,16 @@ describe('Footer', () => {
       expect(termsLink.getAttribute('href')).toBe('/terms');
     });
 
-    it('should have correct href for Status link', () => {
-      render(<Footer />);
+    it('should have correct href for Status link when user is admin', () => {
+      render(<Footer role="admin" />);
       const statusLink = screen.getByRole('link', { name: 'Status' });
       expect(statusLink.getAttribute('href')).toBe('/status');
+    });
+
+    it('should not render Status link for non-admin users', () => {
+      render(<Footer />);
+      const statusLink = screen.queryByRole('link', { name: 'Status' });
+      expect(statusLink).toBeFalsy();
     });
 
     it('should have proper hover states on links', () => {

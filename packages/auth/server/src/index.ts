@@ -28,6 +28,7 @@ export {
   verifyToken,
   getSessionFromRequest,
   requireAuth,
+  requireAdmin,
   getUser,
   deleteUser,
   setCustomClaims,

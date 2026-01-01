@@ -7,11 +7,6 @@ import { createClerkClient } from '@clerk/backend';
 import { currentUser } from '@clerk/nextjs/server';
 import { Webhook } from 'svix';
 import { logger } from '@uth/utils';
-import {
-  getPurchaseIntentsByAuthUserId,
-  getPurchaseIntentBySessionId,
-  PurchaseIntentStatus,
-} from '@uth/db';
 import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,
@@ -25,6 +20,11 @@ import type {
   WebhookVerificationResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
+import {
+  getPurchaseIntentsByAuthUserId,
+  getPurchaseIntentBySessionId,
+  PurchaseIntentStatus
+} from '@uth/db';
 
 /**
  * Clerk implementation of the auth server provider

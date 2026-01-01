@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import React from 'react';
 import { Navbar } from './Navbar';
 import { navigationStore } from '@uth/stores';
+import { usePathname } from 'next/navigation';
 
 // Mock Next.js navigation hooks - must use factory function
 vi.mock('next/navigation', () => ({
@@ -161,40 +162,35 @@ describe('Navbar', () => {
 
   describe('Active State', () => {
     it('should mark home as active when on home page', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/');
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<Navbar />);
       const homeLink = screen.getByRole('link', { name: 'Home' });
       expect(homeLink.className).toContain('text-slate-900');
     });
 
     it('should mark about as active when on about subpage', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/about/team');
+      vi.mocked(usePathname).mockReturnValue('/about/team');
       render(<Navbar />);
       const aboutLink = screen.getByRole('link', { name: 'About' });
       expect(aboutLink.className).toContain('text-slate-900');
     });
 
     it('should mark travel as active when on travel page', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/travel');
+      vi.mocked(usePathname).mockReturnValue('/travel');
       render(<Navbar />);
       const travelLink = screen.getByRole('link', { name: 'Travel' });
       expect(travelLink.className).toContain('text-slate-900');
     });
 
     it('should display active indicator dot for active route', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/');
+      vi.mocked(usePathname).mockReturnValue('/');
       const { container } = render(<Navbar />);
       const activeDots = container.querySelectorAll('.bg-primary.rounded-full');
       expect(activeDots.length).toBeGreaterThan(0);
     });
 
     it('should use exact match for home route', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/travel');
+      vi.mocked(usePathname).mockReturnValue('/travel');
       render(<Navbar />);
       const homeLink = screen.getByRole('link', { name: 'Home' });
       // Home should not be active when on /travel
@@ -206,8 +202,7 @@ describe('Navbar', () => {
     });
 
     it('should use startsWith match for non-home routes', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/travel/history');
+      vi.mocked(usePathname).mockReturnValue('/travel/history');
       render(<Navbar />);
       const travelLink = screen.getByRole('link', { name: 'Travel' });
       expect(travelLink.className).toContain('text-slate-900');
@@ -317,8 +312,7 @@ describe('Navbar', () => {
     });
 
     it('should show active indicator in mobile drawer', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/travel');
+      vi.mocked(usePathname).mockReturnValue('/travel');
       render(<Navbar />);
       const menuButton = screen.getByRole('button', { name: 'Open menu' });
 
@@ -441,8 +435,7 @@ describe('Navbar', () => {
     });
 
     it('should have primary color for active indicator', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/');
+      vi.mocked(usePathname).mockReturnValue('/');
       const { container } = render(<Navbar />);
       const activeDot = container.querySelector('.bg-primary.rounded-full');
       expect(activeDot).toBeTruthy();
@@ -461,7 +454,6 @@ describe('Navbar', () => {
     });
 
     it('should update when store state changes', async () => {
-      const { waitFor } = await import('@testing-library/react');
       render(<Navbar />);
 
       // Programmatically open menu via store
@@ -500,8 +492,7 @@ describe('Navbar', () => {
     });
 
     it('should have proper contrast for active links', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/');
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<Navbar />);
       const homeLink = screen.getByRole('link', { name: 'Home' });
       expect(homeLink.className).toContain('text-slate-900');
@@ -538,8 +529,7 @@ describe('Navbar', () => {
 
   describe('Conditional Navigation', () => {
     it('should show navigation on all pages', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-      usePathname.mockReturnValue('/travel');
+      vi.mocked(usePathname).mockReturnValue('/travel');
 
       render(<Navbar />);
 
@@ -549,25 +539,23 @@ describe('Navbar', () => {
       expect(screen.getByRole('link', { name: 'Travel' })).toBeTruthy();
     });
 
-    it('should always show logo regardless of page', async () => {
-      const { usePathname } = vi.mocked(await import('next/navigation'));
-
+    it('should always show logo regardless of page', () => {
       // Test on About page
-      usePathname.mockReturnValue('/about');
+      vi.mocked(usePathname).mockReturnValue('/about');
       const { rerender } = render(<Navbar />);
       expect(
         screen.getByRole('link', { name: 'UK Travel Parser home' }),
       ).toBeTruthy();
 
       // Test on Terms page
-      usePathname.mockReturnValue('/terms');
+      vi.mocked(usePathname).mockReturnValue('/terms');
       rerender(<Navbar />);
       expect(
         screen.getByRole('link', { name: 'UK Travel Parser home' }),
       ).toBeTruthy();
 
       // Test on regular page
-      usePathname.mockReturnValue('/');
+      vi.mocked(usePathname).mockReturnValue('/');
       rerender(<Navbar />);
       expect(
         screen.getByRole('link', { name: 'UK Travel Parser home' }),

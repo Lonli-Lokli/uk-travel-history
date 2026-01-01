@@ -12,7 +12,7 @@
  * 5. Type safety - TypeScript ensures correctness at compile time
  */
 
-/* eslint-disable @nx/enforce-module-boundaries */
+ 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
@@ -22,6 +22,8 @@ import {
   type FeaturePolicy,
 } from './features';
 import { FeatureFlagKey, type TierId, TIERS } from './shapes';
+import { auth } from '@clerk/nextjs/server';
+import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
 
 /**
  * Logger interface for dependency injection
@@ -76,12 +78,7 @@ function getLogger(): Logger {
   return apiGuardsConfig.logger || logger;
 }
 
-// Dynamic imports for lazy-loaded libraries
-// auth-server is marked as lazy-loaded in nx.json to avoid circular dependencies
-// We use dynamic imports at runtime instead of static imports
-
-// Re-export SubscriptionStatus enum values for use in this file
-// This avoids static imports of @uth/auth-server
+// SubscriptionStatus enum values for checking subscription state
 const SubscriptionStatus = {
   ACTIVE: 'active' as const,
   TRIALING: 'trialing' as const,
@@ -145,12 +142,10 @@ export async function getUserContext(
 
     if (authProvider === 'clerk') {
       // Use Clerk's auth() helper to get current user
-      const { auth } = await import('@clerk/nextjs/server');
       const authResult = await auth();
       userId = authResult.userId;
     } else {
       // For Firebase mode, extract from Authorization header
-      const { getSessionFromRequest } = await import('@uth/auth-server');
       try {
         const session = await getSessionFromRequest(_request.headers);
         userId = session.user.uid;
@@ -181,8 +176,7 @@ export async function getUserContext(
       };
     }
 
-    // Check subscription status (dynamic import to avoid lazy-load violation)
-    const { getSubscription } = await import('@uth/auth-server');
+    // Check subscription status
     const subscription = await getSubscription(userId);
 
     // User has active subscription if:

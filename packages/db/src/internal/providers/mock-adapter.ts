@@ -21,6 +21,7 @@ import {
   PurchaseIntentStatus,
   SubscriptionTier,
   SubscriptionStatus,
+  UserRole,
 } from '../../types/domain';
 
 /**
@@ -93,6 +94,7 @@ export class MockDbAdapter implements DbProvider {
       authUserId: data.authUserId,
       email: data.email,
       passkeyEnrolled: data.passkeyEnrolled ?? false,
+      role: data.role ?? UserRole.STANDARD,
       subscriptionTier: data.subscriptionTier ?? SubscriptionTier.FREE,
       subscriptionStatus: data.subscriptionStatus ?? SubscriptionStatus.ACTIVE,
       stripeCustomerId: data.stripeCustomerId ?? null,
@@ -125,6 +127,7 @@ export class MockDbAdapter implements DbProvider {
       ...user,
       email: updates.email ?? user.email,
       passkeyEnrolled: updates.passkeyEnrolled ?? user.passkeyEnrolled,
+      role: updates.role ?? user.role,
       subscriptionTier: updates.subscriptionTier ?? user.subscriptionTier,
       subscriptionStatus: updates.subscriptionStatus ?? user.subscriptionStatus,
       stripeCustomerId: updates.stripeCustomerId !== undefined ? updates.stripeCustomerId : user.stripeCustomerId,

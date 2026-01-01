@@ -17,6 +17,7 @@ import type {
 import { AuthError, AuthErrorCode } from '../types/domain';
 import { getAuthProvider } from '../internal/provider-resolver';
 import type { IncomingHttpHeaders } from 'http';
+import { getUserByAuthId } from '@uth/db';
 
 /**
  * Extract token from Authorization header
@@ -105,6 +106,35 @@ export async function requireAuth(
   headers: IncomingHttpHeaders | Headers,
 ): Promise<AuthSession> {
   return getSessionFromRequest(headers);
+}
+
+/**
+ * Require admin role for a request
+ * Throws AuthError if not authenticated or not an admin
+ * @returns The authenticated admin user
+ * @throws AuthError with UNAUTHENTICATED if not logged in, FORBIDDEN if not admin
+ */
+export async function requireAdmin(): Promise<AuthUser> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new AuthError(
+      AuthErrorCode.UNAUTHENTICATED,
+      'Authentication required',
+    );
+  }
+
+  // Get user from @uth/db to check role
+  const dbUser = await getUserByAuthId(user.uid);
+
+  if (!dbUser || dbUser.role !== 'admin') {
+    throw new AuthError(
+      AuthErrorCode.FORBIDDEN,
+      'Admin access required',
+    );
+  }
+
+  return user;
 }
 
 /**

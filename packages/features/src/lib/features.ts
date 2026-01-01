@@ -6,7 +6,7 @@
 import { unstable_cache } from 'next/cache';
 import { logger } from '@uth/utils';
 import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
-// eslint-disable-next-line @nx/enforce-module-boundaries
+ 
 import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
 
 
