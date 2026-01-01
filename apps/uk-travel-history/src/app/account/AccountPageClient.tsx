@@ -42,7 +42,8 @@ export const AccountPageClient = observer(({ user }: AccountPageClientProps) => 
       // Clear the refresh parameter
       const params = new URLSearchParams(searchParams.toString());
       params.delete('refresh');
-      router.replace(`/account?${params.toString()}`, { scroll: false });
+      const query = params.toString();
+      router.replace(`/account${query ? `?${query}` : ''}`, { scroll: false });
     }
   }, [searchParams, router, refreshAccessContext]);
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TIERS, type TierId } from './shapes';
+import { TIERS, FEATURE_KEYS, type TierId } from './shapes';
 
 // Mock the dependencies
 vi.mock('@uth/auth-server', () => ({
@@ -30,7 +30,7 @@ vi.mock('@uth/db', () => ({
   },
 }));
 
-vi.mock('../lib/features', () => ({
+vi.mock('./features', () => ({
   getAllFeaturePolicies: vi.fn(),
   isFeatureEnabled: vi.fn(),
 }));
@@ -39,7 +39,7 @@ vi.mock('../lib/features', () => ({
 import { loadAccessContext } from './access-context';
 import { getCurrentUser } from '@uth/auth-server';
 import { getUserByAuthId } from '@uth/db';
-import { getAllFeaturePolicies } from '../lib/features';
+import { getAllFeaturePolicies } from './features';
 
 // We need to access the private checkFeatureAccess function for testing
 // Extract it by importing the module and testing through computeEntitlements
@@ -51,6 +51,18 @@ type FeaturePolicy = {
   betaUsers?: string[] | null;
   rolloutPercentage?: number | null;
 };
+
+// Helper function to create a default policy (enabled, FREE tier, no restrictions)
+function createDefaultPolicy(): FeaturePolicy {
+  return {
+    enabled: true,
+    minTier: TIERS.FREE,
+    allowlist: null,
+    denylist: null,
+    betaUsers: null,
+    rolloutPercentage: null,
+  };
+}
 
 // Helper function to test checkFeatureAccess logic through the public API
 async function testFeatureAccess(
@@ -79,14 +91,24 @@ async function testFeatureAccess(
     stripeSubscriptionId: null,
   });
 
-  // Mock feature policies with our test policy
-  vi.mocked(getAllFeaturePolicies).mockResolvedValue({
-    test_feature: policy,
-  });
+  // Mock feature policies with our test policy for clipboard_import
+  // (using a real feature key since computeEntitlements loops through FEATURE_KEYS)
+  // and default policies for all other features
+  const allPolicies: Record<string, FeaturePolicy> = {};
+
+  // Add default policy for all known features
+  for (const featureKey of Object.values(FEATURE_KEYS)) {
+    allPolicies[featureKey] = createDefaultPolicy();
+  }
+
+  // Override clipboard_import with our test policy
+  allPolicies.clipboard_import = policy;
+
+  vi.mocked(getAllFeaturePolicies).mockResolvedValue(allPolicies);
 
   // Load access context and check entitlements
   const context = await loadAccessContext();
-  return context.entitlements.test_feature || false;
+  return context.entitlements.clipboard_import || false;
 }
 
 describe('checkFeatureAccess()', () => {
@@ -265,7 +287,7 @@ describe('checkFeatureAccess()', () => {
 
   describe('Rollout percentage', () => {
     it('should grant access based on user ID hash within rollout percentage', async () => {
-      // Note: This test is deterministic based on the hash function
+      // Note: This test is deterministic based on the hash function (djb2)
       // The hash for 'user1' should result in a specific percentile
       const policy: FeaturePolicy = {
         enabled: true,
@@ -275,8 +297,12 @@ describe('checkFeatureAccess()', () => {
 
       const hasAccess = await testFeatureAccess(TIERS.FREE, 'user1', policy);
 
-      // Calculate expected hash for 'user1'
-      const hash = 'user1'.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      // Calculate expected hash for 'user1' using djb2 algorithm
+      let hash = 5381;
+      for (let i = 0; i < 'user1'.length; i++) {
+        hash = ((hash << 5) + hash) + 'user1'.charCodeAt(i);
+      }
+      hash = Math.abs(hash);
       const percentile = hash % 100;
       const expectedAccess = percentile < 50;
 

@@ -22,7 +22,7 @@ import { useCallback } from 'react';
  * const refreshAccess = useRefreshAccessContext();
  *
  * // After Stripe checkout success
- * await refreshAccess();
+ * refreshAccess(); // Triggers server component re-render (not awaitable)
  *
  * // After billing portal return
  * useEffect(() => {
@@ -35,9 +35,11 @@ import { useCallback } from 'react';
 export function useRefreshAccessContext() {
   const router = useRouter();
 
-  return useCallback(async () => {
+  return useCallback(() => {
     // Refresh the current route to re-run server components
     // This will re-execute loadAccessContext() and update the access context
+    // Note: router.refresh() is synchronous and triggers a re-render
+    // It is NOT awaitable - the refresh happens asynchronously in the background
     router.refresh();
   }, [router]);
 }

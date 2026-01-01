@@ -42,7 +42,8 @@ export const TravelPageClient = observer(() => {
       // Clear the query parameter to prevent re-triggering on refresh
       const params = new URLSearchParams(searchParams.toString());
       params.delete('checkout');
-      router.replace(`/travel?${params.toString()}`, { scroll: false });
+      const query = params.toString();
+      router.replace(`/travel${query ? `?${query}` : ''}`, { scroll: false });
     }
   }, [searchParams, router, refreshAccessContext]);
 

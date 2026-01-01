@@ -16,7 +16,7 @@ import {
   SubscriptionStatus,
   UserRole,
 } from '@uth/db';
-import { getAllFeaturePolicies, isFeatureEnabled } from '../lib/features';
+import { getAllFeaturePolicies, isFeatureEnabled } from './features';
 import { FEATURE_KEYS, TIERS, type TierId, type FeatureFlagKey } from './shapes';
 import * as Sentry from '@sentry/nextjs';
 
@@ -199,6 +199,21 @@ async function computeEntitlements(
 }
 
 /**
+ * Hash user ID using djb2 algorithm
+ * Provides better distribution than simple char code sum
+ *
+ * @param userId - User ID to hash
+ * @returns Positive integer hash value
+ */
+function hashUserId(userId: string): number {
+  let hash = 5381;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) + hash) + userId.charCodeAt(i); // hash * 33 + c
+  }
+  return Math.abs(hash);
+}
+
+/**
  * Check if user has access to a feature based on policy
  * Implements tier checking, allowlist/denylist, and rollout percentage
  *
@@ -248,8 +263,9 @@ function checkFeatureAccess(
 
   // 6. Check rollout percentage (if specified)
   if (policy.rolloutPercentage !== undefined && policy.rolloutPercentage !== null) {
-    // Simple hash-based rollout: convert userId to number and check against percentage
-    const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Hash-based rollout using djb2 algorithm for better distribution
+    // This is a non-cryptographic hash that provides good distribution across user IDs
+    const hash = hashUserId(userId);
     const userPercentile = hash % 100;
     if (userPercentile >= policy.rolloutPercentage) {
       return false;
