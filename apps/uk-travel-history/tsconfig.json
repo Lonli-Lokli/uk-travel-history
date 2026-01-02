@@ -50,16 +50,13 @@
       "path": "../../packages/calculators"
     },
     {
+      "path": "../../packages/auth/client"
+    },
+    {
       "path": "../../packages/widgets"
     },
     {
       "path": "../../packages/parser"
-    },
-    {
-      "path": "../../packages/features"
-    },
-    {
-      "path": "../../packages/payments/server"
     },
     {
       "path": "../../packages/flow"
@@ -68,13 +65,19 @@
       "path": "../../packages/db"
     },
     {
-      "path": "../../packages/auth/server"
-    },
-    {
       "path": "../../packages/stores"
     },
     {
       "path": "../../packages/ui"
+    },
+    {
+      "path": "../../packages/features"
+    },
+    {
+      "path": "../../packages/auth/server"
+    },
+    {
+      "path": "../../packages/payments/server"
     },
     {
       "path": "../../packages/utils"

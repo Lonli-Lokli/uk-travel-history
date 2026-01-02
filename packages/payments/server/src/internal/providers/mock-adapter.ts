@@ -16,6 +16,7 @@ import type {
   CheckoutSessionDetails,
   SubscriptionDetails,
   PriceDetails,
+  ParsedWebhookEvent,
 } from '../../types/domain';
 import {
   PaymentsError,
@@ -23,6 +24,7 @@ import {
   PaymentPlan,
   PaymentStatus,
   WebhookEventType,
+  ProviderSubscriptionStatus,
 } from '../../types/domain';
 
 /**
@@ -112,10 +114,11 @@ export class MockPaymentsServerAdapter implements PaymentsServerProvider {
       const subscription: SubscriptionDetails = {
         id: subscriptionId,
         customerId: sessionDetails.customerId || 'cus_mock_anonymous',
-        status: 'active',
+        status: ProviderSubscriptionStatus.ACTIVE,
         currentPeriodStart: now,
         currentPeriodEnd: now + 30 * 24 * 60 * 60, // 30 days
         cancelAtPeriodEnd: false,
+        pauseCollection: null,
         priceId: this.getPriceId(intent.plan),
         metadata: intent.metadata || {},
       };
@@ -199,7 +202,7 @@ export class MockPaymentsServerAdapter implements PaymentsServerProvider {
     body: string | Buffer,
     signature: string,
     secret: string,
-  ): any {
+  ): ParsedWebhookEvent {
     // Simple mock webhook event construction
     // In real implementation, this would verify signature
     if (signature !== 'mock_valid_signature') {
@@ -212,7 +215,14 @@ export class MockPaymentsServerAdapter implements PaymentsServerProvider {
     const bodyStr = typeof body === 'string' ? body : body.toString();
 
     try {
-      return JSON.parse(bodyStr);
+      const parsed = JSON.parse(bodyStr);
+      // Return a properly typed ParsedWebhookEvent
+      return {
+        id: parsed.id || `evt_mock_${Date.now()}`,
+        type: parsed.type || 'unknown',
+        created: parsed.created || Math.floor(Date.now() / 1000),
+        data: parsed.data || {},
+      } as ParsedWebhookEvent;
     } catch {
       throw new PaymentsError(
         PaymentsErrorCode.INVALID_INPUT,
@@ -220,27 +230,6 @@ export class MockPaymentsServerAdapter implements PaymentsServerProvider {
       );
     }
   }
-
-  async handleWebhook(input: WebhookHandlerInput): Promise<WebhookEventResult> {
-    const event = this.constructWebhookEvent(
-      input.body,
-      input.signature,
-      'mock_secret',
-    );
-
-    return {
-      event: {
-        id: event.id || 'evt_mock_' + Date.now(),
-        type: WebhookEventType.UNKNOWN,
-        timestamp: new Date(),
-        userId: event.userId,
-        metadata: event.metadata,
-      },
-      alreadyProcessed: false,
-      actions: [],
-    };
-  }
-
   /**
    * Helper method to add a mock session (for testing)
    */

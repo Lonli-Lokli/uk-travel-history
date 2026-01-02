@@ -9,5 +9,9 @@
   },
   "nx": {
     "name": "app"
+  },
+  "devDependencies": {
+    "@uth/payments-server": "*",
+    "@uth/auth-server": "*"
   }
 }

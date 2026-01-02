@@ -29,15 +29,16 @@
       "exclude": [
         "packages/parser/*",
         "packages/utils/*",
+        "packages/ui/*",
         "packages/calculators/*",
         "packages/features/*",
-        "packages/auth-client/*",
-        "packages/auth-server/*",
+        "packages/auth/client/*",
+        "packages/auth/server/*",
         "packages/stores/*",
-        "packages/payments-server/*",
-        "packages/payments-client/*",
+        "packages/payments/server/*",
+        "packages/payments/client/*",
         "packages/db/*",
-        "packages/flow/core/*"
+        "packages/flow/*"
       ]
     },
     {
@@ -62,15 +63,16 @@
       "include": [
         "packages/parser/*",
         "packages/utils/*",
+        "packages/ui/*",
         "packages/calculators/*",
         "packages/features/*",
-        "packages/auth-client/*",
-        "packages/auth-server/*",
+        "packages/auth/client/*",
+        "packages/auth/server/*",
         "packages/stores/*",
-        "packages/paymments-client/*",
-        "packages/paymments-server/*",
+        "packages/payments/server/*",
+        "packages/payments/client/*",
         "packages/db/*",
-        "packages/flow/core/*"
+        "packages/flow/*"      
       ],
       "options": {
         "typecheck": {

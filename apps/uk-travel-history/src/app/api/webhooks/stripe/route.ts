@@ -5,15 +5,7 @@
  * SUBSCRIPTION LIFECYCLE DOCUMENTATION
  * ====================================
  *
- * This handler implements a complete subscription lifecycle system following Stripe's
- * recommended practices. It handles both recurring subscriptions and one-time purchases.
- *
- * SOURCE OF TRUTH RULES
- * ---------------------
- * - Stripe webhooks are the SINGLE source of truth for subscription state
- * - Clerk webhook creates users; Stripe webhooks update subscription entitlements
- * - checkout.session.completed handles authenticated checkouts only
- * - customer.subscription.* events UPDATE subscription entitlements
+ * SOURCE OF TRUTH: Stripe webhooks are the SINGLE source of truth for subscription state
  *
  * WEBHOOK EVENT COVERAGE
  * ----------------------
@@ -24,61 +16,20 @@
  * ✅ invoice.payment_succeeded - Recovery from past_due/unpaid
  * ✅ invoice.payment_failed - Mark subscription as past_due
  *
- * SUBSCRIPTION STATE MAPPING (Stripe → Domain)
- * ---------------------------------------------
- * | Stripe Condition              | Domain Status | Access | End Date           | Flags                    |
- * |-------------------------------|---------------|--------|--------------------| -------------------------|
- * | status=active                 | active        | ✅     | current_period_end | cancel_at_period_end=false|
- * | cancel_at_period_end=true     | active        | ✅     | current_period_end | cancel_at_period_end=true |
- * | pause_collection != null      | paused        | ❌     | current_period_end | pause_resumes_at set      |
- * | status=past_due               | past_due      | ❌     | current_period_end | -                         |
- * | status=canceled               | canceled      | ❌     | deletion timestamp | -                         |
- * | subscription.deleted          | free (null)   | ❌     | preserved for grace| cancel/pause flags cleared|
- * | status=trialing               | trialing      | ✅     | trial_end          | -                         |
- * | status=incomplete             | incomplete    | ❌     | current_period_end | -                         |
- * | status=unpaid                 | unpaid        | ❌     | current_period_end | -                         |
- * | Lifetime purchase             | active        | ✅     | null               | No subscription_id        |
+ * SUBSCRIPTION STATE MAPPING (Provider → Domain)
+ * -----------------------------------------------
+ * | Provider Condition            | Domain Status | Access |
+ * |-------------------------------|---------------|--------|
+ * | status=active                 | active        | ✅     |
+ * | cancel_at_period_end=true     | active        | ✅     |
+ * | pause_collection != null      | paused        | ❌     |
+ * | status=past_due               | past_due      | ❌     |
+ * | status=canceled               | canceled      | ❌     |
+ * | status=trialing               | trialing      | ✅     |
+ * | status=incomplete             | incomplete    | ❌     |
+ * | status=unpaid                 | unpaid        | ❌     |
  *
- * END DATE HANDLING
- * -----------------
- * - Recurring: current_period_end (updated on each renewal)
- * - Scheduled cancellation: current_period_end (user retains access until then)
- * - Paused: current_period_end (frozen during pause)
- * - Deleted: preserved from last period (grace period access)
- * - Lifetime: null (never expires)
- *
- * IDEMPOTENCY & DEDUPLICATION
- * ----------------------------
- * - Webhook events tracked in webhook_events table by Stripe event ID
- * - Duplicate events skipped before processing
- * - Safe for Stripe retries and out-of-order delivery
- *
- * DATABASE GUARANTEES
- * -------------------
- * - UNIQUE constraint on clerk_user_id (prevents duplicate users)
- * - UNIQUE constraint on stripe_customer_id (prevents duplicate Stripe customers)
- * - UNIQUE constraint on stripe_subscription_id (prevents duplicate subscriptions)
- * - CHECK constraint: free tier must have NULL status
- * - CHECK constraint: paid tier must have non-NULL status
- * - CHECK constraint: paused status must have pause_resumes_at
- *
- * LIFECYCLE EVENT FLOW
- * --------------------
- * 1. User signs up via Clerk → Clerk webhook creates user (FREE tier)
- * 2. User purchases subscription → checkout.session.completed (authenticated)
- * 3. Stripe creates subscription → customer.subscription.created
- * 4. Handler updates user: tier=monthly/yearly/lifetime, status=active
- * 5. User cancels → subscription.updated (cancel_at_period_end=true, status still active)
- * 6. Period ends → subscription.deleted (tier=free, status=null, preserve period_end)
- * 7. User renews → new checkout session → subscription.created (repeat from step 2)
- *
- * LOGGING
- * -------
- * - All webhook events logged with event type and subscription ID
- * - State transitions logged with before/after values
- * - Errors logged with context (subscription ID, user ID, event type)
- * - Warnings for unexpected states or missing metadata
- * - Unknown/unhandled event types logged for debugging
+ * IDEMPOTENCY: Events tracked by event ID, duplicates skipped
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -94,6 +45,10 @@ import {
 import {
   constructWebhookEvent,
   retrieveSubscription,
+  ProviderSubscriptionStatus,
+  type ParsedWebhookEvent,
+  type SubscriptionDetails,
+  type PauseCollectionInfo,
 } from '@uth/payments-server';
 import { getUsersByEmail } from '@uth/auth-server';
 import { getRouteLogger } from '@uth/flow';
@@ -101,9 +56,72 @@ import { getRouteLogger } from '@uth/flow';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
+// ============================================================================
+// Status Mapping (Provider → Domain)
+// ============================================================================
+
+/**
+ * Map provider subscription status to domain status
+ * Handles pause_collection as a modifier on top of status
+ */
+function mapProviderStatusToDomain(
+  status: ProviderSubscriptionStatus,
+  pauseCollection: PauseCollectionInfo | null,
+): SubscriptionStatus {
+  // Paused takes precedence - it's an overlay on active status
+  if (pauseCollection?.behavior) {
+    return SubscriptionStatus.PAUSED;
+  }
+
+  switch (status) {
+    case ProviderSubscriptionStatus.ACTIVE:
+      return SubscriptionStatus.ACTIVE;
+    case ProviderSubscriptionStatus.PAST_DUE:
+      return SubscriptionStatus.PAST_DUE;
+    case ProviderSubscriptionStatus.CANCELED:
+      return SubscriptionStatus.CANCELED;
+    case ProviderSubscriptionStatus.TRIALING:
+      return SubscriptionStatus.TRIALING;
+    case ProviderSubscriptionStatus.INCOMPLETE:
+      return SubscriptionStatus.INCOMPLETE;
+    case ProviderSubscriptionStatus.INCOMPLETE_EXPIRED:
+      return SubscriptionStatus.CANCELED;
+    case ProviderSubscriptionStatus.UNPAID:
+      return SubscriptionStatus.UNPAID;
+    case ProviderSubscriptionStatus.PAUSED:
+      return SubscriptionStatus.PAUSED;
+  }
+}
+
+/**
+ * Map Stripe price ID to subscription tier
+ */
+function mapPriceIdToTier(priceId: string | undefined): SubscriptionTier {
+  if (!priceId) {
+    getRouteLogger().warn('No price ID provided, defaulting to monthly');
+    return SubscriptionTier.MONTHLY;
+  }
+
+  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
+  const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID;
+  const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID;
+
+  if (priceId === monthlyPriceId) return SubscriptionTier.MONTHLY;
+  if (priceId === yearlyPriceId) return SubscriptionTier.YEARLY;
+  if (priceId === lifetimePriceId) return SubscriptionTier.LIFETIME;
+
+  getRouteLogger().warn('Unknown price ID, defaulting to monthly', {
+    extra: { priceId },
+  });
+  return SubscriptionTier.MONTHLY;
+}
+
+// ============================================================================
+// Main Webhook Handler
+// ============================================================================
+
 export async function POST(request: NextRequest) {
   try {
-    // Get the raw body for signature verification
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
@@ -121,281 +139,183 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify webhook signature
-    let event: any;
+    // Verify signature and parse event to domain type
+    let event: ParsedWebhookEvent;
     try {
       event = constructWebhookEvent(body, signature, WEBHOOK_SECRET);
-    } catch (err: any) {
-      getRouteLogger().error(
-        'Webhook signature verification failed',
-        undefined,
-        {
-          extra: { message: err.message },
-        },
-      );
-      return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
-        { status: 400 },
-      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      getRouteLogger().error('Webhook signature verification failed', undefined, {
+        extra: { message },
+      });
+      return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
     }
 
-    // Check if event already processed (idempotency)
+    // Idempotency check
     const alreadyProcessed = await hasWebhookEventBeenProcessed(event.id);
-
     if (alreadyProcessed) {
       getRouteLogger().info(`Event ${event.id} already processed, skipping`);
       return NextResponse.json({ received: true, skipped: true });
     }
 
-    // Record webhook event
+    // Record event for idempotency
     await recordWebhookEvent({
       stripeEventId: event.id,
       type: event.type,
-      payload: event.data.object as any,
+      payload: event.data as Record<string, unknown>,
     });
 
-    // Handle checkout.session.completed event
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as any;
+    // Handle events with discriminated union pattern for full type safety
+    switch (event.type) {
+      // ========================================================================
+      // Checkout Events
+      // ========================================================================
+      case 'checkout.session.completed': {
+        const session = event.data;
+        const userId = session.userId;
 
-      getRouteLogger().info('Processing checkout.session.completed', {
-        extra: { sessionId: session.id },
-      });
+        getRouteLogger().info('Processing checkout.session.completed', {
+          extra: {
+            sessionId: session.id,
+            userId,
+            mode: session.mode,
+            paymentStatus: session.paymentStatus,
+          },
+        });
 
-      // Authenticated checkout - user already exists via Clerk
-      // Subscription webhooks will handle entitlement updates
-      const userId = session.metadata?.userId || session.client_reference_id;
-
-      getRouteLogger().info('Authenticated checkout completed', {
-        extra: { sessionId: session.id, userId },
-      });
-
-      return NextResponse.json({ received: true, authenticated: true });
-    }
-
-    // Handle customer.subscription.created event
-    if (event.type === 'customer.subscription.created') {
-      const subscription = event.data.object as any;
-
-      getRouteLogger().info('Processing customer.subscription.created', {
-        extra: { subscriptionId: subscription.id },
-      });
-
-      try {
-        await handleSubscriptionChange(subscription, 'created');
-      } catch (error: any) {
-        getRouteLogger().error('Failed to handle subscription.created', error);
-        // Don't return error - event was recorded, can be retried
+        // For subscription mode, the subscription.created event handles provisioning
+        // For one-time payments, handle here if needed
+        return NextResponse.json({ received: true, authenticated: !!userId });
       }
-    }
 
-    // Handle customer.subscription.updated event
-    if (event.type === 'customer.subscription.updated') {
-      const subscription = event.data.object as any;
+      // ========================================================================
+      // Subscription Events
+      // ========================================================================
+      case 'customer.subscription.created': {
+        const subscription = event.data;
+        getRouteLogger().info('Processing customer.subscription.created', {
+          extra: {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+          },
+        });
 
-      getRouteLogger().info('Processing customer.subscription.updated', {
-        extra: { subscriptionId: subscription.id },
-      });
-
-      try {
-        await handleSubscriptionChange(subscription, 'updated');
-      } catch (error: any) {
-        getRouteLogger().error('Failed to handle subscription.updated', error);
-        // Don't return error - event was recorded, can be retried
+        await handleSubscriptionCreatedOrUpdated(subscription, 'created');
+        break;
       }
-    }
 
-    // Handle customer.subscription.deleted event
-    if (event.type === 'customer.subscription.deleted') {
-      const subscription = event.data.object as any;
+      case 'customer.subscription.updated': {
+        const subscription = event.data;
+        getRouteLogger().info('Processing customer.subscription.updated', {
+          extra: {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            pauseCollection: !!subscription.pauseCollection,
+          },
+        });
 
-      getRouteLogger().info('Processing customer.subscription.deleted', {
-        extra: { subscriptionId: subscription.id },
-      });
-
-      try {
-        await handleSubscriptionCancellation(subscription);
-      } catch (error: any) {
-        getRouteLogger().error('Failed to handle subscription.deleted', error);
-        // Don't return error - event was recorded, can be retried
+        await handleSubscriptionCreatedOrUpdated(subscription, 'updated');
+        break;
       }
-    }
 
-    // Handle invoice.payment_succeeded event
-    if (event.type === 'invoice.payment_succeeded') {
-      const invoice = event.data.object as any;
+      case 'customer.subscription.deleted': {
+        const subscription = event.data;
+        getRouteLogger().info('Processing customer.subscription.deleted', {
+          extra: {
+            subscriptionId: subscription.id,
+          },
+        });
 
-      getRouteLogger().info('Processing invoice.payment_succeeded', {
-        extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
-      });
+        await handleSubscriptionDeleted(subscription);
+        break;
+      }
 
-      if (invoice.subscription) {
-        try {
-          await handleInvoicePaymentSucceeded(invoice);
-        } catch (error: any) {
-          getRouteLogger().error(
-            'Failed to handle invoice.payment_succeeded',
-            error,
-          );
-          // Don't return error - event was recorded, can be retried
+      // ========================================================================
+      // Invoice Events
+      // ========================================================================
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data;
+        const subscriptionId = invoice.subscriptionId;
+
+        getRouteLogger().info('Processing invoice.payment_succeeded', {
+          extra: {
+            invoiceId: invoice.id,
+            subscriptionId,
+            billingReason: invoice.billingReason,
+          },
+        });
+
+        if (subscriptionId) {
+          await handleInvoicePaymentSucceeded(invoice.customerEmail, subscriptionId);
         }
+        break;
       }
-    }
 
-    // Handle invoice.payment_failed event
-    if (event.type === 'invoice.payment_failed') {
-      const invoice = event.data.object as any;
+      case 'invoice.payment_failed': {
+        const invoice = event.data;
+        const subscriptionId = invoice.subscriptionId;
 
-      getRouteLogger().info('Processing invoice.payment_failed', {
-        extra: { invoiceId: invoice.id, subscriptionId: invoice.subscription },
-      });
+        getRouteLogger().info('Processing invoice.payment_failed', {
+          extra: {
+            invoiceId: invoice.id,
+            subscriptionId,
+            attemptCount: invoice.attemptCount,
+          },
+        });
 
-      if (invoice.subscription) {
-        try {
-          await handleInvoicePaymentFailed(invoice);
-        } catch (error: any) {
-          getRouteLogger().error(
-            'Failed to handle invoice.payment_failed',
-            error,
-          );
-          // Don't return error - event was recorded, can be retried
+        if (subscriptionId) {
+          await handleInvoicePaymentFailed(invoice.customerEmail, subscriptionId, invoice.id, invoice.attemptCount);
         }
+        break;
       }
-    }
 
-    // Log unknown/unhandled events for debugging
-    const handledEvents = [
-      'checkout.session.completed',
-      'customer.subscription.created',
-      'customer.subscription.updated',
-      'customer.subscription.deleted',
-      'invoice.payment_succeeded',
-      'invoice.payment_failed',
-    ];
-
-    if (!handledEvents.includes(event.type)) {
-      getRouteLogger().warn('Received unhandled Stripe webhook event', {
-        extra: {
-          eventType: event.type,
-          eventId: event.id,
-          objectId: event.data.object?.id,
-        },
-      });
+      // ========================================================================
+      // Unhandled Events
+      // ========================================================================
+      default: {
+        // Log for monitoring - helps identify events we might want to handle
+        getRouteLogger().debug('Received unhandled webhook event', {
+          extra: {
+            eventType: event._type,
+            eventId: event.id,
+            data: event.data
+          },
+        });
+      }
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    getRouteLogger().error('Webhook handler error', error);
-    return NextResponse.json(
-      { error: 'Webhook handler error' },
-      { status: 500 },
+    getRouteLogger().error(
+      'Webhook handler error',
+      error instanceof Error ? error : undefined,
     );
+    return NextResponse.json({ error: 'Webhook handler error' }, { status: 500 });
   }
 }
 
-/**
- * Map Stripe price ID to subscription tier
- */
-function mapPriceToTier(priceId: string): SubscriptionTier {
-  // Check environment variables for price IDs
-  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
-  const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID;
-  const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID;
-
-  if (priceId === monthlyPriceId) {
-    return SubscriptionTier.MONTHLY;
-  }
-  if (priceId === yearlyPriceId) {
-    return SubscriptionTier.YEARLY;
-  }
-  if (priceId === lifetimePriceId) {
-    return SubscriptionTier.LIFETIME;
-  }
-
-  // Default to monthly if unknown
-  getRouteLogger().warn('Unknown price ID, defaulting to monthly', {
-    extra: { priceId },
-  });
-  return SubscriptionTier.MONTHLY;
-}
+// ============================================================================
+// Subscription Handlers
+// ============================================================================
 
 /**
- * Map Stripe subscription status to domain status
+ * Handle subscription created or updated events
+ *
+ * Both events have the same shape and similar handling logic:
+ * - Extract user identity from metadata
+ * - Map provider status to domain status
+ * - Update or create user record
  */
-function mapStripeStatus(
-  stripeStatus: string,
-  pauseCollection: { behavior?: string; resumes_at?: number } | null | undefined,
-): SubscriptionStatus {
-  // Check if subscription is paused
-  if (pauseCollection && pauseCollection.behavior) {
-    return SubscriptionStatus.PAUSED;
-  }
-
-  switch (stripeStatus) {
-    case 'active':
-      return SubscriptionStatus.ACTIVE;
-    case 'past_due':
-      return SubscriptionStatus.PAST_DUE;
-    case 'canceled':
-      return SubscriptionStatus.CANCELED;
-    case 'trialing':
-      return SubscriptionStatus.TRIALING;
-    case 'incomplete':
-      return SubscriptionStatus.INCOMPLETE;
-    case 'unpaid':
-      return SubscriptionStatus.UNPAID;
-    case 'paused':
-      return SubscriptionStatus.PAUSED;
-    default:
-      getRouteLogger().warn('Unknown Stripe status, defaulting to active', {
-        extra: { stripeStatus },
-      });
-      return SubscriptionStatus.ACTIVE;
-  }
-}
-
-/**
- * Create subscription state logging context
- */
-function getSubscriptionLogContext(
-  authUserId: string,
-  subscriptionId: string,
-  cancelAtPeriodEnd: boolean,
-  pauseResumesAt: Date | null,
-  action?: 'created' | 'updated',
-): { extra: Record<string, any> } {
-  return {
-    extra: {
-      authUserId,
-      subscriptionId,
-      ...(action && { action }),
-      cancelAtPeriodEnd,
-      paused: !!pauseResumesAt,
-    },
-  };
-}
-
-/**
- * Handle subscription creation or update
- */
-async function handleSubscriptionChange(
-  subscription: any,
+async function handleSubscriptionCreatedOrUpdated(
+  subscription: SubscriptionDetails,
   action: 'created' | 'updated',
 ): Promise<void> {
-  const customerId = subscription.customer;
   const subscriptionId = subscription.id;
-  const status = subscription.status;
-  const priceId = subscription.items?.data[0]?.price?.id;
-  const currentPeriodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000)
-    : null;
-  const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
-  const pauseCollection = subscription.pause_collection;
-  const pauseResumesAt =
-    pauseCollection?.resumes_at !== undefined && pauseCollection.resumes_at !== null
-      ? new Date(pauseCollection.resumes_at * 1000)
-      : null;
+  const customerId = subscription.customerId;
+  const priceId = subscription.priceId;
 
+  // Validate required data
   if (!priceId) {
     getRouteLogger().error('No price ID in subscription', undefined, {
       extra: { subscriptionId },
@@ -403,292 +323,286 @@ async function handleSubscriptionChange(
     return;
   }
 
-  const tier = mapPriceToTier(priceId);
-  const subscriptionStatus = mapStripeStatus(status, pauseCollection);
+  // Map to domain types
+  const tier = mapPriceIdToTier(priceId);
+  const domainStatus = mapProviderStatusToDomain(
+    subscription.status,
+    subscription.pauseCollection,
+  );
 
-  // Get userId directly from metadata (new flow) or find by email (legacy flow)
-  let authUserId = subscription.metadata?.userId;
-  const customerEmail = subscription.metadata?.email;
+  // Extract dates
+  const periodEnd = subscription.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd * 1000)
+    : null;
+  const cancelAtPeriodEnd = subscription.cancelAtPeriodEnd;
+  const pauseResumesAt = subscription.pauseCollection?.resumesAt
+    ? new Date(subscription.pauseCollection.resumesAt * 1000)
+    : null;
+
+  // Get user identity from metadata
+  let authUserId = subscription.metadata.userId;
+  const customerEmail = subscription.metadata.email;
 
   if (!authUserId && !customerEmail) {
-    getRouteLogger().error(
-      'No userId or email in subscription metadata',
-      undefined,
-      {
-        extra: { subscriptionId, customerId },
-      },
-    );
+    getRouteLogger().error('No userId or email in subscription metadata', undefined, {
+      extra: { subscriptionId, customerId },
+    });
     return;
   }
 
   try {
-    // If no userId, try to find user by email
+    // Resolve user ID from email if not in metadata
     if (!authUserId && customerEmail) {
-      const existingUsersResult = await getUsersByEmail(customerEmail);
-
-      if (existingUsersResult.users.length === 0) {
-        getRouteLogger().error(
-          'No auth user found for subscription',
-          undefined,
-          {
-            extra: { email: customerEmail, subscriptionId },
-          },
-        );
+      const result = await getUsersByEmail(customerEmail);
+      if (result.users.length === 0) {
+        getRouteLogger().error('No auth user found for subscription', undefined, {
+          extra: { email: customerEmail, subscriptionId },
+        });
         return;
       }
-
-      authUserId = existingUsersResult.users[0].uid;
+      authUserId = result.users[0].uid;
     }
 
     if (!authUserId) {
-      getRouteLogger().error('Could not determine auth user ID', undefined, {
+      getRouteLogger().error('Could not resolve auth user ID', undefined, {
         extra: { subscriptionId, customerEmail },
       });
       return;
     }
 
     // Check if user exists in database
-    const dbUser = await getUserByAuthId(authUserId);
+    const existingUser = await getUserByAuthId(authUserId);
 
-    if (!dbUser) {
-      // User should already exist (created by Clerk webhook)
-      // Log error but don't fail - this might be a timing issue
-      getRouteLogger().error(
-        'User not found in database for subscription',
-        undefined,
-        {
-          extra: { authUserId, subscriptionId, hasEmail: !!customerEmail },
-        },
-      );
-
-      // If we have email, try to create the user
-      if (customerEmail) {
-        await createDbUser({
-          authUserId,
-          email: customerEmail,
-          passkeyEnrolled: false,
-          subscriptionTier: tier,
-          subscriptionStatus,
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscriptionId,
-          stripePriceId: priceId,
-          currentPeriodEnd,
-          cancelAtPeriodEnd,
-          pauseResumesAt,
-        });
-
-        getRouteLogger().info(
-          `Created user with ${tier} subscription`,
-          getSubscriptionLogContext(authUserId, subscriptionId, cancelAtPeriodEnd, pauseResumesAt),
-        );
-      } else {
-        return; // Cannot create user without email
-      }
-    } else {
-      // Update user with subscription entitlements
-      await updateUserByAuthId(authUserId, {
-        subscriptionTier: tier,
-        subscriptionStatus,
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        stripePriceId: priceId,
-        currentPeriodEnd,
-        cancelAtPeriodEnd,
-        pauseResumesAt,
-      });
-
-      getRouteLogger().info(
-        `Updated user subscription to ${tier}`,
-        getSubscriptionLogContext(authUserId, subscriptionId, cancelAtPeriodEnd, pauseResumesAt, action),
-      );
-    }
-  } catch (error: any) {
-    getRouteLogger().error('Failed to handle subscription change', error, {
-      extra: { subscriptionId, action },
-    });
-    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
-  }
-}
-
-/**
- * Handle subscription cancellation
- */
-async function handleSubscriptionCancellation(
-  subscription: any,
-): Promise<void> {
-  const subscriptionId = subscription.id;
-  let authUserId = subscription.metadata?.userId;
-  const customerEmail = subscription.metadata?.email;
-
-  if (!authUserId && !customerEmail) {
-    getRouteLogger().error(
-      'No userId or email in subscription metadata',
-      undefined,
-      {
-        extra: { subscriptionId },
-      },
-    );
-    return;
-  }
-
-  try {
-    // If no userId, try to find user by email
-    if (!authUserId && customerEmail) {
-      const existingUsersResult = await getUsersByEmail(customerEmail);
-
-      if (existingUsersResult.users.length === 0) {
-        getRouteLogger().warn('No auth user found for cancelled subscription', {
-          extra: { email: customerEmail, subscriptionId },
+    if (!existingUser) {
+      // User should exist (created by Clerk webhook), but handle race condition
+      if (!customerEmail) {
+        getRouteLogger().error('User not found and no email to create', undefined, {
+          extra: { authUserId, subscriptionId },
         });
         return;
       }
 
-      authUserId = existingUsersResult.users[0].uid;
+      await createDbUser({
+        authUserId,
+        email: customerEmail,
+        passkeyEnrolled: false,
+        subscriptionTier: tier,
+        subscriptionStatus: domainStatus,
+        stripeCustomerId: customerId ?? undefined,
+        stripeSubscriptionId: subscriptionId,
+        stripePriceId: priceId,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd,
+        pauseResumesAt,
+      });
+
+      getRouteLogger().info(`Created user with ${tier} subscription`, {
+        extra: { authUserId, subscriptionId, action },
+      });
+    } else {
+      // Update existing user
+      await updateUserByAuthId(authUserId, {
+        subscriptionTier: tier,
+        subscriptionStatus: domainStatus,
+        stripeCustomerId: customerId ?? undefined,
+        stripeSubscriptionId: subscriptionId,
+        stripePriceId: priceId,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd,
+        pauseResumesAt,
+      });
+
+      getRouteLogger().info(`Updated user subscription to ${tier}`, {
+        extra: {
+          authUserId,
+          subscriptionId,
+          action,
+          status: domainStatus,
+          cancelAtPeriodEnd,
+          paused: !!pauseResumesAt,
+        },
+      });
+    }
+  } catch (error) {
+    getRouteLogger().error(
+      'Failed to handle subscription change',
+      error instanceof Error ? error : undefined,
+      { extra: { subscriptionId, action } },
+    );
+    // Don't throw - webhook should succeed for idempotency retry handling
+  }
+}
+
+/**
+ * Handle subscription deleted event
+ *
+ * When a subscription is deleted (cancelled, expired, or terminated):
+ * - Downgrade user to free tier
+ * - Clear subscription-related fields
+ * - Preserve currentPeriodEnd for grace period access logic
+ */
+async function handleSubscriptionDeleted(
+  subscription: SubscriptionDetails,
+): Promise<void> {
+  const subscriptionId = subscription.id;
+  const currentPeriodEnd = subscription.currentPeriodEnd;
+
+  // Get user identity
+  let authUserId = subscription.metadata.userId;
+  const customerEmail = subscription.metadata.email;
+
+  if (!authUserId && !customerEmail) {
+    getRouteLogger().error('No userId or email in subscription metadata', undefined, {
+      extra: { subscriptionId },
+    });
+    return;
+  }
+
+  try {
+    // Resolve user ID from email if needed
+    if (!authUserId && customerEmail) {
+      const result = await getUsersByEmail(customerEmail);
+      if (result.users.length === 0) {
+        getRouteLogger().warn('No auth user found for deleted subscription', {
+          extra: { email: customerEmail, subscriptionId },
+        });
+        return;
+      }
+      authUserId = result.users[0].uid;
     }
 
     if (!authUserId) {
-      getRouteLogger().error('Could not determine auth user ID', undefined, {
+      getRouteLogger().error('Could not resolve auth user ID', undefined, {
         extra: { subscriptionId, customerEmail },
       });
       return;
     }
 
-    // Update user to free tier with NULL status
-    // Clear subscription data but preserve current_period_end for grace period access
+    // Downgrade to free tier
     await updateUserByAuthId(authUserId, {
       subscriptionTier: SubscriptionTier.FREE,
-      subscriptionStatus: null, // NULL for free tier (enforced by DB constraint)
-      stripeSubscriptionId: null, // Clear subscription ID
-      // Keep current_period_end to allow grace period access
-      currentPeriodEnd: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000)
-        : null,
-      cancelAtPeriodEnd: false, // Clear cancellation flag
-      pauseResumesAt: null, // Clear pause flag
+      subscriptionStatus: null, // Free tier has NULL status (DB constraint)
+      stripeSubscriptionId: null, // Clear subscription reference
+      // Preserve period end for grace period access decisions
+      currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+      cancelAtPeriodEnd: false,
+      pauseResumesAt: null,
     });
 
-    getRouteLogger().info('Downgraded user to free tier after cancellation', {
+    getRouteLogger().info('Downgraded user to free tier', {
       extra: { authUserId, subscriptionId },
     });
-  } catch (error: any) {
+  } catch (error) {
     getRouteLogger().error(
-      'Failed to handle subscription cancellation',
-      error,
-      {
-        extra: { subscriptionId },
-      },
+      'Failed to handle subscription deletion',
+      error instanceof Error ? error : undefined,
+      { extra: { subscriptionId } },
     );
-    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
   }
 }
+
+// ============================================================================
+// Invoice Handlers
+// ============================================================================
 
 /**
  * Handle successful invoice payment
  *
- * When a payment succeeds (especially after 3D Secure), we fetch the current
- * subscription from Stripe to ensure we have the latest status (active).
- * This handles the race condition where subscription.updated might not have
- * fired yet or arrived out of order.
+ * This is important for:
+ * - Recovering from past_due status after successful retry
+ * - Handling 3D Secure completions where subscription.updated may arrive out of order
+ * - Ensuring status is synced after any successful payment
+ *
+ * We fetch the current subscription state to ensure accuracy.
  */
-async function handleInvoicePaymentSucceeded(invoice: any): Promise<void> {
-  const subscriptionId = invoice.subscription;
-  const customerEmail = invoice.customer_email;
-
-  if (!subscriptionId) {
-    getRouteLogger().warn('No subscription ID in invoice', {
-      extra: { invoiceId: invoice.id },
-    });
-    return;
-  }
-
+async function handleInvoicePaymentSucceeded(
+  customerEmail: string | null,
+  subscriptionId: string,
+): Promise<void> {
   if (!customerEmail) {
     getRouteLogger().error('No customer email in invoice', undefined, {
-      extra: { invoiceId: invoice.id },
+      extra: { subscriptionId },
     });
     return;
   }
 
   try {
-    // Fetch the CURRENT subscription from Stripe to get latest status
-    // This is more reliable than waiting for subscription.updated event
-    getRouteLogger().info('Fetching subscription from Stripe after payment', {
-      extra: { subscriptionId, invoiceId: invoice.id },
-    });
-
+    // Fetch current subscription state - more reliable than event data
+    // This handles race conditions and out-of-order event delivery
     const subscription = await retrieveSubscription(subscriptionId);
 
-    if (!subscription) {
-      getRouteLogger().error('Failed to retrieve subscription from Stripe', undefined, {
-        extra: { subscriptionId, invoiceId: invoice.id },
-      });
-      return;
-    }
+    // Use the same handler as subscription.updated for consistency
+    await handleSubscriptionCreatedOrUpdated(subscription, 'updated');
 
-    // Process the subscription using the existing handler
-    // This ensures consistent logic with subscription.created/updated events
-    await handleSubscriptionChange(subscription, 'updated');
-
-    getRouteLogger().info('Updated subscription after invoice payment', {
+    getRouteLogger().info('Synced subscription after successful payment', {
       extra: {
         subscriptionId,
-        invoiceId: invoice.id,
         status: subscription.status,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     getRouteLogger().error(
-      'Failed to handle invoice payment succeeded',
-      error,
-      {
-        extra: { invoiceId: invoice.id, subscriptionId },
-      },
+      'Failed to handle invoice payment success',
+      error instanceof Error ? error : undefined,
+      { extra: { subscriptionId } },
     );
-    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
   }
 }
 
 /**
  * Handle failed invoice payment
+ *
+ * Mark the user's subscription as past_due so the UI can:
+ * - Show payment failure messaging
+ * - Prompt for payment method update
+ * - Potentially restrict access based on business rules
+ *
+ * The payment provider will retry the payment according to retry settings.
  */
-async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
-  const subscriptionId = invoice.subscription;
-  const customerEmail = invoice.customer_email;
-
+async function handleInvoicePaymentFailed(
+  customerEmail: string | null,
+  subscriptionId: string,
+  invoiceId: string,
+  attemptCount: number,
+): Promise<void> {
   if (!customerEmail) {
     getRouteLogger().error('No customer email in invoice', undefined, {
-      extra: { invoiceId: invoice.id },
+      extra: { invoiceId },
     });
     return;
   }
 
   try {
     // Find user by email
-    const existingUsersResult = await getUsersByEmail(customerEmail);
+    const result = await getUsersByEmail(customerEmail);
 
-    if (existingUsersResult.users.length === 0) {
+    if (result.users.length === 0) {
       getRouteLogger().warn('No auth user found for failed invoice', {
         extra: { email: customerEmail, subscriptionId },
       });
       return;
     }
 
-    const authUserId = existingUsersResult.users[0].uid;
+    const authUserId = result.users[0].uid;
 
-    // Mark user as past_due (Stripe will retry payment)
+    // Mark as past_due - payment provider will handle retries
     await updateUserByAuthId(authUserId, {
       subscriptionStatus: SubscriptionStatus.PAST_DUE,
     });
 
-    getRouteLogger().info(
-      'Marked user subscription as past_due after payment failure',
-      {
-        extra: { authUserId, subscriptionId },
+    getRouteLogger().info('Marked subscription as past_due', {
+      extra: {
+        authUserId,
+        subscriptionId,
+        invoiceId,
+        attemptCount,
       },
-    );
-  } catch (error: any) {
-    getRouteLogger().error('Failed to handle invoice payment failed', error, {
-      extra: { invoiceId: invoice.id, subscriptionId },
     });
-    // Don't throw - let webhook succeed even if handler fails (idempotency handles retries)
+  } catch (error) {
+    getRouteLogger().error(
+      'Failed to handle invoice payment failure',
+      error instanceof Error ? error : undefined,
+      { extra: { invoiceId, subscriptionId } },
+    );
   }
 }

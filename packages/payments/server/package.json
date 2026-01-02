@@ -17,6 +17,6 @@
     "name": "payments-server"
   },
   "dependencies": {
-    "stripe": "^17.5.0"
+     "@stripe/stripe-js": "^8.6.0"
   }
 }

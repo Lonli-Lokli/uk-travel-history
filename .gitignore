@@ -34,6 +34,7 @@ yarn-error.log
 testem.log
 /typings
 test-output
+tsconfig.tsbuildinfo
 
 # System Files
 .DS_Store
@@ -53,3 +54,4 @@ vitest.config.*.timestamp*
 .env.local
 firebase-debug.log
 apps/uk-travel-history/next-env.d.ts
+

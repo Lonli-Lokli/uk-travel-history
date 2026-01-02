@@ -13,6 +13,7 @@ import type {
   CheckoutSessionDetails,
   SubscriptionDetails,
   PriceDetails,
+  ParsedWebhookEvent,
 } from '../types/domain';
 import { PaymentPlan } from '../types/domain';
 import { getPaymentsProvider } from '../internal/provider-resolver';
@@ -44,19 +45,6 @@ export async function verifyCheckoutSession(
   return provider.verifyCheckoutSession(sessionId);
 }
 
-/**
- * Handle incoming webhook from payment provider
- * Verifies signature and normalizes event to domain type
- * @param input - Webhook input with body and signature
- * @returns Normalized webhook event result
- * @throws PaymentsError if signature is invalid or processing fails
- */
-export async function handleWebhook(
-  input: WebhookHandlerInput,
-): Promise<WebhookEventResult> {
-  const provider = getPaymentsProvider();
-  return provider.handleWebhook(input);
-}
 
 /**
  * Check if payments are properly configured
@@ -118,18 +106,18 @@ export async function retrieveSubscription(
 
 /**
  * Construct and verify webhook event
- * Low-level method for webhook signature verification
+ * Verifies signature and converts to domain event type
  * @param body - Raw webhook body
  * @param signature - Webhook signature
  * @param secret - Webhook secret
- * @returns Provider-specific event object (e.g., Stripe.Event)
+ * @returns Parsed webhook event (discriminated union for type-safe handling)
  * @throws PaymentsError if verification fails
  */
 export function constructWebhookEvent(
   body: string | Buffer,
   signature: string,
   secret: string,
-): any {
+): ParsedWebhookEvent {
   const provider = getPaymentsProvider();
   return provider.constructWebhookEvent(body, signature, secret);
 }

@@ -19,6 +19,20 @@ export type {
   PriceDetail,
   CheckoutSessionDetails,
   SubscriptionDetails,
+  TypedWebhookEvent,
+  InvoiceDetails,
+  PauseCollectionInfo,
+  // Webhook event types
+  ParsedWebhookEvent,
+  CheckoutSessionEventData,
+  InvoiceEventData,
+  CheckoutCompletedEvent,
+  SubscriptionCreatedEvent,
+  SubscriptionUpdatedEvent,
+  SubscriptionDeletedEvent,
+  InvoicePaymentSucceededEvent,
+  InvoicePaymentFailedEvent,
+  UnknownWebhookEvent,
 } from './types/domain';
 export {
   PaymentsError,
@@ -26,13 +40,13 @@ export {
   PaymentPlan,
   PaymentStatus,
   WebhookEventType,
+  ProviderSubscriptionStatus,
 } from './types/domain';
 
 // Export public operations
 export {
   createCheckoutSession,
   verifyCheckoutSession,
-  handleWebhook,
   isPaymentsConfigured,
   getPriceIds,
   getPriceDetails,

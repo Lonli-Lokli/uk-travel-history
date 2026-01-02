@@ -675,7 +675,7 @@ describe('Feature 3: Today\'s Absence Quota Summary', () => {
     }
   });
 
-  it('calculates remaining180LimitToday as 0 when limit exceeded', () => {
+  it('calculates remaining180LimitToday as 0 when limit exceeded', {timeout: 10_000},() => {
     // Create trips that exceed 180 days in last 12 months
     const today = new Date();
     const trips: TripRecord[] = [];

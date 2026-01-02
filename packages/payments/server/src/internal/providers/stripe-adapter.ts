@@ -1,5 +1,9 @@
 /**
  * Stripe implementation of PaymentsServerProvider
+ * API Version: 2025-12-15.clover
+ *
+ * This adapter handles Stripe API interactions and converts
+ * all Stripe types to domain types before returning.
  */
 
 import Stripe from 'stripe';
@@ -19,6 +23,9 @@ import type {
   CheckoutSessionDetails,
   SubscriptionDetails,
   PriceDetails,
+  ParsedWebhookEvent,
+  InvoiceEventData,
+  CheckoutSessionEventData,
 } from '../../types/domain';
 import {
   PaymentsError,
@@ -26,7 +33,209 @@ import {
   PaymentPlan,
   PaymentStatus,
   WebhookEventType,
+  ProviderSubscriptionStatus,
 } from '../../types/domain';
+
+// ============================================================================
+// Stripe to Domain Type Converters (Internal)
+// ============================================================================
+
+/**
+ * Convert Stripe subscription status to domain status
+ */
+function mapStripeStatus(status: Stripe.Subscription.Status): ProviderSubscriptionStatus {
+  const mapping: Record<Stripe.Subscription.Status, ProviderSubscriptionStatus> = {
+    active: ProviderSubscriptionStatus.ACTIVE,
+    past_due: ProviderSubscriptionStatus.PAST_DUE,
+    canceled: ProviderSubscriptionStatus.CANCELED,
+    trialing: ProviderSubscriptionStatus.TRIALING,
+    incomplete: ProviderSubscriptionStatus.INCOMPLETE,
+    incomplete_expired: ProviderSubscriptionStatus.INCOMPLETE_EXPIRED,
+    unpaid: ProviderSubscriptionStatus.UNPAID,
+    paused: ProviderSubscriptionStatus.PAUSED,
+  };
+  return mapping[status];
+}
+
+/**
+ * Extract customer ID from polymorphic customer field
+ */
+function extractCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): string {
+  if (!customer) return '';
+  return typeof customer === 'string' ? customer : customer.id;
+}
+
+/**
+ * Extract billing period from subscription items (API 2025-03-31+)
+ */
+function extractBillingPeriod(subscription: Stripe.Subscription): {
+  currentPeriodStart: number | null;
+  currentPeriodEnd: number | null;
+} {
+  const firstItem = subscription.items?.data?.[0];
+  return {
+    currentPeriodStart: firstItem?.current_period_start ?? null,
+    currentPeriodEnd: firstItem?.current_period_end ?? null,
+  };
+}
+
+/**
+ * Extract price ID from subscription's first item
+ */
+function extractPriceId(subscription: Stripe.Subscription): string | undefined {
+  return subscription.items?.data?.[0]?.price?.id;
+}
+
+/**
+ * Normalize metadata to remove null values
+ */
+function normalizeMetadata(
+  metadata: Stripe.Metadata | null | undefined,
+): Record<string, string> {
+  if (!metadata) return {};
+  return Object.fromEntries(
+    Object.entries(metadata).filter((entry): entry is [string, string] => entry[1] !== null),
+  );
+}
+
+/**
+ * Convert Stripe.Subscription to SubscriptionDetails
+ */
+function convertSubscription(subscription: Stripe.Subscription): SubscriptionDetails {
+  const { currentPeriodStart, currentPeriodEnd } = extractBillingPeriod(subscription);
+
+  return {
+    id: subscription.id,
+    customerId: extractCustomerId(subscription.customer),
+    status: mapStripeStatus(subscription.status),
+    currentPeriodStart,
+    currentPeriodEnd,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    pauseCollection: subscription.pause_collection
+      ? {
+          behavior: subscription.pause_collection.behavior,
+          resumesAt: subscription.pause_collection.resumes_at,
+        }
+      : null,
+    priceId: extractPriceId(subscription),
+    metadata: normalizeMetadata(subscription.metadata),
+  };
+}
+
+/**
+ * Extract subscription ID from Invoice using new parent structure
+ * API 2025-03-31+: invoice.subscription deprecated → invoice.parent.subscription_details.subscription
+ */
+function extractSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  if (invoice.parent?.type === 'subscription_details') {
+    const subscription = invoice.parent.subscription_details?.subscription;
+    if (subscription) {
+      return typeof subscription === 'string' ? subscription : subscription.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Convert Stripe.Invoice to InvoiceEventData
+ */
+function convertInvoice(invoice: Stripe.Invoice): InvoiceEventData {
+  return {
+    id: invoice.id,
+    customerId: extractCustomerId(invoice.customer),
+    customerEmail: invoice.customer_email,
+    subscriptionId: extractSubscriptionIdFromInvoice(invoice),
+    billingReason: invoice.billing_reason,
+    attemptCount: invoice.attempt_count ?? 0,
+    amountDue: invoice.amount_due,
+    amountPaid: invoice.amount_paid,
+    currency: invoice.currency,
+  };
+}
+
+/**
+ * Convert Stripe.Checkout.Session to CheckoutSessionEventData
+ */
+function convertCheckoutSession(session: Stripe.Checkout.Session): CheckoutSessionEventData {
+  const metadata = normalizeMetadata(session.metadata);
+  return {
+    id: session.id,
+    mode: session.mode,
+    paymentStatus: session.payment_status,
+    customerId: extractCustomerId(session.customer),
+    subscriptionId:
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id,
+    userId: metadata.userId || session.client_reference_id || undefined,
+    customerEmail: session.customer_email || session.customer_details?.email || undefined,
+    metadata,
+  };
+}
+
+/**
+ * Convert Stripe.Event to ParsedWebhookEvent
+ */
+function convertWebhookEvent(event: Stripe.Event): ParsedWebhookEvent {
+  const basePayload = {
+    id: event.id,
+    created: event.created,
+  };
+
+  switch (event.type) {
+    case 'checkout.session.completed':
+      return {
+        ...basePayload,
+        type: 'checkout.session.completed',
+        data: convertCheckoutSession(event.data.object),
+      };
+
+    case 'customer.subscription.created':
+      return {
+        ...basePayload,
+        type: 'customer.subscription.created',
+        data: convertSubscription(event.data.object),
+      };
+
+    case 'customer.subscription.updated':
+      return {
+        ...basePayload,
+        type: 'customer.subscription.updated',
+        data: convertSubscription(event.data.object),
+      };
+
+    case 'customer.subscription.deleted':
+      return {
+        ...basePayload,
+        type: 'customer.subscription.deleted',
+        data: convertSubscription(event.data.object),
+      };
+
+    case 'invoice.payment_succeeded':
+      return {
+        ...basePayload,
+        type: 'invoice.payment_succeeded',
+        data: convertInvoice(event.data.object),
+      };
+
+    case 'invoice.payment_failed':
+      return {
+        ...basePayload,
+        type: 'invoice.payment_failed',
+        data: convertInvoice(event.data.object),
+      };
+
+    default:
+      return {
+        ...basePayload,
+        type: 'unknown',
+        _type: event.type,
+        data: event.data.object,
+      };
+  }
+}
 
 /**
  * Stripe implementation of the payments server provider
@@ -37,8 +246,7 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
   private priceIds: Record<string, string> = {};
   private configured = false;
 
-  initialize(config: PaymentsServerProviderConfig): void {
-    // Load Stripe secret key
+  initialize(_config: PaymentsServerProviderConfig): void {
     const secretKey =
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_build';
 
@@ -51,11 +259,10 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
 
     try {
       this.stripe = new Stripe(secretKey, {
-        apiVersion: '2025-02-24.acacia',
+        apiVersion: '2025-12-15.clover',
         typescript: true,
       });
 
-      // Load price IDs from environment
       this.priceIds = {
         [PaymentPlan.PREMIUM_MONTHLY]:
           process.env.STRIPE_MONTHLY_PRICE_ID || 'price_monthly',
@@ -65,7 +272,6 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           process.env.STRIPE_LIFETIME_PRICE_ID || 'price_lifetime',
       };
 
-      // Load webhook secret
       this.webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       if (!this.webhookSecret) {
         logger.warn(
@@ -111,7 +317,6 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     try {
       const priceIds = this.getPriceIds();
 
-      // Fetch all prices in parallel
       const [monthlyPrice, annualPrice, lifetimePrice] = await Promise.all([
         stripe.prices.retrieve(priceIds.PREMIUM_MONTHLY),
         stripe.prices.retrieve(priceIds.PREMIUM_ANNUAL),
@@ -121,21 +326,21 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       return {
         monthly: {
           id: monthlyPrice.id,
-          unitAmount: monthlyPrice.unit_amount || 0,
+          unitAmount: monthlyPrice.unit_amount || 10,
           currency: monthlyPrice.currency,
-          amount: (monthlyPrice.unit_amount || 0) / 100,
+          amount: (monthlyPrice.unit_amount || 10) / 100,
         },
         annual: {
           id: annualPrice.id,
-          unitAmount: annualPrice.unit_amount || 0,
+          unitAmount: annualPrice.unit_amount || 100,
           currency: annualPrice.currency,
-          amount: (annualPrice.unit_amount || 0) / 100,
+          amount: (annualPrice.unit_amount || 100) / 100,
         },
         lifetime: {
           id: lifetimePrice.id,
-          unitAmount: lifetimePrice.unit_amount || 0,
+          unitAmount: lifetimePrice.unit_amount || 1_000,
           currency: lifetimePrice.currency,
-          amount: (lifetimePrice.unit_amount || 0) / 100,
+          amount: (lifetimePrice.unit_amount || 1_000) / 100,
         },
       };
     } catch (error) {
@@ -159,8 +364,14 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
       return {
         id: session.id,
         paymentStatus: session.payment_status,
-        customerId: session.customer as string | undefined,
-        subscriptionId: session.subscription as string | undefined,
+        customerId:
+          typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id,
+        subscriptionId:
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id,
         metadata: session.metadata || undefined,
         customerEmail:
           session.customer_email ||
@@ -168,13 +379,14 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           undefined,
       };
     } catch (error: unknown) {
-      const stripeError = error as Stripe.StripeRawError;
-      if (stripeError.code === 'resource_missing') {
-        throw new PaymentsError(
-          PaymentsErrorCode.NOT_FOUND,
-          `Checkout session not found: ${sessionId}`,
-          error,
-        );
+      if (error instanceof Stripe.errors.StripeError) {
+        if (error.code === 'resource_missing') {
+          throw new PaymentsError(
+            PaymentsErrorCode.NOT_FOUND,
+            `Checkout session not found: ${sessionId}`,
+            error,
+          );
+        }
       }
 
       const errorMessage =
@@ -187,32 +399,25 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     }
   }
 
-  async retrieveSubscription(
-    subscriptionId: string,
-  ): Promise<SubscriptionDetails> {
+  /**
+   * Retrieve a subscription by ID
+   * Converts Stripe.Subscription to domain SubscriptionDetails
+   */
+  async retrieveSubscription(subscriptionId: string): Promise<SubscriptionDetails> {
     const stripe = this.ensureConfigured();
 
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-      return {
-        id: subscription.id,
-        customerId: subscription.customer as string,
-        status: subscription.status,
-        currentPeriodStart: subscription.current_period_start,
-        currentPeriodEnd: subscription.current_period_end,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        priceId: subscription.items.data[0]?.price.id,
-        metadata: subscription.metadata || undefined,
-      };
+      return convertSubscription(subscription);
     } catch (error: unknown) {
-      const stripeError = error as Stripe.StripeRawError;
-      if (stripeError.code === 'resource_missing') {
-        throw new PaymentsError(
-          PaymentsErrorCode.NOT_FOUND,
-          `Subscription not found: ${subscriptionId}`,
-          error,
-        );
+      if (error instanceof Stripe.errors.StripeError) {
+        if (error.code === 'resource_missing') {
+          throw new PaymentsError(
+            PaymentsErrorCode.NOT_FOUND,
+            `Subscription not found: ${subscriptionId}`,
+            error,
+          );
+        }
       }
 
       const errorMessage =
@@ -225,15 +430,20 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     }
   }
 
+  /**
+   * Construct and verify a webhook event
+   * Verifies signature and returns a domain ParsedWebhookEvent
+   */
   constructWebhookEvent(
     body: string | Buffer,
     signature: string,
     secret: string,
-  ): Stripe.Event {
+  ): ParsedWebhookEvent {
     const stripe = this.ensureConfigured();
 
     try {
-      return stripe.webhooks.constructEvent(body, signature, secret);
+      const stripeEvent = stripe.webhooks.constructEvent(body, signature, secret);
+      return convertWebhookEvent(stripeEvent);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -253,25 +463,17 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     try {
       const priceId = this.getPriceId(intent.plan);
 
-      // Build session parameters based on whether this is authenticated or anonymous
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode:
           intent.plan === PaymentPlan.PREMIUM_ONCE ? 'payment' : 'subscription',
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
+        line_items: [{ price: priceId, quantity: 1 }],
         success_url: intent.successUrl,
         cancel_url: intent.cancelUrl,
         metadata: {
           plan: intent.plan,
-          ...intent.metadata,
         },
       };
 
-      // Authenticated user: set customer_email and client_reference_id
       if (intent.userId) {
         sessionParams.client_reference_id = intent.userId;
         sessionParams.metadata!.userId = intent.userId;
@@ -282,7 +484,6 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         }
       }
 
-      // Add subscription metadata if subscription mode
       if (intent.plan !== PaymentPlan.PREMIUM_ONCE && intent.userId) {
         sessionParams.subscription_data = {
           metadata: {
@@ -291,7 +492,6 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
           },
         };
       } else if (intent.plan !== PaymentPlan.PREMIUM_ONCE) {
-        // Anonymous subscription
         sessionParams.subscription_data = {
           metadata: {
             isPreRegistration: 'true',
@@ -353,7 +553,6 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
         isActive: true,
       };
 
-      // If it's a subscription, add subscription details
       if (session.mode === 'subscription' && session.subscription) {
         const subscription =
           typeof session.subscription === 'string'
@@ -361,18 +560,23 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
             : session.subscription;
 
         entitlement.subscriptionId = subscription.id;
-        entitlement.endDate = new Date(subscription.current_period_end * 1000);
+        // API 2025-03-31+: billing period is on subscription items
+        const firstItem = subscription.items?.data?.[0];
+        if (firstItem?.current_period_end) {
+          entitlement.endDate = new Date(firstItem.current_period_end * 1000);
+        }
       }
 
       return entitlement;
     } catch (error: unknown) {
-      const stripeError = error as Stripe.StripeRawError;
-      if (stripeError.code === 'resource_missing') {
-        throw new PaymentsError(
-          PaymentsErrorCode.NOT_FOUND,
-          `Checkout session not found: ${sessionId}`,
-          error,
-        );
+      if (error instanceof Stripe.errors.StripeError) {
+        if (error.code === 'resource_missing') {
+          throw new PaymentsError(
+            PaymentsErrorCode.NOT_FOUND,
+            `Checkout session not found: ${sessionId}`,
+            error,
+          );
+        }
       }
 
       const errorMessage =
@@ -385,134 +589,14 @@ export class StripePaymentsServerAdapter implements PaymentsServerProvider {
     }
   }
 
-  /**
-   * Map Stripe event type to domain event type
-   */
-  private mapEventType(stripeType: string): WebhookEventType {
-    switch (stripeType) {
-      case 'checkout.session.completed':
-        return WebhookEventType.CHECKOUT_COMPLETED;
-      case 'payment_intent.succeeded':
-        return WebhookEventType.PAYMENT_SUCCEEDED;
-      case 'payment_intent.payment_failed':
-        return WebhookEventType.PAYMENT_FAILED;
-      case 'customer.subscription.created':
-        return WebhookEventType.SUBSCRIPTION_CREATED;
-      case 'customer.subscription.updated':
-        return WebhookEventType.SUBSCRIPTION_UPDATED;
-      case 'customer.subscription.deleted':
-        return WebhookEventType.SUBSCRIPTION_CANCELLED;
-      default:
-        return WebhookEventType.UNKNOWN;
-    }
-  }
-
-  /**
-   * Normalize Stripe event to domain webhook event
-   */
-  private normalizeStripeEvent(stripeEvent: Stripe.Event): WebhookEvent {
-    const event: WebhookEvent = {
-      id: stripeEvent.id,
-      type: this.mapEventType(stripeEvent.type),
-      timestamp: new Date(stripeEvent.created * 1000),
-    };
-
-    // Extract data based on event type with proper typing
-    if (stripeEvent.type === 'checkout.session.completed') {
-      const session = stripeEvent.data.object as Stripe.Checkout.Session;
-      event.userId =
-        session.client_reference_id || session.metadata?.userId || undefined;
-      event.plan = session.metadata?.plan as PaymentPlan | undefined;
-      event.sessionId = session.id;
-      event.subscriptionId = session.subscription as string | undefined;
-      event.status = PaymentStatus.SUCCEEDED;
-    } else if (stripeEvent.type.startsWith('payment_intent')) {
-      const paymentIntent = stripeEvent.data.object as Stripe.PaymentIntent;
-      event.status =
-        stripeEvent.type === 'payment_intent.succeeded'
-          ? PaymentStatus.SUCCEEDED
-          : PaymentStatus.FAILED;
-      event.metadata = paymentIntent.metadata as
-        | Record<string, unknown>
-        | undefined;
-    } else if (stripeEvent.type.startsWith('customer.subscription')) {
-      const subscription = stripeEvent.data.object as Stripe.Subscription;
-      event.subscriptionId = subscription.id;
-      event.userId = subscription.metadata?.userId || undefined;
-      event.plan = subscription.metadata?.plan as PaymentPlan | undefined;
-      event.metadata = subscription.metadata as
-        | Record<string, unknown>
-        | undefined;
-    }
-
-    return event;
-  }
-
-  async handleWebhook(input: WebhookHandlerInput): Promise<WebhookEventResult> {
-    const stripe = this.ensureConfigured();
-
-    // Verify webhook signature if webhook secret is configured
-    let stripeEvent: Stripe.Event;
-
-    if (this.webhookSecret) {
-      try {
-        stripeEvent = stripe.webhooks.constructEvent(
-          input.body,
-          input.signature,
-          this.webhookSecret,
-        );
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        throw new PaymentsError(
-          PaymentsErrorCode.INVALID_SIGNATURE,
-          `Webhook signature verification failed: ${errorMessage}`,
-          error,
-        );
-      }
-    } else {
-      // If no webhook secret, parse the body directly (not recommended for production)
-      try {
-        stripeEvent =
-          typeof input.body === 'string'
-            ? JSON.parse(input.body)
-            : JSON.parse(input.body.toString());
-      } catch (error: unknown) {
-        throw new PaymentsError(
-          PaymentsErrorCode.INVALID_INPUT,
-          'Invalid webhook payload',
-          error,
-        );
-      }
-    }
-
-    // Normalize to domain event
-    const event = this.normalizeStripeEvent(stripeEvent);
-
-    // TODO: Implement idempotency check
-    // For now, assume not processed
-    const alreadyProcessed = false;
-
-    return {
-      event,
-      alreadyProcessed,
-      actions: ['Event normalized from Stripe webhook'],
-    };
-  }
-
   async createPortalSession(
     customerId: string,
     returnUrl: string,
   ): Promise<string> {
-    if (!this.stripe) {
-      throw new PaymentsError(
-        PaymentsErrorCode.CONFIG_ERROR,
-        'Stripe not initialized',
-      );
-    }
+    const stripe = this.ensureConfigured();
 
     try {
-      const session = await this.stripe.billingPortal.sessions.create({
+      const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
       });
