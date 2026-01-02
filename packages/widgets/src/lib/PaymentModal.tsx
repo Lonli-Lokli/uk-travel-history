@@ -1,17 +1,11 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  Button,
-  UIIcon,
-} from '@uth/ui';
+import { Sheet } from 'react-modal-sheet';
+import { Button, UIIcon } from '@uth/ui';
 import { paymentStore, authStore } from '@uth/stores';
 import { logger } from '@uth/utils';
+import 'react-modal-sheet/styles.css';
 
 // Helper function to format currency
 const formatCurrency = (amount: number, currency: string): string => {
@@ -54,16 +48,17 @@ export const PaymentModal = observer(() => {
   );
 
   return (
-    <Dialog open={isPaymentModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Upgrade to Premium</DialogTitle>
-          <DialogDescription>
-            Unlock all features with a Premium subscription
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet isOpen={isPaymentModalOpen} onClose={handleClose} detent="content">
+      <Sheet.Container>
+        <Sheet.Header />
+        <Sheet.Content>
+          <div className="px-4 pb-6">
+            <h2 className="text-2xl font-semibold mb-2">Upgrade to Premium</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Unlock all features with a Premium subscription
+            </p>
 
-        <div className="space-y-6 py-4">
+            <div className="space-y-6">
           {/* Pricing Options */}
           <div className="space-y-3">
             {/* Monthly Option */}
@@ -250,13 +245,16 @@ export const PaymentModal = observer(() => {
               </>)}
           </Button>
 
-          <p className="text-xs text-center text-slate-500">
-            Secure payment processed by Stripe.
-            {billingPeriod !== 'once' && ' Cancel anytime.'}
-          </p>
-        </div>
-      </DialogContent>
-    </Dialog>
+              <p className="text-xs text-center text-slate-500">
+                Secure payment processed by Stripe.
+                {billingPeriod !== 'once' && ' Cancel anytime.'}
+              </p>
+            </div>
+          </div>
+        </Sheet.Content>
+      </Sheet.Container>
+      <Sheet.Backdrop />
+    </Sheet>
   );
 });
 

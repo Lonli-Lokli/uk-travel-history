@@ -1,15 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@uth/ui';
+import { Sheet } from 'react-modal-sheet';
 import { BugReportForm } from './BugReportForm';
+import './bug-report-sheet.css';
 
 interface BugReportDialogProps {
   children: React.ReactNode;
@@ -18,7 +12,7 @@ interface BugReportDialogProps {
 /**
  * Dialog component for bug report form
  *
- * Wraps the bug report form in a Radix UI dialog
+ * Wraps the bug report form in a bottom sheet
  * that can be triggered by any child element.
  */
 export function BugReportDialog({ children }: BugReportDialogProps) {
@@ -29,18 +23,25 @@ export function BugReportDialog({ children }: BugReportDialogProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Report a Bug</DialogTitle>
-          <DialogDescription>
-            Help us improve by reporting any issues you encounter. We&apos;ll automatically
-            capture a screenshot of the current page to help us understand the problem.
-          </DialogDescription>
-        </DialogHeader>
-        <BugReportForm onSuccess={handleSuccess} />
-      </DialogContent>
-    </Dialog>
+    <>
+      <div onClick={() => setIsOpen(true)}>{children}</div>
+      <Sheet isOpen={isOpen} onClose={() => setIsOpen(false)} detent="content">
+        <Sheet.Container>
+          <Sheet.Header />
+          <Sheet.Content className="bug-report-sheet-content">
+            <div className="px-4 pb-6">
+              <h2 className="text-2xl font-semibold mb-2">Report a Bug</h2>
+              <p className="text-sm text-slate-600 mb-4">
+                Help us improve by reporting any issues you encounter. We&apos;ll
+                automatically capture a screenshot of the current page to help us
+                understand the problem.
+              </p>
+              <BugReportForm onSuccess={handleSuccess} />
+            </div>
+          </Sheet.Content>
+        </Sheet.Container>
+        <Sheet.Backdrop />
+      </Sheet>
+    </>
   );
 }
