@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
+import { rateLimiter } from '../../../components/bug-report/utils';
 
 // Mock dependencies
 vi.mock('@vercel/blob', () => ({
@@ -41,6 +42,7 @@ describe('Bug Report API Route', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimiter.reset();
     testCounter++;
   });
 

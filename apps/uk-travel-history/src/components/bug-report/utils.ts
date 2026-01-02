@@ -106,6 +106,13 @@ class RateLimiter {
       }
     }
   }
+
+  /**
+   * Reset the rate limiter (useful for testing)
+   */
+  reset() {
+    this.requests.clear();
+  }
 }
 
 export const rateLimiter = new RateLimiter(3, 60 * 60 * 1000); // 3 requests per hour
