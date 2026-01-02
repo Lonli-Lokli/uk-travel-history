@@ -18,6 +18,6 @@
   },
   "dependencies": {
     "@uth/utils": "*",
-    "@stripe/stripe-js": "^5.4.0"
+    "@stripe/stripe-js": "^8.6.0"
   }
 }
