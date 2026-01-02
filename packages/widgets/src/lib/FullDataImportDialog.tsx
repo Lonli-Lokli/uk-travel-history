@@ -9,7 +9,6 @@ import {
   UIIcon,
 } from '@uth/ui';
 import { useState } from 'react';
-import 'react-modal-sheet/styles.css';
 
 interface FullDataImportDialogProps {
   isOpen: boolean;
@@ -38,10 +37,10 @@ export const FullDataImportDialog = ({
 
   return (
     <Sheet isOpen={isOpen} onClose={onCancel} detent="content">
-      <Sheet.Container>
-        <Sheet.Header />
+      <Sheet.Container className="!rounded-t-2xl">
+        <Sheet.Header className="!h-10" />
         <Sheet.Content>
-          <div className="px-4 pb-6">
+          <div className="px-4 pb-6 max-w-2xl mx-auto">
             <h2 className="text-2xl font-semibold mb-2">Import Full Data</h2>
             <p className="text-sm text-slate-600 mb-4">
               Review the data to be imported and choose how to proceed.

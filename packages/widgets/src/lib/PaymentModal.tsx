@@ -5,7 +5,6 @@ import { Sheet } from 'react-modal-sheet';
 import { Button, UIIcon } from '@uth/ui';
 import { paymentStore, authStore } from '@uth/stores';
 import { logger } from '@uth/utils';
-import 'react-modal-sheet/styles.css';
 
 // Helper function to format currency
 const formatCurrency = (amount: number, currency: string): string => {
@@ -49,10 +48,10 @@ export const PaymentModal = observer(() => {
 
   return (
     <Sheet isOpen={isPaymentModalOpen} onClose={handleClose} detent="content">
-      <Sheet.Container>
-        <Sheet.Header />
+      <Sheet.Container className="!rounded-t-2xl">
+        <Sheet.Header className="!h-10" />
         <Sheet.Content>
-          <div className="px-4 pb-6">
+          <div className="px-4 pb-6 max-w-2xl mx-auto">
             <h2 className="text-2xl font-semibold mb-2">Upgrade to Premium</h2>
             <p className="text-sm text-slate-600 mb-4">
               Unlock all features with a Premium subscription

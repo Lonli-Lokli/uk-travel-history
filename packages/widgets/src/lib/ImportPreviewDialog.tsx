@@ -2,7 +2,6 @@
 
 import { Sheet } from 'react-modal-sheet';
 import { Button } from '@uth/ui';
-import 'react-modal-sheet/styles.css';
 
 interface ImportPreviewDialogProps {
   isOpen: boolean;
@@ -19,10 +18,10 @@ export const ImportPreviewDialog = ({
 }: ImportPreviewDialogProps) => {
   return (
     <Sheet isOpen={isOpen} onClose={onCancel} detent="content">
-      <Sheet.Container>
-        <Sheet.Header />
+      <Sheet.Container className="!rounded-t-2xl">
+        <Sheet.Header className="!h-10" />
         <Sheet.Content>
-          <div className="px-4 pb-6">
+          <div className="px-4 pb-6 max-w-2xl mx-auto">
             <h2 className="text-2xl font-semibold mb-2">Import Travel History</h2>
             <p className="text-sm text-slate-600 mb-4">
               Found {tripCount} trip{tripCount !== 1 ? 's' : ''} in the data.
