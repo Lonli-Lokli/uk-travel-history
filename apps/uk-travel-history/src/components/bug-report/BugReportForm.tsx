@@ -37,7 +37,12 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
 
       if (screenshotError) {
         console.warn('Screenshot capture failed:', screenshotError);
-        // Continue without screenshot
+        // Show toast notification if screenshot fails
+        toast({
+          title: 'Screenshot capture failed',
+          description: 'Continuing with bug report submission without screenshot.',
+          variant: 'default',
+        });
       }
 
       // Step 2: Upload files to Vercel Blob and send email
@@ -199,14 +204,23 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
         </div>
       </div>
 
-      {/* Screenshot Info */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-900 flex items-center gap-2">
-          <span role="img" aria-label="camera">
-            📸
-          </span>
-          Screenshot will be captured automatically when you submit
-        </p>
+      {/* Screenshot Info and Privacy Notice */}
+      <div className="space-y-2">
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-sm text-blue-900 flex items-center gap-2">
+            <span role="img" aria-label="camera">
+              📸
+            </span>
+            Screenshot will be captured automatically when you submit
+          </p>
+        </div>
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+          <p className="text-xs text-yellow-900">
+            <strong>Privacy Notice:</strong> The screenshot will capture the current page visible
+            on your screen. Please ensure no sensitive information (passwords, personal data) is
+            visible before submitting.
+          </p>
+        </div>
       </div>
 
       {/* Loading State */}

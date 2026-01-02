@@ -24,6 +24,37 @@ interface BugReportEmailProps {
   timestamp: string;
 }
 
+/**
+ * Escape HTML to prevent XSS attacks
+ * Note: React Email typically handles this, but we add explicit escaping for safety
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
+/**
+ * Validate and sanitize URL
+ * Only allows http and https protocols
+ */
+function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return '#';
+    }
+    return url;
+  } catch {
+    return '#';
+  }
+}
+
 export const BugReportEmail = ({
   email,
   message,
@@ -34,7 +65,18 @@ export const BugReportEmail = ({
   attachmentFilename,
   timestamp,
 }: BugReportEmailProps) => {
-  const previewText = `Bug Report: ${message.slice(0, 50)}${message.length > 50 ? '...' : ''}`;
+  // Sanitize all user-provided content
+  const sanitizedEmail = escapeHtml(email);
+  const sanitizedMessage = escapeHtml(message);
+  const sanitizedUserAgent = escapeHtml(userAgent);
+  const sanitizedPageUrl = sanitizeUrl(pageUrl);
+  const sanitizedScreenshotUrl = screenshotUrl ? sanitizeUrl(screenshotUrl) : undefined;
+  const sanitizedAttachmentUrl = attachmentUrl ? sanitizeUrl(attachmentUrl) : undefined;
+  const sanitizedAttachmentFilename = attachmentFilename
+    ? escapeHtml(attachmentFilename)
+    : undefined;
+
+  const previewText = `Bug Report: ${sanitizedMessage.slice(0, 50)}${sanitizedMessage.length > 50 ? '...' : ''}`;
 
   return (
     <Html>
@@ -46,13 +88,13 @@ export const BugReportEmail = ({
 
           <Section style={section}>
             <Text style={label}>From:</Text>
-            <Text style={value}>{email}</Text>
+            <Text style={value}>{sanitizedEmail}</Text>
           </Section>
 
           <Section style={section}>
             <Text style={label}>Page URL:</Text>
-            <Link href={pageUrl} style={link}>
-              {pageUrl}
+            <Link href={sanitizedPageUrl} style={link}>
+              {sanitizedPageUrl}
             </Link>
           </Section>
 
@@ -65,33 +107,29 @@ export const BugReportEmail = ({
 
           <Section style={section}>
             <Text style={label}>Message:</Text>
-            <Text style={messageText}>{message}</Text>
+            <Text style={messageText}>{sanitizedMessage}</Text>
           </Section>
 
-          {screenshotUrl && (
+          {sanitizedScreenshotUrl && (
             <>
               <Hr style={hr} />
               <Section style={section}>
                 <Text style={label}>Screenshot:</Text>
-                <Img
-                  src={screenshotUrl}
-                  alt="Page screenshot"
-                  style={screenshot}
-                />
-                <Link href={screenshotUrl} style={link}>
+                <Img src={sanitizedScreenshotUrl} alt="Page screenshot" style={screenshot} />
+                <Link href={sanitizedScreenshotUrl} style={link}>
                   View full size
                 </Link>
               </Section>
             </>
           )}
 
-          {attachmentUrl && attachmentFilename && (
+          {sanitizedAttachmentUrl && sanitizedAttachmentFilename && (
             <>
               <Hr style={hr} />
               <Section style={section}>
                 <Text style={label}>Attachment:</Text>
-                <Link href={attachmentUrl} style={link}>
-                  {attachmentFilename}
+                <Link href={sanitizedAttachmentUrl} style={link}>
+                  {sanitizedAttachmentFilename}
                 </Link>
               </Section>
             </>
@@ -101,7 +139,7 @@ export const BugReportEmail = ({
 
           <Section style={section}>
             <Text style={label}>Technical Details:</Text>
-            <Text style={technicalText}>User Agent: {userAgent}</Text>
+            <Text style={technicalText}>User Agent: {sanitizedUserAgent}</Text>
           </Section>
         </Container>
       </Body>
