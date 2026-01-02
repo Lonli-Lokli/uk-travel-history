@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@uth/ui';
 import type { UserRole } from '@uth/db';
+import { BugReportDialog } from './bug-report/BugReportDialog';
 
 interface FooterProps {
   /** User role for conditionally showing admin-only links */
@@ -40,6 +41,15 @@ export function Footer({ role }: FooterProps) {
                 </Link>
               </>
             )}
+            <span className="text-slate-300">•</span>
+            <BugReportDialog>
+              <button
+                className="text-slate-600 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                aria-label="Report a bug"
+              >
+                Contact Us
+              </button>
+            </BugReportDialog>
             <span className="text-slate-300">•</span>
             {/* Developer Info Popover */}
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
