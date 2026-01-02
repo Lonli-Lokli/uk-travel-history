@@ -1,12 +1,7 @@
 'use client';
 
+import { Sheet } from 'react-modal-sheet';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
   Button,
   RadioGroup,
   RadioGroupItem,
@@ -41,109 +36,113 @@ export const FullDataImportDialog = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Import Full Data</DialogTitle>
-          <DialogDescription>
-            Review the data to be imported and choose how to proceed.
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet isOpen={isOpen} onClose={onCancel} detent="content">
+      <Sheet.Container className="!rounded-t-2xl">
+        <Sheet.Header className="!h-10" />
+        <Sheet.Content>
+          <div className="px-4 pb-6 max-w-2xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-2">Import Full Data</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Review the data to be imported and choose how to proceed.
+            </p>
 
-        <div className="space-y-4">
-          {/* Preview Information */}
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
-            <div className="flex items-start gap-2">
-              <UIIcon
-                iconName="alert-circle"
-                className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0"
-              />
-              <div className="space-y-2 text-sm">
-                <p className="font-medium text-blue-900">
-                  File contains {tripCount} trip{tripCount !== 1 ? 's' : ''}
-                </p>
-                <div className="space-y-1 text-blue-700">
-                  <div className="flex items-center gap-2">
-                    {hasVignetteDate && (
-                      <UIIcon
-                        iconName="check"
-                        className="h-4 w-4 text-green-600"
-                      />
-                    )}
-                    <span>
-                      Vignette Entry Date{' '}
-                      {hasVignetteDate ? '(included)' : '(not set)'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasVisaStartDate && (
-                      <UIIcon
-                        iconName="check"
-                        className="h-4 w-4 text-green-600"
-                      />
-                    )}
-                    <span>
-                      Visa Start Date{' '}
-                      {hasVisaStartDate ? '(included)' : '(not set)'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasIlrTrack && (
-                      <UIIcon
-                        iconName="check"
-                        className="h-4 w-4 text-green-600"
-                      />
-                    )}
-                    <span>
-                      ILR Track {hasIlrTrack ? '(included)' : '(not set)'}
-                    </span>
+            <div className="space-y-4">
+              {/* Preview Information */}
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+                <div className="flex items-start gap-2">
+                  <UIIcon
+                    iconName="alert-circle"
+                    className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-blue-900">
+                      File contains {tripCount} trip{tripCount !== 1 ? 's' : ''}
+                    </p>
+                    <div className="space-y-1 text-blue-700">
+                      <div className="flex items-center gap-2">
+                        {hasVignetteDate && (
+                          <UIIcon
+                            iconName="check"
+                            className="h-4 w-4 text-green-600"
+                          />
+                        )}
+                        <span>
+                          Vignette Entry Date{' '}
+                          {hasVignetteDate ? '(included)' : '(not set)'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasVisaStartDate && (
+                          <UIIcon
+                            iconName="check"
+                            className="h-4 w-4 text-green-600"
+                          />
+                        )}
+                        <span>
+                          Visa Start Date{' '}
+                          {hasVisaStartDate ? '(included)' : '(not set)'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasIlrTrack && (
+                          <UIIcon
+                            iconName="check"
+                            className="h-4 w-4 text-green-600"
+                          />
+                        )}
+                        <span>
+                          ILR Track {hasIlrTrack ? '(included)' : '(not set)'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Import Mode Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Import Mode</Label>
+                <RadioGroup
+                  value={importMode}
+                  onValueChange={(value) =>
+                    setImportMode(value as 'replace' | 'append')
+                  }
+                >
+                  <div className="flex items-center space-x-2 rounded-md border border-slate-200 p-3 hover:bg-slate-50">
+                    <RadioGroupItem value="replace" id="replace" />
+                    <Label htmlFor="replace" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Replace all data</div>
+                      <div className="text-sm text-muted-foreground">
+                        Clear existing trips and visa details, then import
+                      </div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 rounded-md border border-slate-200 p-3 hover:bg-slate-50">
+                    <RadioGroupItem value="append" id="append" />
+                    <Label htmlFor="append" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Append to existing data</div>
+                      <div className="text-sm text-muted-foreground">
+                        Keep current trips and add imported ones (visa details will
+                        be updated)
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-6">
+              <Button onClick={handleConfirm} className="w-full">
+                {importMode === 'replace' ? 'Replace & Import' : 'Append & Import'}
+              </Button>
+              <Button variant="outline" onClick={onCancel} className="w-full">
+                Cancel
+              </Button>
             </div>
           </div>
-
-          {/* Import Mode Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Import Mode</Label>
-            <RadioGroup
-              value={importMode}
-              onValueChange={(value) =>
-                setImportMode(value as 'replace' | 'append')
-              }
-            >
-              <div className="flex items-center space-x-2 rounded-md border border-slate-200 p-3 hover:bg-slate-50">
-                <RadioGroupItem value="replace" id="replace" />
-                <Label htmlFor="replace" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Replace all data</div>
-                  <div className="text-sm text-muted-foreground">
-                    Clear existing trips and visa details, then import
-                  </div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-md border border-slate-200 p-3 hover:bg-slate-50">
-                <RadioGroupItem value="append" id="append" />
-                <Label htmlFor="append" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Append to existing data</div>
-                  <div className="text-sm text-muted-foreground">
-                    Keep current trips and add imported ones (visa details will
-                    be updated)
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </div>
-
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm}>
-            {importMode === 'replace' ? 'Replace & Import' : 'Append & Import'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Sheet.Content>
+      </Sheet.Container>
+      <Sheet.Backdrop />
+    </Sheet>
   );
 };
