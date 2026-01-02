@@ -4,12 +4,23 @@ import { Resend } from 'resend';
 import { render } from '@react-email/components';
 import BugReportEmail from '../../../emails/bug-report';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Force dynamic route to prevent static generation during build
+export const dynamic = 'force-dynamic';
 
 // Email configuration
 const FROM_EMAIL = process.env.BUG_REPORT_FROM_EMAIL || 'bugs@uk-travel-history.com';
 const TO_EMAIL = process.env.BUG_REPORT_TO_EMAIL || 'support@uk-travel-history.com';
+
+/**
+ * Get Resend client instance (lazy initialization to avoid build-time errors)
+ */
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is not set');
+  }
+  return new Resend(apiKey);
+}
 
 /**
  * POST /api/bug-report
@@ -139,6 +150,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Send email via Resend
+    const resend = getResendClient();
     const emailResponse = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,

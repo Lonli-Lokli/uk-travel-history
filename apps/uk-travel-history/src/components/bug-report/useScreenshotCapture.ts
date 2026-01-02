@@ -27,6 +27,7 @@ export function useScreenshotCapture() {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Capture the screenshot
+      // Note: Using type assertion as @types/html2canvas is outdated (v0.5 types for v1.4.1)
       const canvas = await html2canvas(document.body, {
         allowTaint: true,
         useCORS: true,
@@ -35,7 +36,7 @@ export function useScreenshotCapture() {
         windowHeight: document.documentElement.scrollHeight,
         scrollY: -window.scrollY,
         scrollX: -window.scrollX,
-      });
+      } as any);
 
       // Convert canvas to blob (JPEG with 80% quality for smaller file size)
       const blob = await new Promise<Blob | null>((resolve) => {
