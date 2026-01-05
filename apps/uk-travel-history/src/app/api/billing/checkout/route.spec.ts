@@ -7,7 +7,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest, NextResponse } from 'next/server';
 import { configureRouteLogger } from '@uth/flow';
-import { TIERS } from '@uth/features';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -48,9 +47,10 @@ const mockLogger = {
   debug: vi.fn(),
 };
 
-import { createPurchaseIntent, updatePurchaseIntent } from '@uth/db';
+import { createPurchaseIntent, PurchaseIntentStatus, updatePurchaseIntent } from '@uth/db';
 import { createCheckoutSession } from '@uth/payments-server';
 import { assertFeatureAccess } from '@uth/features/server';
+import { TIERS } from '@uth/domain';
 
 const mockCreatePurchaseIntent = vi.mocked(createPurchaseIntent);
 const mockUpdatePurchaseIntent = vi.mocked(updatePurchaseIntent);
@@ -81,7 +81,7 @@ describe('POST /api/billing/checkout', () => {
     mockCreatePurchaseIntent.mockResolvedValue({
       id: 'purchase-intent-123',
       email: 'test@example.com',
-      status: 'created',
+      status: PurchaseIntentStatus.CREATED,
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: null,
       priceId: null,
@@ -94,7 +94,7 @@ describe('POST /api/billing/checkout', () => {
     mockUpdatePurchaseIntent.mockResolvedValue({
       id: 'purchase-intent-123',
       email: 'test@example.com',
-      status: 'checkout_created',
+      status: PurchaseIntentStatus.CHECKOUT_CREATED,
       stripeCheckoutSessionId: 'cs_test_123',
       stripePaymentIntentId: null,
       priceId: 'price_123',

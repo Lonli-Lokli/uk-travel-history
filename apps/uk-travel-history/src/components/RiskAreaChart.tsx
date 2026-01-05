@@ -37,36 +37,186 @@ type TimelinePoint = {
 // Fixed fake placeholder data for premium preview (to avoid hydration errors)
 const FAKE_PLACEHOLDER_DATA = {
   rollingData: [
-    { date: '2020-01-01', rollingDays: 50, daysToExpire: 10, nextExpirationDate: '2020-01-31' },
-    { date: '2020-03-01', rollingDays: 70, daysToExpire: 15, nextExpirationDate: '2020-03-31' },
-    { date: '2020-05-01', rollingDays: 85, daysToExpire: 20, nextExpirationDate: '2020-05-31' },
-    { date: '2020-07-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2020-07-31' },
-    { date: '2020-09-01', rollingDays: 95, daysToExpire: 18, nextExpirationDate: '2020-09-30' },
-    { date: '2020-11-01', rollingDays: 80, daysToExpire: 12, nextExpirationDate: '2020-11-30' },
-    { date: '2021-01-01', rollingDays: 65, daysToExpire: 10, nextExpirationDate: '2021-01-31' },
-    { date: '2021-03-01', rollingDays: 75, daysToExpire: 15, nextExpirationDate: '2021-03-31' },
-    { date: '2021-05-01', rollingDays: 90, daysToExpire: 20, nextExpirationDate: '2021-05-31' },
-    { date: '2021-07-01', rollingDays: 105, daysToExpire: 22, nextExpirationDate: '2021-07-31' },
-    { date: '2021-09-01', rollingDays: 120, daysToExpire: 28, nextExpirationDate: '2021-09-30' },
-    { date: '2021-11-01', rollingDays: 100, daysToExpire: 15, nextExpirationDate: '2021-11-30' },
-    { date: '2022-01-01', rollingDays: 85, daysToExpire: 12, nextExpirationDate: '2022-01-31' },
-    { date: '2022-03-01', rollingDays: 95, daysToExpire: 18, nextExpirationDate: '2022-03-31' },
-    { date: '2022-05-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2022-05-31' },
-    { date: '2022-07-01', rollingDays: 130, daysToExpire: 30, nextExpirationDate: '2022-07-31' },
-    { date: '2022-09-01', rollingDays: 145, daysToExpire: 28, nextExpirationDate: '2022-09-30' },
-    { date: '2022-11-01', rollingDays: 125, daysToExpire: 20, nextExpirationDate: '2022-11-30' },
-    { date: '2023-01-01', rollingDays: 105, daysToExpire: 15, nextExpirationDate: '2023-01-31' },
-    { date: '2023-03-01', rollingDays: 90, daysToExpire: 18, nextExpirationDate: '2023-03-31' },
-    { date: '2023-05-01', rollingDays: 75, daysToExpire: 12, nextExpirationDate: '2023-05-31' },
-    { date: '2023-07-01', rollingDays: 95, daysToExpire: 20, nextExpirationDate: '2023-07-31' },
-    { date: '2023-09-01', rollingDays: 110, daysToExpire: 25, nextExpirationDate: '2023-09-30' },
-    { date: '2023-11-01', rollingDays: 125, daysToExpire: 22, nextExpirationDate: '2023-11-30' },
-    { date: '2024-01-01', rollingDays: 115, daysToExpire: 18, nextExpirationDate: '2024-01-31' },
-    { date: '2024-03-01', rollingDays: 105, daysToExpire: 15, nextExpirationDate: '2024-03-31' },
-    { date: '2024-05-01', rollingDays: 120, daysToExpire: 20, nextExpirationDate: '2024-05-31' },
-    { date: '2024-07-01', rollingDays: 135, daysToExpire: 28, nextExpirationDate: '2024-07-31' },
-    { date: '2024-09-01', rollingDays: 140, daysToExpire: 25, nextExpirationDate: '2024-09-30' },
-    { date: '2024-11-01', rollingDays: 130, daysToExpire: 20, nextExpirationDate: '2024-11-30' },
+    {
+      date: '2020-01-01',
+      rollingDays: 50,
+      daysToExpire: 10,
+      nextExpirationDate: '2020-01-31',
+    },
+    {
+      date: '2020-03-01',
+      rollingDays: 70,
+      daysToExpire: 15,
+      nextExpirationDate: '2020-03-31',
+    },
+    {
+      date: '2020-05-01',
+      rollingDays: 85,
+      daysToExpire: 20,
+      nextExpirationDate: '2020-05-31',
+    },
+    {
+      date: '2020-07-01',
+      rollingDays: 110,
+      daysToExpire: 25,
+      nextExpirationDate: '2020-07-31',
+    },
+    {
+      date: '2020-09-01',
+      rollingDays: 95,
+      daysToExpire: 18,
+      nextExpirationDate: '2020-09-30',
+    },
+    {
+      date: '2020-11-01',
+      rollingDays: 80,
+      daysToExpire: 12,
+      nextExpirationDate: '2020-11-30',
+    },
+    {
+      date: '2021-01-01',
+      rollingDays: 65,
+      daysToExpire: 10,
+      nextExpirationDate: '2021-01-31',
+    },
+    {
+      date: '2021-03-01',
+      rollingDays: 75,
+      daysToExpire: 15,
+      nextExpirationDate: '2021-03-31',
+    },
+    {
+      date: '2021-05-01',
+      rollingDays: 90,
+      daysToExpire: 20,
+      nextExpirationDate: '2021-05-31',
+    },
+    {
+      date: '2021-07-01',
+      rollingDays: 105,
+      daysToExpire: 22,
+      nextExpirationDate: '2021-07-31',
+    },
+    {
+      date: '2021-09-01',
+      rollingDays: 120,
+      daysToExpire: 28,
+      nextExpirationDate: '2021-09-30',
+    },
+    {
+      date: '2021-11-01',
+      rollingDays: 100,
+      daysToExpire: 15,
+      nextExpirationDate: '2021-11-30',
+    },
+    {
+      date: '2022-01-01',
+      rollingDays: 85,
+      daysToExpire: 12,
+      nextExpirationDate: '2022-01-31',
+    },
+    {
+      date: '2022-03-01',
+      rollingDays: 95,
+      daysToExpire: 18,
+      nextExpirationDate: '2022-03-31',
+    },
+    {
+      date: '2022-05-01',
+      rollingDays: 110,
+      daysToExpire: 25,
+      nextExpirationDate: '2022-05-31',
+    },
+    {
+      date: '2022-07-01',
+      rollingDays: 130,
+      daysToExpire: 30,
+      nextExpirationDate: '2022-07-31',
+    },
+    {
+      date: '2022-09-01',
+      rollingDays: 145,
+      daysToExpire: 28,
+      nextExpirationDate: '2022-09-30',
+    },
+    {
+      date: '2022-11-01',
+      rollingDays: 125,
+      daysToExpire: 20,
+      nextExpirationDate: '2022-11-30',
+    },
+    {
+      date: '2023-01-01',
+      rollingDays: 105,
+      daysToExpire: 15,
+      nextExpirationDate: '2023-01-31',
+    },
+    {
+      date: '2023-03-01',
+      rollingDays: 90,
+      daysToExpire: 18,
+      nextExpirationDate: '2023-03-31',
+    },
+    {
+      date: '2023-05-01',
+      rollingDays: 75,
+      daysToExpire: 12,
+      nextExpirationDate: '2023-05-31',
+    },
+    {
+      date: '2023-07-01',
+      rollingDays: 95,
+      daysToExpire: 20,
+      nextExpirationDate: '2023-07-31',
+    },
+    {
+      date: '2023-09-01',
+      rollingDays: 110,
+      daysToExpire: 25,
+      nextExpirationDate: '2023-09-30',
+    },
+    {
+      date: '2023-11-01',
+      rollingDays: 125,
+      daysToExpire: 22,
+      nextExpirationDate: '2023-11-30',
+    },
+    {
+      date: '2024-01-01',
+      rollingDays: 115,
+      daysToExpire: 18,
+      nextExpirationDate: '2024-01-31',
+    },
+    {
+      date: '2024-03-01',
+      rollingDays: 105,
+      daysToExpire: 15,
+      nextExpirationDate: '2024-03-31',
+    },
+    {
+      date: '2024-05-01',
+      rollingDays: 120,
+      daysToExpire: 20,
+      nextExpirationDate: '2024-05-31',
+    },
+    {
+      date: '2024-07-01',
+      rollingDays: 135,
+      daysToExpire: 28,
+      nextExpirationDate: '2024-07-31',
+    },
+    {
+      date: '2024-09-01',
+      rollingDays: 140,
+      daysToExpire: 25,
+      nextExpirationDate: '2024-09-30',
+    },
+    {
+      date: '2024-11-01',
+      rollingDays: 130,
+      daysToExpire: 20,
+      nextExpirationDate: '2024-11-30',
+    },
   ] as RollingDataPoint[],
   trips: [
     {
@@ -136,7 +286,9 @@ export const RiskAreaChart: React.FC = observer(() => {
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
 
   // Use fake data if no access, otherwise use real data
-  const displayRollingData = hasAccess ? rollingAbsenceData : FAKE_PLACEHOLDER_DATA.rollingData;
+  const displayRollingData = hasAccess
+    ? rollingAbsenceData
+    : FAKE_PLACEHOLDER_DATA.rollingData;
   const displayTripBars = hasAccess ? tripBars : FAKE_PLACEHOLDER_DATA.trips;
 
   // -------- Shared x-domain (dates) -----------------------------------------
@@ -757,8 +909,7 @@ export const RiskAreaChart: React.FC = observer(() => {
         <CardContent>
           <div className="text-center py-6 text-slate-500">
             <p className="text-sm">
-              Set a Vignette Entry Date or Visa Start Date to view the risk
-              timeline.
+              Resolve the validation warnings to see the risk timeline.
             </p>
           </div>
         </CardContent>
