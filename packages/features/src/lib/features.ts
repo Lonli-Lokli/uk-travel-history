@@ -51,11 +51,11 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
     minTier: TIERS.ANONYMOUS,
   },
   [FEATURE_KEYS.AUTH]: {
-    enabled: false,
+    enabled: true,
     minTier: TIERS.ANONYMOUS,
   },
   [FEATURE_KEYS.PAYMENTS]: {
-    enabled: false,
+    enabled: true,
     minTier: TIERS.ANONYMOUS,
   },
 
@@ -69,7 +69,7 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
     minTier: TIERS.FREE,
   },
   [FEATURE_KEYS.PDF_IMPORT]: {
-    enabled: false, // Disabled by default, but configured as premium feature
+    enabled: true, // Disabled by default, but configured as premium feature
     minTier: TIERS.PREMIUM, // Premium tier - PDF import requires active subscription
   },
   [FEATURE_KEYS.CLIPBOARD_IMPORT]: {
@@ -79,7 +79,7 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
 
   // UI features (ANONYMOUS - available to all)
   [FEATURE_KEYS.RISK_CHART]: {
-    enabled: false,
+    enabled: true,
     minTier: TIERS.PREMIUM,
   },
 };

@@ -40,7 +40,7 @@ describe('Feature System', () => {
       expect(anonymousFeatures).toContain(FEATURE_KEYS.MONETIZATION);
       expect(anonymousFeatures).toContain(FEATURE_KEYS.AUTH);
       expect(anonymousFeatures).toContain(FEATURE_KEYS.PAYMENTS);
-      expect(anonymousFeatures).toContain(FEATURE_KEYS.RISK_CHART);
+      expect(anonymousFeatures).toContain(FEATURE_KEYS.CLIPBOARD_IMPORT);
     });
 
     it('should define free tier features', () => {
@@ -57,8 +57,8 @@ describe('Feature System', () => {
         .filter(([_, policy]) => policy.minTier === TIERS.PREMIUM)
         .map(([featureKey]) => featureKey);
 
-      expect(premiumFeatures).toContain(FEATURE_KEYS.EXCEL_EXPORT);
-      expect(premiumFeatures).toContain(FEATURE_KEYS.EXCEL_IMPORT);
+      expect(premiumFeatures).toContain(FEATURE_KEYS.PDF_IMPORT);
+      expect(premiumFeatures).toContain(FEATURE_KEYS.RISK_CHART);
     });
 
     it('should have all features defined', () => {
@@ -72,11 +72,7 @@ describe('Feature System', () => {
     it('should mark master switches as disabled by default', () => {
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].enabled).toBe(
         false,
-      );
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH].enabled).toBe(false);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS].enabled).toBe(
-        false,
-      );
+      );      
     });
 
     it('should mark enabled features correctly', () => {
@@ -104,15 +100,18 @@ describe('Feature System', () => {
       ).toBe(TIERS.ANONYMOUS);
 
       // Free tier features
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(
-        TIERS.PREMIUM,
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(
+        TIERS.FREE,
+      );
+        expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].minTier).toBe(
+        TIERS.FREE,
       );
 
       // Premium tier features (highest tier)
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(
         TIERS.PREMIUM,
       );
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].minTier).toBe(
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.RISK_CHART].minTier).toBe(
         TIERS.PREMIUM,
       );
     });

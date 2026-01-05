@@ -6,7 +6,6 @@
  * subscription requirements, and rollout percentages.
  */
 
- 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -19,9 +18,10 @@ import {
 } from './api-guards';
 import { getUserByAuthId } from '@uth/db';
 import { DEFAULT_FEATURE_POLICIES } from './features';
-import { TIERS, FEATURE_KEYS } from './shapes';
+import { FEATURE_KEYS } from './shapes';
 import { auth } from '@clerk/nextjs/server';
 import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
+import { TIERS } from '@uth/domain';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -56,7 +56,6 @@ beforeEach(() => {
 
   // Spy on db methods
   vi.mocked(getUserByAuthId).mockResolvedValue(null);
-
 });
 
 describe('API Feature Guards', () => {
@@ -74,14 +73,14 @@ describe('API Feature Guards', () => {
 
         // With default policies, premium users can access EXCEL_EXPORT
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           userContext,
         );
         expect(result.allowed).toBe(true);
 
-        // Test with a disabled feature (PDF_IMPORT is disabled by default)
+        // Test with a disabled feature (MONETIZATION is disabled by default)
         const result2 = await checkFeatureAccess(
-          FEATURE_KEYS.PDF_IMPORT,
+          FEATURE_KEYS.MONETIZATION,
           userContext,
         );
         expect(result2.allowed).toBe(false);
@@ -98,7 +97,7 @@ describe('API Feature Guards', () => {
 
         // PDF_IMPORT is disabled by default
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.PDF_IMPORT,
+          FEATURE_KEYS.MONETIZATION,
           userContext,
         );
 
@@ -145,7 +144,10 @@ describe('API Feature Guards', () => {
           tier: TIERS.ANONYMOUS,
           hasActiveSubscription: false,
         };
-        const result = await checkFeatureAccess(FEATURE_KEYS.CLIPBOARD_IMPORT, anonymousContext);
+        const result = await checkFeatureAccess(
+          FEATURE_KEYS.CLIPBOARD_IMPORT,
+          anonymousContext,
+        );
 
         expect(result.allowed).toBe(true);
       });
@@ -160,7 +162,7 @@ describe('API Feature Guards', () => {
         };
 
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           userContext,
         );
 
@@ -178,7 +180,7 @@ describe('API Feature Guards', () => {
         };
 
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           userContext,
         );
 
@@ -192,7 +194,7 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: false,
         };
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           anonymousContext,
         );
 
@@ -211,7 +213,7 @@ describe('API Feature Guards', () => {
         };
 
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           userContext,
         );
 
@@ -247,13 +249,13 @@ describe('API Feature Guards', () => {
           hasActiveSubscription: false,
         };
 
-        // Normally EXCEL_EXPORT requires premium
+        // Normally PDF_IMPORT requires premium
         // But if we change the policy to mode='free', it should work
 
         // Note: This requires mocking getFeaturePolicy to return custom policy
         // For now, this is a documentation test showing the intended behavior
         const result = await checkFeatureAccess(
-          FEATURE_KEYS.EXCEL_EXPORT,
+          FEATURE_KEYS.PDF_IMPORT,
           userContext,
         );
 
@@ -314,54 +316,62 @@ describe('API Feature Guards', () => {
   describe('Default Feature Policies', () => {
     it('should have correct default policies for all features', () => {
       // Verify ANONYMOUS tier features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT]).toMatchObject({
+      expect(
+        DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT],
+      ).toMatchObject({
         enabled: true,
         minTier: TIERS.ANONYMOUS,
       });
 
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH]).toMatchObject({
-        enabled: false,
+        enabled: true,
         minTier: TIERS.ANONYMOUS,
       });
 
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION]).toMatchObject({
-        enabled: false,
-        minTier: TIERS.ANONYMOUS,
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION]).toMatchObject(
+        {
+          enabled: false,
+          minTier: TIERS.ANONYMOUS,
+        },
+      );
+
+      // Verify PREMIUM tier features are configured correctly
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
+        enabled: true,
+        minTier: TIERS.PREMIUM,
       });
 
       // Verify FREE tier features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT]).toMatchObject({
-        enabled: false,
-        minTier: TIERS.PREMIUM,
-      });
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT]).toMatchObject(
+        {
+          enabled: true,
+          minTier: TIERS.FREE,
+        },
+      );
 
-      // Verify PREMIUM tier features are configured correctly
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT]).toMatchObject({
-        enabled: true,
-        minTier: TIERS.PREMIUM,
-      });
-
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT]).toMatchObject({
-        enabled: true,
-        minTier: TIERS.PREMIUM,
-      });
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT]).toMatchObject(
+        {
+          enabled: true,
+          minTier: TIERS.FREE,
+        },
+      );
 
       // Verify disabled UI features
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.RISK_CHART]).toMatchObject({
-        enabled: false,
-        minTier: TIERS.ANONYMOUS,
+        enabled: true,
+        minTier: TIERS.PREMIUM,
       });
 
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS]).toMatchObject({
-        enabled: false,
+        enabled: true,
         minTier: TIERS.ANONYMOUS,
       });
     });
   });
 
   describe('Security - Fail-safe defaults', () => {
-    it('should fail closed when Edge Config unavailable', async () => {
-      // When Edge Config is unavailable, we should use conservative defaults
+    it('should fail closed when Config unavailable', async () => {
+      // When server Config is unavailable, we should use conservative defaults
       // This is already tested by using DEFAULT_FEATURE_POLICIES
 
       const freeUser: UserContext = {
@@ -372,7 +382,7 @@ describe('API Feature Guards', () => {
 
       // Free user should NOT get premium features by default
       const result = await checkFeatureAccess(
-        FEATURE_KEYS.EXCEL_EXPORT,
+        FEATURE_KEYS.PDF_IMPORT,
         freeUser,
       );
 
@@ -389,7 +399,7 @@ describe('API Feature Guards', () => {
 
       // PDF_IMPORT is disabled by default
       const result = await checkFeatureAccess(
-        FEATURE_KEYS.PDF_IMPORT,
+        FEATURE_KEYS.MONETIZATION,
         userContext,
       );
 
@@ -406,7 +416,9 @@ describe('API Feature Guards', () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
       // Mock Clerk auth
-      vi.mocked(auth).mockResolvedValue({ userId: 'clerk-user-123' } as any);
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'clerk-user-123',
+      } as any);
 
       // Mock DB user
       vi.mocked(getUserByAuthId).mockResolvedValue({
@@ -434,7 +446,9 @@ describe('API Feature Guards', () => {
     it('should return free tier for authenticated user without DB record', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'new-user-123' } as any);
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'new-user-123',
+      } as any);
 
       vi.mocked(getUserByAuthId).mockResolvedValue(null);
 
@@ -451,15 +465,17 @@ describe('API Feature Guards', () => {
     it('should return free tier when subscription is not active', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'canceled',
       });
 
@@ -473,15 +489,17 @@ describe('API Feature Guards', () => {
     it('should handle trialing subscription as active', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'trialing',
       });
 
@@ -495,11 +513,13 @@ describe('API Feature Guards', () => {
     it('should treat cancelled subscription in grace period as active (cancelAtPeriodEnd = true, period not ended)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -507,7 +527,7 @@ describe('API Feature Guards', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: futureDate,
@@ -524,11 +544,13 @@ describe('API Feature Guards', () => {
     it('should treat cancelled subscription after grace period as inactive (cancelAtPeriodEnd = true, period ended)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -536,7 +558,7 @@ describe('API Feature Guards', () => {
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 1);
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: pastDate,
@@ -553,16 +575,18 @@ describe('API Feature Guards', () => {
     it('should treat immediately cancelled subscription as inactive (cancelAtPeriodEnd = false)', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
       // Subscription cancelled immediately (no grace period)
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'canceled',
         cancelAtPeriodEnd: false,
         currentPeriodEnd: new Date(),
@@ -579,7 +603,7 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier for unauthenticated Clerk user', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockResolvedValue({ userId: null });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({ userId: null });
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -594,17 +618,17 @@ describe('API Feature Guards', () => {
     it('should handle Firebase auth mode', async () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
-      vi.mocked(getSessionFromRequest).mockResolvedValue({
-        user: { uid: 'firebase-user-123' },
+      vi.mocked(getSessionFromRequest, { partial: true }).mockResolvedValue({
+        user: { uid: 'firebase-user-123', emailVerified: true },
       });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'firebase-user-123',
+        authUserId: 'firebase-user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'active',
       });
 
@@ -617,7 +641,7 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier when Firebase auth fails', async () => {
       process.env.UTH_AUTH_PROVIDER = 'firebase';
 
-      vi.mocked(getSessionFromRequest).mockRejectedValue(
+      vi.mocked(getSessionFromRequest, { partial: true }).mockRejectedValue(
         new Error('Invalid token'),
       );
 
@@ -634,7 +658,9 @@ describe('API Feature Guards', () => {
     it('should return ANONYMOUS tier when getUserContext throws error', async () => {
       process.env.UTH_AUTH_PROVIDER = 'clerk';
 
-      vi.mocked(auth).mockRejectedValue(new Error('Auth error'));
+      vi.mocked(auth, { partial: true }).mockRejectedValue(
+        new Error('Auth error'),
+      );
 
       const request = new NextRequest('http://localhost/api/test');
       const context = await getUserContext(request);
@@ -657,15 +683,17 @@ describe('API Feature Guards', () => {
     });
 
     it('should return user context when access is allowed', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'active',
       });
 
@@ -689,29 +717,31 @@ describe('API Feature Guards', () => {
     });
 
     it('should throw NextResponse when access is denied', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'canceled', // No active subscription
       });
 
       const request = new NextRequest('http://localhost/api/export');
 
       await expect(
-        assertFeatureAccess(request, FEATURE_KEYS.EXCEL_EXPORT),
+        assertFeatureAccess(request, FEATURE_KEYS.PDF_IMPORT),
       ).rejects.toThrow();
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         '[Feature Access] Denied',
         expect.objectContaining({
           extra: expect.objectContaining({
-            featureKey: FEATURE_KEYS.EXCEL_EXPORT,
+            featureKey: FEATURE_KEYS.PDF_IMPORT,
             allowed: false,
             reason: expect.any(String),
           }),
@@ -720,7 +750,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should log access decisions with request details', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: null });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({ userId: null });
 
       const request = new NextRequest('http://localhost/api/parse', {
         method: 'POST',
@@ -758,15 +788,17 @@ describe('API Feature Guards', () => {
     });
 
     it('should call handler when access is allowed', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
-      vi.mocked(getSubscription).mockResolvedValue({
+      vi.mocked(getSubscription, { partial: true }).mockResolvedValue({
         status: 'active',
       });
 
@@ -793,7 +825,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should return error response when access is denied', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: null });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({ userId: null });
 
       const mockHandler = vi.fn();
       const wrappedHandler = withFeatureAccess(
@@ -805,18 +837,20 @@ describe('API Feature Guards', () => {
       const response = await wrappedHandler(request);
 
       expect(mockHandler).not.toHaveBeenCalled();
-      expect(response.status).toBe(403); // tier_restriction, not unauthenticated
+      expect(response.status).toBe(401); // tier_restriction, not unauthenticated
       const body = await response.json();
       expect(body).toHaveProperty('error');
       expect(body).toHaveProperty('code');
     });
 
     it('should handle handler errors gracefully', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: 'user-123' });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({
+        userId: 'user-123',
+      });
 
-      vi.mocked(getUserByAuthId).mockResolvedValue({
+      vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authId: 'user-123',
+        authUserId: 'user-123',
       });
 
       vi.mocked(getSubscription).mockResolvedValue(null);
@@ -838,7 +872,7 @@ describe('API Feature Guards', () => {
     });
 
     it('should pass ANONYMOUS user context for ANONYMOUS features accessed without auth', async () => {
-      vi.mocked(auth).mockResolvedValue({ userId: null });
+      vi.mocked(auth, { partial: true }).mockResolvedValue({ userId: null });
 
       const mockHandler = vi
         .fn()
@@ -861,4 +895,3 @@ describe('API Feature Guards', () => {
     });
   });
 });
-

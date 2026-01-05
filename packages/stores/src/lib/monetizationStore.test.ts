@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { monetizationStore } from './monetizationStore';
 import { authStore } from './authStore';
-import { FEATURE_KEYS, TIERS } from '@uth/features';
+import { FEATURE_KEYS } from '@uth/features';
+import { TIERS } from '@uth/domain';
 
 // Mock the authStore
 vi.mock('./authStore', () => ({
@@ -32,9 +33,9 @@ describe('MonetizationStore', () => {
     it('should deny premium features for free users', () => {
       monetizationStore.setTier(TIERS.FREE);
 
-      // EXCEL_EXPORT and EXCEL_IMPORT require PREMIUM tier
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_EXPORT)).toBe(false);
-      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.EXCEL_IMPORT)).toBe(false);
+      // PDF_IMPORT and RISK_CHART require PREMIUM tier
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.PDF_IMPORT)).toBe(false);
+      expect(monetizationStore.hasFeatureAccess(FEATURE_KEYS.RISK_CHART)).toBe(false);
     });
 
     it('should allow all features for premium users', () => {

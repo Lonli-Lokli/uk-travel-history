@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   isFeatureEnabled,
-  isSupabaseFeaturePoliciesAvailable,
-  DEFAULT_FEATURE_POLICIES,
+  isSupabaseFeaturePoliciesAvailable
 } from './features';
 import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
 import type { FeaturePolicy } from '@uth/db';
@@ -18,11 +17,11 @@ vi.mock('next/cache', () => ({
 }));
 
 // Import the mocked function after mocking
-import { getAllFeaturePolicies as mockGetAllFeaturePolicies } from '@uth/db';
+import { getAllFeaturePolicies  } from '@uth/db';
 
 // Helper to convert Edge Config format to DB format
-function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): FeaturePolicy[] | null {
-  if (!edgeConfigFlags) return null;
+function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): FeaturePolicy[] {
+  if (!edgeConfigFlags) return [];
 
   return Object.entries(edgeConfigFlags).map(([featureKey, policy]) => ({
     id: `mock-${featureKey}`,
@@ -38,6 +37,7 @@ function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): Feature
   }));
 }
 
+const mockGetAllFeaturePolicies = vi.mocked(getAllFeaturePolicies, {partial: true});
 describe('Edge Config Feature Flags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,7 +59,7 @@ describe('Edge Config Feature Flags', () => {
     it('should return false when Edge Config is not configured', async () => {
       mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(null));
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.MONETIZATION);
       expect(result).toBe(false);
     });
 
@@ -167,7 +167,7 @@ describe('Edge Config Feature Flags', () => {
     it('should return false on Edge Config error (fail closed)', async () => {
       mockGetAllFeaturePolicies.mockRejectedValue(new Error('Edge Config unavailable'));
 
-      const result = await isFeatureEnabled(FEATURE_KEYS.AUTH);
+      const result = await isFeatureEnabled(FEATURE_KEYS.MONETIZATION);
       expect(result).toBe(false);
     });
 

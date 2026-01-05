@@ -20,8 +20,8 @@ import {
 import { getPriceDetails } from '@uth/payments-server';
 import { getAllFeaturePolicies, DEFAULT_FEATURE_POLICIES } from './features';
 import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
-import * as Sentry from '@sentry/nextjs';
 import { TierId, TIERS } from '@uth/domain';
+import { getFeatureLogger } from './feature-logger';
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -70,47 +70,33 @@ export async function loadAccessContext(): Promise<AccessContext> {
         subscriptionStatus = dbUser.subscriptionStatus;
         currentPeriodEnd = dbUser.currentPeriodEnd;
         cancelAtPeriodEnd = dbUser.cancelAtPeriodEnd;
-
-        // TODO: Add admin role detection logic when implemented
-        // Admin role detection should check:
-        // 1. User's role field from DB (when column exists)
-        // 2. Admin allowlist (environment variable or feature policy)
-        // 3. Clerk metadata/roles (if using Clerk's RBAC features)
-        // Example implementation:
-        //   if (dbUser.role === 'admin') {
-        //     role = UserRole.ADMIN;
-        //   } else if (process.env.ADMIN_USER_IDS?.split(',').includes(authUser.uid)) {
-        //     role = UserRole.ADMIN;
-        //   } else {
-        //     role = UserRole.STANDARD;
-        //   }
-        // For now, all users are STANDARD
-        role = UserRole.STANDARD;
+        role = dbUser.role;
       } else {
         // User exists in Clerk but not in DB - fail-closed to FREE tier
-        const message = `User ${authUser.uid} not found in database, defaulting to FREE tier`;
-        console.warn(`[loadAccessContext] ${message}`);
-        Sentry.captureMessage(message, {
-          level: 'warning',
-          tags: {
-            context: 'access-context',
-            userId: authUser.uid,
+        getFeatureLogger().warn(
+          `User ${authUser.uid} not found in database, defaulting to FREE tier`,
+          {
+            level: 'warning',
+            tags: {
+              context: 'access-context',
+              userId: authUser.uid,
+            },
           },
-        });
+        );
       }
     } catch (error) {
       // DB lookup failed - fail-closed to FREE tier
-      console.error(
+      getFeatureLogger().error(
         '[loadAccessContext] Failed to load user from database:',
         error,
-      );
-      Sentry.captureException(error, {
-        tags: {
-          context: 'access-context',
-          operation: 'getUserByAuthId',
-          userId: authUser.uid,
+        {
+          tags: {
+            context: 'access-context',
+            operation: 'getUserByAuthId',
+            userId: authUser.uid,
+          },
         },
-      });
+      );
     }
 
     // Step 5: Compute entitlements from loaded policies
@@ -139,17 +125,17 @@ export async function loadAccessContext(): Promise<AccessContext> {
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
-    console.error(
+    getFeatureLogger().error(
       '[loadAccessContext] Critical error loading access context:',
       error,
-    );
-    Sentry.captureException(error, {
-      tags: {
-        context: 'access-context',
-        operation: 'loadAccessContext',
+      {
+        tags: {
+          context: 'access-context',
+          operation: 'loadAccessContext',
+        },
+        level: 'error',
       },
-      level: 'error',
-    });
+    );
     return createAnonymousContext(DEFAULT_FEATURE_POLICIES, null);
   }
 }

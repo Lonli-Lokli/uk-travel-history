@@ -47,7 +47,11 @@ const mockLogger = {
   debug: vi.fn(),
 };
 
-import { createPurchaseIntent, PurchaseIntentStatus, updatePurchaseIntent } from '@uth/db';
+import {
+  createPurchaseIntent,
+  PurchaseIntentStatus,
+  updatePurchaseIntent,
+} from '@uth/db';
 import { createCheckoutSession } from '@uth/payments-server';
 import { assertFeatureAccess } from '@uth/features/server';
 import { TIERS } from '@uth/domain';
@@ -238,10 +242,7 @@ describe('POST /api/billing/checkout', () => {
     await POST(request);
 
     // Assert - verify assertFeatureAccess was called with correct params
-    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(
-      request,
-      'payments',
-    );
+    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(request, 'payments');
   });
 
   it('should return 404 when PAYMENTS feature is disabled', async () => {
@@ -265,10 +266,7 @@ describe('POST /api/billing/checkout', () => {
     const data = await response.json();
 
     // Assert - assertFeatureAccess was called
-    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(
-      request,
-      'payments',
-    );
+    expect(mockAssertFeatureAccess).toHaveBeenCalledWith(request, 'payments');
 
     // The route should catch and return the error response
     // Note: The actual behavior depends on try/catch in the route
