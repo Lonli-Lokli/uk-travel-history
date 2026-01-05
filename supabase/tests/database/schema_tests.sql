@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 
 BEGIN;
-SELECT plan(24);
+SELECT plan(31);
 
 -- ==========================================================================
 -- Test that required extensions are enabled
@@ -17,6 +17,8 @@ SELECT has_table('purchase_intents', 'purchase_intents table should exist');
 SELECT has_table('webhook_events', 'webhook_events table should exist');
 SELECT has_table('subscription_statuses', 'subscription_statuses table should exist');
 SELECT has_table('feature_policies', 'feature_policies table should exist');
+SELECT has_table('tracking_goals', 'tracking_goals table should exist');
+SELECT has_table('goal_templates', 'goal_templates table should exist');
 
 -- ==========================================================================
 -- Test that RLS is enabled on all tables
@@ -85,8 +87,8 @@ SELECT is(
 
 SELECT is(
   (SELECT COUNT(*) FROM feature_policies),
-  8::bigint,
-  'feature_policies should have 8 rows seeded'
+  9::bigint,
+  'feature_policies should have 9 rows seeded'
 );
 
 -- ==========================================================================
@@ -95,6 +97,23 @@ SELECT is(
 SELECT isnt_empty(
   $$SELECT 1 FROM subscription_statuses WHERE code = 'active' AND is_active = true$$,
   'active subscription status should exist and be marked active'
+);
+
+-- ==========================================================================
+-- Test tracking_goals table structure
+-- ==========================================================================
+SELECT has_column('tracking_goals', 'id', 'tracking_goals should have id column');
+SELECT has_column('tracking_goals', 'user_id', 'tracking_goals should have user_id column');
+SELECT has_column('tracking_goals', 'type', 'tracking_goals should have type column');
+SELECT has_column('tracking_goals', 'config', 'tracking_goals should have config column');
+
+-- ==========================================================================
+-- Test goal_templates has seed data
+-- ==========================================================================
+SELECT is(
+  (SELECT COUNT(*) FROM goal_templates),
+  9::bigint,
+  'goal_templates should have 9 rows seeded'
 );
 
 SELECT * FROM finish();

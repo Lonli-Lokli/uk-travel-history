@@ -39,7 +39,8 @@
         "packages/payments/client/*",
         "packages/db/*",
         "packages/flow/*",
-        "packages/domain/*"
+        "packages/domain/*",
+        "packages/rules/*"
       ]
     },
     {
@@ -74,7 +75,8 @@
         "packages/payments/client/*",
         "packages/db/*",
         "packages/flow/*",
-        "packages/domain/*"
+        "packages/domain/*",
+        "packages/rules/*"
       ],
       "options": {
         "typecheck": {

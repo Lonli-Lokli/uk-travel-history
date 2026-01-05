@@ -1,0 +1,23 @@
+{
+  "name": "@uth/rules",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "nx": {
+    "name": "rules"
+  },
+  "dependencies": {
+    "@uth/calculators": "*",
+    "date-fns": "^4.1.0"
+  }
+}

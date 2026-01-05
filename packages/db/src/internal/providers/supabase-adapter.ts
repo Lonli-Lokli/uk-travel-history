@@ -16,6 +16,12 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
+  TrackingGoalData,
+  CreateTrackingGoalData,
+  UpdateTrackingGoalData,
+  GoalTemplate,
+  GoalType,
+  GoalJurisdiction,
 } from '../../types/domain';
 import {
   DbError,
@@ -574,6 +580,207 @@ export class SupabaseDbAdapter implements DbProvider {
       betaUsers: row.beta_users,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  // ============================================================================
+  // Tracking Goal Operations
+  // ============================================================================
+
+  async getUserGoals(userId: string, includeArchived = false): Promise<TrackingGoalData[]> {
+    const client = this.ensureConfigured();
+
+    let query = client
+      .from('tracking_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('display_order', { ascending: true });
+
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.handleError('getUserGoals', error);
+    }
+
+    return (data || []).map((row) => this.mapGoalFromDb(row));
+  }
+
+  async getGoalById(goalId: string): Promise<TrackingGoalData | null> {
+    const client = this.ensureConfigured();
+
+    try {
+      const { data, error } = await client
+        .from('tracking_goals')
+        .select('*')
+        .eq('id', goalId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        this.handleError('getGoalById', error);
+      }
+
+      return this.mapGoalFromDb(data);
+    } catch (error) {
+      if (error instanceof DbError && error.is(DbErrorCode.NOT_FOUND)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async createGoal(userId: string, data: CreateTrackingGoalData): Promise<TrackingGoalData> {
+    const client = this.ensureConfigured();
+
+    const insertData = {
+      user_id: userId,
+      type: data.type,
+      jurisdiction: data.jurisdiction,
+      name: data.name,
+      config: data.config,
+      start_date: data.startDate,
+      target_date: data.targetDate ?? null,
+      is_active: data.isActive ?? true,
+      display_order: data.displayOrder ?? 0,
+      color: data.color ?? null,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error } = await (client.from('tracking_goals') as any)
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('createGoal', error);
+    }
+
+    return this.mapGoalFromDb(result);
+  }
+
+  async updateGoal(goalId: string, data: UpdateTrackingGoalData): Promise<TrackingGoalData> {
+    const client = this.ensureConfigured();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.config !== undefined) updateData.config = data.config;
+    if (data.targetDate !== undefined) updateData.target_date = data.targetDate;
+    if (data.isActive !== undefined) updateData.is_active = data.isActive;
+    if (data.isArchived !== undefined) updateData.is_archived = data.isArchived;
+    if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
+    if (data.color !== undefined) updateData.color = data.color;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error } = await (client.from('tracking_goals') as any)
+      .update(updateData)
+      .eq('id', goalId)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('updateGoal', error);
+    }
+
+    return this.mapGoalFromDb(result);
+  }
+
+  async deleteGoal(goalId: string): Promise<void> {
+    const client = this.ensureConfigured();
+
+    const { error } = await client
+      .from('tracking_goals')
+      .delete()
+      .eq('id', goalId);
+
+    if (error) {
+      this.handleError('deleteGoal', error);
+    }
+  }
+
+  async getGoalCount(userId: string): Promise<number> {
+    const client = this.ensureConfigured();
+
+    const { count, error } = await client
+      .from('tracking_goals')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_archived', false);
+
+    if (error) {
+      this.handleError('getGoalCount', error);
+    }
+
+    return count ?? 0;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private mapGoalFromDb(row: any): TrackingGoalData {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      type: row.type as GoalType,
+      jurisdiction: row.jurisdiction as GoalJurisdiction,
+      name: row.name,
+      config: row.config as Record<string, unknown>,
+      startDate: row.start_date,
+      targetDate: row.target_date,
+      isActive: row.is_active,
+      isArchived: row.is_archived,
+      displayOrder: row.display_order,
+      color: row.color,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  // ============================================================================
+  // Goal Template Operations
+  // ============================================================================
+
+  async getGoalTemplates(jurisdiction?: string): Promise<GoalTemplate[]> {
+    const client = this.ensureConfigured();
+
+    let query = client
+      .from('goal_templates')
+      .select('*')
+      .eq('is_available', true)
+      .order('display_order', { ascending: true });
+
+    if (jurisdiction) {
+      query = query.eq('jurisdiction', jurisdiction);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.handleError('getGoalTemplates', error);
+    }
+
+    return (data || []).map((row) => this.mapGoalTemplateFromDb(row));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private mapGoalTemplateFromDb(row: any): GoalTemplate {
+    return {
+      id: row.id,
+      jurisdiction: row.jurisdiction as GoalJurisdiction,
+      category: row.category,
+      name: row.name,
+      description: row.description,
+      icon: row.icon,
+      type: row.type as GoalType,
+      defaultConfig: row.default_config as Record<string, unknown>,
+      requiredFields: row.required_fields as string[],
+      displayOrder: row.display_order,
+      isAvailable: row.is_available,
+      minTier: row.min_tier,
     };
   }
 }

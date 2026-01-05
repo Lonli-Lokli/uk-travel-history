@@ -13,6 +13,10 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
+  TrackingGoalData,
+  CreateTrackingGoalData,
+  UpdateTrackingGoalData,
+  GoalTemplate,
 } from '../../types/domain';
 
 /**
@@ -162,4 +166,63 @@ export interface DbProvider {
    * @returns The feature policy, or null if not found
    */
   getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null>;
+
+  // ============================================================================
+  // Tracking Goal Operations
+  // ============================================================================
+
+  /**
+   * Get all goals for a user
+   * @param userId - The user ID (clerk_user_id)
+   * @param includeArchived - Whether to include archived goals
+   * @returns Array of goals
+   */
+  getUserGoals(userId: string, includeArchived?: boolean): Promise<TrackingGoalData[]>;
+
+  /**
+   * Get a goal by ID
+   * @param goalId - The goal ID
+   * @returns The goal, or null if not found
+   */
+  getGoalById(goalId: string): Promise<TrackingGoalData | null>;
+
+  /**
+   * Create a new tracking goal
+   * @param userId - The user ID (clerk_user_id)
+   * @param data - Goal creation data
+   * @returns The created goal
+   */
+  createGoal(userId: string, data: CreateTrackingGoalData): Promise<TrackingGoalData>;
+
+  /**
+   * Update a tracking goal
+   * @param goalId - The goal ID
+   * @param data - Goal update data
+   * @returns The updated goal
+   */
+  updateGoal(goalId: string, data: UpdateTrackingGoalData): Promise<TrackingGoalData>;
+
+  /**
+   * Delete a tracking goal
+   * @param goalId - The goal ID
+   */
+  deleteGoal(goalId: string): Promise<void>;
+
+  /**
+   * Get goal count for a user (for limit checking)
+   * @param userId - The user ID
+   * @returns Number of active (non-archived) goals
+   */
+  getGoalCount(userId: string): Promise<number>;
+
+  // ============================================================================
+  // Goal Template Operations
+  // ============================================================================
+
+  /**
+   * Get all available goal templates
+   * @param jurisdiction - Optional jurisdiction filter
+   * @returns Array of goal templates
+   */
+  getGoalTemplates(jurisdiction?: string): Promise<GoalTemplate[]>;
 }

@@ -22,6 +22,16 @@ export type {
   FeaturePolicyData,
   PriceData,
   PricingData,
+  // Goal types
+  GoalType,
+  GoalJurisdiction,
+  TrackingGoalData,
+  CreateTrackingGoalData,
+  UpdateTrackingGoalData,
+  GoalCalculationData,
+  GoalMetricData,
+  GoalWarningData,
+  GoalTemplate,
 } from './types/domain';
 
 export {
@@ -62,6 +72,15 @@ export {
   // Feature policy operations
   getAllFeaturePolicies,
   getFeaturePolicyByKey,
+  // Goal operations
+  getUserGoals,
+  getGoalById,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  getGoalCount,
+  // Goal template operations
+  getGoalTemplates,
 } from './public/db-operations';
 
 // Export testing utilities (for internal use only - consumers should use public API)

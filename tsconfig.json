@@ -47,6 +47,9 @@
     },
     {
       "path": "./packages/domain"
+    },
+    {
+      "path": "./packages/rules"
     }
   ]
 }

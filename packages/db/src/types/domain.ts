@@ -438,4 +438,133 @@ export interface AccessContext {
    * True if subscription is scheduled to cancel at period end
    */
   cancelAtPeriodEnd: boolean;
+
+  /**
+   * User's tracking goals (null if feature disabled or no goals)
+   * Loaded server-side for instant hydration
+   */
+  goals: TrackingGoalData[] | null;
+
+  /**
+   * Pre-computed goal calculations (null if no goals)
+   * Calculations done server-side to prevent client-side flicker
+   */
+  goalCalculations: Record<string, GoalCalculationData> | null;
+}
+
+// ============================================================================
+// Tracking Goal Types
+// ============================================================================
+
+/**
+ * Goal type enum
+ */
+export type GoalType =
+  | 'uk_ilr'
+  | 'uk_citizenship'
+  | 'uk_tax_residency'
+  | 'schengen_90_180'
+  | 'days_counter'
+  | 'custom_threshold';
+
+/**
+ * Goal jurisdiction enum
+ */
+export type GoalJurisdiction = 'uk' | 'schengen' | 'global';
+
+/**
+ * Serializable goal data for hydration (ISO strings instead of Date objects)
+ */
+export interface TrackingGoalData {
+  id: string;
+  userId: string;
+  type: GoalType;
+  jurisdiction: GoalJurisdiction;
+  name: string;
+  config: Record<string, unknown>;
+  startDate: string; // ISO date string
+  targetDate: string | null;
+  isActive: boolean;
+  isArchived: boolean;
+  displayOrder: number;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Data for creating a new tracking goal
+ */
+export interface CreateTrackingGoalData {
+  type: GoalType;
+  jurisdiction: GoalJurisdiction;
+  name: string;
+  config: Record<string, unknown>;
+  startDate: string;
+  targetDate?: string | null;
+  isActive?: boolean;
+  displayOrder?: number;
+  color?: string | null;
+}
+
+/**
+ * Data for updating a tracking goal
+ */
+export interface UpdateTrackingGoalData {
+  name?: string;
+  config?: Record<string, unknown>;
+  targetDate?: string | null;
+  isActive?: boolean;
+  isArchived?: boolean;
+  displayOrder?: number;
+  color?: string | null;
+}
+
+/**
+ * Serializable goal calculation data for hydration
+ */
+export interface GoalCalculationData {
+  goalId: string;
+  goalType: GoalType;
+  status: string;
+  progressPercent: number;
+  eligibilityDate: string | null;
+  daysUntilEligible: number | null;
+  metrics: GoalMetricData[];
+  warnings: GoalWarningData[];
+}
+
+export interface GoalMetricData {
+  key: string;
+  label: string;
+  value: number | string;
+  limit?: number | null;
+  unit: string;
+  status: string;
+  tooltip?: string;
+}
+
+export interface GoalWarningData {
+  severity: string;
+  title: string;
+  message: string;
+  action?: string;
+}
+
+/**
+ * Goal template for predefined goals
+ */
+export interface GoalTemplate {
+  id: string;
+  jurisdiction: GoalJurisdiction;
+  category: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  type: GoalType;
+  defaultConfig: Record<string, unknown>;
+  requiredFields: string[];
+  displayOrder: number;
+  isAvailable: boolean;
+  minTier: string;
 }

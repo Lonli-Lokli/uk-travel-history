@@ -16,6 +16,9 @@ export const FEATURE_KEYS = {
 
   // UI features
   RISK_CHART: 'risk_chart',
+
+  // Multi-goal tracking (Issue #XXX)
+  MULTI_GOAL_TRACKING: 'multi_goal_tracking',
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
