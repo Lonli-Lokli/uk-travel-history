@@ -1,0 +1,50 @@
+name: Supabase CI (migrations, lint, tests)
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/supabase-ci.yml'
+
+jobs:
+  db-check:
+    name: Database Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (local)
+        run: supabase start
+
+      - name: Verify Supabase is running
+        run: supabase status
+
+      - name: Reset DB and replay migrations
+        run: supabase db reset --local
+
+      - name: Lint database (fail on errors)
+        run: supabase db lint --level error --local
+
+      - name: Run database tests (pgTAP)
+        run: supabase test db
+
+      - name: Ensure git working tree clean
+        run: |
+          git status --porcelain
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: Uncommitted changes detected after running migrations"
+            git status
+            exit 1
+          fi
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup

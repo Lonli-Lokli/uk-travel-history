@@ -112,6 +112,7 @@
     "nx": "22.3.3",
     "postcss": "8.5.6",
     "prettier": "^3.7.4",
+    "supabase": "^2.70.5",
     "tailwindcss": "3.4.3",
     "tailwindcss-animate": "^1.0.7",
     "tslib": "^2.3.0",

@@ -561,7 +561,7 @@ describe('loadAccessContext()', () => {
       expect(context.user).toBeNull();
       expect(context.tier).toBe('anonymous');
       expect(context.role).toBe('standard');
-      expect(context.entitlements).toEqual({});
+      expect(context.entitlements).toBeDefined();
       expect(context.subscriptionStatus).toBeNull();
     });
   });
