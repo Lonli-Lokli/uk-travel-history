@@ -40,6 +40,7 @@ This is a Next.js application designed to help users track their UK travel histo
   - User-scoped clients use anon key + Clerk JWT (RLS enforced)
   - Admin clients use service_role key (webhooks only, bypasses RLS)
   - Factory functions: `createUserScopedClient()`, `createAdminClient()`
+  - **Migrations**: GitHub is source of truth (see Database Migrations section below)
 - **Stripe** for payments
   - Subscription tiers: free, monthly, yearly, lifetime
   - Webhook handler at `/api/webhooks/stripe` for subscription lifecycle
@@ -121,13 +122,14 @@ The application uses a **three-layer defense** strategy for access control:
 - Server-side validation of subscription tiers
 - Use `getCurrentUser()` from `@uth/auth-server` for type-safe user access
 
-**Layer 3: Database RLS Policies** (`supabase/migrations/003_add_rls_policies.sql`)
+**Layer 3: Database RLS Policies** (defined in `supabase/migrations/`)
 
 - **Users table**: Can only read/update own profile
   - CRITICAL: Column-level restrictions prevent users from modifying entitlement fields
-  - `subscription_tier`, `stripe_customer_id`, etc. can only be modified by service_role
+  - `subscription_tier`, `stripe_customer_id`, `role`, etc. can only be modified by service_role
 - **Purchase intents**: Can only view own purchase history
 - **Webhook events**: Service_role only (contains sensitive payment data)
+- **Feature policies**: Public read access (for feature flag checks)
 
 **Important Rules**:
 
@@ -135,6 +137,37 @@ The application uses a **three-layer defense** strategy for access control:
 - ALWAYS use `createUserScopedClient()` for user-facing operations (RLS enforced)
 - ONLY use `createAdminClient()` in webhook handlers (bypasses RLS)
 - Webhook handlers MUST verify signatures before processing
+
+### Database Migrations
+
+GitHub is the **single source of truth** for database schema. Never make schema changes directly in Supabase Dashboard.
+
+**Structure:**
+```
+supabase/
+├── migrations/          # SQL migrations (applied in order)
+├── seed.sql            # Reference data (subscription_statuses, feature_policies)
+├── tests/database/     # pgTAP tests
+└── config.toml         # Local dev config
+```
+
+**Workflow:**
+1. **PR to `master`**: CI runs `supabase db reset` + `supabase test db` on fresh local DB
+2. **Merge to `master`**: CD runs `supabase db push` to apply migrations to production
+
+**Local Development:**
+```bash
+npx supabase start          # Start local Supabase
+npx supabase db reset       # Reset DB + apply migrations + seed
+npx supabase test db        # Run pgTAP tests
+npx supabase db lint        # Check for schema issues
+```
+
+**Creating New Migrations:**
+```bash
+npx supabase migration new <name>   # Creates timestamped .sql file
+# Edit the file, then test locally with db reset
+```
 
 ### SDK Usage Guidelines
 

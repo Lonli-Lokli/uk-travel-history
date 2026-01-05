@@ -43,7 +43,7 @@ let config: FeatureLoggerConfig = {};
  * // Reset to defaults
  * configureFeatureLogger({});
  */
-export function configureFeatureLogger(newConfig: RouteLoggerConfig): void {
+export function configureFeatureLogger(newConfig: FeatureLoggerConfig): void {
   config = newConfig;
 }
 
