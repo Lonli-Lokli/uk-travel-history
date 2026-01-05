@@ -41,7 +41,7 @@ export const VisaDetailsCard = observer(() => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="vignetteDate" className="text-xs font-medium">
-              Vignette Entry Date
+              Vignette Entry Date (YYYY-MM-DD)
             </Label>
             <DatePicker
               value={travelStore.vignetteEntryDate}
@@ -56,7 +56,7 @@ export const VisaDetailsCard = observer(() => {
 
           <div className="space-y-1.5">
             <Label htmlFor="visaStartDate" className="text-xs font-medium">
-              Visa Start Date
+              Visa Start Date (YYYY-MM-DD)
             </Label>
             <DatePicker
               value={travelStore.visaStartDate}

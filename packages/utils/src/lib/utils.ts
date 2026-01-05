@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import {format, parseISO} from 'date-fns'
+import { enGB } from 'date-fns/locale';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,7 +13,8 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatDate(dateString: string): string {
   if (!dateString) return '';
-  return dateString.split('-').reverse().join('/');
+  const isoDate = parseISO(dateString);
+  return format(isoDate, 'MMMM d, yyyy', { locale: enGB })
 }
 
 export class NeverError extends Error {

@@ -50,6 +50,9 @@
       "path": "../../packages/calculators"
     },
     {
+      "path": "../../packages/domain"
+    },
+    {
       "path": "../../packages/auth/client"
     },
     {

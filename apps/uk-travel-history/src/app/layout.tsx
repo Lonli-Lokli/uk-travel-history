@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@uth/ui';
-import { getAllFeaturePolicies } from '@uth/features';
 import { loadAccessContext } from '@uth/features/server';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
@@ -124,18 +123,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Load server-authoritative access context (auth + tier + entitlements)
+  // Load server-authoritative access context (auth + tier + entitlements + policies + pricing)
   // This is computed server-side and hydrated to client stores to prevent flicker
+  // All data is loaded in a single call to avoid duplicate fetches
   const accessContext = await loadAccessContext();
-
-  // Fetch feature flags and policies from Supabase
-  const policies = await getAllFeaturePolicies();
 
   return (
     <ClerkProvider>
       <html lang="en" className={geist.className}>
         <body className="h-screen bg-slate-50 flex flex-col">
-          <Providers featurePolicies={policies} accessContext={accessContext}>
+          <Providers accessContext={accessContext}>
             <div className="flex flex-col flex-1 overflow-hidden">
               <Navbar />
               <main className="flex-1 overflow-y-auto">{children}</main>

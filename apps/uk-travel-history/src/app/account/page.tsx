@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
-import { getCurrentUser, type AuthUser } from '@uth/auth-server';
+import { getCurrentUser } from '@uth/auth-server';
 import { AccountPageClient } from './AccountPageClient';
 import { AccountErrorFallback } from '@/components/AccountErrorFallback';
-import { getUserByAuthId, type User } from '@uth/db';
+import { getUserByAuthId } from '@uth/db';
 import { logger } from '@uth/utils';
 import { call, appFlow } from '@uth/flow';
 

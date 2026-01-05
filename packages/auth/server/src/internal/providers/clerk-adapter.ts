@@ -21,9 +21,11 @@ import type {
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 import {
-  getPurchaseIntentsByAuthUserId,
+  getUserByAuthId,
+  updateUserByAuthId,
   getPurchaseIntentBySessionId,
-  PurchaseIntentStatus
+  SubscriptionStatus as DbSubscriptionStatus,
+  type User as DbUser,
 } from '@uth/db';
 
 /**
@@ -227,21 +229,45 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
   }
 
   // ============================================================================
-  // Subscription Management (using Supabase)
+  // Subscription Management (using @uth/db users table)
   // ============================================================================
+
+  /**
+   * Map database user to auth Subscription type
+   */
+  private mapUserToSubscription(user: DbUser): Subscription | null {
+    // If user has no subscription data, return null
+    if (!user.stripeCustomerId) {
+      return null;
+    }
+
+    return {
+      userId: user.authUserId,
+      status: user.subscriptionStatus || DbSubscriptionStatus.ACTIVE,
+      stripeCustomerId: user.stripeCustomerId,
+      stripeSubscriptionId: user.stripeSubscriptionId || '',
+      stripePriceId: user.stripePriceId || undefined,
+      // For currentPeriodStart, use createdAt as fallback
+      currentPeriodStart: user.createdAt,
+      currentPeriodEnd: user.currentPeriodEnd || new Date(),
+      cancelAtPeriodEnd: user.cancelAtPeriodEnd,
+      createdAt: user.createdAt,
+      updatedAt: user.createdAt, // Users table doesn't track updatedAt separately
+      canceledAt: user.subscriptionStatus === DbSubscriptionStatus.CANCELED
+        ? user.currentPeriodEnd || undefined
+        : undefined,
+    };
+  }
 
   async getSubscription(userId: string): Promise<Subscription | null> {
     try {
-      // Get provisioned purchase intents for the user
-      const intents = await getPurchaseIntentsByAuthUserId(userId);
-      const provisioned = intents.find(
-        (intent) => intent.status === PurchaseIntentStatus.PROVISIONED,
-      );
+      const user = await getUserByAuthId(userId);
 
-      // Note: For one-time payments, we don't have subscription data
-      // This is a placeholder implementation
-      // In reality, you'd want a separate subscriptions table or modify the schema
-      return null;
+      if (!user) {
+        return null;
+      }
+
+      return this.mapUserToSubscription(user);
     } catch (error: any) {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
@@ -255,10 +281,28 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     sessionId: string,
   ): Promise<Subscription | null> {
     try {
+      // Get purchase intent by session ID
       const intent = await getPurchaseIntentBySessionId(sessionId);
 
-      // Placeholder - one-time payment doesn't have subscription
-      return null;
+      if (!intent || !intent.authUserId) {
+        return null;
+      }
+
+      // Get user subscription data
+      const user = await getUserByAuthId(intent.authUserId);
+
+      if (!user) {
+        return null;
+      }
+
+      const subscription = this.mapUserToSubscription(user);
+
+      // Add session ID to the subscription if found
+      if (subscription) {
+        subscription.stripeSessionId = sessionId;
+      }
+
+      return subscription;
     } catch (error: any) {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
@@ -271,23 +315,72 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
   async createSubscription(
     data: CreateSubscriptionData,
   ): Promise<Subscription> {
-    // Note: This is for one-time payments, not subscriptions
-    // Keeping interface compatibility
-    throw new AuthError(
-      AuthErrorCode.PROVIDER_ERROR,
-      'createSubscription is not used for one-time payments. Use purchase_intents table instead.',
-    );
+    try {
+      // Update user with subscription data
+      const user = await updateUserByAuthId(data.userId, {
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        stripePriceId: data.stripePriceId || null,
+        subscriptionStatus: data.status as DbSubscriptionStatus,
+        currentPeriodEnd: data.currentPeriodEnd,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+      });
+
+      const subscription = this.mapUserToSubscription(user);
+
+      if (!subscription) {
+        throw new Error('Failed to create subscription mapping');
+      }
+
+      // Add session ID if provided
+      if (data.stripeSessionId) {
+        subscription.stripeSessionId = data.stripeSessionId;
+      }
+
+      return subscription;
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to create subscription: ${error.message}`,
+        error,
+      );
+    }
   }
 
   async updateSubscription(
     userId: string,
     updates: UpdateSubscriptionData,
   ): Promise<Subscription> {
-    // Note: This is for one-time payments, not subscriptions
-    throw new AuthError(
-      AuthErrorCode.PROVIDER_ERROR,
-      'updateSubscription is not used for one-time payments. Use purchase_intents table instead.',
-    );
+    try {
+      // Build update data from subscription updates
+      const updateData: Parameters<typeof updateUserByAuthId>[1] = {};
+
+      if (updates.status !== undefined) {
+        updateData.subscriptionStatus = updates.status as DbSubscriptionStatus;
+      }
+      if (updates.currentPeriodEnd !== undefined) {
+        updateData.currentPeriodEnd = updates.currentPeriodEnd;
+      }
+      if (updates.cancelAtPeriodEnd !== undefined) {
+        updateData.cancelAtPeriodEnd = updates.cancelAtPeriodEnd;
+      }
+
+      const user = await updateUserByAuthId(userId, updateData);
+
+      const subscription = this.mapUserToSubscription(user);
+
+      if (!subscription) {
+        throw new Error('Failed to update subscription mapping');
+      }
+
+      return subscription;
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to update subscription: ${error.message}`,
+        error,
+      );
+    }
   }
 
   async createUser(data: CreateUserData): Promise<AuthUser> {

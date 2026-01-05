@@ -1,22 +1,29 @@
 // Monetization Store
-// Manages user subscription tier and feature access
+// Manages user subscription tier, role, and feature access
 //
-// SIMPLIFIED APPROACH:
-// - Client-side tier is for UX only (showing/hiding UI elements)
-// - Real security is server-side via requirePaidFeature() in API routes
-// - Defaults to FREE tier to keep UI simple and safe
-// - Server validates all premium feature access with Firebase tokens
+// HYDRATION STRATEGY:
+// - All state is hydrated from server-side AccessContext
+// - Client-side state is for UX only (showing/hiding UI elements)
+// - Real security is server-side via assertFeatureAccess() in API routes
+// - When auth state changes, Providers triggers router.refresh() to re-fetch from server
+//
+// IMPORTANT: This store does NOT fetch data itself. All data comes from:
+// 1. Initial hydration via AccessContext (from loadAccessContext())
+// 2. Re-hydration after router.refresh() when auth state changes
 
-import { makeAutoObservable, reaction } from 'mobx';
+import { makeAutoObservable } from 'mobx';
 import { authStore } from './authStore';
-import { TIERS, type TierId, DEFAULT_FEATURE_POLICIES, type FeatureFlagKey, type FeaturePolicy } from '@uth/features';
+import {
+  DEFAULT_FEATURE_POLICIES,
+  type FeatureFlagKey,
+  type FeaturePolicy,
+} from '@uth/features';
+import { ROLES, TIERS, type RoleId, type TierId } from '@uth/domain';
 
 // Type guard to validate tier values
 function isValidTier(value: unknown): value is TierId {
   return (
-    value === TIERS.ANONYMOUS ||
-    value === TIERS.FREE ||
-    value === TIERS.PREMIUM
+    value === TIERS.ANONYMOUS || value === TIERS.FREE || value === TIERS.PREMIUM
   );
 }
 
@@ -25,23 +32,20 @@ class MonetizationStore {
   // Defaults to ANONYMOUS for unauthenticated users (fail-closed)
   tier: TierId = TIERS.ANONYMOUS;
 
+  // User role (standard or admin)
+  // Defaults to STANDARD for all users
+  role: RoleId = ROLES.STANDARD;
+
   // Server-loaded feature policies
   // These are passed from the server to ensure consistency
-  featurePolicies: Record<FeatureFlagKey, FeaturePolicy> = DEFAULT_FEATURE_POLICIES;
+  featurePolicies: Record<FeatureFlagKey, FeaturePolicy> =
+    DEFAULT_FEATURE_POLICIES;
 
   constructor() {
     makeAutoObservable(this);
-
-    // Auto-update tier when auth state changes
-    // This ensures registered users automatically get FREE tier
-    if (typeof window !== 'undefined') {
-      reaction(
-        () => authStore.user,
-        (user) => {
-          this.updateTierFromAuth();
-        }
-      );
-    }
+    // NOTE: No reaction for auth state changes here.
+    // Providers component handles auth changes via router.refresh()
+    // which re-fetches the access context from server and calls hydrate()
   }
 
   /**
@@ -94,13 +98,19 @@ class MonetizationStore {
   get isAuthenticated(): boolean {
     return !!authStore.user;
   }
-  
 
   /**
    * Check if user is anonymous (not authenticated)
    */
   get isAnonymous(): boolean {
     return this.tier === TIERS.ANONYMOUS;
+  }
+
+  /**
+   * Check if user is admin
+   */
+  get isAdmin(): boolean {
+    return this.role === ROLES.ADMIN;
   }
 
   /**
@@ -122,7 +132,7 @@ class MonetizationStore {
   }
 
   /**
-   * Manually set tier (for testing or future subscription integration)
+   * Manually set tier (for testing or admin override)
    *
    * @param tier - The tier to set (must be valid TierId)
    */
@@ -139,34 +149,42 @@ class MonetizationStore {
   }
 
   /**
-   * Update tier based on authentication status
-   * If user is authenticated but no explicit tier is set, default to FREE
+   * Manually set role (for testing or admin override)
+   *
+   * @param role - The role to set
    */
-  updateTierFromAuth(): void {
-    if (this.isAuthenticated && this.tier === TIERS.ANONYMOUS) {
-      this.tier = TIERS.FREE;
-    } else if (!this.isAuthenticated && this.tier !== TIERS.ANONYMOUS) {
-      this.tier = TIERS.ANONYMOUS;
-    }
+  setRole(role: RoleId): void {
+    this.role = role;
   }
 
   /**
    * Hydrate store with server-side access context
-   * Used during SSR/RSC to prevent flicker on initial render
+   * Called from Providers with data from loadAccessContext()
+   *
+   * This is the ONLY way tier/role/policies should be set from server data.
+   * The server is the source of truth for subscription status.
    *
    * @param tier - User's subscription tier from server
+   * @param role - User's role from server
    * @param policies - Feature policies from server
    */
-  hydrate(tier: TierId, policies: Record<FeatureFlagKey, FeaturePolicy>): void {
+  hydrate(
+    tier: TierId,
+    role: RoleId,
+    policies: Record<FeatureFlagKey, FeaturePolicy>,
+  ): void {
     this.tier = tier;
+    this.role = role;
     this.featurePolicies = policies;
   }
 
   /**
-   * Reset to default state (anonymous)
+   * Reset to default state (anonymous, standard role)
    */
   reset(): void {
     this.tier = TIERS.ANONYMOUS;
+    this.role = ROLES.STANDARD;
+    this.featurePolicies = DEFAULT_FEATURE_POLICIES;
   }
 }
 

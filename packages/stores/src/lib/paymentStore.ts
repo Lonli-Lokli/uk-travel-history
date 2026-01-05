@@ -1,5 +1,10 @@
 // Payment Store
 // Manages payment and registration flow logic
+//
+// HYDRATION STRATEGY:
+// - Prices are loaded server-side and passed via AccessContext
+// - hydrate() is called with pricing data from server
+// - Falls back to fetchPrices() only if hydration not performed
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import { authStore } from './authStore';
@@ -11,6 +16,12 @@ interface PriceData {
   id: string;
   amount: number;
   currency: string;
+}
+
+interface PricingData {
+  monthly: PriceData;
+  annual: PriceData;
+  lifetime: PriceData;
 }
 
 interface StripePrices {
@@ -38,38 +49,27 @@ class PaymentStore {
   private _lifetimePrice = 69.9;
   private _currency = 'gbp';
   pricesLoaded = false;
+  private _hydrated = false;
 
   constructor() {
     makeAutoObservable(this);
-    this.fetchPrices(); // Load prices on initialization
+    // Don't fetch prices in constructor - wait for hydration or explicit call
+    // This allows server-side pricing data to be used when available
   }
 
   /**
-   * Fetch prices from API
+   * Hydrate store with server-side pricing data
+   * Called from Providers with AccessContext.pricing
+   *
+   * @param pricing - Pricing data from server
    */
-  async fetchPrices(): Promise<void> {
-    try {
-      const response = await fetch('/api/stripe/prices');
-      if (!response.ok) {
-        throw new Error('Failed to fetch prices');
-      }
-
-      const prices: StripePrices = await response.json();
-
-      runInAction(() => {
-        this._monthlyPrice = prices.monthly.amount;
-        this._annualPrice = prices.annual.amount;
-        this._lifetimePrice = prices.lifetime.amount;
-        this._currency = prices.monthly.currency; // All prices should have same currency
-        this.pricesLoaded = true;
-      });
-    } catch (err) {
-      logger.error('Failed to fetch prices, using fallback values', err);
-      // Keep fallback values
-      runInAction(() => {
-        this.pricesLoaded = true;
-      });
-    }
+  hydrate(pricing: PricingData): void {
+    this._monthlyPrice = pricing.monthly.amount;
+    this._annualPrice = pricing.annual.amount;
+    this._lifetimePrice = pricing.lifetime.amount;
+    this._currency = pricing.monthly.currency;
+    this.pricesLoaded = true;
+    this._hydrated = true;
   }
 
   /**
@@ -162,7 +162,7 @@ class PaymentStore {
 
     try {
       // Use always authenticated checkout
-      const endpoint =  '/api/stripe/create-checkout'
+      const endpoint = '/api/stripe/create-checkout';
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {

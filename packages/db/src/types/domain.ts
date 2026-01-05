@@ -66,6 +66,8 @@ export class DbError extends Error {
  * Subscription tier for entitlement enforcement
  */
 export enum SubscriptionTier {
+  /** No authentication (default for unauthenticated users) */
+  ANONYMOUS = 'anonymous',
   /** Free tier (default for new sign-ups) */
   FREE = 'free',
   /** Monthly recurring subscription */
@@ -337,6 +339,43 @@ export enum UserRole {
 }
 
 /**
+ * Feature policy configuration for tier-based access control
+ * Duplicated here from @uth/features to avoid circular dependency
+ */
+export interface FeaturePolicyData {
+  /** Global kill switch - if false, feature is disabled for everyone */
+  enabled: boolean;
+  /** Minimum tier required to access this feature */
+  minTier: string;
+  /** Rollout percentage (0-100) for gradual feature rollout */
+  rolloutPercentage?: number;
+  /** Explicit allowlist of user IDs (bypasses tier check) */
+  allowlist?: string[];
+  /** Explicit denylist of user IDs (blocks access regardless of tier) */
+  denylist?: string[];
+  /** Explicit list of beta users who get access regardless of tier */
+  betaUsers?: string[];
+}
+
+/**
+ * Pricing information for subscription plans
+ */
+export interface PriceData {
+  id: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * All pricing data for hydration
+ */
+export interface PricingData {
+  monthly: PriceData;
+  annual: PriceData;
+  lifetime: PriceData;
+}
+
+/**
  * Server-computed access context containing auth, tier, role, and entitlements.
  * This is the single source of truth for access control, computed server-side
  * and hydrated to the client to prevent flicker and ensure consistency.
@@ -371,6 +410,18 @@ export interface AccessContext {
    * Maps feature keys to boolean access flags
    */
   entitlements: Record<string, boolean>;
+
+  /**
+   * Feature policies from database
+   * Used by UI to display tier requirements (e.g., "Premium" badges)
+   */
+  policies: Record<string, FeaturePolicyData>;
+
+  /**
+   * Pricing data for subscription plans
+   * Used by PaymentStore for hydration
+   */
+  pricing: PricingData | null;
 
   /**
    * Subscription status (for paid users)

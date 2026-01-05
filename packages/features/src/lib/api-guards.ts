@@ -12,7 +12,6 @@
  * 5. Type safety - TypeScript ensures correctness at compile time
  */
 
- 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
@@ -21,9 +20,10 @@ import {
   getFeaturePolicy as getFeaturePolicyFromEdgeConfig,
   type FeaturePolicy,
 } from './features';
-import { FeatureFlagKey, type TierId, TIERS } from './shapes';
+import { FeatureFlagKey } from './shapes';
 import { auth } from '@clerk/nextjs/server';
 import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
+import { TierId, TIERS } from '@uth/domain';
 
 /**
  * Logger interface for dependency injection

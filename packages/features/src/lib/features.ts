@@ -5,10 +5,10 @@
 
 import { unstable_cache } from 'next/cache';
 import { logger } from '@uth/utils';
-import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
- 
-import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
+import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
+import { TIERS, TierId } from '@uth/domain';
 
+import { getAllFeaturePolicies as dbGetAllFeaturePolicies } from '@uth/db';
 
 /**
  * Feature policy configuration for tier-based access control
@@ -36,7 +36,7 @@ export interface FeaturePolicy {
 }
 
 /**
- * Default feature policies (used as fallback if Edge Config unavailable)
+ * Default feature policies (used as fallback if configuration unavailable)
  * Conservative defaults: features are enabled but require appropriate tier
  *
  * Tier hierarchy:
@@ -62,11 +62,11 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
   // Premium features (require PREMIUM tier)
   [FEATURE_KEYS.EXCEL_EXPORT]: {
     enabled: true,
-    minTier: TIERS.PREMIUM,
+    minTier: TIERS.FREE,
   },
   [FEATURE_KEYS.EXCEL_IMPORT]: {
     enabled: true,
-    minTier: TIERS.PREMIUM,
+    minTier: TIERS.FREE,
   },
   [FEATURE_KEYS.PDF_IMPORT]: {
     enabled: false, // Disabled by default, but configured as premium feature
@@ -80,10 +80,9 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
   // UI features (ANONYMOUS - available to all)
   [FEATURE_KEYS.RISK_CHART]: {
     enabled: false,
-    minTier: TIERS.ANONYMOUS,
+    minTier: TIERS.PREMIUM,
   },
 };
-
 
 /**
  * INTERNAL: Load all feature policies from Supabase (uncached)
@@ -139,7 +138,7 @@ const loadPoliciesFromSupabase = unstable_cache(
     // This ensures feature flags are refreshed daily without excessive DB reads
     revalidate: 3600, // 1 hour
     tags: ['feature-policies'],
-  }
+  },
 );
 
 /**
@@ -315,9 +314,13 @@ export async function getAllFeaturePolicies(): Promise<
     }
 
     // Merge Supabase policies with defaults
-    const result: Record<FeatureFlagKey, FeaturePolicy> = { ...DEFAULT_FEATURE_POLICIES };
+    const result: Record<FeatureFlagKey, FeaturePolicy> = {
+      ...DEFAULT_FEATURE_POLICIES,
+    };
 
-    for (const featureKey of Object.keys(DEFAULT_FEATURE_POLICIES) as FeatureFlagKey[]) {
+    for (const featureKey of Object.keys(
+      DEFAULT_FEATURE_POLICIES,
+    ) as FeatureFlagKey[]) {
       if (policies[featureKey]) {
         result[featureKey] = {
           ...DEFAULT_FEATURE_POLICIES[featureKey],

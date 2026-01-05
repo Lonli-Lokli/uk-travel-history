@@ -60,7 +60,7 @@ export function configureTravelStore(config: TravelStoreConfig): void {
  * Get the configured HTTP client or fall back to global fetch
  */
 function getHttpClient(): HttpClient {
-  return storeConfig.httpClient || { fetch: globalThis.fetch };
+  return storeConfig.httpClient || { fetch: globalThis.fetch.bind(globalThis) };
 }
 
 class TravelStore {

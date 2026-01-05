@@ -24,28 +24,40 @@ class AuthStore {
   isLoading = false;
   isAuthenticating = false;
   error: string | null = null;
+  // Track whether we've initialized auth state subscription
+  private authSubscriptionInitialized = false;
 
   constructor() {
     makeAutoObservable(this);
+    // NOTE: Auth subscription is NOT started in constructor to prevent hydration mismatches.
+    // Instead, call initializeAuthSubscription() after hydration is complete.
+  }
 
-    // Listen for auth state changes using SDK
-    if (typeof window !== 'undefined') {
-      try {
-        onAuthStateChanged((authState: AuthState) => {
-          runInAction(() => {
-            this.user = authState.user;
-            this.isLoading = authState.loading;
-            if (authState.error) {
-              this.error = authState.error.message;
-            }
-          });
-        });
-      } catch {
-        // If auth is not available, set loading to false immediately
-        this.isLoading = false;
-      }
+  /**
+   * Initialize auth state subscription
+   * MUST be called after React hydration to prevent hydration mismatches.
+   * Safe to call multiple times - will only subscribe once.
+   */
+  initializeAuthSubscription(): void {
+    if (this.authSubscriptionInitialized || typeof window === 'undefined') {
+      return;
     }
-    // Server-side: isLoading is already false from initial state
+
+    this.authSubscriptionInitialized = true;
+
+    try {
+      onAuthStateChanged((authState: AuthState) => {
+        runInAction(() => {
+          this.user = authState.user;
+          this.isLoading = authState.loading;
+          if (authState.error) {
+            this.error = authState.error.message;
+          }
+        });
+      });
+    } catch {
+      // If auth is not available, keep loading as false
+    }
   }
 
   /**

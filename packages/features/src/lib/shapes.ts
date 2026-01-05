@@ -1,12 +1,3 @@
-// Tier identifiers
-export const TIERS = {
-  ANONYMOUS: 'anonymous', // No authentication required
-  FREE: 'free', // Authenticated, free tier
-  PREMIUM: 'premium', // Authenticated, paid subscription
-} as const;
-
-export type TierId = (typeof TIERS)[keyof typeof TIERS];
-
 /**
  * Feature flag identifiers (typed constants)
  * These match the keys in Vercel Edge Config
@@ -28,4 +19,3 @@ export const FEATURE_KEYS = {
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
-

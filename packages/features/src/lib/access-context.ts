@@ -12,13 +12,16 @@ import { getCurrentUser, type AuthUser } from '@uth/auth-server';
 import {
   getUserByAuthId,
   type AccessContext,
+  type PricingData,
   SubscriptionTier,
   SubscriptionStatus,
   UserRole,
 } from '@uth/db';
-import { getAllFeaturePolicies, isFeatureEnabled } from './features';
-import { FEATURE_KEYS, TIERS, type TierId, type FeatureFlagKey } from './shapes';
+import { getPriceDetails } from '@uth/payments-server';
+import { getAllFeaturePolicies, DEFAULT_FEATURE_POLICIES } from './features';
+import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
 import * as Sentry from '@sentry/nextjs';
+import { TierId, TIERS } from '@uth/domain';
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -38,15 +41,21 @@ import * as Sentry from '@sentry/nextjs';
  */
 export async function loadAccessContext(): Promise<AccessContext> {
   try {
-    // Step 1: Get current user from Clerk (via auth SDK)
+    // Step 1: Load policies and pricing in parallel (needed for all users)
+    const [policies, pricing] = await Promise.all([
+      loadPolicies(),
+      loadPricing(),
+    ]);
+
+    // Step 2: Get current user from Clerk (via auth SDK)
     const authUser: AuthUser | null = await getCurrentUser();
 
-    // Step 2: If not authenticated, return anonymous context
+    // Step 3: If not authenticated, return anonymous context with policies/pricing
     if (!authUser) {
-      return createAnonymousContext();
+      return createAnonymousContext(policies, pricing);
     }
 
-    // Step 3: Load user profile from database to get tier/subscription
+    // Step 4: Load user profile from database to get tier/subscription
     let tier: SubscriptionTier = SubscriptionTier.FREE;
     let subscriptionStatus: SubscriptionStatus | null = null;
     let currentPeriodEnd: Date | null = null;
@@ -91,7 +100,10 @@ export async function loadAccessContext(): Promise<AccessContext> {
       }
     } catch (error) {
       // DB lookup failed - fail-closed to FREE tier
-      console.error('[loadAccessContext] Failed to load user from database:', error);
+      console.error(
+        '[loadAccessContext] Failed to load user from database:',
+        error,
+      );
       Sentry.captureException(error, {
         tags: {
           context: 'access-context',
@@ -101,10 +113,15 @@ export async function loadAccessContext(): Promise<AccessContext> {
       });
     }
 
-    // Step 4: Load feature policies and compute entitlements
-    const entitlements = await computeEntitlements(tier, authUser.uid);
+    // Step 5: Compute entitlements from loaded policies
+    const tierId = mapSubscriptionTierToTierId(tier);
+    const entitlements = computeEntitlementsFromPolicies(
+      policies,
+      tierId,
+      authUser.uid,
+    );
 
-    // Step 5: Return complete access context
+    // Step 6: Return complete access context
     return {
       user: {
         uid: authUser.uid,
@@ -114,13 +131,18 @@ export async function loadAccessContext(): Promise<AccessContext> {
       tier,
       role,
       entitlements,
+      policies,
+      pricing,
       subscriptionStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd,
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
-    console.error('[loadAccessContext] Critical error loading access context:', error);
+    console.error(
+      '[loadAccessContext] Critical error loading access context:',
+      error,
+    );
     Sentry.captureException(error, {
       tags: {
         context: 'access-context',
@@ -128,20 +150,97 @@ export async function loadAccessContext(): Promise<AccessContext> {
       },
       level: 'error',
     });
-    return createAnonymousContext();
+    return createAnonymousContext(DEFAULT_FEATURE_POLICIES, null);
+  }
+}
+
+/**
+ * Load feature policies from database
+ * Returns default policies on error
+ */
+async function loadPolicies(): Promise<
+  Record<
+    string,
+    {
+      enabled: boolean;
+      minTier: TierId;
+      rolloutPercentage?: number;
+      allowlist?: string[];
+      denylist?: string[];
+      betaUsers?: string[];
+    }
+  >
+> {
+  try {
+    return await getAllFeaturePolicies();
+  } catch (error) {
+    console.error('[loadAccessContext] Failed to load policies:', error);
+    return DEFAULT_FEATURE_POLICIES;
+  }
+}
+
+/**
+ * Load pricing data from payments provider
+ * Returns null on error (client will use fallback values)
+ */
+async function loadPricing(): Promise<PricingData | null> {
+  try {
+    const prices = await getPriceDetails();
+    return {
+      monthly: {
+        id: prices.monthly.id,
+        amount: prices.monthly.amount,
+        currency: prices.monthly.currency,
+      },
+      annual: {
+        id: prices.annual.id,
+        amount: prices.annual.amount,
+        currency: prices.annual.currency,
+      },
+      lifetime: {
+        id: prices.lifetime.id,
+        amount: prices.lifetime.amount,
+        currency: prices.lifetime.currency,
+      },
+    };
+  } catch (error) {
+    console.error('[loadAccessContext] Failed to load pricing:', error);
+    return null;
   }
 }
 
 /**
  * Create anonymous (unauthenticated) access context
- * Fail-closed: no access to any features
+ * Includes policies for UI display and entitlements for anonymous tier
  */
-function createAnonymousContext(): AccessContext {
+function createAnonymousContext(
+  policies: Record<
+    string,
+    {
+      enabled: boolean;
+      minTier: TierId;
+      rolloutPercentage?: number;
+      allowlist?: string[];
+      denylist?: string[];
+      betaUsers?: string[];
+    }
+  >,
+  pricing: PricingData | null,
+): AccessContext {
+  // Compute entitlements for anonymous tier
+  const entitlements = computeEntitlementsFromPolicies(
+    policies,
+    TIERS.ANONYMOUS,
+    null,
+  );
+
   return {
     user: null,
-    tier: SubscriptionTier.FREE, // Use FREE instead of a hypothetical ANONYMOUS
+    tier: SubscriptionTier.ANONYMOUS,
     role: UserRole.STANDARD,
-    entitlements: {},
+    entitlements,
+    policies,
+    pricing,
     subscriptionStatus: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
@@ -149,53 +248,47 @@ function createAnonymousContext(): AccessContext {
 }
 
 /**
- * Compute feature entitlements based on tier and feature policies
+ * Compute feature entitlements from pre-loaded policies
+ * Synchronous function - policies are already loaded
  *
- * @param tier - User's subscription tier
- * @param userId - User ID (for allowlist/denylist checks)
+ * @param policies - Pre-loaded feature policies
+ * @param tierId - User's tier ID
+ * @param userId - User ID (null for anonymous users)
  * @returns Record of feature keys to boolean access flags
  */
-async function computeEntitlements(
-  tier: SubscriptionTier,
-  userId: string,
-): Promise<Record<string, boolean>> {
-  try {
-    // Load all feature policies from database
-    const policies = await getAllFeaturePolicies();
+function computeEntitlementsFromPolicies(
+  policies: Record<
+    string,
+    {
+      enabled: boolean;
+      minTier: TierId;
+      rolloutPercentage?: number;
+      allowlist?: string[];
+      denylist?: string[];
+      betaUsers?: string[];
+    }
+  >,
+  tierId: TierId,
+  userId: string | null,
+): Record<string, boolean> {
+  const entitlements: Record<string, boolean> = {};
 
-    // Map subscription tier to legacy TierId for feature checking
-    const tierId = mapSubscriptionTierToTierId(tier);
+  for (const featureKey of Object.values(FEATURE_KEYS)) {
+    const policy =
+      policies[featureKey as FeatureFlagKey] ??
+      DEFAULT_FEATURE_POLICIES[featureKey as FeatureFlagKey];
 
-    // Compute entitlements for all known features
-    const entitlements: Record<string, boolean> = {};
-
-    for (const featureKey of Object.values(FEATURE_KEYS)) {
-      const policy = policies[featureKey as FeatureFlagKey];
-
-      if (!policy) {
-        // No policy defined - deny access
-        entitlements[featureKey] = false;
-        continue;
-      }
-
-      // Check if user has access based on policy
-      entitlements[featureKey] = checkFeatureAccess(policy, tierId, userId);
+    if (!policy) {
+      // No policy defined - deny access
+      entitlements[featureKey] = false;
+      continue;
     }
 
-    return entitlements;
-  } catch (error) {
-    // Failed to load policies - fail-closed: no entitlements
-    console.error('[computeEntitlements] Failed to load feature policies:', error);
-    Sentry.captureException(error, {
-      tags: {
-        context: 'access-context',
-        operation: 'computeEntitlements',
-        tier,
-        userId,
-      },
-    });
-    return {};
+    // Check if user has access based on policy
+    entitlements[featureKey] = checkFeatureAccess(policy, tierId, userId);
   }
+
+  return entitlements;
 }
 
 /**
@@ -208,7 +301,7 @@ async function computeEntitlements(
 function hashUserId(userId: string): number {
   let hash = 5381;
   for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) + hash) + userId.charCodeAt(i); // hash * 33 + c
+    hash = (hash << 5) + hash + userId.charCodeAt(i); // hash * 33 + c
   }
   return Math.abs(hash);
 }
@@ -219,32 +312,42 @@ function hashUserId(userId: string): number {
  *
  * @param policy - Feature policy from database
  * @param userTier - User's subscription tier
- * @param userId - User ID for allowlist/denylist checks
+ * @param userId - User ID for allowlist/denylist checks (null for anonymous)
  * @returns true if user has access, false otherwise
  */
 function checkFeatureAccess(
-  policy: { enabled: boolean; minTier: TierId; allowlist?: string[] | null; denylist?: string[] | null; betaUsers?: string[] | null; rolloutPercentage?: number | null },
+  policy: {
+    enabled: boolean;
+    minTier: TierId;
+    allowlist?: string[] | null;
+    denylist?: string[] | null;
+    betaUsers?: string[] | null;
+    rolloutPercentage?: number | null;
+  },
   userTier: TierId,
-  userId: string,
+  userId: string | null,
 ): boolean {
   // 1. Check if feature is enabled globally
   if (!policy.enabled) {
     return false;
   }
 
-  // 2. Check denylist (explicit denial overrides everything)
-  if (policy.denylist?.includes(userId)) {
-    return false;
-  }
+  // User-specific checks only apply to authenticated users
+  if (userId) {
+    // 2. Check denylist (explicit denial overrides everything)
+    if (policy.denylist?.includes(userId)) {
+      return false;
+    }
 
-  // 3. Check allowlist (explicit allow bypasses tier check)
-  if (policy.allowlist?.includes(userId)) {
-    return true;
-  }
+    // 3. Check allowlist (explicit allow bypasses tier check)
+    if (policy.allowlist?.includes(userId)) {
+      return true;
+    }
 
-  // 4. Check beta users (beta access bypasses tier check)
-  if (policy.betaUsers?.includes(userId)) {
-    return true;
+    // 4. Check beta users (beta access bypasses tier check)
+    if (policy.betaUsers?.includes(userId)) {
+      return true;
+    }
   }
 
   // 5. Check tier level
@@ -261,8 +364,12 @@ function checkFeatureAccess(
     return false;
   }
 
-  // 6. Check rollout percentage (if specified)
-  if (policy.rolloutPercentage !== undefined && policy.rolloutPercentage !== null) {
+  // 6. Check rollout percentage (if specified and user is authenticated)
+  if (
+    userId &&
+    policy.rolloutPercentage !== undefined &&
+    policy.rolloutPercentage !== null
+  ) {
     // Hash-based rollout using djb2 algorithm for better distribution
     // This is a non-cryptographic hash that provides good distribution across user IDs
     const hash = hashUserId(userId);
@@ -290,7 +397,9 @@ function mapSubscriptionTierToTierId(tier: SubscriptionTier): TierId {
       return TIERS.PREMIUM;
     default:
       // Unknown tier - fail-closed to FREE
-      console.warn(`[mapSubscriptionTierToTierId] Unknown tier: ${tier}, defaulting to FREE`);
+      console.warn(
+        `[mapSubscriptionTierToTierId] Unknown tier: ${tier}, defaulting to FREE`,
+      );
       return TIERS.FREE;
   }
 }

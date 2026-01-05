@@ -18,6 +18,10 @@ export type {
   CreateWebhookEventData,
   FeaturePolicy,
   AccessContext,
+  // New types for hydration
+  FeaturePolicyData,
+  PriceData,
+  PricingData,
 } from './types/domain';
 
 export {
@@ -30,7 +34,11 @@ export {
 } from './types/domain';
 
 // Export client factory functions
-export { createUserScopedClient, createAdminClient, checkUserHasPremiumAccess } from './lib/client-factory';
+export {
+  createUserScopedClient,
+  createAdminClient,
+  checkUserHasPremiumAccess,
+} from './lib/client-factory';
 
 // Export public operations
 export {
@@ -57,7 +65,10 @@ export {
 } from './public/db-operations';
 
 // Export testing utilities (for internal use only - consumers should use public API)
-export { injectDbProvider, resetDbProvider } from './internal/provider-resolver';
+export {
+  injectDbProvider,
+  resetDbProvider,
+} from './internal/provider-resolver';
 export { MockDbAdapter } from './internal/providers/mock-adapter';
 
 // DO NOT export:

@@ -5,8 +5,9 @@
 // DEPRECATED: This module is deprecated in favor of api-guards.ts
 // Use assertFeatureAccess() or withFeatureAccess() from api-guards.ts instead
 
+import { TierId, TIERS } from '@uth/domain';
 import { getFeaturePolicy } from './features';
-import { TIERS, type TierId, type FeatureFlagKey } from './shapes';
+import { type FeatureFlagKey } from './shapes';
 
 /**
  * User tier information
@@ -114,7 +115,9 @@ export async function validateFeatureAccess(
  * @param featureKey - The feature to check
  * @returns Promise<boolean> indicating if the feature requires premium tier
  */
-export async function isPremiumFeature(featureKey: FeatureFlagKey): Promise<boolean> {
+export async function isPremiumFeature(
+  featureKey: FeatureFlagKey,
+): Promise<boolean> {
   const policy = await getFeaturePolicy(featureKey);
   return policy.minTier === TIERS.PREMIUM;
 }

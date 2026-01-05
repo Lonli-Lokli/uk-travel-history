@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import {
-  DEFAULT_FEATURE_POLICIES,
-} from './features';
-import { FEATURE_KEYS, FeatureFlagKey, TierId, TIERS } from './shapes';
+import { DEFAULT_FEATURE_POLICIES } from './features';
+import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
+import { TierId, TIERS } from '@uth/domain';
 
 describe('Feature System', () => {
   describe('Tier Constants', () => {
@@ -71,38 +70,62 @@ describe('Feature System', () => {
     });
 
     it('should mark master switches as disabled by default', () => {
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].enabled).toBe(false);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].enabled).toBe(
+        false,
+      );
       expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH].enabled).toBe(false);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS].enabled).toBe(false);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PAYMENTS].enabled).toBe(
+        false,
+      );
     });
 
     it('should mark enabled features correctly', () => {
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].enabled).toBe(true);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].enabled).toBe(true);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].enabled).toBe(true);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].enabled).toBe(
+        true,
+      );
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].enabled).toBe(
+        true,
+      );
+      expect(
+        DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].enabled,
+      ).toBe(true);
     });
 
     it('should define tier hierarchy correctly', () => {
       // Master switches - ANONYMOUS (lowest tier)
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].minTier).toBe(TIERS.ANONYMOUS);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH].minTier).toBe(TIERS.ANONYMOUS);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier).toBe(TIERS.ANONYMOUS);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.MONETIZATION].minTier).toBe(
+        TIERS.ANONYMOUS,
+      );
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.AUTH].minTier).toBe(
+        TIERS.ANONYMOUS,
+      );
+      expect(
+        DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.CLIPBOARD_IMPORT].minTier,
+      ).toBe(TIERS.ANONYMOUS);
 
       // Free tier features
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(TIERS.PREMIUM);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.PDF_IMPORT].minTier).toBe(
+        TIERS.PREMIUM,
+      );
 
       // Premium tier features (highest tier)
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(TIERS.PREMIUM);
-      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].minTier).toBe(TIERS.PREMIUM);
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_EXPORT].minTier).toBe(
+        TIERS.PREMIUM,
+      );
+      expect(DEFAULT_FEATURE_POLICIES[FEATURE_KEYS.EXCEL_IMPORT].minTier).toBe(
+        TIERS.PREMIUM,
+      );
     });
 
     it('should have required policy fields for all features', () => {
-      Object.entries(DEFAULT_FEATURE_POLICIES).forEach(([featureKey, policy]) => {
-        expect(policy).toHaveProperty('enabled');
-        expect(policy).toHaveProperty('minTier');
-        expect(typeof policy.enabled).toBe('boolean');
-        expect(['anonymous', 'free', 'premium']).toContain(policy.minTier);
-      });
+      Object.entries(DEFAULT_FEATURE_POLICIES).forEach(
+        ([featureKey, policy]) => {
+          expect(policy).toHaveProperty('enabled');
+          expect(policy).toHaveProperty('minTier');
+          expect(typeof policy.enabled).toBe('boolean');
+          expect(['anonymous', 'free', 'premium']).toContain(policy.minTier);
+        },
+      );
     });
   });
 

@@ -35,6 +35,7 @@ import {
   Xls02Icon,
   CircleArrowReload01Icon,
   Chart01Icon,
+  Tick01Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
@@ -47,6 +48,7 @@ export type IconName =
   | 'xlsx'
   | 'clipboard'
   | 'check'
+  | 'check-circle'
   | 'arrow-right'
   | 'alert-circle'
   | 'check-circle'
@@ -101,7 +103,7 @@ function getIconByName(iconName: IconName): IconSvgElement {
     case 'arrow-right':
       return ArrowRight02Icon;
     case 'check':
-      return CheckmarkCircle02Icon;
+      return Tick01Icon;
     case 'alert-circle':
       return AlertCircleIcon;
     case 'clipboard':

@@ -18,8 +18,10 @@ import {
 export const dynamic = 'force-dynamic';
 
 // Email configuration
-const FROM_EMAIL = process.env.BUG_REPORT_FROM_EMAIL || 'bugs@uk-travel-history.com';
-const TO_EMAIL = process.env.BUG_REPORT_TO_EMAIL || 'support@uk-travel-history.com';
+const FROM_EMAIL =
+  process.env.BUG_REPORT_FROM_EMAIL || 'bugs@uk-travel-history.com';
+const TO_EMAIL =
+  process.env.BUG_REPORT_TO_EMAIL || 'support@uk-travel-history.com';
 
 // Allowed origins for CSRF protection
 const ALLOWED_ORIGINS = [
@@ -27,7 +29,6 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:4200',
   'https://uk-travel-history.vercel.app',
-  'https://uk-travel-history-git-claude-issue-ac52b5-lonliloklis-projects.vercel.app',
 ].filter(Boolean); // Remove undefined values
 
 /**
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       console.error('Missing environment variables:', envCheck.missing);
       return NextResponse.json(
         { error: 'Service temporarily unavailable. Please try again later.' },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -74,25 +75,33 @@ export async function POST(request: NextRequest) {
     // Allow requests from allowed origins or if origin header is missing (same-origin requests)
     const isValidOrigin =
       !origin ||
-      ALLOWED_ORIGINS.some((allowed) => origin === allowed || origin.startsWith(allowed || ''));
+      ALLOWED_ORIGINS.some(
+        (allowed) => origin === allowed || origin.startsWith(allowed || ''),
+      );
 
     const isValidReferer =
       !referer ||
       ALLOWED_ORIGINS.some(
-        (allowed) => referer.startsWith(allowed || '') || referer.startsWith('http://localhost')
+        (allowed) =>
+          referer.startsWith(allowed || '') ||
+          referer.startsWith('http://localhost'),
       );
 
     if (!isValidOrigin && !isValidReferer) {
       console.warn('Invalid request origin:', origin, 'referer:', referer);
-      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Invalid request origin' },
+        { status: 403 },
+      );
     }
 
     // Step 3: Rate Limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
     if (!rateLimiter.check(ip)) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -108,22 +117,31 @@ export async function POST(request: NextRequest) {
 
     // Step 5: Validate required fields
     if (!email || !message || !pageUrl) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 },
+      );
     }
 
     // Step 6: Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 },
+      );
     }
 
     // Step 7: Validate message length
-    if (message.length < MESSAGE_LENGTH.MIN || message.length > MESSAGE_LENGTH.MAX) {
+    if (
+      message.length < MESSAGE_LENGTH.MIN ||
+      message.length > MESSAGE_LENGTH.MAX
+    ) {
       return NextResponse.json(
         {
           error: `Message must be between ${MESSAGE_LENGTH.MIN} and ${MESSAGE_LENGTH.MAX} characters`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -142,8 +160,10 @@ export async function POST(request: NextRequest) {
       // Validate file size
       if (screenshot.size > FILE_SIZE_LIMITS.SCREENSHOT) {
         return NextResponse.json(
-          { error: `Screenshot file too large (max ${FILE_SIZE_LIMITS.SCREENSHOT / 1024 / 1024}MB)` },
-          { status: 400 }
+          {
+            error: `Screenshot file too large (max ${FILE_SIZE_LIMITS.SCREENSHOT / 1024 / 1024}MB)`,
+          },
+          { status: 400 },
         );
       }
 
@@ -156,7 +176,7 @@ export async function POST(request: NextRequest) {
           access: 'public',
           addRandomSuffix: true,
           contentType: 'image/jpeg',
-        }
+        },
       );
       screenshotUrl = screenshotBlob.url;
     }
@@ -166,19 +186,24 @@ export async function POST(request: NextRequest) {
       // Validate file size
       if (attachment.size > FILE_SIZE_LIMITS.ATTACHMENT) {
         return NextResponse.json(
-          { error: `Attachment file too large (max ${FILE_SIZE_LIMITS.ATTACHMENT / 1024 / 1024}MB)` },
-          { status: 400 }
+          {
+            error: `Attachment file too large (max ${FILE_SIZE_LIMITS.ATTACHMENT / 1024 / 1024}MB)`,
+          },
+          { status: 400 },
         );
       }
 
       // Validate file type
       const isLogFile = attachment.name.endsWith('.log');
       const isAllowedType = ALLOWED_FILE_TYPES.includes(
-        attachment.type as (typeof ALLOWED_FILE_TYPES)[number]
+        attachment.type as (typeof ALLOWED_FILE_TYPES)[number],
       );
 
       if (!isLogFile && !isAllowedType) {
-        return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'File type not allowed' },
+          { status: 400 },
+        );
       }
 
       // Sanitize filename to prevent path traversal
@@ -191,7 +216,7 @@ export async function POST(request: NextRequest) {
           access: 'public',
           addRandomSuffix: true,
           contentType: attachment.type || 'application/octet-stream',
-        }
+        },
       );
       attachmentUrl = attachmentBlob.url;
       attachmentFilename = sanitizedFilename; // Use sanitized filename
@@ -208,7 +233,7 @@ export async function POST(request: NextRequest) {
         attachmentUrl,
         attachmentFilename,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     // Step 12: Send email via Resend
@@ -226,7 +251,7 @@ export async function POST(request: NextRequest) {
       // Don't expose internal error details to user
       return NextResponse.json(
         { error: 'Failed to send bug report. Please try again later.' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -239,7 +264,7 @@ export async function POST(request: NextRequest) {
     console.error('Bug report API error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred. Please try again later.' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
