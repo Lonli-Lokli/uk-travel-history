@@ -220,6 +220,8 @@ export class SupabaseDbAdapter implements DbProvider {
       pause_resumes_at: data.pauseResumesAt?.toISOString() ?? null,
     };
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The insert operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: result, error } = await (client.from('users') as any)
       .insert(insertData)
@@ -264,6 +266,8 @@ export class SupabaseDbAdapter implements DbProvider {
       updateData.pause_resumes_at =
         updates.pauseResumesAt?.toISOString() ?? null;
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The update operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from('users') as any)
       .update(updateData)
@@ -378,7 +382,9 @@ export class SupabaseDbAdapter implements DbProvider {
       product_id: data.productId ?? null,
     };
 
-     
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The insert operation returns the correct types but TS can't infer them without this cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: result, error } = await (
       client.from('purchase_intents') as any
     )
@@ -409,6 +415,8 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.authUserId !== undefined)
       updateData.clerk_user_id = updates.authUserId;
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The update operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from('purchase_intents') as any)
       .update(updateData)
@@ -464,6 +472,8 @@ export class SupabaseDbAdapter implements DbProvider {
       payload: data.payload,
     };
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The insert operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: result, error } = await (client.from('webhook_events') as any)
       .insert(insertData)
@@ -674,6 +684,8 @@ export class SupabaseDbAdapter implements DbProvider {
       color: data.color ?? null,
     };
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The insert operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: result, error } = await (client.from('tracking_goals') as any)
       .insert(insertData)
@@ -704,6 +716,8 @@ export class SupabaseDbAdapter implements DbProvider {
       updateData.display_order = data.displayOrder;
     if (data.color !== undefined) updateData.color = data.color;
 
+    // Note: Using type assertion to work around Supabase client's generic constraints
+    // The update operation returns the correct types but TS can't infer them without this cast
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: result, error } = await (client.from('tracking_goals') as any)
       .update(updateData)
