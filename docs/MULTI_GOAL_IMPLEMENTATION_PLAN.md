@@ -49,6 +49,7 @@ ON CONFLICT (feature_key) DO NOTHING;
 ```
 
 **Acceptance:**
+
 - [ ] `FEATURE_KEYS.MULTI_GOAL_TRACKING` exists in `@uth/features`
 - [ ] Feature flag exists in seed.sql and defaults to `false`
 - [ ] Migration created for production deployment
@@ -201,6 +202,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 **Acceptance:**
+
 - [ ] `tracking_goals` table created with RLS
 - [ ] `goal_templates` table seeded
 - [ ] Indexes verified with EXPLAIN ANALYZE
@@ -217,26 +219,20 @@ $$ LANGUAGE plpgsql;
 export type Jurisdiction = 'uk' | 'schengen' | 'global';
 
 // Goal type - which rule set to use
-export type GoalType =
-  | 'uk_ilr'
-  | 'uk_citizenship'
-  | 'uk_tax_residency'
-  | 'schengen_90_180'
-  | 'days_counter'
-  | 'custom_threshold';
+export type GoalType = 'uk_ilr' | 'uk_citizenship' | 'uk_tax_residency' | 'schengen_90_180' | 'days_counter' | 'custom_threshold';
 
 // Category for UI grouping
 export type GoalCategory = 'immigration' | 'tax' | 'personal';
 
 // Status indicators
 export type GoalStatus =
-  | 'not_started'    // No trips, no progress
-  | 'in_progress'    // Tracking but not yet eligible
-  | 'on_track'       // Will meet target at current rate
-  | 'at_risk'        // May exceed limits soon
+  | 'not_started' // No trips, no progress
+  | 'in_progress' // Tracking but not yet eligible
+  | 'on_track' // Will meet target at current rate
+  | 'at_risk' // May exceed limits soon
   | 'limit_exceeded' // Already broke a limit
-  | 'eligible'       // Can apply now
-  | 'achieved';      // Goal completed
+  | 'eligible' // Can apply now
+  | 'achieved'; // Goal completed
 
 // Main goal entity
 export interface TrackingGoal {
@@ -246,7 +242,7 @@ export interface TrackingGoal {
   jurisdiction: Jurisdiction;
   name: string;
   config: GoalConfig;
-  startDate: string;        // ISO date
+  startDate: string; // ISO date
   targetDate: string | null;
   isActive: boolean;
   isArchived: boolean;
@@ -257,13 +253,7 @@ export interface TrackingGoal {
 }
 
 // Discriminated union for goal configs
-export type GoalConfig =
-  | UKILRConfig
-  | UKCitizenshipConfig
-  | UKTaxConfig
-  | SchengenConfig
-  | DaysCounterConfig
-  | CustomThresholdConfig;
+export type GoalConfig = UKILRConfig | UKCitizenshipConfig | UKTaxConfig | SchengenConfig | DaysCounterConfig | CustomThresholdConfig;
 
 export interface UKILRConfig {
   type: 'uk_ilr';
@@ -282,7 +272,7 @@ export interface UKCitizenshipConfig {
 
 export interface UKTaxConfig {
   type: 'uk_tax_residency';
-  taxYear: string;  // "2024-25"
+  taxYear: string; // "2024-25"
 }
 
 export interface SchengenConfig {
@@ -311,7 +301,7 @@ export interface GoalCalculation {
   status: GoalStatus;
 
   // Progress
-  progressPercent: number;  // 0-100
+  progressPercent: number; // 0-100
 
   // Key dates
   eligibilityDate: string | null;
@@ -362,12 +352,7 @@ export interface RuleEngine<TConfig extends GoalConfig = GoalConfig> {
   readonly jurisdiction: Jurisdiction;
 
   // Calculate results
-  calculate(
-    trips: TripRecord[],
-    config: TConfig,
-    startDate: Date,
-    asOfDate?: Date
-  ): GoalCalculation;
+  calculate(trips: TripRecord[], config: TConfig, startDate: Date, asOfDate?: Date): GoalCalculation;
 
   // Validate config
   validateConfig(config: unknown): config is TConfig;
@@ -398,7 +383,7 @@ class RuleEngineRegistry {
   }
 
   getByJurisdiction(jurisdiction: Jurisdiction): RuleEngine[] {
-    return this.getAll().filter(e => e.jurisdiction === jurisdiction);
+    return this.getAll().filter((e) => e.jurisdiction === jurisdiction);
   }
 }
 
@@ -415,12 +400,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
   readonly goalType = 'uk_ilr' as const;
   readonly jurisdiction = 'uk' as const;
 
-  calculate(
-    trips: TripRecord[],
-    config: UKILRConfig,
-    startDate: Date,
-    asOfDate: Date = new Date()
-  ): GoalCalculation {
+  calculate(trips: TripRecord[], config: UKILRConfig, startDate: Date, asOfDate: Date = new Date()): GoalCalculation {
     // Use existing calculateTravelData from @uth/calculators
     // Transform to GoalCalculation format
     // ...
@@ -435,7 +415,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       name: 'UK Indefinite Leave to Remain',
       icon: 'home',
       description: 'Track continuous residence for ILR eligibility',
-      category: 'immigration' as const
+      category: 'immigration' as const,
     };
   }
 }
@@ -449,12 +429,7 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
   readonly goalType = 'days_counter' as const;
   readonly jurisdiction = 'global' as const;
 
-  calculate(
-    trips: TripRecord[],
-    config: DaysCounterConfig,
-    startDate: Date,
-    asOfDate: Date = new Date()
-  ): GoalCalculation {
+  calculate(trips: TripRecord[], config: DaysCounterConfig, startDate: Date, asOfDate: Date = new Date()): GoalCalculation {
     const daysAway = this.calculateDaysAway(trips, startDate, asOfDate);
     const totalDays = this.daysBetween(startDate, asOfDate);
     const daysPresent = totalDays - daysAway;
@@ -475,23 +450,24 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
           value,
           unit: 'days',
           status: 'ok',
-          tooltip: `Since ${format(startDate, 'MMM d, yyyy')}`
+          tooltip: `Since ${format(startDate, 'MMM d, yyyy')}`,
         },
         {
           key: 'tracking_period',
           label: 'Tracking Period',
           value: totalDays,
           unit: 'days',
-          status: 'ok'
-        }
+          status: 'ok',
+        },
       ],
-      warnings: []
+      warnings: [],
     };
   }
 }
 ```
 
 **Acceptance:**
+
 - [ ] `packages/rules` package created
 - [ ] Core types exported
 - [ ] `UKILRRuleEngine` extracts logic from `@uth/calculators`
@@ -539,16 +515,16 @@ export async function getGoalTemplates(jurisdiction?: Jurisdiction): Promise<Goa
 
 ### 3.2 API Routes
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/goals` | List user's goals |
-| POST | `/api/goals` | Create new goal |
-| GET | `/api/goals/[id]` | Get goal with calculation |
-| PATCH | `/api/goals/[id]` | Update goal |
-| DELETE | `/api/goals/[id]` | Delete goal |
-| POST | `/api/goals/reorder` | Reorder goals |
-| GET | `/api/goals/templates` | Get available templates |
-| POST | `/api/goals/[id]/calculate` | Force recalculate |
+| Method | Path                        | Description               |
+| ------ | --------------------------- | ------------------------- |
+| GET    | `/api/goals`                | List user's goals         |
+| POST   | `/api/goals`                | Create new goal           |
+| GET    | `/api/goals/[id]`           | Get goal with calculation |
+| PATCH  | `/api/goals/[id]`           | Update goal               |
+| DELETE | `/api/goals/[id]`           | Delete goal               |
+| POST   | `/api/goals/reorder`        | Reorder goals             |
+| GET    | `/api/goals/templates`      | Get available templates   |
+| POST   | `/api/goals/[id]/calculate` | Force recalculate         |
 
 ### 3.3 Route Implementation Example
 
@@ -594,10 +570,7 @@ export async function POST(request: NextRequest) {
   const isPaid = userProfile?.subscription_tier !== 'free';
 
   if (!isPaid && existingGoals.length >= 1) {
-    return NextResponse.json(
-      { error: 'Free tier limited to 1 goal. Upgrade to add more.' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Free tier limited to 1 goal. Upgrade to add more.' }, { status: 403 });
   }
 
   const body = await request.json();
@@ -609,6 +582,7 @@ export async function POST(request: NextRequest) {
 ```
 
 **Acceptance:**
+
 - [ ] All CRUD operations in `@uth/db`
 - [ ] All API routes implemented
 - [ ] Authentication required
@@ -692,7 +666,7 @@ export interface TrackingGoalData {
   jurisdiction: string;
   name: string;
   config: Record<string, unknown>;
-  startDate: string;  // ISO date string
+  startDate: string; // ISO date string
   targetDate: string | null;
   isActive: boolean;
   isArchived: boolean;
@@ -740,7 +714,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
   const multiGoalEnabled = policies['multi_goal_tracking']?.enabled ?? false;
 
   if (user && multiGoalEnabled) {
-    goals = await db.getUserGoals(user.uid, false);  // exclude archived
+    goals = await db.getUserGoals(user.uid, false); // exclude archived
 
     // Pre-compute calculations server-side
     if (goals.length > 0) {
@@ -794,26 +768,21 @@ export class GoalsStore {
    * Hydrate store with server-loaded goals data.
    * This prevents flicker by having data ready immediately on page render.
    */
-  hydrate(
-    goals: TrackingGoalData[] | null,
-    calculations: Record<string, GoalCalculationData> | null
-  ): void {
+  hydrate(goals: TrackingGoalData[] | null, calculations: Record<string, GoalCalculationData> | null): void {
     if (!goals) {
       this.isHydrated = true;
       return;
     }
 
     // Convert serialized data to domain types
-    this.goals = goals.map(g => ({
+    this.goals = goals.map((g) => ({
       ...g,
       // Dates are already ISO strings, keep as-is for serialization
     })) as TrackingGoal[];
 
     // Hydrate calculations map
     if (calculations) {
-      this.calculations = new Map(
-        Object.entries(calculations).map(([id, calc]) => [id, calc as GoalCalculation])
-      );
+      this.calculations = new Map(Object.entries(calculations).map(([id, calc]) => [id, calc as GoalCalculation]));
     }
 
     // Set first goal as active if none selected
@@ -831,14 +800,12 @@ export class GoalsStore {
   }
 
   get activeGoals(): TrackingGoal[] {
-    return this.goals
-      .filter(g => g.isActive && !g.isArchived)
-      .sort((a, b) => a.displayOrder - b.displayOrder);
+    return this.goals.filter((g) => g.isActive && !g.isArchived).sort((a, b) => a.displayOrder - b.displayOrder);
   }
 
   get activeGoal(): TrackingGoal | null {
     if (!this.activeGoalId) return this.activeGoals[0] ?? null;
-    return this.goals.find(g => g.id === this.activeGoalId) ?? null;
+    return this.goals.find((g) => g.id === this.activeGoalId) ?? null;
   }
 
   get activeCalculation(): GoalCalculation | null {
@@ -862,7 +829,7 @@ export class GoalsStore {
         this.isLoading = false;
 
         // Calculate all active goals
-        this.activeGoals.forEach(goal => {
+        this.activeGoals.forEach((goal) => {
           this.calculateGoal(goal.id);
         });
       });
@@ -878,7 +845,7 @@ export class GoalsStore {
     const response = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
+      body: JSON.stringify(input),
     });
 
     const data = await response.json();
@@ -897,7 +864,7 @@ export class GoalsStore {
   }
 
   calculateGoal(goalId: string): void {
-    const goal = this.goals.find(g => g.id === goalId);
+    const goal = this.goals.find((g) => g.id === goalId);
     if (!goal) return;
 
     // Get trips from travelStore
@@ -909,11 +876,7 @@ export class GoalsStore {
     const engine = ruleEngineRegistry.get(goal.type);
     if (!engine) return;
 
-    const calculation = engine.calculate(
-      trips,
-      goal.config,
-      new Date(goal.startDate)
-    );
+    const calculation = engine.calculate(trips, goal.config, new Date(goal.startDate));
     calculation.goalId = goalId;
 
     runInAction(() => {
@@ -923,7 +886,7 @@ export class GoalsStore {
 
   // Recalculate all active goals (call when trips change)
   recalculateAll(): void {
-    this.activeGoals.forEach(goal => {
+    this.activeGoals.forEach((goal) => {
       this.calculateGoal(goal.id);
     });
   }
@@ -942,17 +905,18 @@ import { goalsStore } from './goalsStore';
 
 // In constructor or init:
 reaction(
-  () => this.trips.slice(),  // Observe trips array
+  () => this.trips.slice(), // Observe trips array
   () => {
     if (goalsStore.isFeatureEnabled) {
       goalsStore.recalculateAll();
     }
   },
-  { delay: 300 }  // Debounce
+  { delay: 300 }, // Debounce
 );
 ```
 
 **Acceptance:**
+
 - [ ] `GoalsStore` implemented
 - [ ] Integrates with `travelStore` for trip data
 - [ ] Calculations cached and updated reactively
@@ -968,11 +932,11 @@ reaction(
 
 #### Available Components (from widgets package)
 
-| Component | Purpose | Use Case |
-|-----------|---------|----------|
-| `FeatureGate` | Wrap content that requires feature access | Hide entire sections for non-enabled users |
-| `FeatureButton` | Button with auto premium badge | "Add Goal" button for free tier users |
-| `useFeatureGate(feature)` | Hook for custom logic | Check `canAddMore` based on tier + goal count |
+| Component                 | Purpose                                   | Use Case                                      |
+| ------------------------- | ----------------------------------------- | --------------------------------------------- |
+| `FeatureGate`             | Wrap content that requires feature access | Hide entire sections for non-enabled users    |
+| `FeatureButton`           | Button with auto premium badge            | "Add Goal" button for free tier users         |
+| `useFeatureGate(feature)` | Hook for custom logic                     | Check `canAddMore` based on tier + goal count |
 
 #### Integration with Goal Limits
 
@@ -988,17 +952,15 @@ export const GoalMiniCardsRow = observer(({ goals, onAddGoal, onUpgrade }) => {
 
   return (
     <div className="flex gap-2 overflow-x-auto">
-      {goals.map(goal => <GoalMiniCard key={goal.id} goal={goal} />)}
+      {goals.map((goal) => (
+        <GoalMiniCard key={goal.id} goal={goal} />
+      ))}
 
       {canAddMore ? (
         <button onClick={onAddGoal}>+ Add Goal</button>
       ) : (
         // Use FeatureButton - auto shows "PRO" badge and triggers upgrade flow
-        <FeatureButton
-          feature={FEATURE_KEYS.PREMIUM_FEATURES}
-          onClick={onAddGoal}
-          variant="outline"
-        >
+        <FeatureButton feature={FEATURE_KEYS.PREMIUM_FEATURES} onClick={onAddGoal} variant="outline">
           + Add Goal
         </FeatureButton>
       )}
@@ -1018,7 +980,7 @@ export const TravelPageClient = observer(() => {
   return (
     <FeatureGate
       feature={FEATURE_KEYS.MULTI_GOAL_TRACKING}
-      fallback={<LegacyTravelPage />}  // Show old UI if feature disabled
+      fallback={<LegacyTravelPage />} // Show old UI if feature disabled
     >
       <MultiGoalTravelPage />
     </FeatureGate>
@@ -1085,7 +1047,7 @@ interface GoalMiniCardsRowProps {
   activeGoalId: string | null;
   onGoalSelect: (goalId: string) => void;
   onAddGoal: () => void;
-  canAddMore: boolean;  // false if free tier and already has 1 goal
+  canAddMore: boolean; // false if free tier and already has 1 goal
   onUpgrade: () => void;
 }
 
@@ -1112,10 +1074,12 @@ Free tier with 1 goal (shows upgrade prompt):
 **Three-step wizard optimized for clarity.**
 
 **Tier restrictions:**
+
 - Anonymous/Free users: Can only select from predefined templates (no "Custom Goal")
 - Paid users: Full access to all templates including custom goals
 
 **Step 1: Category Selection**
+
 ```
 What would you like to track?
 
@@ -1125,6 +1089,7 @@ What would you like to track?
 ```
 
 **Step 2: Template Selection** (filtered by category)
+
 ```
 Choose a goal type:
 
@@ -1136,6 +1101,7 @@ Choose a goal type:
 ```
 
 **Step 3: Configuration** (based on template)
+
 ```
 Configure your goal:
 
@@ -1219,25 +1185,10 @@ export const TravelPageClient = observer(() => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
       {/* Goal Selection Row */}
-      {goalsStore.hasGoals ? (
-        <GoalMiniCardsRow
-          goals={goalsStore.activeGoals}
-          calculations={goalsStore.calculations}
-          activeGoalId={goalsStore.activeGoalId}
-          onGoalSelect={goalsStore.setActiveGoal}
-          onAddGoal={() => setShowAddModal(true)}
-        />
-      ) : (
-        <GoalEmptyState onAddGoal={() => setShowAddModal(true)} />
-      )}
+      {goalsStore.hasGoals ? <GoalMiniCardsRow goals={goalsStore.activeGoals} calculations={goalsStore.calculations} activeGoalId={goalsStore.activeGoalId} onGoalSelect={goalsStore.setActiveGoal} onAddGoal={() => setShowAddModal(true)} /> : <GoalEmptyState onAddGoal={() => setShowAddModal(true)} />}
 
       {/* Selected Goal Detail */}
-      {goalsStore.activeGoal && goalsStore.activeCalculation && (
-        <GoalDetailPanel
-          goal={goalsStore.activeGoal}
-          calculation={goalsStore.activeCalculation}
-        />
-      )}
+      {goalsStore.activeGoal && goalsStore.activeCalculation && <GoalDetailPanel goal={goalsStore.activeGoal} calculation={goalsStore.activeCalculation} />}
 
       {/* Trip Table */}
       <TravelHistoryCard />
@@ -1257,6 +1208,7 @@ export const TravelPageClient = observer(() => {
 ```
 
 **Acceptance:**
+
 - [ ] All components created
 - [ ] Mobile-responsive mini cards row
 - [ ] Add goal wizard works end-to-end
@@ -1293,12 +1245,12 @@ When multi-goal is enabled for a user with existing ILR data:
 
 ### 6.2 Rollout Plan
 
-| Stage | Scope | Duration | Success Criteria |
-|-------|-------|----------|------------------|
-| Alpha | Internal + beta_users | 1 week | No data loss, calculations match |
-| Beta | 10% rollout | 2 weeks | <1% error rate, positive feedback |
-| GA | 50% rollout | 1 week | Stable metrics |
-| Full | 100% | Ongoing | - |
+| Stage | Scope                 | Duration | Success Criteria                  |
+| ----- | --------------------- | -------- | --------------------------------- |
+| Alpha | Internal + beta_users | 1 week   | No data loss, calculations match  |
+| Beta  | 10% rollout           | 2 weeks  | <1% error rate, positive feedback |
+| GA    | 50% rollout           | 1 week   | Stable metrics                    |
+| Full  | 100%                  | Ongoing  | -                                 |
 
 ### 6.3 Backward Compatibility
 
@@ -1312,23 +1264,27 @@ When multi-goal is enabled for a user with existing ILR data:
 ## Summary Checklist
 
 ### Phase 0 (Foundation)
+
 - [ ] `FEATURE_KEYS.MULTI_GOAL_TRACKING` added to `@uth/features`
 - [ ] Feature flag in `seed.sql` (defaults to `false`)
 - [ ] Migration for production deployment
 
 ### Phase 1 (Database)
+
 - [ ] `tracking_goals` table with RLS
 - [ ] `goal_templates` table seeded
 - [ ] `custom` template requires `min_tier = 'monthly'`
 - [ ] Migration tested locally with `npx supabase db reset`
 
 ### Phase 2 (Rule Engines)
+
 - [ ] `@uth/rules` package created
 - [ ] `UKILRRuleEngine` (refactored from calculators)
 - [ ] `DaysCounterRuleEngine`
 - [ ] Unit tests passing
 
 ### Phase 3 (API)
+
 - [ ] CRUD endpoints for goals
 - [ ] Templates endpoint
 - [ ] Feature flag checks via `checkFeatureAccess()`
@@ -1336,6 +1292,7 @@ When multi-goal is enabled for a user with existing ILR data:
 - [ ] Integration tests passing
 
 ### Phase 4 (State & Hydration)
+
 - [ ] `GoalsStore` with MobX
 - [ ] `GoalsStore.hydrate()` method for server data
 - [ ] `AccessContext` extended with `goals` and `goalCalculations`
@@ -1344,6 +1301,7 @@ When multi-goal is enabled for a user with existing ILR data:
 - [ ] Integration with `travelStore` for reactive recalculation
 
 ### Phase 5 (UI with @uth/widgets)
+
 - [ ] `FeatureGate` wraps multi-goal UI with `fallback={<LegacyTravelPage />}`
 - [ ] `FeatureButton` for "Add Goal" when free tier limit reached
 - [ ] `useFeatureGate()` for `canAddMore` logic
@@ -1355,6 +1313,7 @@ When multi-goal is enabled for a user with existing ILR data:
 - [ ] Custom goal template hidden for anonymous/free users
 
 ### Phase 6 (Rollout)
+
 - [ ] Migration UI for existing users
 - [ ] Alpha testing (internal + beta_users)
 - [ ] Beta rollout (10%)

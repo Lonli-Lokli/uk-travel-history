@@ -138,12 +138,30 @@ export class MockDbAdapter implements DbProvider {
       role: updates.role ?? user.role,
       subscriptionTier: updates.subscriptionTier ?? user.subscriptionTier,
       subscriptionStatus: updates.subscriptionStatus ?? user.subscriptionStatus,
-      stripeCustomerId: updates.stripeCustomerId !== undefined ? updates.stripeCustomerId : user.stripeCustomerId,
-      stripeSubscriptionId: updates.stripeSubscriptionId !== undefined ? updates.stripeSubscriptionId : user.stripeSubscriptionId,
-      stripePriceId: updates.stripePriceId !== undefined ? updates.stripePriceId : user.stripePriceId,
-      currentPeriodEnd: updates.currentPeriodEnd !== undefined ? updates.currentPeriodEnd : user.currentPeriodEnd,
-      cancelAtPeriodEnd: updates.cancelAtPeriodEnd !== undefined ? updates.cancelAtPeriodEnd : user.cancelAtPeriodEnd,
-      pauseResumesAt: updates.pauseResumesAt !== undefined ? updates.pauseResumesAt : user.pauseResumesAt,
+      stripeCustomerId:
+        updates.stripeCustomerId !== undefined
+          ? updates.stripeCustomerId
+          : user.stripeCustomerId,
+      stripeSubscriptionId:
+        updates.stripeSubscriptionId !== undefined
+          ? updates.stripeSubscriptionId
+          : user.stripeSubscriptionId,
+      stripePriceId:
+        updates.stripePriceId !== undefined
+          ? updates.stripePriceId
+          : user.stripePriceId,
+      currentPeriodEnd:
+        updates.currentPeriodEnd !== undefined
+          ? updates.currentPeriodEnd
+          : user.currentPeriodEnd,
+      cancelAtPeriodEnd:
+        updates.cancelAtPeriodEnd !== undefined
+          ? updates.cancelAtPeriodEnd
+          : user.cancelAtPeriodEnd,
+      pauseResumesAt:
+        updates.pauseResumesAt !== undefined
+          ? updates.pauseResumesAt
+          : user.pauseResumesAt,
     };
 
     this.users.set(updated.id, updated);
@@ -263,7 +281,9 @@ export class MockDbAdapter implements DbProvider {
     return false;
   }
 
-  async recordWebhookEvent(data: CreateWebhookEventData): Promise<WebhookEvent> {
+  async recordWebhookEvent(
+    data: CreateWebhookEventData,
+  ): Promise<WebhookEvent> {
     // Check for duplicate
     const hasProcessed = await this.hasWebhookEventBeenProcessed(
       data.stripeEventId,
@@ -295,7 +315,9 @@ export class MockDbAdapter implements DbProvider {
     return Array.from(this.featurePolicies.values());
   }
 
-  async getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null> {
+  async getFeaturePolicyByKey(
+    featureKey: string,
+  ): Promise<FeaturePolicy | null> {
     for (const policy of this.featurePolicies.values()) {
       if (policy.featureKey === featureKey) {
         return policy;
@@ -308,7 +330,10 @@ export class MockDbAdapter implements DbProvider {
   // Tracking Goal Operations
   // ============================================================================
 
-  async getUserGoals(userId: string, includeArchived = false): Promise<TrackingGoalData[]> {
+  async getUserGoals(
+    userId: string,
+    includeArchived = false,
+  ): Promise<TrackingGoalData[]> {
     const results: TrackingGoalData[] = [];
     for (const goal of this.trackingGoals.values()) {
       if (goal.userId === userId) {
@@ -324,7 +349,10 @@ export class MockDbAdapter implements DbProvider {
     return this.trackingGoals.get(goalId) || null;
   }
 
-  async createGoal(userId: string, data: CreateTrackingGoalData): Promise<TrackingGoalData> {
+  async createGoal(
+    userId: string,
+    data: CreateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
     const now = new Date().toISOString();
     const goal: TrackingGoalData = {
       id: this.generateId(),
@@ -347,7 +375,10 @@ export class MockDbAdapter implements DbProvider {
     return goal;
   }
 
-  async updateGoal(goalId: string, data: UpdateTrackingGoalData): Promise<TrackingGoalData> {
+  async updateGoal(
+    goalId: string,
+    data: UpdateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
     const goal = await this.getGoalById(goalId);
 
     if (!goal) {
@@ -361,7 +392,8 @@ export class MockDbAdapter implements DbProvider {
       ...goal,
       name: data.name ?? goal.name,
       config: data.config ?? goal.config,
-      targetDate: data.targetDate !== undefined ? data.targetDate : goal.targetDate,
+      targetDate:
+        data.targetDate !== undefined ? data.targetDate : goal.targetDate,
       isActive: data.isActive ?? goal.isActive,
       isArchived: data.isArchived ?? goal.isArchived,
       displayOrder: data.displayOrder ?? goal.displayOrder,

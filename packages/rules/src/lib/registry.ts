@@ -34,7 +34,7 @@ class RuleEngineRegistry {
    * Get rule engines for a specific jurisdiction
    */
   getByJurisdiction(jurisdiction: Jurisdiction): RuleEngine[] {
-    return this.getAll().filter(e => e.jurisdiction === jurisdiction);
+    return this.getAll().filter((e) => e.jurisdiction === jurisdiction);
   }
 
   /**

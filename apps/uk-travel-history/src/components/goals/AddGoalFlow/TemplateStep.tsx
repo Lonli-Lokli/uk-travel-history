@@ -2,16 +2,18 @@
 
 import { Button, UIIcon, type IconName } from '@uth/ui';
 import { cn } from '@uth/utils';
-import type { GoalTemplate } from './AddGoalModal';
+import { goalsStore } from '@uth/stores';
+import type { GoalTemplateWithAccess } from '@uth/db';
 
 interface TemplateStepProps {
-  templates: GoalTemplate[];
+  templates: GoalTemplateWithAccess[];
   isLoading: boolean;
-  onSelect: (template: GoalTemplate) => void;
-  onBack: () => void;
 }
 
-export function TemplateStep({ templates, isLoading, onSelect, onBack }: TemplateStepProps) {
+/**
+ * Template selection step - uses goalsStore actions
+ */
+export function TemplateStep({ templates, isLoading }: TemplateStepProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -23,8 +25,14 @@ export function TemplateStep({ templates, isLoading, onSelect, onBack }: Templat
   if (templates.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">No templates available for this category.</p>
-        <Button variant="outline" onClick={onBack} className="mt-4">
+        <p className="text-muted-foreground">
+          No templates available for this category.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => goalsStore.goBackInModal()}
+          className="mt-4"
+        >
           <UIIcon iconName="arrow-left" className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -42,9 +50,10 @@ export function TemplateStep({ templates, isLoading, onSelect, onBack }: Templat
             className={cn(
               'w-full justify-between h-auto py-3 px-4',
               template.requiresUpgrade && 'opacity-60',
-              !template.requiresUpgrade && 'hover:bg-primary/5 hover:border-primary',
+              !template.requiresUpgrade &&
+                'hover:bg-primary/5 hover:border-primary',
             )}
-            onClick={() => onSelect(template)}
+            onClick={() => goalsStore.selectTemplate(template)}
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -56,7 +65,9 @@ export function TemplateStep({ templates, isLoading, onSelect, onBack }: Templat
               <div className="text-left">
                 <p className="font-medium">{template.name}</p>
                 {template.description && (
-                  <p className="text-xs text-muted-foreground">{template.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {template.description}
+                  </p>
                 )}
               </div>
             </div>
@@ -66,13 +77,20 @@ export function TemplateStep({ templates, isLoading, onSelect, onBack }: Templat
                   PRO
                 </span>
               )}
-              <UIIcon iconName="chevron-right" className="w-4 h-4 text-slate-400" />
+              <UIIcon
+                iconName="chevron-right"
+                className="w-4 h-4 text-slate-400"
+              />
             </div>
           </Button>
         ))}
       </div>
 
-      <Button variant="ghost" onClick={onBack} className="w-full">
+      <Button
+        variant="ghost"
+        onClick={() => goalsStore.goBackInModal()}
+        className="w-full"
+      >
         <UIIcon iconName="arrow-left" className="w-4 h-4 mr-2" />
         Back
       </Button>

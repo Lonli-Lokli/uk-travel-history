@@ -32,11 +32,15 @@ export async function GET(request: NextRequest) {
         userContext,
       );
       if (!accessResult.allowed) {
-        return NextResponse.json({ error: 'Feature not available' }, { status: 403 });
+        return NextResponse.json(
+          { error: 'Feature not available' },
+          { status: 403 },
+        );
       }
     }
 
-    const jurisdiction = request.nextUrl.searchParams.get('jurisdiction') ?? undefined;
+    const jurisdiction =
+      request.nextUrl.searchParams.get('jurisdiction') ?? undefined;
     const allTemplates = await getGoalTemplates(jurisdiction);
 
     // Define tier hierarchy for filtering

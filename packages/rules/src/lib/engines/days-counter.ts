@@ -4,7 +4,14 @@
  * Simple engine for counting days away or present without any limits.
  */
 
-import { differenceInDays, addDays, format, parseISO, isBefore, isAfter } from 'date-fns';
+import {
+  differenceInDays,
+  addDays,
+  format,
+  parseISO,
+  isBefore,
+  isAfter,
+} from 'date-fns';
 import type { TripRecord } from '@uth/calculators';
 import type {
   RuleEngine,
@@ -23,16 +30,18 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
     trips: TripRecord[],
     config: DaysCounterConfig,
     startDate: Date,
-    asOfDate: Date = new Date()
+    asOfDate: Date = new Date(),
   ): GoalCalculation {
     const daysAway = this.calculateDaysAway(trips, startDate, asOfDate);
     const totalDays = differenceInDays(asOfDate, startDate) + 1;
     const daysPresent = totalDays - daysAway;
 
-    const primaryValue = config.countDirection === 'days_away' ? daysAway : daysPresent;
-    const label = config.countDirection === 'days_away'
-      ? `Days Away from ${config.referenceLocation}`
-      : `Days in ${config.referenceLocation}`;
+    const primaryValue =
+      config.countDirection === 'days_away' ? daysAway : daysPresent;
+    const label =
+      config.countDirection === 'days_away'
+        ? `Days Away from ${config.referenceLocation}`
+        : `Days in ${config.referenceLocation}`;
 
     const metrics: GoalMetric[] = [
       {
@@ -72,10 +81,14 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
     }
 
     // Calculate percentage of time away/present
-    const percentage = totalDays > 0 ? Math.round((primaryValue / totalDays) * 100) : 0;
+    const percentage =
+      totalDays > 0 ? Math.round((primaryValue / totalDays) * 100) : 0;
     metrics.push({
       key: 'percentage',
-      label: config.countDirection === 'days_away' ? '% Time Away' : '% Time Present',
+      label:
+        config.countDirection === 'days_away'
+          ? '% Time Away'
+          : '% Time Present',
       value: percentage,
       unit: 'percent',
       status: 'ok',
@@ -119,7 +132,7 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
   private calculateDaysAway(
     trips: TripRecord[],
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): number {
     let totalDaysAway = 0;
 

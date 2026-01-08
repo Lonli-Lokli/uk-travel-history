@@ -1,7 +1,14 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { Card, CardContent, CardHeader, CardTitle, Button, UIIcon } from '@uth/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  UIIcon,
+} from '@uth/ui';
 import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
@@ -25,7 +32,12 @@ interface MetricCardProps {
   status?: 'ok' | 'warning' | 'danger';
 }
 
-function MetricCard({ label, value, subtitle, status = 'ok' }: MetricCardProps) {
+function MetricCard({
+  label,
+  value,
+  subtitle,
+  status = 'ok',
+}: MetricCardProps) {
   const statusColors = {
     ok: 'bg-slate-50',
     warning: 'bg-amber-50 border-amber-200',
@@ -41,7 +53,13 @@ function MetricCard({ label, value, subtitle, status = 'ok' }: MetricCardProps) 
   );
 }
 
-function ProgressRing({ percent, size = 80 }: { percent: number; size?: number }) {
+function ProgressRing({
+  percent,
+  size = 80,
+}: {
+  percent: number;
+  size?: number;
+}) {
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -83,7 +101,9 @@ function ProgressRing({ percent, size = 80 }: { percent: number; size?: number }
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-bold text-slate-700">{Math.round(percent)}%</span>
+        <span className="text-lg font-bold text-slate-700">
+          {Math.round(percent)}%
+        </span>
       </div>
     </div>
   );
@@ -158,7 +178,9 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
           <ProgressRing percent={progress} />
           <div className="flex-1">
             <p className="text-sm text-slate-600">Eligible</p>
-            <p className="text-lg font-semibold text-slate-900">{eligibilityDateStr}</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {eligibilityDateStr}
+            </p>
             {daysUntil !== null && daysUntil > 0 && (
               <p className="text-sm text-muted-foreground">
                 {daysUntil} days remaining
@@ -176,7 +198,13 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                 label={metric.label}
                 value={`${metric.value}${metric.unit === 'days' ? '' : ` ${metric.unit}`}`}
                 subtitle={metric.tooltip}
-                status={metric.status === 'ok' ? 'ok' : metric.status === 'warning' ? 'warning' : 'danger'}
+                status={
+                  metric.status === 'ok'
+                    ? 'ok'
+                    : metric.status === 'warning'
+                      ? 'warning'
+                      : 'danger'
+                }
               />
             ))}
           </div>
@@ -196,7 +224,11 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                 )}
               >
                 <UIIcon
-                  iconName={warning.severity === 'error' ? 'alert-circle' : 'alert-triangle'}
+                  iconName={
+                    warning.severity === 'error'
+                      ? 'alert-circle'
+                      : 'alert-triangle'
+                  }
                   className="w-4 h-4 flex-shrink-0 mt-0.5"
                 />
                 <span>{warning.message}</span>
@@ -218,9 +250,12 @@ export function GoalEmptyState({ onAddGoal }: { onAddGoal: () => void }) {
           <UIIcon iconName="target" className="w-8 h-8 text-slate-400" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Start Tracking Your Time</h3>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Start Tracking Your Time
+          </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Track your days for visa applications, tax purposes, or just to see how much you travel.
+            Track your days for visa applications, tax purposes, or just to see
+            how much you travel.
           </p>
         </div>
         <Button onClick={onAddGoal}>

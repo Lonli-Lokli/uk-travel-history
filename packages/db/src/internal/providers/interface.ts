@@ -79,7 +79,10 @@ export interface DbProvider {
    * @param updates - Fields to update
    * @returns The updated user
    */
-  updateUserByAuthId(authUserId: string, updates: UpdateUserData): Promise<User>;
+  updateUserByAuthId(
+    authUserId: string,
+    updates: UpdateUserData,
+  ): Promise<User>;
 
   /**
    * Delete a user by auth user ID
@@ -177,7 +180,10 @@ export interface DbProvider {
    * @param includeArchived - Whether to include archived goals
    * @returns Array of goals
    */
-  getUserGoals(userId: string, includeArchived?: boolean): Promise<TrackingGoalData[]>;
+  getUserGoals(
+    userId: string,
+    includeArchived?: boolean,
+  ): Promise<TrackingGoalData[]>;
 
   /**
    * Get a goal by ID
@@ -192,7 +198,10 @@ export interface DbProvider {
    * @param data - Goal creation data
    * @returns The created goal
    */
-  createGoal(userId: string, data: CreateTrackingGoalData): Promise<TrackingGoalData>;
+  createGoal(
+    userId: string,
+    data: CreateTrackingGoalData,
+  ): Promise<TrackingGoalData>;
 
   /**
    * Update a tracking goal
@@ -200,7 +209,10 @@ export interface DbProvider {
    * @param data - Goal update data
    * @returns The updated goal
    */
-  updateGoal(goalId: string, data: UpdateTrackingGoalData): Promise<TrackingGoalData>;
+  updateGoal(
+    goalId: string,
+    data: UpdateTrackingGoalData,
+  ): Promise<TrackingGoalData>;
 
   /**
    * Delete a tracking goal

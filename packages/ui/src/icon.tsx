@@ -201,11 +201,10 @@ function getIconByName(iconName: StandardIconName): IconSvgElement {
   }
 }
 
-
 // taken from https://nucleoapp.com/svg-flag-icons
 const CUSTOM_ICONS: Record<string, React.FC<{ className?: string }>> = {
   'uk-flag': UKFlagIcon,
-  'eu-flag': EUFlagIcon
+  'eu-flag': EUFlagIcon,
 } as const;
 
 function isCustomIconName(iconName: IconName): iconName is CustomIconName {

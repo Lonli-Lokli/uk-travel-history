@@ -13,12 +13,20 @@
  * 3. API calls for CRUD operations (create, update, delete)
  */
 
-import { makeAutoObservable, runInAction, reaction, IReactionDisposer } from 'mobx';
+import {
+  makeAutoObservable,
+  runInAction,
+  reaction,
+  IReactionDisposer,
+} from 'mobx';
 import type {
   TrackingGoalData,
   GoalCalculationData,
   CreateTrackingGoalData,
   UpdateTrackingGoalData,
+  GoalTemplateWithAccess,
+  GoalType,
+  GoalJurisdiction,
 } from '@uth/db';
 
 class GoalsStore {
@@ -49,6 +57,38 @@ class GoalsStore {
 
   /** Reaction disposer for trip change observation (not observable) */
   tripReactionDisposer: IReactionDisposer | null = null;
+
+  // ============================================================================
+  // Templates State (hydrated from server)
+  // ============================================================================
+
+  /** Available goal templates (hydrated from server) */
+  templates: GoalTemplateWithAccess[] = [];
+
+  // ============================================================================
+  // Add Goal Modal UI State
+  // ============================================================================
+
+  /** Whether the add goal modal is open */
+  isAddModalOpen = false;
+
+  /** Current step in add goal wizard */
+  addModalStep: 'category' | 'template' | 'configure' = 'category';
+
+  /** Selected goal category */
+  selectedCategory: 'immigration' | 'tax' | 'personal' | null = null;
+
+  /** Selected template for new goal */
+  selectedTemplate: GoalTemplateWithAccess | null = null;
+
+  /** Form data for configuring new goal */
+  addModalFormData: Record<string, string> = {};
+
+  /** Whether goal is being created */
+  isCreating = false;
+
+  /** Error from add modal operations */
+  addModalError: string | null = null;
 
   constructor() {
     makeAutoObservable(this, {
@@ -95,6 +135,17 @@ class GoalsStore {
     return this.activeGoals.length;
   }
 
+  /** Get templates filtered by selected category */
+  get filteredTemplates(): GoalTemplateWithAccess[] {
+    if (!this.selectedCategory) return [];
+    return this.templates.filter((t) => t.category === this.selectedCategory);
+  }
+
+  /** Check if templates are loading (for backward compat - always false with server hydration) */
+  get isLoadingTemplates(): boolean {
+    return false; // Templates are hydrated from server, no client-side loading
+  }
+
   // ============================================================================
   // Hydration (called from Providers.tsx with server-loaded data)
   // ============================================================================
@@ -106,13 +157,18 @@ class GoalsStore {
    * @param goals - User's goals from AccessContext (null if feature disabled)
    * @param calculations - Pre-computed calculations from AccessContext
    * @param isFeatureEnabled - Whether the multi-goal feature is enabled
+   * @param templates - Available goal templates from AccessContext
    */
   hydrate(
     goals: TrackingGoalData[] | null,
     calculations: Record<string, GoalCalculationData> | null,
     isFeatureEnabled = false,
+    templates: GoalTemplateWithAccess[] | null = null,
   ): void {
     this.isFeatureEnabled = isFeatureEnabled;
+
+    // Hydrate templates
+    this.templates = templates ?? [];
 
     if (!goals) {
       this.goals = [];
@@ -152,6 +208,138 @@ class GoalsStore {
   }
 
   // ============================================================================
+  // Actions - Add Goal Modal
+  // ============================================================================
+
+  /**
+   * Open the add goal modal and reset state
+   */
+  openAddModal(): void {
+    this.isAddModalOpen = true;
+    this.addModalStep = 'category';
+    this.selectedCategory = null;
+    this.selectedTemplate = null;
+    this.addModalFormData = {};
+    this.addModalError = null;
+    this.isCreating = false;
+  }
+
+  /**
+   * Close the add goal modal
+   */
+  closeAddModal(): void {
+    this.isAddModalOpen = false;
+  }
+
+  /**
+   * Select a category and move to template step
+   */
+  selectCategory(category: 'immigration' | 'tax' | 'personal'): void {
+    this.selectedCategory = category;
+    this.addModalStep = 'template';
+  }
+
+  /**
+   * Select a template and move to configure step (if not requiring upgrade)
+   */
+  selectTemplate(template: GoalTemplateWithAccess): void {
+    if (template.requiresUpgrade) {
+      // Don't proceed if upgrade required
+      return;
+    }
+    this.selectedTemplate = template;
+    // Initialize form data with template defaults
+    this.addModalFormData = {
+      name: template.name,
+      startDate: new Date().toISOString().split('T')[0],
+    };
+    // Add default config values to form
+    Object.entries(template.defaultConfig).forEach(([key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number') {
+        this.addModalFormData[key] = String(value);
+      }
+    });
+    this.addModalStep = 'configure';
+  }
+
+  /**
+   * Update a form field value
+   */
+  setFormField(field: string, value: string): void {
+    this.addModalFormData[field] = value;
+  }
+
+  /**
+   * Go back to the previous step
+   */
+  goBackInModal(): void {
+    if (this.addModalStep === 'template') {
+      this.addModalStep = 'category';
+      this.selectedCategory = null;
+    } else if (this.addModalStep === 'configure') {
+      this.addModalStep = 'template';
+      this.selectedTemplate = null;
+    }
+  }
+
+  /**
+   * Create the goal from the current form data
+   * @returns Created goal, or null on error
+   */
+  async createGoalFromModal(): Promise<TrackingGoalData | null> {
+    if (!this.selectedTemplate) return null;
+
+    this.isCreating = true;
+    this.addModalError = null;
+
+    try {
+      // Convert form data to proper types
+      const config: Record<string, unknown> = {};
+      Object.entries(this.addModalFormData).forEach(([key, value]) => {
+        // Handle number fields
+        if (['thresholdDays', 'windowDays'].includes(key)) {
+          config[key] = parseInt(value, 10);
+        } else if (key !== 'name' && key !== 'startDate') {
+          config[key] = value;
+        }
+      });
+
+      const goalData: CreateTrackingGoalData = {
+        type: this.selectedTemplate.type as GoalType,
+        jurisdiction: this.selectedTemplate.jurisdiction as GoalJurisdiction,
+        name: this.addModalFormData.name || this.selectedTemplate.name,
+        config: { ...this.selectedTemplate.defaultConfig, ...config },
+        startDate:
+          this.addModalFormData.startDate ||
+          new Date().toISOString().split('T')[0],
+      };
+
+      const goal = await this.createGoal(goalData);
+
+      if (goal) {
+        runInAction(() => {
+          this.isCreating = false;
+          this.closeAddModal();
+        });
+        return goal;
+      } else {
+        runInAction(() => {
+          this.addModalError = this.error || 'Failed to create goal';
+          this.isCreating = false;
+        });
+        return null;
+      }
+    } catch (err) {
+      runInAction(() => {
+        this.addModalError =
+          err instanceof Error ? err.message : 'Failed to create goal';
+        this.isCreating = false;
+      });
+      return null;
+    }
+  }
+
+  // ============================================================================
   // Actions - API Operations
   // ============================================================================
 
@@ -177,7 +365,8 @@ class GoalsStore {
       });
     } catch (err) {
       runInAction(() => {
-        this.error = err instanceof Error ? err.message : 'Failed to fetch goals';
+        this.error =
+          err instanceof Error ? err.message : 'Failed to fetch goals';
         this.isLoading = false;
       });
     }
@@ -188,7 +377,9 @@ class GoalsStore {
    * @param input - Goal creation data
    * @returns Created goal, or null on error
    */
-  async createGoal(input: CreateTrackingGoalData): Promise<TrackingGoalData | null> {
+  async createGoal(
+    input: CreateTrackingGoalData,
+  ): Promise<TrackingGoalData | null> {
     this.isLoading = true;
     this.error = null;
 
@@ -215,7 +406,8 @@ class GoalsStore {
       return data.goal;
     } catch (err) {
       runInAction(() => {
-        this.error = err instanceof Error ? err.message : 'Failed to create goal';
+        this.error =
+          err instanceof Error ? err.message : 'Failed to create goal';
         this.isLoading = false;
       });
       return null;
@@ -260,7 +452,8 @@ class GoalsStore {
       return data.goal;
     } catch (err) {
       runInAction(() => {
-        this.error = err instanceof Error ? err.message : 'Failed to update goal';
+        this.error =
+          err instanceof Error ? err.message : 'Failed to update goal';
         this.isLoading = false;
       });
       return null;
@@ -304,7 +497,8 @@ class GoalsStore {
       return true;
     } catch (err) {
       runInAction(() => {
-        this.error = err instanceof Error ? err.message : 'Failed to archive goal';
+        this.error =
+          err instanceof Error ? err.message : 'Failed to archive goal';
         this.isLoading = false;
       });
       return false;
@@ -350,6 +544,15 @@ class GoalsStore {
     this.error = null;
     this.isFeatureEnabled = false;
     this.isHydrated = false;
+    // Reset templates and modal state
+    this.templates = [];
+    this.isAddModalOpen = false;
+    this.addModalStep = 'category';
+    this.selectedCategory = null;
+    this.selectedTemplate = null;
+    this.addModalFormData = {};
+    this.isCreating = false;
+    this.addModalError = null;
   }
 
   // ============================================================================
@@ -363,7 +566,13 @@ class GoalsStore {
    * @param travelStore - The travel store to observe for trip changes
    */
   initializeTripReaction(travelStore: {
-    trips: Array<{ id: string; outDate: string; inDate: string; outRoute: string; inRoute: string }>;
+    trips: Array<{
+      id: string;
+      outDate: string;
+      inDate: string;
+      outRoute: string;
+      inRoute: string;
+    }>;
   }): void {
     // Dispose any existing reaction first
     this.disposeTripReaction();
@@ -408,40 +617,55 @@ class GoalsStore {
    * @param travelStore - The travel store containing trip data
    */
   recalculateAllGoals(travelStore: {
-    trips: Array<{ id: string; outDate: string; inDate: string; outRoute: string; inRoute: string }>;
+    trips: Array<{
+      id: string;
+      outDate: string;
+      inDate: string;
+      outRoute: string;
+      inRoute: string;
+    }>;
   }): void {
     // Dynamically import rule engines to avoid circular dependencies
     // and to ensure this works in both client and server contexts
-    import('@uth/rules').then(({ ruleEngineRegistry }) => {
-      runInAction(() => {
-        for (const goal of this.activeGoals) {
-          const engine = ruleEngineRegistry.get(goal.type as Parameters<typeof ruleEngineRegistry.get>[0]);
-
-          if (!engine) {
-            console.warn(`No rule engine found for goal type: ${goal.type}`);
-            continue;
-          }
-
-          try {
-            const calculation = engine.calculate(
-              travelStore.trips,
-              goal.config as unknown as Parameters<typeof engine.calculate>[1],
-              new Date(goal.startDate),
+    import('@uth/rules')
+      .then(({ ruleEngineRegistry }) => {
+        runInAction(() => {
+          for (const goal of this.activeGoals) {
+            const engine = ruleEngineRegistry.get(
+              goal.type as Parameters<typeof ruleEngineRegistry.get>[0],
             );
 
-            // Set the goal ID on the calculation
-            calculation.goalId = goal.id;
+            if (!engine) {
+              console.warn(`No rule engine found for goal type: ${goal.type}`);
+              continue;
+            }
 
-            // Store the calculation
-            this.calculations.set(goal.id, calculation as GoalCalculationData);
-          } catch (error) {
-            console.error(`Failed to calculate goal ${goal.id}:`, error);
+            try {
+              const calculation = engine.calculate(
+                travelStore.trips,
+                goal.config as unknown as Parameters<
+                  typeof engine.calculate
+                >[1],
+                new Date(goal.startDate),
+              );
+
+              // Set the goal ID on the calculation
+              calculation.goalId = goal.id;
+
+              // Store the calculation
+              this.calculations.set(
+                goal.id,
+                calculation as GoalCalculationData,
+              );
+            } catch (error) {
+              console.error(`Failed to calculate goal ${goal.id}:`, error);
+            }
           }
-        }
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load rule engines:', error);
       });
-    }).catch((error) => {
-      console.error('Failed to load rule engines:', error);
-    });
   }
 
   /**
@@ -452,38 +676,48 @@ class GoalsStore {
   recalculateGoal(
     goalId: string,
     travelStore: {
-      trips: Array<{ id: string; outDate: string; inDate: string; outRoute: string; inRoute: string }>;
+      trips: Array<{
+        id: string;
+        outDate: string;
+        inDate: string;
+        outRoute: string;
+        inRoute: string;
+      }>;
     },
   ): void {
     const goal = this.goals.find((g) => g.id === goalId);
     if (!goal) return;
 
-    import('@uth/rules').then(({ ruleEngineRegistry }) => {
-      const engine = ruleEngineRegistry.get(goal.type as Parameters<typeof ruleEngineRegistry.get>[0]);
-
-      if (!engine) {
-        console.warn(`No rule engine found for goal type: ${goal.type}`);
-        return;
-      }
-
-      try {
-        const calculation = engine.calculate(
-          travelStore.trips,
-          goal.config as unknown as Parameters<typeof engine.calculate>[1],
-          new Date(goal.startDate),
+    import('@uth/rules')
+      .then(({ ruleEngineRegistry }) => {
+        const engine = ruleEngineRegistry.get(
+          goal.type as Parameters<typeof ruleEngineRegistry.get>[0],
         );
 
-        calculation.goalId = goal.id;
+        if (!engine) {
+          console.warn(`No rule engine found for goal type: ${goal.type}`);
+          return;
+        }
 
-        runInAction(() => {
-          this.calculations.set(goal.id, calculation as GoalCalculationData);
-        });
-      } catch (error) {
-        console.error(`Failed to calculate goal ${goal.id}:`, error);
-      }
-    }).catch((error) => {
-      console.error('Failed to load rule engines:', error);
-    });
+        try {
+          const calculation = engine.calculate(
+            travelStore.trips,
+            goal.config as unknown as Parameters<typeof engine.calculate>[1],
+            new Date(goal.startDate),
+          );
+
+          calculation.goalId = goal.id;
+
+          runInAction(() => {
+            this.calculations.set(goal.id, calculation as GoalCalculationData);
+          });
+        } catch (error) {
+          console.error(`Failed to calculate goal ${goal.id}:`, error);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load rule engines:', error);
+      });
   }
 }
 

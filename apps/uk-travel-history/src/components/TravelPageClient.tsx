@@ -1,10 +1,10 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRefreshAccessContext, goalsStore } from '@uth/stores';
-import { FeatureGate } from '@uth/widgets';
+import { FeatureGate, useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
@@ -37,9 +37,6 @@ export const TravelPageClient = observer(() => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const refreshAccessContext = useRefreshAccessContext();
-
-  // State for Add Goal modal
-  const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
 
   // Refresh access context after successful checkout
   // This ensures the UI updates with the new subscription tier
@@ -84,8 +81,16 @@ export const TravelPageClient = observer(() => {
   } = useClipboardImport();
 
   // Handlers for goal actions
-  const handleAddGoal = () => setIsAddGoalOpen(true);
+  const handleAddGoal = () => goalsStore.openAddModal();
   const handleUpgrade = () => router.push('/account');
+
+  // Feature gate for multi-goal tracking
+  const {
+    hasAccess: hasGoalsAccess,
+    isLoading: isGoalsLoading,
+    requiresUpgrade: goalsRequiresUpgrade,
+    handleUpgrade: handleGoalsUpgrade,
+  } = useFeatureGate(FEATURE_KEYS.MULTI_GOAL_TRACKING);
 
   return (
     <>
@@ -117,7 +122,11 @@ export const TravelPageClient = observer(() => {
 
         {/* Multi-Goal Tracking Section (feature-gated) */}
         <FeatureGate
-          feature={FEATURE_KEYS.MULTI_GOAL_TRACKING}
+          hasAccess={hasGoalsAccess}
+          isLoading={isGoalsLoading}
+          mode="hide"
+          gateReason={goalsRequiresUpgrade ? 'upgrade' : 'login'}
+          onGatedClick={handleGoalsUpgrade}
           fallback={null}
         >
           <div className="mb-6">
@@ -184,15 +193,8 @@ export const TravelPageClient = observer(() => {
         />
       )}
 
-      {/* Add Goal Modal */}
-      <AddGoalModal
-        open={isAddGoalOpen}
-        onOpenChange={setIsAddGoalOpen}
-        onSuccess={() => {
-          // Goal created successfully
-          // The store is already updated, calculation will happen via reaction
-        }}
-      />
+      {/* Add Goal Modal - state managed by goalsStore */}
+      <AddGoalModal />
     </>
   );
 });

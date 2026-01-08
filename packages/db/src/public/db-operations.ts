@@ -55,7 +55,9 @@ export async function keepalive(): Promise<number> {
  * @param authUserId - The authentication provider user ID (e.g., Clerk user ID)
  * @returns The user, or null if not found
  */
-export async function getUserByAuthId(authUserId: string): Promise<User | null> {
+export async function getUserByAuthId(
+  authUserId: string,
+): Promise<User | null> {
   const provider = getDbProvider();
   return provider.getUserByAuthId(authUserId);
 }

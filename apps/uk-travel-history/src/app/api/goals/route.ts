@@ -25,13 +25,17 @@ export const maxDuration = 30;
 export async function GET(request: NextRequest) {
   try {
     // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+    );
 
     if (!userContext.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const includeArchived = request.nextUrl.searchParams.get('includeArchived') === 'true';
+    const includeArchived =
+      request.nextUrl.searchParams.get('includeArchived') === 'true';
     const goals = await getUserGoals(userContext.userId, includeArchived);
 
     return NextResponse.json({ goals });
@@ -57,7 +61,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+    );
 
     if (!userContext.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,12 +81,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json() as CreateTrackingGoalData;
+    const body = (await request.json()) as CreateTrackingGoalData;
 
     // Basic validation
     if (!body.type || !body.jurisdiction || !body.name || !body.startDate) {
       return NextResponse.json(
-        { error: 'Missing required fields: type, jurisdiction, name, startDate' },
+        {
+          error: 'Missing required fields: type, jurisdiction, name, startDate',
+        },
         { status: 400 },
       );
     }

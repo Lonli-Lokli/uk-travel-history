@@ -90,7 +90,11 @@ export class SupabaseDbAdapter implements DbProvider {
     const errorCode = error?.code;
 
     if (errorCode === 'PGRST116') {
-      throw new DbError(DbErrorCode.NOT_FOUND, `${operation}: Record not found`, error);
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `${operation}: Record not found`,
+        error,
+      );
     }
 
     if (errorCode === '23505') {
@@ -252,11 +256,13 @@ export class SupabaseDbAdapter implements DbProvider {
     if (updates.stripePriceId !== undefined)
       updateData.stripe_price_id = updates.stripePriceId;
     if (updates.currentPeriodEnd !== undefined)
-      updateData.current_period_end = updates.currentPeriodEnd?.toISOString() ?? null;
+      updateData.current_period_end =
+        updates.currentPeriodEnd?.toISOString() ?? null;
     if (updates.cancelAtPeriodEnd !== undefined)
       updateData.cancel_at_period_end = updates.cancelAtPeriodEnd;
     if (updates.pauseResumesAt !== undefined)
-      updateData.pause_resumes_at = updates.pauseResumesAt?.toISOString() ?? null;
+      updateData.pause_resumes_at =
+        updates.pauseResumesAt?.toISOString() ?? null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from('users') as any)
@@ -373,7 +379,9 @@ export class SupabaseDbAdapter implements DbProvider {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: result, error } = await (client.from('purchase_intents') as any)
+    const { data: result, error } = await (
+      client.from('purchase_intents') as any
+    )
       .insert(insertData)
       .select()
       .single();
@@ -445,7 +453,9 @@ export class SupabaseDbAdapter implements DbProvider {
     }
   }
 
-  async recordWebhookEvent(data: CreateWebhookEventData): Promise<WebhookEvent> {
+  async recordWebhookEvent(
+    data: CreateWebhookEventData,
+  ): Promise<WebhookEvent> {
     const client = this.ensureConfigured();
 
     const insertData = {
@@ -471,14 +481,17 @@ export class SupabaseDbAdapter implements DbProvider {
   // Mapping Functions (DB -> Domain)
   // ============================================================================
 
-  private mapUserFromDb(row: Database['public']['Tables']['users']['Row']): User {
+  private mapUserFromDb(
+    row: Database['public']['Tables']['users']['Row'],
+  ): User {
     return {
       id: row.id,
       authUserId: row.clerk_user_id,
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
       role: (row.role as UserRole) ?? UserRole.STANDARD,
-      subscriptionTier: (row.subscription_tier as SubscriptionTier) ?? SubscriptionTier.FREE,
+      subscriptionTier:
+        (row.subscription_tier as SubscriptionTier) ?? SubscriptionTier.FREE,
       // NULL status is valid for free tier users, only default to ACTIVE for non-null values
       subscriptionStatus: row.subscription_status
         ? (row.subscription_status as SubscriptionStatus)
@@ -486,9 +499,13 @@ export class SupabaseDbAdapter implements DbProvider {
       stripeCustomerId: row.stripe_customer_id ?? null,
       stripeSubscriptionId: row.stripe_subscription_id ?? null,
       stripePriceId: row.stripe_price_id ?? null,
-      currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
+      currentPeriodEnd: row.current_period_end
+        ? new Date(row.current_period_end)
+        : null,
       cancelAtPeriodEnd: row.cancel_at_period_end ?? false,
-      pauseResumesAt: row.pause_resumes_at ? new Date(row.pause_resumes_at) : null,
+      pauseResumesAt: row.pause_resumes_at
+        ? new Date(row.pause_resumes_at)
+        : null,
       createdAt: new Date(row.created_at),
     };
   }
@@ -529,9 +546,7 @@ export class SupabaseDbAdapter implements DbProvider {
   async getAllFeaturePolicies(): Promise<FeaturePolicy[]> {
     const client = this.ensureConfigured();
 
-    const { data, error } = await client
-      .from('feature_policies')
-      .select('*');
+    const { data, error } = await client.from('feature_policies').select('*');
 
     if (error) {
       this.handleError('getAllFeaturePolicies', error);
@@ -540,7 +555,9 @@ export class SupabaseDbAdapter implements DbProvider {
     return (data || []).map((row) => this.mapFeaturePolicyFromDb(row));
   }
 
-  async getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null> {
+  async getFeaturePolicyByKey(
+    featureKey: string,
+  ): Promise<FeaturePolicy | null> {
     const client = this.ensureConfigured();
 
     try {
@@ -587,7 +604,10 @@ export class SupabaseDbAdapter implements DbProvider {
   // Tracking Goal Operations
   // ============================================================================
 
-  async getUserGoals(userId: string, includeArchived = false): Promise<TrackingGoalData[]> {
+  async getUserGoals(
+    userId: string,
+    includeArchived = false,
+  ): Promise<TrackingGoalData[]> {
     const client = this.ensureConfigured();
 
     let query = client
@@ -635,7 +655,10 @@ export class SupabaseDbAdapter implements DbProvider {
     }
   }
 
-  async createGoal(userId: string, data: CreateTrackingGoalData): Promise<TrackingGoalData> {
+  async createGoal(
+    userId: string,
+    data: CreateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
     const client = this.ensureConfigured();
 
     const insertData = {
@@ -664,7 +687,10 @@ export class SupabaseDbAdapter implements DbProvider {
     return this.mapGoalFromDb(result);
   }
 
-  async updateGoal(goalId: string, data: UpdateTrackingGoalData): Promise<TrackingGoalData> {
+  async updateGoal(
+    goalId: string,
+    data: UpdateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
     const client = this.ensureConfigured();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -674,7 +700,8 @@ export class SupabaseDbAdapter implements DbProvider {
     if (data.targetDate !== undefined) updateData.target_date = data.targetDate;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
     if (data.isArchived !== undefined) updateData.is_archived = data.isArchived;
-    if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
+    if (data.displayOrder !== undefined)
+      updateData.display_order = data.displayOrder;
     if (data.color !== undefined) updateData.color = data.color;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -24,7 +24,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
     trips: TripRecord[],
     config: UKILRConfig,
     startDate: Date,
-    asOfDate: Date = new Date()
+    asOfDate: Date = new Date(),
   ): GoalCalculation {
     // Delegate to existing calculator
     const result = calculateTravelData({
@@ -42,8 +42,14 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
 
     // Calculate progress percentage
     const totalDays = config.trackYears * 365;
-    const elapsedDays = differenceInDays(asOfDate, parseISO(config.visaStartDate));
-    const progressPercent = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
+    const elapsedDays = differenceInDays(
+      asOfDate,
+      parseISO(config.visaStartDate),
+    );
+    const progressPercent = Math.min(
+      100,
+      Math.round((elapsedDays / totalDays) * 100),
+    );
 
     return {
       goalId: '', // Set by caller
@@ -80,7 +86,10 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
 
   private mapStatus(
     validationStatus: 'ELIGIBLE' | 'INELIGIBLE',
-    summary: { hasExceededAllowedAbsense: boolean; maxAbsenceInAny12Months: number | null }
+    summary: {
+      hasExceededAllowedAbsense: boolean;
+      maxAbsenceInAny12Months: number | null;
+    },
   ): GoalStatus {
     if (validationStatus === 'ELIGIBLE') {
       return 'eligible';
@@ -91,7 +100,10 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
     }
 
     // Check if at risk (>150 days in rolling 12 months)
-    if (summary.maxAbsenceInAny12Months && summary.maxAbsenceInAny12Months >= 150) {
+    if (
+      summary.maxAbsenceInAny12Months &&
+      summary.maxAbsenceInAny12Months >= 150
+    ) {
       return 'at_risk';
     }
 
@@ -106,7 +118,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       currentRollingAbsenceToday: number | null;
       remaining180LimitToday: number | null;
     },
-    config: UKILRConfig
+    config: UKILRConfig,
   ): GoalMetric[] {
     const metrics: GoalMetric[] = [];
 
@@ -141,8 +153,12 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
         value: summary.maxAbsenceInAny12Months,
         limit,
         unit: 'days',
-        status: summary.maxAbsenceInAny12Months > limit ? 'exceeded' :
-                summary.maxAbsenceInAny12Months >= 150 ? 'warning' : 'ok',
+        status:
+          summary.maxAbsenceInAny12Months > limit
+            ? 'exceeded'
+            : summary.maxAbsenceInAny12Months >= 150
+              ? 'warning'
+              : 'ok',
         tooltip: `Maximum absence in any rolling 12-month period (limit: ${limit} days)`,
       });
     }
@@ -155,8 +171,12 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
         value: summary.currentRollingAbsenceToday,
         limit: 180,
         unit: 'days',
-        status: summary.currentRollingAbsenceToday > 180 ? 'exceeded' :
-                summary.currentRollingAbsenceToday >= 150 ? 'warning' : 'ok',
+        status:
+          summary.currentRollingAbsenceToday > 180
+            ? 'exceeded'
+            : summary.currentRollingAbsenceToday >= 150
+              ? 'warning'
+              : 'ok',
         tooltip: 'Absence days in the 12-month period ending today',
       });
     }
@@ -169,7 +189,8 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
         value: summary.remaining180LimitToday,
         unit: 'days',
         status: summary.remaining180LimitToday < 30 ? 'warning' : 'ok',
-        tooltip: 'Days you can still spend outside UK in current 12-month window',
+        tooltip:
+          'Days you can still spend outside UK in current 12-month window',
       });
     }
 
@@ -181,7 +202,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       hasExceededAllowedAbsense: boolean;
       remaining180LimitToday: number | null;
     },
-    validation: { status: string; reason?: { message?: string } }
+    validation: { status: string; reason?: { message?: string } },
   ): GoalWarning[] {
     const warnings: GoalWarning[] = [];
 
@@ -189,10 +210,14 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       warnings.push({
         severity: 'error',
         title: 'Absence Limit Exceeded',
-        message: 'You have exceeded the maximum allowed absence in a 12-month period.',
+        message:
+          'You have exceeded the maximum allowed absence in a 12-month period.',
         action: 'Review your travel history and eligibility date',
       });
-    } else if (summary.remaining180LimitToday !== null && summary.remaining180LimitToday < 30) {
+    } else if (
+      summary.remaining180LimitToday !== null &&
+      summary.remaining180LimitToday < 30
+    ) {
       warnings.push({
         severity: 'warning',
         title: 'Low Remaining Allowance',
@@ -220,7 +245,9 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       {
         key: 'qualifying_period',
         label: 'Complete qualifying period',
-        status: summary.ilrEligibilityDate ? 'met' as const : 'pending' as const,
+        status: summary.ilrEligibilityDate
+          ? ('met' as const)
+          : ('pending' as const),
         detail: summary.ilrEligibilityDate
           ? `Eligible from ${format(parseISO(summary.ilrEligibilityDate), 'dd MMM yyyy')}`
           : 'In progress',
@@ -228,7 +255,9 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       {
         key: 'absence_limit',
         label: 'Stay within absence limits',
-        status: summary.hasExceededAllowedAbsense ? 'not_met' as const : 'met' as const,
+        status: summary.hasExceededAllowedAbsense
+          ? ('not_met' as const)
+          : ('met' as const),
         detail: summary.hasExceededAllowedAbsense
           ? 'Exceeded 180-day limit'
           : 'Within limits',

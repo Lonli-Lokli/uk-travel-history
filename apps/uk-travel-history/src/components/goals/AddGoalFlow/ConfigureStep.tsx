@@ -1,62 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { Button, Input, Label, UIIcon } from '@uth/ui';
-import type { GoalTemplate } from './AddGoalModal';
+import { goalsStore } from '@uth/stores';
+import type { GoalTemplateWithAccess } from '@uth/db';
 
 interface ConfigureStepProps {
-  template: GoalTemplate;
+  template: GoalTemplateWithAccess;
   isCreating: boolean;
-  onSubmit: (config: Record<string, unknown>) => void;
-  onBack: () => void;
+  onSubmit: () => void;
 }
 
 /** Field configuration based on required fields */
-const fieldConfigs: Record<string, { label: string; type: string; placeholder: string; required?: boolean }> = {
+const fieldConfigs: Record<
+  string,
+  { label: string; type: string; placeholder: string; required?: boolean }
+> = {
   name: { label: 'Goal Name', type: 'text', placeholder: 'e.g., UK ILR 2027' },
-  startDate: { label: 'Start Date', type: 'date', placeholder: '', required: true },
-  visaStartDate: { label: 'Visa Start Date', type: 'date', placeholder: '', required: true },
-  vignetteEntryDate: { label: 'Vignette Entry Date', type: 'date', placeholder: '' },
-  ilrGrantDate: { label: 'ILR Grant Date', type: 'date', placeholder: '', required: true },
+  startDate: {
+    label: 'Start Date',
+    type: 'date',
+    placeholder: '',
+    required: true,
+  },
+  visaStartDate: {
+    label: 'Visa Start Date',
+    type: 'date',
+    placeholder: '',
+    required: true,
+  },
+  vignetteEntryDate: {
+    label: 'Vignette Entry Date',
+    type: 'date',
+    placeholder: '',
+  },
+  ilrGrantDate: {
+    label: 'ILR Grant Date',
+    type: 'date',
+    placeholder: '',
+    required: true,
+  },
   taxYear: { label: 'Tax Year', type: 'text', placeholder: 'e.g., 2024-25' },
-  thresholdDays: { label: 'Day Limit', type: 'number', placeholder: 'e.g., 180' },
-  windowDays: { label: 'Window (days)', type: 'number', placeholder: 'e.g., 365' },
-  referenceLocation: { label: 'Reference Location', type: 'text', placeholder: 'e.g., UK' },
+  thresholdDays: {
+    label: 'Day Limit',
+    type: 'number',
+    placeholder: 'e.g., 180',
+  },
+  windowDays: {
+    label: 'Window (days)',
+    type: 'number',
+    placeholder: 'e.g., 365',
+  },
+  referenceLocation: {
+    label: 'Reference Location',
+    type: 'text',
+    placeholder: 'e.g., UK',
+  },
 };
 
-export function ConfigureStep({ template, isCreating, onSubmit, onBack }: ConfigureStepProps) {
-  const [formData, setFormData] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {
-      name: template.name,
-      startDate: new Date().toISOString().split('T')[0],
-    };
-    // Initialize from default config
-    Object.entries(template.defaultConfig).forEach(([key, value]) => {
-      if (typeof value === 'string' || typeof value === 'number') {
-        initial[key] = String(value);
-      }
-    });
-    return initial;
-  });
+/**
+ * Configure step - uses goalsStore for form state
+ */
+export const ConfigureStep = observer(function ConfigureStep({
+  template,
+  isCreating,
+  onSubmit,
+}: ConfigureStepProps) {
+  const formData = goalsStore.addModalFormData;
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    goalsStore.setFormField(field, value);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Convert form data to proper types
-    const config: Record<string, unknown> = {};
-    Object.entries(formData).forEach(([key, value]) => {
-      if (fieldConfigs[key]?.type === 'number') {
-        config[key] = parseInt(value, 10);
-      } else {
-        config[key] = value;
-      }
-    });
-
-    onSubmit(config);
+    onSubmit();
   };
 
   // Determine which fields to show
@@ -76,7 +94,8 @@ export function ConfigureStep({ template, isCreating, onSubmit, onBack }: Config
         const config = fieldConfigs[fieldKey];
         if (!config) return null;
 
-        const isRequired = config.required || template.requiredFields.includes(fieldKey);
+        const isRequired =
+          config.required || template.requiredFields.includes(fieldKey);
 
         return (
           <div key={fieldKey} className="space-y-1.5">
@@ -97,7 +116,12 @@ export function ConfigureStep({ template, isCreating, onSubmit, onBack }: Config
       })}
 
       <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onBack} className="flex-1">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => goalsStore.goBackInModal()}
+          className="flex-1"
+        >
           <UIIcon iconName="arrow-left" className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -117,4 +141,4 @@ export function ConfigureStep({ template, isCreating, onSubmit, onBack }: Config
       </div>
     </form>
   );
-}
+});

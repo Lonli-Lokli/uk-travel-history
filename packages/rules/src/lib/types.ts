@@ -25,13 +25,13 @@ export type GoalCategory = 'immigration' | 'tax' | 'personal';
 // ============================================================================
 
 export type GoalStatus =
-  | 'not_started'    // No trips, no progress
-  | 'in_progress'    // Tracking but not yet eligible
-  | 'on_track'       // Will meet target at current rate
-  | 'at_risk'        // May exceed limits soon
+  | 'not_started' // No trips, no progress
+  | 'in_progress' // Tracking but not yet eligible
+  | 'on_track' // Will meet target at current rate
+  | 'at_risk' // May exceed limits soon
   | 'limit_exceeded' // Already broke a limit
-  | 'eligible'       // Can apply now
-  | 'achieved';      // Goal completed
+  | 'eligible' // Can apply now
+  | 'achieved'; // Goal completed
 
 // ============================================================================
 // Goal Configuration (Discriminated Union)
@@ -149,7 +149,7 @@ export interface RuleEngine<TConfig extends GoalConfig = GoalConfig> {
     trips: TripRecord[],
     config: TConfig,
     startDate: Date,
-    asOfDate?: Date
+    asOfDate?: Date,
   ): GoalCalculation;
 
   /**

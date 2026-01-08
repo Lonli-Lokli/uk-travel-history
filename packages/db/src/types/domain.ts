@@ -450,6 +450,23 @@ export interface AccessContext {
    * Calculations done server-side to prevent client-side flicker
    */
   goalCalculations: Record<string, GoalCalculationData> | null;
+
+  /**
+   * Goal templates available for the user's tier
+   * Loaded server-side for instant hydration in add goal wizard
+   */
+  goalTemplates: GoalTemplateWithAccess[] | null;
+}
+
+/**
+ * Goal template with tier access information
+ * Extended from base GoalTemplate with computed access flags
+ */
+export interface GoalTemplateWithAccess extends GoalTemplate {
+  /** Whether the user's tier allows access to this template */
+  isAvailableForTier: boolean;
+  /** True if user needs to upgrade to use this template */
+  requiresUpgrade: boolean;
 }
 
 // ============================================================================

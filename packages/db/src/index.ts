@@ -32,6 +32,7 @@ export type {
   GoalMetricData,
   GoalWarningData,
   GoalTemplate,
+  GoalTemplateWithAccess,
 } from './types/domain';
 
 export {

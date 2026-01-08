@@ -4,20 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { type ReactNode } from 'react';
 import { FeatureGate, type RenderMode } from './feature-gate';
 import { FEATURE_KEYS } from '@uth/features';
-import { useFeatureGateContext } from './feature-gate-context';
-
-/**
- * Premium-only features that require paid subscription
- */
-const PREMIUM_FEATURES = [
-  FEATURE_KEYS.EXCEL_EXPORT,
-  FEATURE_KEYS.EXCEL_IMPORT,
-  // Future premium features:
-  // FEATURE_KEYS.PDF_EXPORT,
-  // FEATURE_KEYS.EMPLOYER_LETTERS,
-  // FEATURE_KEYS.CLOUD_SYNC,
-  // FEATURE_KEYS.ADVANCED_ANALYTICS,
-] as const;
+import { useFeatureGate } from './feature-gate-context';
 
 export interface PremiumGateProps {
   /**
@@ -39,6 +26,7 @@ export interface PremiumGateProps {
 
   /**
    * Optional callback when user clicks on upgrade prompt
+   * If not provided, uses default handleUpgrade from hook
    */
   onUpgradeClick?: () => void;
 }
@@ -48,11 +36,6 @@ export interface PremiumGateProps {
  *
  * A simplified wrapper around FeatureGate specifically for premium-only content.
  * Uses EXCEL_EXPORT as the representative premium feature for gating.
- *
- * This component automatically handles:
- * - Checking premium access via monetizationStore
- * - Showing upgrade prompts for non-premium users
- * - Integrating with payment flow
  *
  * @example
  * ```tsx
@@ -81,18 +64,17 @@ const PremiumGateComponent = ({
   children,
   onUpgradeClick,
 }: PremiumGateProps) => {
-  const { monetizationStore, authStore, paymentStore } =
-    useFeatureGateContext();
+  const { hasAccess, isLoading, requiresUpgrade, handleUpgrade } =
+    useFeatureGate(FEATURE_KEYS.EXCEL_EXPORT);
 
   return (
     <FeatureGate
-      feature={FEATURE_KEYS.EXCEL_EXPORT}
+      hasAccess={hasAccess}
+      isLoading={isLoading}
       mode={mode}
+      gateReason={requiresUpgrade ? 'upgrade' : 'login'}
       fallback={fallback}
-      onUpgradeClick={onUpgradeClick}
-      monetizationStore={monetizationStore}
-      authStore={authStore}
-      paymentStore={paymentStore}
+      onGatedClick={onUpgradeClick ?? handleUpgrade}
     >
       {children}
     </FeatureGate>

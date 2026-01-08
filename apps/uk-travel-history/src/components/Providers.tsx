@@ -127,7 +127,7 @@ export function Providers({ children, accessContext }: ProvidersProps) {
       paymentStore.hydrate(accessContext.pricing);
     }
 
-    // Hydrate goals store with goals data
+    // Hydrate goals store with goals data and templates
     // Check if multi_goal_tracking feature is enabled via entitlements
     const isGoalsFeatureEnabled =
       accessContext.entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING] ?? false;
@@ -135,6 +135,7 @@ export function Providers({ children, accessContext }: ProvidersProps) {
       accessContext.goals ?? null,
       accessContext.goalCalculations ?? null,
       isGoalsFeatureEnabled,
+      accessContext.goalTemplates ?? null,
     );
 
     // Initialize trip reaction for goal recalculation when trips change

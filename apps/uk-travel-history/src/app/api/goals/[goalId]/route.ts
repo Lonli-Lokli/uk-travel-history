@@ -6,11 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getGoalById,
-  updateGoal,
-  type UpdateTrackingGoalData,
-} from '@uth/db';
+import { getGoalById, updateGoal, type UpdateTrackingGoalData } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 import { logger } from '@uth/utils';
 
@@ -28,7 +24,10 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+    );
     const { goalId } = await params;
 
     if (!userContext.userId) {
@@ -69,7 +68,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+    );
     const { goalId } = await params;
 
     if (!userContext.userId) {
@@ -87,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    const body = await request.json() as UpdateTrackingGoalData;
+    const body = (await request.json()) as UpdateTrackingGoalData;
     const goal = await updateGoal(goalId, body);
 
     logger.info('Goal updated', {
@@ -117,7 +119,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+    );
     const { goalId } = await params;
 
     if (!userContext.userId) {

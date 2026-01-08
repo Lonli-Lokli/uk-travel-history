@@ -20,7 +20,9 @@ export const GoalMiniCardsRow = observer(function GoalMiniCardsRow({
   onUpgrade,
   className,
 }: GoalMiniCardsRowProps) {
-  const { hasAccess: isPremium } = useFeatureGate(FEATURE_KEYS.MULTI_GOAL_TRACKING);
+  const { hasAccess: isPremium } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
+  );
   const goals = goalsStore.activeGoals;
   const activeGoalId = goalsStore.activeGoalId;
 
