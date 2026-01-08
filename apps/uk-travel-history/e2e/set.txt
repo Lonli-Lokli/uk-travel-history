@@ -1,0 +1,4 @@
+ 1. Each worker writes violations to a JSON file (intermediate)
+  2. Global teardown merges all JSON files and generates:
+    - Either no-violations.md if clean
+    - Or one file per rule (e.g., color-contrast.md) showing which devices have it

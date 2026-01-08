@@ -57,3 +57,5 @@ apps/uk-travel-history/next-env.d.ts
 
 supabase/.temp
 supabase/.branches
+accessibility-reports
+playwright-report
