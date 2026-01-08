@@ -1,42 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FeatureGate } from './feature-gate';
-import { FEATURE_KEYS } from '@uth/features';
 
 describe('FeatureGate', () => {
-  const mockMonetizationStore = {
-    hasFeatureAccess: vi.fn(),
-    getMinimumTier: vi.fn(),
-    isLoading: false,
-    isAuthenticated: false,
-  };
-
-  const mockAuthStore = {
-    user: null,
-  };
-
-  const mockPaymentStore = {
-    openPaymentModal: vi.fn(),
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockMonetizationStore.isLoading = false;
-    mockMonetizationStore.isAuthenticated = false;
-    mockMonetizationStore.hasFeatureAccess.mockReturnValue(false);
-    mockMonetizationStore.getMinimumTier.mockReturnValue('premium');
-    mockAuthStore.user = null;
   });
 
   describe('Access Granted', () => {
     it('should render children when access is granted', () => {
-      mockMonetizationStore.hasFeatureAccess.mockReturnValue(true);
-
       render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={true}>
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -45,8 +19,6 @@ describe('FeatureGate', () => {
     });
 
     it('should render children normally for all modes when access granted', () => {
-      mockMonetizationStore.hasFeatureAccess.mockReturnValue(true);
-
       const modes: Array<'hide' | 'disable' | 'blur' | 'paywall'> = [
         'hide',
         'disable',
@@ -56,11 +28,7 @@ describe('FeatureGate', () => {
 
       modes.forEach((mode) => {
         const { unmount } = render(
-          <FeatureGate
-            feature={FEATURE_KEYS.EXCEL_EXPORT}
-            mode={mode}
-            monetizationStore={mockMonetizationStore}
-          >
+          <FeatureGate hasAccess={true} mode={mode}>
             <div>Content for {mode}</div>
           </FeatureGate>,
         );
@@ -73,14 +41,12 @@ describe('FeatureGate', () => {
 
   describe('Loading State', () => {
     it('should show fallback when loading in hide mode', () => {
-      mockMonetizationStore.isLoading = true;
-
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
+          isLoading={true}
           mode="hide"
           fallback={<div>Loading...</div>}
-          monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -91,14 +57,8 @@ describe('FeatureGate', () => {
     });
 
     it('should return null when loading in hide mode without fallback', () => {
-      mockMonetizationStore.isLoading = true;
-
       const { container } = render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          mode="hide"
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={false} isLoading={true} mode="hide">
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -107,14 +67,8 @@ describe('FeatureGate', () => {
     });
 
     it('should show blurred content when loading in other modes', () => {
-      mockMonetizationStore.isLoading = true;
-
       render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          mode="disable"
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={false} isLoading={true} mode="disable">
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -129,11 +83,7 @@ describe('FeatureGate', () => {
   describe('Mode: hide', () => {
     it('should return null when access denied without fallback', () => {
       const { container } = render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          mode="hide"
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={false} mode="hide">
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -144,10 +94,9 @@ describe('FeatureGate', () => {
     it('should show fallback when access denied with fallback', () => {
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="hide"
           fallback={<div>Upgrade to Premium</div>}
-          monetizationStore={mockMonetizationStore}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -161,11 +110,7 @@ describe('FeatureGate', () => {
   describe('Mode: blur', () => {
     it('should render blurred content when access denied', () => {
       render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          mode="blur"
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={false} mode="blur">
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -179,15 +124,14 @@ describe('FeatureGate', () => {
     });
 
     it('should have clickable overlay in blur mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="blur"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -198,18 +142,14 @@ describe('FeatureGate', () => {
       });
       fireEvent.click(overlay);
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Mode: disable', () => {
     it('should render disabled blurred content when access denied', () => {
       render(
-        <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
-          mode="disable"
-          monetizationStore={mockMonetizationStore}
-        >
+        <FeatureGate hasAccess={false} mode="disable">
           <div>Premium Content</div>
         </FeatureGate>,
       );
@@ -221,59 +161,58 @@ describe('FeatureGate', () => {
       expect(content.parentElement?.className).toContain('grayscale');
     });
 
-    it('should call upgrade callback on click when authenticated', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+    it('should call callback on click when provided', () => {
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="disable"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.click(overlay);
+      // Click on the overlay (there are two clickable areas in disable mode)
+      const overlays = screen.getAllByRole('button');
+      fireEvent.click(overlays[0]);
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should open payment modal when no callback provided', () => {
-      mockMonetizationStore.isAuthenticated = true;
+    it('should handle click on badge in disable mode', () => {
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="disable"
-          monetizationStore={mockMonetizationStore}
-          paymentStore={mockPaymentStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.click(overlay);
+      const badge = screen.getByText('Premium');
+      fireEvent.click(badge.parentElement!);
 
-      expect(mockPaymentStore.openPaymentModal).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalled();
     });
   });
 
   describe('Mode: paywall', () => {
     it('should render clickable content in paywall mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="paywall"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -282,67 +221,74 @@ describe('FeatureGate', () => {
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Authentication Flow', () => {
-    it('should call login callback when not authenticated', () => {
-      const onLoginClick = vi.fn();
+  describe('Gate Reason', () => {
+    it('should show login badge when gateReason is login', () => {
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="disable"
-          onLoginClick={onLoginClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="login"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.click(overlay);
-
-      expect(onLoginClick).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Sign up')).toBeTruthy();
     });
 
-    it('should check authStore.user if monetizationStore not authenticated', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = false;
-      mockAuthStore.user = { uid: 'test-user' } as any;
+    it('should show premium badge when gateReason is upgrade', () => {
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="disable"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
-          authStore={mockAuthStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.click(overlay);
+      expect(screen.getByText('Premium')).toBeTruthy();
+    });
 
-      // Should call upgrade (not login) because user is authenticated via authStore
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+    it('should show correct aria-label for login gate', () => {
+      render(
+        <FeatureGate
+          hasAccess={false}
+          mode="blur"
+          gateReason="login"
+          onGatedClick={vi.fn()}
+        >
+          <div>Premium Content</div>
+        </FeatureGate>,
+      );
+
+      const overlay = screen.getByRole('button', {
+        name: 'Sign up to access this feature',
+      });
+      expect(overlay).toBeTruthy();
     });
   });
 
   describe('Keyboard Accessibility', () => {
     it('should handle Enter key in blur mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="blur"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -351,40 +297,38 @@ describe('FeatureGate', () => {
       const overlay = screen.getByRole('button');
       fireEvent.keyDown(overlay, { key: 'Enter' });
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
 
     it('should handle Space key in disable mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="disable"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.keyDown(overlay, { key: ' ' });
+      const overlays = screen.getAllByRole('button');
+      fireEvent.keyDown(overlays[0], { key: ' ' });
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
 
     it('should handle Enter key in paywall mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="paywall"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -393,19 +337,18 @@ describe('FeatureGate', () => {
       const button = screen.getByRole('button');
       fireEvent.keyDown(button, { key: 'Enter' });
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
 
     it('should handle Space key in paywall mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="paywall"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -414,19 +357,18 @@ describe('FeatureGate', () => {
       const button = screen.getByRole('button');
       fireEvent.keyDown(button, { key: ' ' });
 
-      expect(onUpgradeClick).toHaveBeenCalledTimes(1);
+      expect(onGatedClick).toHaveBeenCalledTimes(1);
     });
 
     it('should not handle other keys', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="blur"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -435,19 +377,18 @@ describe('FeatureGate', () => {
       const overlay = screen.getByRole('button');
       fireEvent.keyDown(overlay, { key: 'Tab' });
 
-      expect(onUpgradeClick).not.toHaveBeenCalled();
+      expect(onGatedClick).not.toHaveBeenCalled();
     });
 
     it('should not handle other keys in paywall mode', () => {
-      const onUpgradeClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
+      const onGatedClick = vi.fn();
 
       render(
         <FeatureGate
-          feature={FEATURE_KEYS.EXCEL_EXPORT}
+          hasAccess={false}
           mode="paywall"
-          onUpgradeClick={onUpgradeClick}
-          monetizationStore={mockMonetizationStore}
+          gateReason="upgrade"
+          onGatedClick={onGatedClick}
         >
           <div>Premium Content</div>
         </FeatureGate>,
@@ -456,7 +397,7 @@ describe('FeatureGate', () => {
       const button = screen.getByRole('button');
       fireEvent.keyDown(button, { key: 'Escape' });
 
-      expect(onUpgradeClick).not.toHaveBeenCalled();
+      expect(onGatedClick).not.toHaveBeenCalled();
     });
   });
 
@@ -464,23 +405,22 @@ describe('FeatureGate', () => {
     it('should stop propagation on click', () => {
       const parentClick = vi.fn();
       const childClick = vi.fn();
-      mockMonetizationStore.isAuthenticated = true;
 
       render(
         <div onClick={parentClick}>
           <FeatureGate
-            feature={FEATURE_KEYS.EXCEL_EXPORT}
+            hasAccess={false}
             mode="disable"
-            onUpgradeClick={childClick}
-            monetizationStore={mockMonetizationStore}
+            gateReason="upgrade"
+            onGatedClick={childClick}
           >
             <div>Premium Content</div>
           </FeatureGate>
         </div>,
       );
 
-      const overlay = screen.getByRole('button');
-      fireEvent.click(overlay);
+      const overlays = screen.getAllByRole('button');
+      fireEvent.click(overlays[0]);
 
       expect(childClick).toHaveBeenCalledTimes(1);
       expect(parentClick).not.toHaveBeenCalled();
