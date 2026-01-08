@@ -5,6 +5,7 @@ export { paymentStore } from './paymentStore';
 export { monetizationStore } from './monetizationStore';
 export { navigationStore } from './navigationStore';
 export { navbarToolbarStore } from './navbarToolbarStore';
+export { goalsStore } from './goalsStore';
 
 // Access context refresh hook
 export { useRefreshAccessContext } from './useRefreshAccessContext';

@@ -4,9 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { getGoalTemplates, getUserByAuthId } from '@uth/db';
-import { checkFeatureAccess, FEATURE_KEYS } from '@uth/features';
+import { getGoalTemplates } from '@uth/db';
+import {
+  getUserContext,
+  checkFeatureAccess,
+  FEATURE_KEYS,
+} from '@uth/features/server';
+import { TIERS } from '@uth/domain';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -18,15 +22,16 @@ export const maxDuration = 30;
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    // Allow anonymous access for browsing templates
-    // But filter based on tier
+    // Get user context (never throws - returns anonymous tier if not authenticated)
+    const userContext = await getUserContext(request);
 
     // Check feature flag (if user is authenticated)
-    if (userId) {
-      const hasAccess = await checkFeatureAccess(FEATURE_KEYS.MULTI_GOAL_TRACKING, userId);
-      if (!hasAccess) {
+    if (userContext.userId) {
+      const accessResult = await checkFeatureAccess(
+        FEATURE_KEYS.MULTI_GOAL_TRACKING,
+        userContext,
+      );
+      if (!accessResult.allowed) {
         return NextResponse.json({ error: 'Feature not available' }, { status: 403 });
       }
     }
@@ -34,25 +39,14 @@ export async function GET(request: NextRequest) {
     const jurisdiction = request.nextUrl.searchParams.get('jurisdiction') ?? undefined;
     const allTemplates = await getGoalTemplates(jurisdiction);
 
-    // Determine user's tier for filtering
-    let userTier = 'anonymous';
-    if (userId) {
-      const user = await getUserByAuthId(userId);
-      if (user) {
-        userTier = user.subscriptionTier;
-      }
-    }
-
     // Define tier hierarchy for filtering
     const tierHierarchy: Record<string, number> = {
-      anonymous: 0,
-      free: 1,
-      monthly: 2,
-      yearly: 2,
-      lifetime: 3,
+      [TIERS.ANONYMOUS]: 0,
+      [TIERS.FREE]: 1,
+      [TIERS.PREMIUM]: 2,
     };
 
-    const userTierLevel = tierHierarchy[userTier] ?? 0;
+    const userTierLevel = tierHierarchy[userContext.tier] ?? 0;
 
     // Filter templates by min_tier (but show all with availability info)
     const templates = allTemplates.map((template) => {

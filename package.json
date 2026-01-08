@@ -85,6 +85,7 @@
     "@nx/vitest": "22.3.3",
     "@nx/workspace": "22.3.3",
     "@playwright/test": "^1.36.0",
+    "@svgr/webpack": "^8.1.0",
     "@swc-node/register": "~1.11.1",
     "@swc/cli": "~0.7.9",
     "@swc/core": "~1.15.8",

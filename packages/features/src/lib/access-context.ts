@@ -11,8 +11,11 @@
 import { getCurrentUser, type AuthUser } from '@uth/auth-server';
 import {
   getUserByAuthId,
+  getUserGoals,
   type AccessContext,
   type PricingData,
+  type TrackingGoalData,
+  type GoalCalculationData,
   SubscriptionTier,
   SubscriptionStatus,
   UserRole,
@@ -107,7 +110,38 @@ export async function loadAccessContext(): Promise<AccessContext> {
       authUser.uid,
     );
 
-    // Step 6: Return complete access context
+    // Step 6: Load goals if multi_goal_tracking feature is enabled
+    let goals: TrackingGoalData[] | null = null;
+    let goalCalculations: Record<string, GoalCalculationData> | null = null;
+
+    if (entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING]) {
+      try {
+        goals = await getUserGoals(authUser.uid, false); // exclude archived
+
+        // Note: Goal calculations require trip data which is stored client-side
+        // Server-side calculations would require trips to be stored in DB
+        // For now, calculations will be done client-side after hydration
+        // This is consistent with the current architecture where trips are in localStorage
+        goalCalculations = null;
+      } catch (error) {
+        getFeatureLogger().warn(
+          `Failed to load goals for user ${authUser.uid}`,
+          {
+            level: 'warning',
+            tags: {
+              context: 'access-context',
+              operation: 'getUserGoals',
+              userId: authUser.uid,
+            },
+          },
+        );
+        // Fail gracefully - user just won't see their goals initially
+        goals = null;
+        goalCalculations = null;
+      }
+    }
+
+    // Step 7: Return complete access context
     return {
       user: {
         uid: authUser.uid,
@@ -122,6 +156,8 @@ export async function loadAccessContext(): Promise<AccessContext> {
       subscriptionStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd,
+      goals,
+      goalCalculations,
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
@@ -230,6 +266,8 @@ function createAnonymousContext(
     subscriptionStatus: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    goals: null,
+    goalCalculations: null,
   };
 }
 

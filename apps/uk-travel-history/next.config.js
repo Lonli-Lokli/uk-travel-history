@@ -11,7 +11,7 @@ const getGitCommitHash = () => {
   }
 };
 
-const nextConfig = {
+const nextConfig  = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
@@ -19,6 +19,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_GIT_COMMIT_HASH: getGitCommitHash(),
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
+  turbopack: {
+    rules: {
+      '*.svg': {
+        as: '*.js',
+        loaders: ['@svgr/webpack'],
+      },
+    },
   },
 };
 

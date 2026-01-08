@@ -82,6 +82,12 @@ export const DEFAULT_FEATURE_POLICIES: Record<FeatureFlagKey, FeaturePolicy> = {
     enabled: true,
     minTier: TIERS.PREMIUM,
   },
+
+  // Multi-goal tracking (FREE tier can have 1 goal, PREMIUM unlimited)
+  [FEATURE_KEYS.MULTI_GOAL_TRACKING]: {
+    enabled: true,
+    minTier: TIERS.FREE,
+  },
 };
 
 /**

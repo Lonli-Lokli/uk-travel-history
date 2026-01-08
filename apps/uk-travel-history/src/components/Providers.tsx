@@ -6,9 +6,11 @@ import {
   authStore,
   monetizationStore,
   paymentStore,
+  goalsStore,
+  travelStore,
   useRefreshAccessContext,
 } from '@uth/stores';
-import { type FeatureFlagKey } from '@uth/features';
+import { type FeatureFlagKey, FEATURE_KEYS } from '@uth/features';
 import type { FeaturePolicy } from '@uth/features';
 import type { AccessContext, SubscriptionTier, UserRole } from '@uth/db';
 import type { AuthUser } from '@uth/auth-client';
@@ -123,6 +125,21 @@ export function Providers({ children, accessContext }: ProvidersProps) {
     // Hydrate payment store with pricing data
     if (accessContext.pricing) {
       paymentStore.hydrate(accessContext.pricing);
+    }
+
+    // Hydrate goals store with goals data
+    // Check if multi_goal_tracking feature is enabled via entitlements
+    const isGoalsFeatureEnabled =
+      accessContext.entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING] ?? false;
+    goalsStore.hydrate(
+      accessContext.goals ?? null,
+      accessContext.goalCalculations ?? null,
+      isGoalsFeatureEnabled,
+    );
+
+    // Initialize trip reaction for goal recalculation when trips change
+    if (isGoalsFeatureEnabled) {
+      goalsStore.initializeTripReaction(travelStore);
     }
 
     // Initialize auth state subscription AFTER hydration

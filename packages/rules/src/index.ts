@@ -24,18 +24,18 @@ export type {
   GoalRequirement,
   RuleEngine,
   TrackingGoal,
-} from './types';
+} from './lib/types';
 
 // Registry
-export { ruleEngineRegistry } from './registry';
+export { ruleEngineRegistry } from './lib/registry';
 
 // Engines
-export { UKILRRuleEngine, DaysCounterRuleEngine } from './engines';
+export { UKILRRuleEngine, DaysCounterRuleEngine } from './lib/engines';
 
 // Initialize registry with built-in engines
-import { ruleEngineRegistry } from './registry';
-import { UKILRRuleEngine } from './engines/uk-ilr';
-import { DaysCounterRuleEngine } from './engines/days-counter';
+import { ruleEngineRegistry } from './lib/registry';
+import { UKILRRuleEngine } from './lib/engines/uk-ilr';
+import { DaysCounterRuleEngine } from './lib/engines/days-counter';
 
 // Auto-register built-in engines
 ruleEngineRegistry.register(new UKILRRuleEngine());

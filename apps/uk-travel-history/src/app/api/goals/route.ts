@@ -5,15 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import {
   getUserGoals,
   createGoal,
   getGoalCount,
-  getUserByAuthId,
   type CreateTrackingGoalData,
 } from '@uth/db';
-import { checkFeatureAccess, FEATURE_KEYS } from '@uth/features';
+import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { TIERS } from '@uth/domain';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -25,23 +24,22 @@ export const maxDuration = 30;
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    // Check feature flag and get user context
+    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
 
-    if (!userId) {
+    if (!userContext.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check feature flag
-    const hasAccess = await checkFeatureAccess(FEATURE_KEYS.MULTI_GOAL_TRACKING, userId);
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Feature not available' }, { status: 403 });
-    }
-
     const includeArchived = request.nextUrl.searchParams.get('includeArchived') === 'true';
-    const goals = await getUserGoals(userId, includeArchived);
+    const goals = await getUserGoals(userContext.userId, includeArchived);
 
     return NextResponse.json({ goals });
   } catch (error) {
+    // If assertFeatureAccess throws a NextResponse, return it directly
+    if (error instanceof NextResponse) {
+      return error;
+    }
     logger.error('Failed to fetch goals', {
       extra: { error: (error as Error).message },
     });
@@ -58,22 +56,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    // Check feature flag and get user context
+    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.MULTI_GOAL_TRACKING);
 
-    if (!userId) {
+    if (!userContext.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check feature flag
-    const hasAccess = await checkFeatureAccess(FEATURE_KEYS.MULTI_GOAL_TRACKING, userId);
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Feature not available' }, { status: 403 });
-    }
-
     // Check goal limit: 1 for free tier, unlimited for paid
-    const existingCount = await getGoalCount(userId);
-    const user = await getUserByAuthId(userId);
-    const isPaid = user?.subscriptionTier && user.subscriptionTier !== 'free';
+    const existingCount = await getGoalCount(userContext.userId);
+    const isPaid = userContext.tier === TIERS.PREMIUM;
 
     if (!isPaid && existingCount >= 1) {
       return NextResponse.json(
@@ -92,14 +84,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const goal = await createGoal(userId, body);
+    const goal = await createGoal(userContext.userId, body);
 
     logger.info('Goal created', {
-      extra: { userId, goalId: goal.id, type: goal.type },
+      extra: { userId: userContext.userId, goalId: goal.id, type: goal.type },
     });
 
     return NextResponse.json({ goal }, { status: 201 });
   } catch (error) {
+    // If assertFeatureAccess throws a NextResponse, return it directly
+    if (error instanceof NextResponse) {
+      return error;
+    }
     logger.error('Failed to create goal', {
       extra: { error: (error as Error).message },
     });
