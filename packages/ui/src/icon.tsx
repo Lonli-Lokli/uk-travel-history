@@ -41,6 +41,8 @@ import {
   ArrowRight01Icon,
   ArrowLeft01Icon,
   Archive02Icon,
+  MapPinIcon,
+  Configuration01Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
@@ -93,7 +95,9 @@ type StandardIconName =
   | 'calculator'
   | 'chevron-right'
   | 'chevron-left'
-  | 'archive';
+  | 'archive'
+  | 'map-pin'
+  | 'settings';
 export type IconName = StandardIconName | CustomIconName;
 
 export const UIIcon: FC<{
@@ -196,6 +200,10 @@ function getIconByName(iconName: StandardIconName): IconSvgElement {
       return ArrowLeft01Icon;
     case 'archive':
       return Archive02Icon;
+    case 'map-pin':
+      return MapPinIcon;
+    case 'settings':
+      return Configuration01Icon;
     default:
       throw new NeverError(iconName);
   }

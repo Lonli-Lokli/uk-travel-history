@@ -142,16 +142,16 @@ INSERT INTO goal_templates (id, jurisdiction, category, name, description, icon,
 ('uk_ilr_5yr', 'uk', 'immigration', 'UK ILR (5-Year)', 'Indefinite Leave to Remain via standard 5-year route', 'home', 'uk_ilr', '{"trackYears": 5}', '["visaStartDate"]', 1, 'anonymous'),
 ('uk_ilr_3yr', 'uk', 'immigration', 'UK ILR (3-Year)', 'ILR via family/spouse route', 'home', 'uk_ilr', '{"trackYears": 3}', '["visaStartDate"]', 2, 'anonymous'),
 ('uk_ilr_10yr', 'uk', 'immigration', 'UK ILR (10-Year)', 'Long residence route', 'home', 'uk_ilr', '{"trackYears": 10}', '["visaStartDate"]', 3, 'anonymous'),
-('uk_citizenship', 'uk', 'immigration', 'British Citizenship', 'Naturalisation after ILR', 'flag', 'uk_citizenship', '{"qualifyingYears": 5}', '["ilrGrantDate"]', 4, 'anonymous'),
+('uk_citizenship', 'uk', 'immigration', 'British Citizenship', 'Naturalisation after ILR', 'uk-flag', 'uk_citizenship', '{"qualifyingYears": 5}', '["ilrGrantDate"]', 4, 'anonymous'),
 
 -- UK Tax
 ('uk_tax', 'uk', 'tax', 'UK Tax Residency', 'Statutory Residence Test tracking', 'calculator', 'uk_tax_residency', '{}', '["taxYear"]', 10, 'anonymous'),
 
 -- Schengen
-('schengen_90_180', 'schengen', 'immigration', 'Schengen 90/180', '90 days per 180-day rolling window', 'globe', 'schengen_90_180', '{}', '[]', 20, 'anonymous'),
+('schengen_90_180', 'schengen', 'immigration', 'Schengen 90/180', '90 days per 180-day rolling window', 'eu-flag', 'schengen_90_180', '{}', '[]', 20, 'anonymous'),
 
 -- Personal / Generic
-('days_away', 'global', 'personal', 'Days Away', 'Count days spent away from home', 'plane', 'days_counter', '{"countDirection": "days_away", "referenceLocation": "Home"}', '[]', 100, 'anonymous'),
+('days_away', 'global', 'personal', 'Days Away', 'Count days spent away from home', 'airplane', 'days_counter', '{"countDirection": "days_away", "referenceLocation": "Home"}', '[]', 100, 'anonymous'),
 ('days_present', 'global', 'personal', 'Days Present', 'Count days in a specific location', 'map-pin', 'days_counter', '{"countDirection": "days_present", "referenceLocation": "UK"}', '[]', 101, 'anonymous'),
 ('custom', 'global', 'personal', 'Custom Goal', 'Set your own day limit and window', 'settings', 'custom_threshold', '{"thresholdDays": 180, "windowDays": 365}', '["thresholdDays", "windowDays"]', 110, 'monthly');
 
