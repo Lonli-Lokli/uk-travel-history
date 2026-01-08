@@ -14,6 +14,10 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
+  TrackingGoalData,
+  CreateTrackingGoalData,
+  UpdateTrackingGoalData,
+  GoalTemplate,
 } from '../../types/domain';
 import {
   DbError,
@@ -33,6 +37,8 @@ export class MockDbAdapter implements DbProvider {
   private purchaseIntents: Map<string, PurchaseIntent> = new Map();
   private webhookEvents: Map<string, WebhookEvent> = new Map();
   private featurePolicies: Map<string, FeaturePolicy> = new Map();
+  private trackingGoals: Map<string, TrackingGoalData> = new Map();
+  private goalTemplates: Map<string, GoalTemplate> = new Map();
   private idCounter = 1;
 
   initialize(_config: DbProviderConfig): void {
@@ -55,6 +61,8 @@ export class MockDbAdapter implements DbProvider {
     this.purchaseIntents.clear();
     this.webhookEvents.clear();
     this.featurePolicies.clear();
+    this.trackingGoals.clear();
+    this.goalTemplates.clear();
     this.idCounter = 1;
   }
 
@@ -130,12 +138,30 @@ export class MockDbAdapter implements DbProvider {
       role: updates.role ?? user.role,
       subscriptionTier: updates.subscriptionTier ?? user.subscriptionTier,
       subscriptionStatus: updates.subscriptionStatus ?? user.subscriptionStatus,
-      stripeCustomerId: updates.stripeCustomerId !== undefined ? updates.stripeCustomerId : user.stripeCustomerId,
-      stripeSubscriptionId: updates.stripeSubscriptionId !== undefined ? updates.stripeSubscriptionId : user.stripeSubscriptionId,
-      stripePriceId: updates.stripePriceId !== undefined ? updates.stripePriceId : user.stripePriceId,
-      currentPeriodEnd: updates.currentPeriodEnd !== undefined ? updates.currentPeriodEnd : user.currentPeriodEnd,
-      cancelAtPeriodEnd: updates.cancelAtPeriodEnd !== undefined ? updates.cancelAtPeriodEnd : user.cancelAtPeriodEnd,
-      pauseResumesAt: updates.pauseResumesAt !== undefined ? updates.pauseResumesAt : user.pauseResumesAt,
+      stripeCustomerId:
+        updates.stripeCustomerId !== undefined
+          ? updates.stripeCustomerId
+          : user.stripeCustomerId,
+      stripeSubscriptionId:
+        updates.stripeSubscriptionId !== undefined
+          ? updates.stripeSubscriptionId
+          : user.stripeSubscriptionId,
+      stripePriceId:
+        updates.stripePriceId !== undefined
+          ? updates.stripePriceId
+          : user.stripePriceId,
+      currentPeriodEnd:
+        updates.currentPeriodEnd !== undefined
+          ? updates.currentPeriodEnd
+          : user.currentPeriodEnd,
+      cancelAtPeriodEnd:
+        updates.cancelAtPeriodEnd !== undefined
+          ? updates.cancelAtPeriodEnd
+          : user.cancelAtPeriodEnd,
+      pauseResumesAt:
+        updates.pauseResumesAt !== undefined
+          ? updates.pauseResumesAt
+          : user.pauseResumesAt,
     };
 
     this.users.set(updated.id, updated);
@@ -255,7 +281,9 @@ export class MockDbAdapter implements DbProvider {
     return false;
   }
 
-  async recordWebhookEvent(data: CreateWebhookEventData): Promise<WebhookEvent> {
+  async recordWebhookEvent(
+    data: CreateWebhookEventData,
+  ): Promise<WebhookEvent> {
     // Check for duplicate
     const hasProcessed = await this.hasWebhookEventBeenProcessed(
       data.stripeEventId,
@@ -287,12 +315,129 @@ export class MockDbAdapter implements DbProvider {
     return Array.from(this.featurePolicies.values());
   }
 
-  async getFeaturePolicyByKey(featureKey: string): Promise<FeaturePolicy | null> {
+  async getFeaturePolicyByKey(
+    featureKey: string,
+  ): Promise<FeaturePolicy | null> {
     for (const policy of this.featurePolicies.values()) {
       if (policy.featureKey === featureKey) {
         return policy;
       }
     }
     return null;
+  }
+
+  // ============================================================================
+  // Tracking Goal Operations
+  // ============================================================================
+
+  async getUserGoals(
+    userId: string,
+    includeArchived = false,
+  ): Promise<TrackingGoalData[]> {
+    const results: TrackingGoalData[] = [];
+    for (const goal of this.trackingGoals.values()) {
+      if (goal.userId === userId) {
+        if (includeArchived || !goal.isArchived) {
+          results.push(goal);
+        }
+      }
+    }
+    return results.sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getGoalById(goalId: string): Promise<TrackingGoalData | null> {
+    return this.trackingGoals.get(goalId) || null;
+  }
+
+  async createGoal(
+    userId: string,
+    data: CreateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
+    const now = new Date().toISOString();
+    const goal: TrackingGoalData = {
+      id: this.generateId(),
+      userId,
+      type: data.type,
+      jurisdiction: data.jurisdiction,
+      name: data.name,
+      config: data.config,
+      startDate: data.startDate,
+      targetDate: data.targetDate ?? null,
+      isActive: data.isActive ?? true,
+      isArchived: false,
+      displayOrder: data.displayOrder ?? 0,
+      color: data.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.trackingGoals.set(goal.id, goal);
+    return goal;
+  }
+
+  async updateGoal(
+    goalId: string,
+    data: UpdateTrackingGoalData,
+  ): Promise<TrackingGoalData> {
+    const goal = await this.getGoalById(goalId);
+
+    if (!goal) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `Goal with id ${goalId} not found`,
+      );
+    }
+
+    const updated: TrackingGoalData = {
+      ...goal,
+      name: data.name ?? goal.name,
+      config: data.config ?? goal.config,
+      targetDate:
+        data.targetDate !== undefined ? data.targetDate : goal.targetDate,
+      isActive: data.isActive ?? goal.isActive,
+      isArchived: data.isArchived ?? goal.isArchived,
+      displayOrder: data.displayOrder ?? goal.displayOrder,
+      color: data.color !== undefined ? data.color : goal.color,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.trackingGoals.set(updated.id, updated);
+    return updated;
+  }
+
+  async deleteGoal(goalId: string): Promise<void> {
+    if (!this.trackingGoals.has(goalId)) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `Goal with id ${goalId} not found`,
+      );
+    }
+    this.trackingGoals.delete(goalId);
+  }
+
+  async getGoalCount(userId: string): Promise<number> {
+    let count = 0;
+    for (const goal of this.trackingGoals.values()) {
+      if (goal.userId === userId && !goal.isArchived) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ============================================================================
+  // Goal Template Operations
+  // ============================================================================
+
+  async getGoalTemplates(jurisdiction?: string): Promise<GoalTemplate[]> {
+    const results: GoalTemplate[] = [];
+    for (const template of this.goalTemplates.values()) {
+      if (template.isAvailable) {
+        if (!jurisdiction || template.jurisdiction === jurisdiction) {
+          results.push(template);
+        }
+      }
+    }
+    return results.sort((a, b) => a.displayOrder - b.displayOrder);
   }
 }

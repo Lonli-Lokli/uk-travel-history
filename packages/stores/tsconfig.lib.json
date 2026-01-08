@@ -26,6 +26,12 @@
       "path": "../features/tsconfig.lib.json"
     },
     {
+      "path": "../rules/tsconfig.lib.json"
+    },
+    {
+      "path": "../db/tsconfig.lib.json"
+    },
+    {
       "path": "../utils/tsconfig.lib.json"
     },
     {

@@ -36,12 +36,20 @@ import {
   CircleArrowReload01Icon,
   Chart01Icon,
   Tick01Icon,
+  Home03Icon,
+  CalculateIcon,
+  ArrowRight01Icon,
+  ArrowLeft01Icon,
+  Archive02Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
 import { FC } from 'react';
+import UKFlagIcon from './cutom-icons/uk-flag.svg';
+import EUFlagIcon from './cutom-icons/eu-flag.svg';
 
-export type IconName =
+type CustomIconName = keyof typeof CUSTOM_ICONS;
+type StandardIconName =
   | 'loading'
   | 'info-circle'
   | 'pdf'
@@ -80,17 +88,27 @@ export type IconName =
   | 'menu'
   | 'close'
   | 'reload'
-  | 'line-chart';
+  | 'line-chart'
+  | 'home'
+  | 'calculator'
+  | 'chevron-right'
+  | 'chevron-left'
+  | 'archive';
+export type IconName = StandardIconName | CustomIconName;
 
 export const UIIcon: FC<{
   iconName: IconName;
   className?: string;
 }> = ({ iconName, className }) => {
+  if (isCustomIconName(iconName)) {
+    const CustomIcon = CUSTOM_ICONS[iconName];
+    return <CustomIcon className={className} />;
+  }
   const icon = getIconByName(iconName);
   return <HugeiconsIcon icon={icon} className={className} />;
 };
 
-function getIconByName(iconName: IconName): IconSvgElement {
+function getIconByName(iconName: StandardIconName): IconSvgElement {
   switch (iconName) {
     case 'loading':
       return Loading03Icon;
@@ -168,7 +186,27 @@ function getIconByName(iconName: IconName): IconSvgElement {
       return CircleArrowReload01Icon;
     case 'line-chart':
       return Chart01Icon;
+    case 'home':
+      return Home03Icon;
+    case 'calculator':
+      return CalculateIcon;
+    case 'chevron-right':
+      return ArrowRight01Icon;
+    case 'chevron-left':
+      return ArrowLeft01Icon;
+    case 'archive':
+      return Archive02Icon;
     default:
       throw new NeverError(iconName);
   }
+}
+
+// taken from https://nucleoapp.com/svg-flag-icons
+const CUSTOM_ICONS: Record<string, React.FC<{ className?: string }>> = {
+  'uk-flag': UKFlagIcon,
+  'eu-flag': EUFlagIcon,
+} as const;
+
+function isCustomIconName(iconName: IconName): iconName is CustomIconName {
+  return iconName in CUSTOM_ICONS;
 }

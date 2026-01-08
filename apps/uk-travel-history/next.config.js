@@ -20,6 +20,14 @@ const nextConfig = {
     NEXT_PUBLIC_GIT_COMMIT_HASH: getGitCommitHash(),
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
+  turbopack: {
+    rules: {
+      '*.svg': {
+        as: '*.js',
+        loaders: ['@svgr/webpack'],
+      },
+    },
+  },
 };
 
 const plugins = [

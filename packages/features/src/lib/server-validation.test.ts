@@ -22,7 +22,9 @@ vi.mock('next/cache', () => ({
 import { getAllFeaturePolicies as mockGetAllFeaturePolicies } from '@uth/db';
 
 // Helper to convert Edge Config format to DB format
-function convertToDbFormat(edgeConfigFlags: Record<string, any> | null): FeaturePolicy[] | null {
+function convertToDbFormat(
+  edgeConfigFlags: Record<string, any> | null,
+): FeaturePolicy[] | null {
   if (!edgeConfigFlags) return null;
 
   return Object.entries(edgeConfigFlags).map(([featureKey, policy]) => ({
@@ -52,6 +54,10 @@ describe('Server-Side Feature Validation', () => {
       [FEATURE_KEYS.PDF_IMPORT]: { enabled: false, minTier: 'premium' },
       [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true, minTier: 'anonymous' },
       [FEATURE_KEYS.RISK_CHART]: { enabled: false, minTier: 'anonymous' },
+      [FEATURE_KEYS.MULTI_GOAL_TRACKING]: {
+        enabled: false,
+        minTier: 'anonymous',
+      },
     };
     mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat(allFeatures));
   });
@@ -82,9 +88,7 @@ describe('Server-Side Feature Validation', () => {
       });
 
       it('should allow all free tier features', async () => {
-        const freeFeatures = [
-          FEATURE_KEYS.CLIPBOARD_IMPORT,
-        ];
+        const freeFeatures = [FEATURE_KEYS.CLIPBOARD_IMPORT];
 
         for (const feature of freeFeatures) {
           const result = await validateFeatureAccess(feature, freeUser);
@@ -159,9 +163,11 @@ describe('Server-Side Feature Validation', () => {
 
     describe('Feature flag disabled', () => {
       it('should deny access when feature is disabled in Edge Config', async () => {
-        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-          [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
-        }));
+        mockGetAllFeaturePolicies.mockResolvedValue(
+          convertToDbFormat({
+            [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
+          }),
+        );
 
         const premiumUser: UserTier = {
           userId: 'user456',
@@ -178,9 +184,11 @@ describe('Server-Side Feature Validation', () => {
       });
 
       it('should deny access to all users when feature is disabled', async () => {
-        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-          [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
-        }));
+        mockGetAllFeaturePolicies.mockResolvedValue(
+          convertToDbFormat({
+            [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
+          }),
+        );
 
         const freeUser: UserTier = { userId: 'user123', tier: 'free' };
         const premiumUser: UserTier = {
@@ -207,13 +215,15 @@ describe('Server-Side Feature Validation', () => {
 
     describe('Beta users and rollout', () => {
       it('should allow beta users even with 0% rollout', async () => {
-        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-          [FEATURE_KEYS.EXCEL_EXPORT]: {
-            enabled: true,
-            rolloutPercentage: 0,
-            betaUsers: ['beta_user'],
-          },
-        }));
+        mockGetAllFeaturePolicies.mockResolvedValue(
+          convertToDbFormat({
+            [FEATURE_KEYS.EXCEL_EXPORT]: {
+              enabled: true,
+              rolloutPercentage: 0,
+              betaUsers: ['beta_user'],
+            },
+          }),
+        );
 
         const betaUser: UserTier = {
           userId: 'beta_user',
@@ -229,12 +239,14 @@ describe('Server-Side Feature Validation', () => {
       });
 
       it('should respect rollout percentage for non-beta users', async () => {
-        mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-          [FEATURE_KEYS.EXCEL_EXPORT]: {
-            enabled: true,
-            rolloutPercentage: 0,
-          },
-        }));
+        mockGetAllFeaturePolicies.mockResolvedValue(
+          convertToDbFormat({
+            [FEATURE_KEYS.EXCEL_EXPORT]: {
+              enabled: true,
+              rolloutPercentage: 0,
+            },
+          }),
+        );
 
         const normalUser: UserTier = {
           userId: 'user999',
@@ -295,10 +307,12 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should exclude disabled features', async () => {
-      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-        [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true },
-        [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
-      }));
+      mockGetAllFeaturePolicies.mockResolvedValue(
+        convertToDbFormat({
+          [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true },
+          [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
+        }),
+      );
 
       const freeUser: UserTier = {
         userId: 'user123',
@@ -312,16 +326,19 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should return empty array if all features are disabled', async () => {
-      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-        [FEATURE_KEYS.MONETIZATION]: { enabled: false },
-        [FEATURE_KEYS.AUTH]: { enabled: false },
-        [FEATURE_KEYS.PAYMENTS]: { enabled: false },
-        [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
-        [FEATURE_KEYS.EXCEL_IMPORT]: { enabled: false },
-        [FEATURE_KEYS.PDF_IMPORT]: { enabled: false },
-        [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
-        [FEATURE_KEYS.RISK_CHART]: { enabled: false },
-      }));
+      mockGetAllFeaturePolicies.mockResolvedValue(
+        convertToDbFormat({
+          [FEATURE_KEYS.MONETIZATION]: { enabled: false },
+          [FEATURE_KEYS.AUTH]: { enabled: false },
+          [FEATURE_KEYS.PAYMENTS]: { enabled: false },
+          [FEATURE_KEYS.EXCEL_EXPORT]: { enabled: false },
+          [FEATURE_KEYS.EXCEL_IMPORT]: { enabled: false },
+          [FEATURE_KEYS.PDF_IMPORT]: { enabled: false },
+          [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: false },
+          [FEATURE_KEYS.RISK_CHART]: { enabled: false },
+          [FEATURE_KEYS.MULTI_GOAL_TRACKING]: { enabled: false },
+        }),
+      );
 
       const freeUser: UserTier = {
         userId: 'user123',
@@ -333,13 +350,15 @@ describe('Server-Side Feature Validation', () => {
     });
 
     it('should respect beta users', async () => {
-      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-        [FEATURE_KEYS.EXCEL_EXPORT]: {
-          enabled: true,
-          rolloutPercentage: 0,
-          betaUsers: ['beta_user'],
-        },
-      }));
+      mockGetAllFeaturePolicies.mockResolvedValue(
+        convertToDbFormat({
+          [FEATURE_KEYS.EXCEL_EXPORT]: {
+            enabled: true,
+            rolloutPercentage: 0,
+            betaUsers: ['beta_user'],
+          },
+        }),
+      );
 
       const betaUser: UserTier = {
         userId: 'beta_user',

@@ -10,8 +10,8 @@ import {
   TripWithCalculations,
   TravelCalculationResult,
   calculateTravelData,
+  calculateTripDurations
 } from '@uth/calculators';
-import { calculateTripDurations } from '@uth/calculators';
 
 /**
  * HTTP client interface for dependency injection

@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 
 BEGIN;
-SELECT plan(6);
+SELECT plan(8);
 
 -- Test that RLS policies exist for users table
 -- Policy names match baseline migration: users_select_own, users_update_own
@@ -46,6 +46,22 @@ SELECT is(
 SELECT isnt_empty(
   $$SELECT 1 FROM subscription_statuses WHERE code = 'active'$$,
   'subscription_statuses should have active status seeded'
+);
+
+-- Test that tracking_goals has RLS enabled
+SELECT is(
+  (SELECT relrowsecurity FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid
+   WHERE c.relname = 'tracking_goals' AND n.nspname = 'public'),
+  true,
+  'RLS should be enabled on tracking_goals table'
+);
+
+-- Test that goal_templates has RLS enabled
+SELECT is(
+  (SELECT relrowsecurity FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid
+   WHERE c.relname = 'goal_templates' AND n.nspname = 'public'),
+  true,
+  'RLS should be enabled on goal_templates table'
 );
 
 SELECT * FROM finish();

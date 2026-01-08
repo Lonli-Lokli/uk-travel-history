@@ -13,6 +13,10 @@ import type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
+  TrackingGoalData,
+  CreateTrackingGoalData,
+  UpdateTrackingGoalData,
+  GoalTemplate,
 } from '../types/domain';
 import { getDbProvider } from '../internal/provider-resolver';
 
@@ -51,7 +55,9 @@ export async function keepalive(): Promise<number> {
  * @param authUserId - The authentication provider user ID (e.g., Clerk user ID)
  * @returns The user, or null if not found
  */
-export async function getUserByAuthId(authUserId: string): Promise<User | null> {
+export async function getUserByAuthId(
+  authUserId: string,
+): Promise<User | null> {
   const provider = getDbProvider();
   return provider.getUserByAuthId(authUserId);
 }
@@ -223,4 +229,97 @@ export async function getFeaturePolicyByKey(
 ): Promise<FeaturePolicy | null> {
   const provider = getDbProvider();
   return provider.getFeaturePolicyByKey(featureKey);
+}
+
+// ============================================================================
+// Tracking Goal Operations
+// ============================================================================
+
+/**
+ * Get all goals for a user
+ * @param userId - The user ID (clerk_user_id)
+ * @param includeArchived - Whether to include archived goals
+ * @returns Array of goals
+ */
+export async function getUserGoals(
+  userId: string,
+  includeArchived = false,
+): Promise<TrackingGoalData[]> {
+  const provider = getDbProvider();
+  return provider.getUserGoals(userId, includeArchived);
+}
+
+/**
+ * Get a goal by ID
+ * @param goalId - The goal ID
+ * @returns The goal, or null if not found
+ */
+export async function getGoalById(
+  goalId: string,
+): Promise<TrackingGoalData | null> {
+  const provider = getDbProvider();
+  return provider.getGoalById(goalId);
+}
+
+/**
+ * Create a new tracking goal
+ * @param userId - The user ID (clerk_user_id)
+ * @param data - Goal creation data
+ * @returns The created goal
+ */
+export async function createGoal(
+  userId: string,
+  data: CreateTrackingGoalData,
+): Promise<TrackingGoalData> {
+  const provider = getDbProvider();
+  return provider.createGoal(userId, data);
+}
+
+/**
+ * Update a tracking goal
+ * @param goalId - The goal ID
+ * @param data - Goal update data
+ * @returns The updated goal
+ */
+export async function updateGoal(
+  goalId: string,
+  data: UpdateTrackingGoalData,
+): Promise<TrackingGoalData> {
+  const provider = getDbProvider();
+  return provider.updateGoal(goalId, data);
+}
+
+/**
+ * Delete a tracking goal
+ * @param goalId - The goal ID
+ */
+export async function deleteGoal(goalId: string): Promise<void> {
+  const provider = getDbProvider();
+  return provider.deleteGoal(goalId);
+}
+
+/**
+ * Get goal count for a user (for limit checking)
+ * @param userId - The user ID
+ * @returns Number of active (non-archived) goals
+ */
+export async function getGoalCount(userId: string): Promise<number> {
+  const provider = getDbProvider();
+  return provider.getGoalCount(userId);
+}
+
+// ============================================================================
+// Goal Template Operations
+// ============================================================================
+
+/**
+ * Get all available goal templates
+ * @param jurisdiction - Optional jurisdiction filter
+ * @returns Array of goal templates
+ */
+export async function getGoalTemplates(
+  jurisdiction?: string,
+): Promise<GoalTemplate[]> {
+  const provider = getDbProvider();
+  return provider.getGoalTemplates(jurisdiction);
 }

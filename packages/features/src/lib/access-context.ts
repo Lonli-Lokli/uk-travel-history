@@ -11,8 +11,13 @@
 import { getCurrentUser, type AuthUser } from '@uth/auth-server';
 import {
   getUserByAuthId,
+  getUserGoals,
+  getGoalTemplates,
   type AccessContext,
   type PricingData,
+  type TrackingGoalData,
+  type GoalCalculationData,
+  type GoalTemplateWithAccess,
   SubscriptionTier,
   SubscriptionStatus,
   UserRole,
@@ -107,7 +112,64 @@ export async function loadAccessContext(): Promise<AccessContext> {
       authUser.uid,
     );
 
-    // Step 6: Return complete access context
+    // Step 6: Load goals and templates if multi_goal_tracking feature is enabled
+    let goals: TrackingGoalData[] | null = null;
+    let goalCalculations: Record<string, GoalCalculationData> | null = null;
+    let goalTemplates: GoalTemplateWithAccess[] | null = null;
+
+    if (entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING]) {
+      try {
+        // Load goals and templates in parallel
+        const [userGoals, allTemplates] = await Promise.all([
+          getUserGoals(authUser.uid, false), // exclude archived
+          getGoalTemplates(),
+        ]);
+
+        goals = userGoals;
+
+        // Note: Goal calculations require trip data which is stored client-side
+        // Server-side calculations would require trips to be stored in DB
+        // For now, calculations will be done client-side after hydration
+        // This is consistent with the current architecture where trips are in localStorage
+        goalCalculations = null;
+
+        // Compute template access based on user's tier
+        const tierHierarchy: Record<string, number> = {
+          [TIERS.ANONYMOUS]: 0,
+          [TIERS.FREE]: 1,
+          [TIERS.PREMIUM]: 2,
+        };
+        const userTierLevel = tierHierarchy[tierId] ?? 0;
+
+        goalTemplates = allTemplates.map((template) => {
+          const templateTierLevel = tierHierarchy[template.minTier] ?? 0;
+          const isAvailableForTier = userTierLevel >= templateTierLevel;
+          return {
+            ...template,
+            isAvailableForTier,
+            requiresUpgrade: !isAvailableForTier,
+          };
+        });
+      } catch (error) {
+        getFeatureLogger().warn(
+          `Failed to load goals/templates for user ${authUser.uid}`,
+          {
+            level: 'warning',
+            tags: {
+              context: 'access-context',
+              operation: 'getUserGoals/getGoalTemplates',
+              userId: authUser.uid,
+            },
+          },
+        );
+        // Fail gracefully - user just won't see their goals initially
+        goals = null;
+        goalCalculations = null;
+        goalTemplates = null;
+      }
+    }
+
+    // Step 7: Return complete access context
     return {
       user: {
         uid: authUser.uid,
@@ -122,6 +184,9 @@ export async function loadAccessContext(): Promise<AccessContext> {
       subscriptionStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd,
+      goals,
+      goalCalculations,
+      goalTemplates,
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
@@ -230,6 +295,9 @@ function createAnonymousContext(
     subscriptionStatus: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    goals: null,
+    goalCalculations: null,
+    goalTemplates: null,
   };
 }
 

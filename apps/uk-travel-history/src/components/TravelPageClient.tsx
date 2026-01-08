@@ -3,7 +3,9 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useRefreshAccessContext } from '@uth/stores';
+import { useRefreshAccessContext, goalsStore } from '@uth/stores';
+import { FeatureGate, useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
 import { SummaryCards } from './SummaryCards';
 import { VisaDetailsCard } from './VisaDetailsCard';
 import { ValidationStatusCard } from './ValidationStatusCard';
@@ -11,6 +13,12 @@ import { RiskAreaChart } from './RiskAreaChart';
 import { TravelHistoryCard } from './TravelHistoryCard';
 import { TravelToolbar } from './TravelToolbar';
 import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
+import {
+  GoalMiniCardsRow,
+  GoalDetailPanel,
+  GoalEmptyState,
+  AddGoalModal,
+} from './goals';
 import {
   useClearAll,
   useCsvImport,
@@ -72,6 +80,18 @@ export const TravelPageClient = observer(() => {
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
 
+  // Handlers for goal actions
+  const handleAddGoal = () => goalsStore.openAddModal();
+  const handleUpgrade = () => router.push('/account');
+
+  // Feature gate for multi-goal tracking
+  const {
+    hasAccess: hasGoalsAccess,
+    isLoading: isGoalsLoading,
+    requiresUpgrade: goalsRequiresUpgrade,
+    handleUpgrade: handleGoalsUpgrade,
+  } = useFeatureGate(FEATURE_KEYS.MULTI_GOAL_TRACKING);
+
   return (
     <>
       <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
@@ -99,6 +119,39 @@ export const TravelPageClient = observer(() => {
             handleExport={handleExport}
           />
         </div>
+
+        {/* Multi-Goal Tracking Section (feature-gated) */}
+        <FeatureGate
+          hasAccess={hasGoalsAccess}
+          isLoading={isGoalsLoading}
+          mode="hide"
+          gateReason={goalsRequiresUpgrade ? 'upgrade' : 'login'}
+          onGatedClick={handleGoalsUpgrade}
+          fallback={null}
+        >
+          <div className="mb-6">
+            {goalsStore.hasGoals ? (
+              <>
+                {/* Goals row */}
+                <GoalMiniCardsRow
+                  onAddGoal={handleAddGoal}
+                  onUpgrade={handleUpgrade}
+                  className="mb-4"
+                />
+
+                {/* Selected goal details */}
+                {goalsStore.activeGoal && (
+                  <GoalDetailPanel
+                    goal={goalsStore.activeGoal}
+                    calculation={goalsStore.activeCalculation}
+                  />
+                )}
+              </>
+            ) : (
+              <GoalEmptyState onAddGoal={handleAddGoal} />
+            )}
+          </div>
+        </FeatureGate>
 
         <SummaryCards />
         <VisaDetailsCard />
@@ -139,6 +192,9 @@ export const TravelPageClient = observer(() => {
           onCancel={cancelFullDataImport}
         />
       )}
+
+      {/* Add Goal Modal - state managed by goalsStore */}
+      <AddGoalModal />
     </>
   );
 });

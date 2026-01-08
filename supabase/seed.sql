@@ -50,7 +50,10 @@ VALUES
   ('clipboard_import', true, 'anonymous', NULL, '{}'),
 
   -- UI features (ANONYMOUS tier)
-  ('risk_chart', false, 'anonymous', NULL, '{}')
+  ('risk_chart', false, 'anonymous', NULL, '{}'),
+
+  -- Multi-goal tracking (disabled by default, enable via beta_users)
+  ('multi_goal_tracking', false, 'anonymous', NULL, '{}')
 ON CONFLICT (feature_key) DO UPDATE SET
   enabled = EXCLUDED.enabled,
   min_tier = EXCLUDED.min_tier,
