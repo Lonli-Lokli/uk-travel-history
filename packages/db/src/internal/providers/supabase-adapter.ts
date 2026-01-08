@@ -378,7 +378,7 @@ export class SupabaseDbAdapter implements DbProvider {
       product_id: data.productId ?? null,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: result, error } = await (
       client.from('purchase_intents') as any
     )
