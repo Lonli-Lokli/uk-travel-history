@@ -1,5 +1,6 @@
 export * from './FeatureFlagsProvider';
 export * from './TravelTable';
+export * from './TripDrawer';
 export * from './PaymentModal';
 export * from './feature-gate';
 export * from './feature-gate-context';

@@ -50,6 +50,7 @@ export const TravelTable = observer(() => {
             className="cursor-move hover:bg-muted/50 rounded p-1 -m-1"
             draggable
             onDragStart={() => handleDragStart(row.index)}
+            onClick={(e) => e.stopPropagation()}
           >
             <UIIcon
               iconName="drag-drop"
@@ -73,19 +74,11 @@ export const TravelTable = observer(() => {
           </Button>
         ),
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.outDate}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { outDate: value })
-            }
-            type="date"
-            displayValue={
-              row.original.outDate
-                ? formatDate(row.original.outDate)
-                : undefined
-            }
-            placeholder="Set date (YYYY-MM-DD)"
-          />
+          <span className="text-sm">
+            {row.original.outDate
+              ? formatDate(row.original.outDate)
+              : <span className="text-muted-foreground">Not set</span>}
+          </span>
         ),
       },
       {
@@ -102,48 +95,29 @@ export const TravelTable = observer(() => {
           </Button>
         ),
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.inDate}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { inDate: value })
-            }
-            type="date"
-            displayValue={
-              row.original.inDate ? formatDate(row.original.inDate) : undefined
-            }
-            defaultMonth={row.original.outDate}
-            placeholder="Set date (YYYY-MM-DD)"
-          />
+          <span className="text-sm">
+            {row.original.inDate
+              ? formatDate(row.original.inDate)
+              : <span className="text-muted-foreground">Not set</span>}
+          </span>
         ),
       },
       {
         accessorKey: 'outRoute',
         header: () => <span className="text-xs font-semibold">Departure</span>,
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.outRoute}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { outRoute: value })
-            }
-            type="text"
-            placeholder="Add route"
-            className="max-w-[200px]"
-          />
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
+            {row.original.outRoute || '—'}
+          </span>
         ),
       },
       {
         accessorKey: 'inRoute',
         header: () => <span className="text-xs font-semibold">Return</span>,
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.inRoute}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { inRoute: value })
-            }
-            type="text"
-            placeholder="Add route"
-            className="max-w-[200px]"
-          />
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
+            {row.original.inRoute || '—'}
+          </span>
         ),
       },
       {
@@ -171,7 +145,10 @@ export const TravelTable = observer(() => {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => travelStore.deleteTrip(row.original.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              travelStore.deleteTrip(row.original.id);
+            }}
           >
             <UIIcon iconName="trash" className="h-3.5 w-3.5" />
           </Button>
@@ -191,6 +168,10 @@ export const TravelTable = observer(() => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  const handleRowClick = (tripId: string) => {
+    travelStore.openDrawer('edit', tripId);
+  };
+
   return (
     <div className="w-full">
       {/* Add Row Button */}
@@ -199,7 +180,7 @@ export const TravelTable = observer(() => {
           variant="outline"
           size="sm"
           className="w-full md:w-auto"
-          onClick={() => travelStore.addTrip()}
+          onClick={() => travelStore.openDrawer('create')}
         >
           <UIIcon iconName="plus" className="h-4 w-4 mr-1" />
           Add Trip
@@ -211,21 +192,23 @@ export const TravelTable = observer(() => {
         {table.getRowModel().rows.map((row, index) => (
           <div
             key={row.id}
-            className={`p-2 rounded-lg border ${
+            className={`p-2 rounded-lg border cursor-pointer transition-colors ${
               row.original.isIncomplete
-                ? 'bg-red-50 border-red-200'
-                : 'bg-white border-slate-200'
+                ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                : 'bg-white border-slate-200 hover:bg-slate-50'
             } ${draggedIndex === index ? 'opacity-50' : ''}`}
             draggable
             onDragStart={() => handleDragStart(index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
+            onClick={() => handleRowClick(row.original.id)}
           >
             {/* Header with drag handle and full days */}
             <div className="flex items-center justify-between mb-2">
               <div
                 className="cursor-move flex-shrink-0"
                 onTouchStart={() => handleDragStart(index)}
+                onClick={(e) => e.stopPropagation()}
               >
                 <UIIcon
                   iconName="drag-drop"
@@ -244,7 +227,10 @@ export const TravelTable = observer(() => {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
-                onClick={() => travelStore.deleteTrip(row.original.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  travelStore.deleteTrip(row.original.id);
+                }}
               >
                 <UIIcon iconName="trash" className="h-3 w-3" />
               </Button>
@@ -255,27 +241,16 @@ export const TravelTable = observer(() => {
               <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
                 Departure
               </div>
-              <EditableCell
-                value={row.original.outDate}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { outDate: value })
-                }
-                type="date"
-                displayValue={
-                  row.original.outDate
-                    ? formatDate(row.original.outDate)
-                    : 'Tap to set date'
-                }
-              />
-              <EditableCell
-                value={row.original.outRoute}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { outRoute: value })
-                }
-                type="text"
-                placeholder="Add departure location"
-                className="text-xs text-muted-foreground"
-              />
+              <div className="text-sm">
+                {row.original.outDate
+                  ? formatDate(row.original.outDate)
+                  : 'Not set'}
+              </div>
+              {row.original.outRoute && (
+                <div className="text-xs text-muted-foreground">
+                  {row.original.outRoute}
+                </div>
+              )}
             </div>
 
             {/* Return section */}
@@ -283,28 +258,14 @@ export const TravelTable = observer(() => {
               <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
                 Return
               </div>
-              <EditableCell
-                value={row.original.inDate}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { inDate: value })
-                }
-                type="date"
-                displayValue={
-                  row.original.inDate
-                    ? formatDate(row.original.inDate)
-                    : 'Tap to set date'
-                }
-                defaultMonth={row.original.outDate}
-              />
-              <EditableCell
-                value={row.original.inRoute}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { inRoute: value })
-                }
-                type="text"
-                placeholder="Add return location"
-                className="text-xs text-muted-foreground"
-              />
+              <div className="text-sm">
+                {row.original.inDate ? formatDate(row.original.inDate) : 'Not set'}
+              </div>
+              {row.original.inRoute && (
+                <div className="text-xs text-muted-foreground">
+                  {row.original.inRoute}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -346,13 +307,14 @@ export const TravelTable = observer(() => {
               table.getRowModel().rows.map((row, index) => (
                 <tr
                   key={row.id}
-                  className={`transition-colors ${
+                  className={`transition-colors cursor-pointer ${
                     row.original.isIncomplete
                       ? 'bg-red-50 hover:bg-red-100'
                       : 'bg-white hover:bg-slate-50'
                   } ${draggedIndex === index ? 'opacity-50' : ''}`}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, index)}
+                  onClick={() => handleRowClick(row.original.id)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2">

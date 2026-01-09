@@ -74,6 +74,12 @@ class TravelStore {
   selectedTripDetails: { name: string; start: string; end: string } | null =
     null;
 
+  // Drawer state
+  isDrawerOpen = false;
+  drawerMode: 'create' | 'edit' = 'create';
+  editingTripId: string | null = null;
+  drawerFormData: Partial<TripRecord> = {};
+
   constructor() {
     makeAutoObservable(this);
   }
@@ -254,6 +260,64 @@ class TravelStore {
     const [movedTrip] = newTrips.splice(fromIndex, 1);
     newTrips.splice(toIndex, 0, movedTrip);
     this.trips = newTrips;
+  }
+
+  // Drawer actions
+  openDrawer(mode: 'create' | 'edit', tripId?: string) {
+    this.drawerMode = mode;
+    this.editingTripId = tripId || null;
+
+    if (mode === 'create') {
+      this.drawerFormData = {
+        outDate: '',
+        inDate: '',
+        outRoute: '',
+        inRoute: '',
+      };
+    } else if (mode === 'edit' && tripId) {
+      const trip = this.trips.find((t) => t.id === tripId);
+      if (trip) {
+        this.drawerFormData = { ...trip };
+      }
+    }
+
+    this.isDrawerOpen = true;
+  }
+
+  closeDrawer() {
+    this.isDrawerOpen = false;
+    this.drawerFormData = {};
+    this.editingTripId = null;
+  }
+
+  updateDrawerFormData(updates: Partial<TripRecord>) {
+    this.drawerFormData = { ...this.drawerFormData, ...updates };
+  }
+
+  saveFromDrawer() {
+    if (this.drawerMode === 'create') {
+      const newTrip: TripRecord = {
+        id: this.generateId(),
+        outDate: this.drawerFormData.outDate || '',
+        inDate: this.drawerFormData.inDate || '',
+        outRoute: this.drawerFormData.outRoute || '',
+        inRoute: this.drawerFormData.inRoute || '',
+      };
+      this.trips.push(newTrip);
+    } else if (this.drawerMode === 'edit' && this.editingTripId) {
+      const index = this.trips.findIndex((t) => t.id === this.editingTripId);
+      if (index !== -1) {
+        this.trips[index] = {
+          ...this.trips[index],
+          outDate: this.drawerFormData.outDate || '',
+          inDate: this.drawerFormData.inDate || '',
+          outRoute: this.drawerFormData.outRoute || '',
+          inRoute: this.drawerFormData.inRoute || '',
+        };
+      }
+    }
+
+    this.closeDrawer();
   }
 
   async importFromPdf(file: File): Promise<void> {
