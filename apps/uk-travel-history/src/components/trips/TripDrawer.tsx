@@ -61,7 +61,6 @@ export const TripDrawer = observer(() => {
         inDate: formData.inDate,
         outRoute: formData.outRoute,
         inRoute: formData.inRoute,
-        goalId: formData.goalId,
       });
     }
 
