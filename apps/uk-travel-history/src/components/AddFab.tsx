@@ -71,7 +71,7 @@ export function AddFab({
         onClick={handleOpenDrawer}
         className={cn(
           'fixed bottom-6 right-6 z-40',
-          'w-14 h-14 rounded-full',
+          'w-14 h-14 md:w-16 md:h-16 rounded-full',
           'bg-primary text-primary-foreground',
           'shadow-lg hover:shadow-xl',
           'transition-all duration-200',
@@ -83,7 +83,7 @@ export function AddFab({
         type="button"
         aria-label="Add new content"
       >
-        <UIIcon iconName="plus" className="w-6 h-6" />
+        <UIIcon iconName="plus" className="w-6 h-6 md:w-8 md:h-8" />
       </button>
 
       {/* Options Drawer */}

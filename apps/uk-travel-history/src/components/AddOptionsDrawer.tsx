@@ -17,10 +17,9 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-  UIIcon,
-  Button,
 } from '@uth/ui';
-import { cn } from '@uth/utils';
+import { FEATURE_KEYS } from '@uth/features';
+import { FeatureOptionButton } from './FeatureOptionButton';
 
 export interface AddOptionsDrawerProps {
   isOpen: boolean;
@@ -30,62 +29,6 @@ export interface AddOptionsDrawerProps {
   onImportPdf?: () => void;
   onImportExcel?: () => void;
   onImportClipboard?: () => void;
-}
-
-interface OptionButtonProps {
-  icon: string;
-  label: string;
-  description: string;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary';
-}
-
-function OptionButton({
-  icon,
-  label,
-  description,
-  onClick,
-  variant = 'secondary',
-}: OptionButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className={cn(
-        'w-full p-4 rounded-lg border-2 transition-all duration-200',
-        'flex items-start gap-4 text-left',
-        onClick
-          ? 'hover:border-primary hover:bg-primary/5 cursor-pointer'
-          : 'opacity-50 cursor-not-allowed',
-        variant === 'primary'
-          ? 'bg-primary/10 border-primary'
-          : 'bg-white border-slate-200',
-      )}
-      type="button"
-    >
-      <div
-        className={cn(
-          'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0',
-          variant === 'primary' ? 'bg-primary/20' : 'bg-slate-100',
-        )}
-      >
-        <UIIcon
-          iconName={icon}
-          className={cn(
-            'w-6 h-6',
-            variant === 'primary' ? 'text-primary' : 'text-slate-600',
-          )}
-        />
-      </div>
-      <div className="flex-1">
-        <p className="font-semibold text-slate-900 mb-1">{label}</p>
-        <p className="text-sm text-slate-600">{description}</p>
-      </div>
-      {onClick && (
-        <UIIcon iconName="chevron-right" className="w-5 h-5 text-slate-400" />
-      )}
-    </button>
-  );
 }
 
 export function AddOptionsDrawer({
@@ -110,7 +53,7 @@ export function AddOptionsDrawer({
         <div className="px-4 pb-6 space-y-3">
           {/* Add Goal/Tracker */}
           {onAddGoal && (
-            <OptionButton
+            <FeatureOptionButton
               icon="target"
               label="Add Tracker"
               description="Create a new goal to track your days"
@@ -121,7 +64,7 @@ export function AddOptionsDrawer({
 
           {/* Add Trip */}
           {onAddTrip && (
-            <OptionButton
+            <FeatureOptionButton
               icon="airplane"
               label="Add Trip"
               description="Manually add a travel entry"
@@ -145,31 +88,34 @@ export function AddOptionsDrawer({
 
           {/* Import PDF */}
           {onImportPdf && (
-            <OptionButton
+            <FeatureOptionButton
               icon="pdf"
               label="Import from PDF"
               description="Import trips from Home Office SAR document"
               onClick={onImportPdf}
+              feature={FEATURE_KEYS.PDF_IMPORT}
             />
           )}
 
           {/* Import Excel */}
           {onImportExcel && (
-            <OptionButton
+            <FeatureOptionButton
               icon="xlsx"
               label="Import from Excel"
               description="Import trips from CSV or Excel file"
               onClick={onImportExcel}
+              feature={FEATURE_KEYS.EXCEL_IMPORT}
             />
           )}
 
           {/* Import Clipboard */}
           {onImportClipboard && (
-            <OptionButton
+            <FeatureOptionButton
               icon="clipboard"
               label="Import from Clipboard"
               description="Paste trip data from your clipboard"
               onClick={onImportClipboard}
+              feature={FEATURE_KEYS.CLIPBOARD_IMPORT}
             />
           )}
         </div>
