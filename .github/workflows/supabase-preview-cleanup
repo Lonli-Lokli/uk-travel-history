@@ -1,0 +1,33 @@
+name: Supabase Preview Branch Cleanup
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
+
+    steps:
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Authenticate Supabase CLI
+        run: supabase login --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Delete preview branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          SB_BRANCH="pr-${{ github.event.pull_request.number }}"
+          supabase branches delete "${SB_BRANCH}" --project-ref "${SUPABASE_PROJECT_REF_PROD}" || true
