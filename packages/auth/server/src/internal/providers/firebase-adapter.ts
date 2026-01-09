@@ -304,7 +304,6 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
 
       // Convert Firestore Timestamps to Dates
       return {
-        userId: data.userId,
         status: data.status,
         stripeCustomerId: data.stripeCustomerId,
         stripeSubscriptionId: data.stripeSubscriptionId,
@@ -322,6 +321,26 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
         `Failed to get subscription: ${error.message}`,
+        error,
+      );
+    }
+  }
+
+  async hasSubscription(sessionId: string): Promise<boolean> {
+    const firestore = this.getFirestore();
+
+    try {
+      const querySnapshot = await firestore
+        .collection('subscriptions')
+        .where('stripeSessionId', '==', sessionId)
+        .limit(1)
+        .get();
+
+      return !querySnapshot.empty;
+    } catch (error: any) {
+      throw new AuthError(
+        AuthErrorCode.PROVIDER_ERROR,
+        `Failed to check subscription by session ID: ${error.message}`,
         error,
       );
     }
@@ -348,7 +367,6 @@ export class FirebaseAuthServerAdapter implements AuthServerProvider {
 
       // Convert Firestore Timestamps to Dates
       return {
-        userId: data.userId,
         status: data.status,
         stripeCustomerId: data.stripeCustomerId,
         stripeSubscriptionId: data.stripeSubscriptionId,
