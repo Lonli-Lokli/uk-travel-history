@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'supabase/migrations/**'
+      - 'supabase/**'
       - '.github/workflows/supabase-deploy-prod.yml'
   workflow_dispatch:
     inputs:
