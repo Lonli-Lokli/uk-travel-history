@@ -94,12 +94,12 @@ export interface AuthServerProvider {
   getSubscription(userId: string): Promise<Subscription | null>;
 
   /**
-   * Get a subscription by Stripe checkout session ID
+   * Checks if a subscription exists by Stripe checkout session ID
    * @param sessionId - The Stripe checkout session ID
-   * @returns The subscription associated with the session, or null if not found
+   * @returns True if a subscription exists for the session, false otherwise
    * @throws AuthError if operation fails
    */
-  getSubscriptionBySessionId(sessionId: string): Promise<Subscription | null>;
+  hasSubscription(sessionId: string): Promise<boolean>;
 
   /**
    * Create a new subscription for a user

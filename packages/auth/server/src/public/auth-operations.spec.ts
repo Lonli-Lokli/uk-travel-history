@@ -15,7 +15,7 @@ import {
   createCustomToken,
   isAuthConfigured,
   getSubscription,
-  getSubscriptionBySessionId,
+  hasSubscription,
   createSubscription,
   updateSubscription,
 } from '../index.js';

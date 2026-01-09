@@ -128,10 +128,7 @@ export async function requireAdmin(): Promise<AuthUser> {
   const dbUser = await getUserByAuthId(user.uid);
 
   if (!dbUser || dbUser.role !== 'admin') {
-    throw new AuthError(
-      AuthErrorCode.FORBIDDEN,
-      'Admin access required',
-    );
+    throw new AuthError(AuthErrorCode.FORBIDDEN, 'Admin access required');
   }
 
   return user;
@@ -232,17 +229,15 @@ export async function getSubscription(
 }
 
 /**
- * Get a subscription by Stripe checkout session ID
+ * Checks if a subscription exists by Stripe checkout session ID
  * Used to check if a checkout session has already been used
  * @param sessionId - The Stripe checkout session ID
  * @returns The subscription associated with the session, or null if not found
  * @throws AuthError if operation fails
  */
-export async function getSubscriptionBySessionId(
-  sessionId: string,
-): Promise<Subscription | null> {
+export async function hasSubscription(sessionId: string): Promise<boolean> {
   const provider = getAuthProvider();
-  return provider.getSubscriptionBySessionId(sessionId);
+  return provider.hasSubscription(sessionId);
 }
 
 /**

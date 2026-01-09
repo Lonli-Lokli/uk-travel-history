@@ -30,7 +30,6 @@ export class TripsStore {
     this.isHydrated = true;
   }
 
-
   /**
    * Create a new trip
    */

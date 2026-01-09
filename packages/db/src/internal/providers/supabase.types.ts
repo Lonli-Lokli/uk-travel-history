@@ -133,7 +133,15 @@ export type Database = {
           stripe_payment_intent_id?: string | null;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'purchase_intents_clerk_user_id_fkey';
+            columns: ['clerk_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['clerk_user_id'];
+          },
+        ];
       };
       subscription_statuses: {
         Row: {

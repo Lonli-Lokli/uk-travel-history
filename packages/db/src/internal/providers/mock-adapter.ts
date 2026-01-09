@@ -35,13 +35,21 @@ import {
   UserRole,
 } from '../../types/domain';
 
+type MockPurchaseIntent = PurchaseIntent & {
+  authUserId: string | null;
+};
+type MockUser = User & {
+  authUserId: string;
+};
+
 /**
  * Mock implementation for testing
  */
 export class MockDbAdapter implements DbProvider {
+ 
   private configured = false;
-  private users: Map<string, User> = new Map();
-  private purchaseIntents: Map<string, PurchaseIntent> = new Map();
+  private users: Map<string, MockUser> = new Map();
+  private purchaseIntents: Map<string, MockPurchaseIntent> = new Map();
   private webhookEvents: Map<string, WebhookEvent> = new Map();
   private featurePolicies: Map<string, FeaturePolicy> = new Map();
   private trackingGoals: Map<string, TrackingGoalData> = new Map();
@@ -94,6 +102,20 @@ export class MockDbAdapter implements DbProvider {
     return null;
   }
 
+  
+  async getUserBySessionId(sessionId: string): Promise<User | null> {
+    for (const intent of this.purchaseIntents.values()) {
+      if (intent.stripeCheckoutSessionId === sessionId) {
+        if (intent.authUserId) {
+          return this.getUserByAuthId(intent.authUserId);
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
+
   async getUserById(id: string): Promise<User | null> {
     return this.users.get(id) || null;
   }
@@ -108,7 +130,7 @@ export class MockDbAdapter implements DbProvider {
       );
     }
 
-    const user: User = {
+    const user: MockUser = {
       id: this.generateId(),
       authUserId: data.authUserId,
       email: data.email,
@@ -142,8 +164,9 @@ export class MockDbAdapter implements DbProvider {
       );
     }
 
-    const updated: User = {
+    const updated: MockUser = {
       ...user,
+      authUserId: authUserId,
       email: updates.email ?? user.email,
       passkeyEnrolled: updates.passkeyEnrolled ?? user.passkeyEnrolled,
       role: updates.role ?? user.role,
@@ -429,7 +452,7 @@ export class MockDbAdapter implements DbProvider {
     data: CreatePurchaseIntentData,
   ): Promise<PurchaseIntent> {
     const now = new Date();
-    const intent: PurchaseIntent = {
+    const intent: MockPurchaseIntent = {
       id: this.generateId(),
       status: data.status || PurchaseIntentStatus.CREATED,
       stripeCheckoutSessionId: null,
@@ -450,7 +473,9 @@ export class MockDbAdapter implements DbProvider {
     id: string,
     updates: UpdatePurchaseIntentData,
   ): Promise<PurchaseIntent> {
-    const intent = await this.getPurchaseIntentById(id);
+    const intent: MockPurchaseIntent | null = (await this.getPurchaseIntentById(
+      id,
+    )) as MockPurchaseIntent | null;
 
     if (!intent) {
       throw new DbError(
@@ -459,7 +484,7 @@ export class MockDbAdapter implements DbProvider {
       );
     }
 
-    const updated: PurchaseIntent = {
+    const updated: MockPurchaseIntent = {
       ...intent,
       status: updates.status ?? intent.status,
       stripeCheckoutSessionId:
@@ -512,7 +537,7 @@ export class MockDbAdapter implements DbProvider {
       id: this.generateId(),
       stripeEventId: data.stripeEventId,
       type: data.type,
-      payload: data.payload,
+      payload: data.payload as any,
       processedAt: new Date(),
     };
 

@@ -63,6 +63,7 @@ export {
   createUser,
   updateUserByAuthId,
   deleteUserByAuthId,
+  getUserBySessionId,
   // Purchase intent operations
   getPurchaseIntentById,
   getPurchaseIntentBySessionId,
@@ -100,6 +101,13 @@ export {
   updateTripGroup,
   deleteTripGroup,
 } from './public/db-operations';
+
+// Export client factory functions
+export {
+  createUserScopedClient,
+  createAdminClient,
+  checkUserHasPremiumAccess,
+} from './lib/client-factory';
 
 // Export testing utilities (for internal use only - consumers should use public API)
 export {

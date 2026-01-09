@@ -366,6 +366,41 @@ export class SupabaseDbAdapter implements DbProvider {
     }
   }
 
+  async getUserBySessionId(sessionId: string): Promise<User | null> {
+    const client = this.ensureConfigured();
+
+    const { data, error } = await client
+      .from('purchase_intents')
+      .select(
+        `
+      user:users!purchase_intents_clerk_user_id_fkey (
+        id,
+        email,
+        role,
+        passkey_enrolled,
+        created_at,
+        subscription_tier,
+        stripe_customer_id,
+        stripe_subscription_id,
+        stripe_price_id,
+        current_period_end,
+        subscription_status,
+        cancel_at_period_end,
+        pause_resumes_at
+      )
+      `,
+      )
+      .eq('stripe_checkout_session_id', sessionId)
+      .maybeSingle();
+
+    if (error) {
+      this.handleError('getUserBySessionId', error);
+    }
+
+    const userRow = data?.user ?? null;
+    return userRow ? this.mapUserFromDb(userRow) : null;
+  }
+
   async getPurchaseIntentsByAuthUserId(
     authUserId: string,
   ): Promise<PurchaseIntent[]> {

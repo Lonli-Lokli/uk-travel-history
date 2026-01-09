@@ -37,7 +37,7 @@ import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
 /**
  * Travel page client component with new Phase 4 design.
  */
-export const TravelPageClientNew = observer(() => {
+export const TravelPageClient = observer(() => {
   const { handleClearAll } = useClearAll();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -218,4 +218,4 @@ export const TravelPageClientNew = observer(() => {
   );
 });
 
-TravelPageClientNew.displayName = 'TravelPageClientNew';
+TravelPageClient.displayName = 'TravelPageClient';

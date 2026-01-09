@@ -118,6 +118,13 @@ export interface DbProvider {
   ): Promise<PurchaseIntent | null>;
 
   /**
+   * Get user by Stripe checkout session ID
+   * @param sessionId - The Stripe checkout session ID
+   * @returns The user, or null if not found
+   */
+  getUserBySessionId(sessionId: string): Promise<User | null>;
+
+  /**
    * Get purchase intents by auth user ID
    * @param authUserId - The authentication provider user ID
    * @returns Array of purchase intents for the user

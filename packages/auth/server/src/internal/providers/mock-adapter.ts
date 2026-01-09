@@ -2,6 +2,7 @@
  * Mock implementation of AuthServerProvider for testing
  */
 
+import { createHmac, timingSafeEqual } from 'crypto';
 import type { AuthServerProvider, AuthServerProviderConfig } from './interface';
 import type {
   AuthUser,
@@ -12,6 +13,7 @@ import type {
   CreateUserData,
   UpdateUserMetadataData,
   UserListResult,
+  WebhookVerificationResult,
 } from '../../types/domain';
 import { AuthError, AuthErrorCode } from '../../types/domain';
 
@@ -19,6 +21,7 @@ import { AuthError, AuthErrorCode } from '../../types/domain';
  * Mock auth server provider for testing
  */
 export class MockAuthServerAdapter implements AuthServerProvider {
+  
   private configured = true;
   private users: Map<string, AuthUser> = new Map();
   private tokens: Map<string, { uid: string; exp: number }> = new Map();
@@ -250,5 +253,59 @@ export class MockAuthServerAdapter implements AuthServerProvider {
     };
 
     this.users.set(uid, updatedUser);
+  }
+
+   async hasSubscription(sessionId: string): Promise<boolean> {
+    return this.subscriptionsBySessionId.has(sessionId);
+  }
+async verifyWebhook?(
+    body: string,
+    headers: Record<string, string>,
+    secret: string,
+  ): Promise<WebhookVerificationResult> {
+    // Find signature header case-insensitively
+    const key = Object.keys(headers).find((k) => {
+      const lk = k.toLowerCase();
+      return lk === 'stripe-signature' || lk === 'x-signature' || lk === 'signature';
+    });
+
+    if (!key) {
+      return { valid: false, message: 'No signature header present' } as any;
+    }
+
+    const signature = headers[key];
+    try {
+      const computed = createHmac('sha256', secret).update(body, 'utf8').digest('hex');
+
+      let valid = false;
+      const sigBuf = Buffer.from(signature, 'utf8');
+      const cmpBuf = Buffer.from(computed, 'utf8');
+      if (sigBuf.length === cmpBuf.length) {
+        valid = timingSafeEqual(sigBuf, cmpBuf);
+      } else {
+        valid = signature === computed;
+      }
+
+      let payload: unknown = null;
+      try {
+        payload = JSON.parse(body);
+      } catch {
+        payload = body;
+      }
+
+      return {
+        valid,
+        payload,
+        signature,
+        computedSignature: computed,
+      } as any;
+    } catch (err) {
+      return { valid: false, message: (err as Error).message } as any;
+    }
+  }
+
+  async getCurrentUser?(): Promise<AuthUser | null> {
+    const it = this.users.values().next();
+    return it.done ? null : it.value;
   }
 }

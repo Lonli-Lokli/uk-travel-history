@@ -115,6 +115,16 @@ export async function deleteUserByAuthId(authUserId: string): Promise<void> {
   return provider.deleteUserByAuthId(authUserId);
 }
 
+/**
+ * Get user by Stripe checkout session ID
+ * @param sessionId - The Stripe checkout session ID
+ * @returns The user, or null if not found
+ */
+export async function getUserBySessionId(sessionId: string): Promise<User | null> {
+  const provider = getDbProvider();
+  return provider.getUserBySessionId(sessionId);
+}
+
 // ============================================================================
 // Purchase Intent Operations
 // ============================================================================
