@@ -18,9 +18,7 @@ jobs:
 
     env:
       PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-      WEEKLY_DATABASE_URL: ${{ secrets.WEEKLY_DATABASE_URL }}
-      MONTHLY_DATABASE_URL: ${{ secrets.MONTHLY_DATABASE_URL }}
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}      
 
     steps:
       - name: Validate inputs + choose target DB URL
@@ -32,8 +30,6 @@ jobs:
 
           case "$TARGET" in
             staging) echo "TARGET_DB_URL=${STAGING_DATABASE_URL}" >> "$GITHUB_OUTPUT" ;;
-            weekly)  echo "TARGET_DB_URL=${WEEKLY_DATABASE_URL}" >> "$GITHUB_OUTPUT" ;;
-            monthly) echo "TARGET_DB_URL=${MONTHLY_DATABASE_URL}" >> "$GITHUB_OUTPUT" ;;
             *) echo "Invalid target: $TARGET"; exit 1 ;;
           esac
 

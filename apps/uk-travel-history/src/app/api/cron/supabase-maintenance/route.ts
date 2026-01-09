@@ -82,7 +82,7 @@ async function supabaseAuthHealth(
  * Dispatch GitHub Actions workflow via workflow_dispatch API
  */
 async function dispatchWorkflow(target: Target): Promise<void> {
-  const token = process.env.GITHUB_ACTIONS_DISPATCH_TOKEN;
+  const token = process.env.GH_ACTIONS_DISPATCH_TOKEN;
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
   const workflowFile = process.env.GITHUB_WORKFLOW_FILE; // "supabase-env-refresh.yml"
@@ -90,7 +90,7 @@ async function dispatchWorkflow(target: Target): Promise<void> {
 
   if (!token || !owner || !repo || !workflowFile) {
     throw new Error(
-      'Missing env vars: GITHUB_ACTIONS_DISPATCH_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_WORKFLOW_FILE',
+      'Missing env vars: GH_ACTIONS_DISPATCH_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_WORKFLOW_FILE',
     );
   }
 
