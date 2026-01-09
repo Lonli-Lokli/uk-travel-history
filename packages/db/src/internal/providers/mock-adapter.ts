@@ -18,6 +18,13 @@ import type {
   CreateTrackingGoalData,
   UpdateTrackingGoalData,
   GoalTemplate,
+  BulkCreateTripsData,
+  CreateTripData,
+  CreateTripGroupData,
+  TripData,
+  TripGroupData,
+  UpdateTripData,
+  UpdateTripGroupData,
 } from '../../types/domain';
 import {
   DbError,
@@ -39,6 +46,8 @@ export class MockDbAdapter implements DbProvider {
   private featurePolicies: Map<string, FeaturePolicy> = new Map();
   private trackingGoals: Map<string, TrackingGoalData> = new Map();
   private goalTemplates: Map<string, GoalTemplate> = new Map();
+  private trips: Map<string, TripData> = new Map();
+  private tripGroups: Map<string, TripGroupData> = new Map();
   private idCounter = 1;
 
   initialize(_config: DbProviderConfig): void {
@@ -63,6 +72,8 @@ export class MockDbAdapter implements DbProvider {
     this.featurePolicies.clear();
     this.trackingGoals.clear();
     this.goalTemplates.clear();
+    this.trips.clear();
+    this.tripGroups.clear();
     this.idCounter = 1;
   }
 
@@ -179,6 +190,208 @@ export class MockDbAdapter implements DbProvider {
     }
 
     this.users.delete(user.id);
+  }
+
+  // ==============================
+  //      Trip operations
+  // ==============================
+
+  async getTrips(userId: string): Promise<TripData[]> {
+    const results: TripData[] = [];
+    for (const trip of this.trips.values()) {
+      if (trip.userId === userId) {
+        results.push(trip);
+      }
+    }
+    return results;
+  }
+
+  async getTripsByGoal(goalId: string): Promise<TripData[]> {
+    const results: TripData[] = [];
+    for (const trip of this.trips.values()) {
+      if (trip.goalId === goalId) {
+        results.push(trip);
+      }
+    }
+    return results;
+  }
+
+  async getTripById(tripId: string): Promise<TripData | null> {
+    return this.trips.get(tripId) || null;
+  }
+
+  async createTrip(userId: string, data: CreateTripData): Promise<TripData> {
+    const now = new Date().toISOString();
+    const trip: TripData = {
+      id: this.generateId(),
+      userId,
+      goalId: data.goalId,
+      outDate: data.outDate,
+      inDate: data.inDate,
+      outRoute: data.outRoute ?? null,
+      inRoute: data.inRoute ?? null,
+      destination: data.destination ?? null,
+      notes: data.notes ?? null,
+      groupId: data.groupId ?? null,
+      sortOrder: data.sortOrder ?? 0,
+      source: data.source ?? 'manual',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.trips.set(trip.id, trip);
+    return trip;
+  }
+
+  async bulkCreateTrips(
+    userId: string,
+    data: BulkCreateTripsData,
+  ): Promise<TripData[]> {
+    const results: TripData[] = [];
+    const now = new Date().toISOString();
+
+    for (let i = 0; i < data.trips.length; i++) {
+      const tripData = data.trips[i];
+      const trip: TripData = {
+        id: this.generateId(),
+        userId,
+        goalId: data.goalId,
+        outDate: tripData.outDate,
+        inDate: tripData.inDate,
+        outRoute: tripData.outRoute ?? null,
+        inRoute: tripData.inRoute ?? null,
+        destination: tripData.destination ?? null,
+        notes: tripData.notes ?? null,
+        groupId: tripData.groupId ?? null,
+        sortOrder: tripData.sortOrder ?? i,
+        source: tripData.source ?? 'manual',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      this.trips.set(trip.id, trip);
+      results.push(trip);
+    }
+
+    return results;
+  }
+
+  async updateTrip(tripId: string, data: UpdateTripData): Promise<TripData> {
+    const trip = await this.getTripById(tripId);
+
+    if (!trip) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `Trip with id ${tripId} not found`,
+      );
+    }
+
+    const updated: TripData = {
+      ...trip,
+      outDate: data.outDate ?? trip.outDate,
+      inDate: data.inDate ?? trip.inDate,
+      outRoute: data.outRoute !== undefined ? data.outRoute : trip.outRoute,
+      inRoute: data.inRoute !== undefined ? data.inRoute : trip.inRoute,
+      destination:
+        data.destination !== undefined ? data.destination : trip.destination,
+      notes: data.notes !== undefined ? data.notes : trip.notes,
+      groupId: data.groupId !== undefined ? data.groupId : trip.groupId,
+      sortOrder: data.sortOrder ?? trip.sortOrder,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.trips.set(updated.id, updated);
+    return updated;
+  }
+
+  async deleteTrip(tripId: string): Promise<void> {
+    if (!this.trips.has(tripId)) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `Trip with id ${tripId} not found`,
+      );
+    }
+    this.trips.delete(tripId);
+  }
+
+  async reorderTrips(tripIds: string[]): Promise<void> {
+    for (let i = 0; i < tripIds.length; i++) {
+      const trip = this.trips.get(tripIds[i]);
+      if (trip) {
+        trip.sortOrder = i;
+        trip.updatedAt = new Date().toISOString();
+      }
+    }
+  }
+
+  async getTripGroups(userId: string): Promise<TripGroupData[]> {
+    const results: TripGroupData[] = [];
+    for (const group of this.tripGroups.values()) {
+      if (group.userId === userId) {
+        results.push(group);
+      }
+    }
+    return results;
+  }
+
+  async getTripGroupById(groupId: string): Promise<TripGroupData | null> {
+    return this.tripGroups.get(groupId) || null;
+  }
+
+  async createTripGroup(
+    userId: string,
+    data: CreateTripGroupData,
+  ): Promise<TripGroupData> {
+    const now = new Date().toISOString();
+    const group: TripGroupData = {
+      id: this.generateId(),
+      userId,
+      name: data.name,
+      color: data.color ?? null,
+      sortOrder: data.sortOrder ?? 0,
+      isCollapsed: data.isCollapsed ?? false,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.tripGroups.set(group.id, group);
+    return group;
+  }
+
+  async updateTripGroup(
+    groupId: string,
+    data: UpdateTripGroupData,
+  ): Promise<TripGroupData> {
+    const group = await this.getTripGroupById(groupId);
+
+    if (!group) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `TripGroup with id ${groupId} not found`,
+      );
+    }
+
+    const updated: TripGroupData = {
+      ...group,
+      name: data.name ?? group.name,
+      color: data.color !== undefined ? data.color : group.color,
+      sortOrder: data.sortOrder ?? group.sortOrder,
+      isCollapsed: data.isCollapsed ?? group.isCollapsed,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.tripGroups.set(updated.id, updated);
+    return updated;
+  }
+
+  async deleteTripGroup(groupId: string): Promise<void> {
+    if (!this.tripGroups.has(groupId)) {
+      throw new DbError(
+        DbErrorCode.NOT_FOUND,
+        `TripGroup with id ${groupId} not found`,
+      );
+    }
+    this.tripGroups.delete(groupId);
   }
 
   // ============================================================================

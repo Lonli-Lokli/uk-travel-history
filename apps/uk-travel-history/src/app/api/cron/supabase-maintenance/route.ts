@@ -145,12 +145,18 @@ export async function GET(request: NextRequest) {
     });
 
     // 3. Keepalive: Call auth health endpoints for staging and production
-    const keepaliveResults: Record<string, KeepaliveResult | { skipped: boolean; reason: string }> = {};
+    const keepaliveResults: Record<
+      string,
+      KeepaliveResult | { skipped: boolean; reason: string }
+    > = {};
 
     const stagingUrl = process.env.SUPABASE_KEEPALIVE_STAGING_URL || '';
     const stagingAnon = process.env.SUPABASE_KEEPALIVE_STAGING_ANON_KEY || '';
     if (stagingUrl && stagingAnon) {
-      keepaliveResults.staging = await supabaseAuthHealth(stagingUrl, stagingAnon);
+      keepaliveResults.staging = await supabaseAuthHealth(
+        stagingUrl,
+        stagingAnon,
+      );
     } else {
       keepaliveResults.staging = {
         skipped: true,
@@ -203,7 +209,10 @@ export async function GET(request: NextRequest) {
       ranAtUtc: now.toISOString(),
       keepalive: {
         ...keepaliveResults,
-        db: dbKeepaliveResult !== null ? { ok: true, result: dbKeepaliveResult } : { ok: false },
+        db:
+          dbKeepaliveResult !== null
+            ? { ok: true, result: dbKeepaliveResult }
+            : { ok: false },
       },
       dispatched: dispatchResults,
     };

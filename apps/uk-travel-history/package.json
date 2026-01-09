@@ -5,7 +5,9 @@
   "dependencies": {
     "next": "~16.1.1",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.1"
   },
   "nx": {
     "name": "app"

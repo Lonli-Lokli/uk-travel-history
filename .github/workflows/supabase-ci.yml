@@ -2,10 +2,11 @@ name: Supabase CI (migrations, lint, tests)
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [master]
     paths:
       - 'supabase/**'
       - '.github/workflows/supabase-ci.yml'
+      - 'src/types/supabase.ts'
 
 jobs:
   db-check:
@@ -36,11 +37,22 @@ jobs:
       - name: Run database tests (pgTAP)
         run: supabase test db
 
+      - name: Generate Supabase TypeScript types from local DB
+        run: |
+          set -euo pipefail
+          supabase gen types typescript --local --schema public > packages/db/src/internal/providers/supabase.types.ts
+
+      - name: Fail if generated types differ from committed types
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- packages/db/src/internal/providers/supabase.types.ts
+
       - name: Ensure git working tree clean
         run: |
+          set -euo pipefail
           git status --porcelain
           if [ -n "$(git status --porcelain)" ]; then
-            echo "ERROR: Uncommitted changes detected after running migrations"
+            echo "ERROR: Uncommitted changes detected after running migrations/types generation"
             git status
             exit 1
           fi

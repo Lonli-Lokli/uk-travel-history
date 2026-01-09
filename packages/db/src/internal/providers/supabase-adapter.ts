@@ -22,6 +22,13 @@ import type {
   GoalTemplate,
   GoalType,
   GoalJurisdiction,
+  TripData,
+  CreateTripData,
+  UpdateTripData,
+  BulkCreateTripsData,
+  TripGroupData,
+  CreateTripGroupData,
+  UpdateTripGroupData,
 } from '../../types/domain';
 import {
   DbError,
@@ -32,6 +39,9 @@ import {
   UserRole,
 } from '../../types/domain';
 import type { Database } from './supabase.types';
+
+// without clerk_user_id as it's protected by policy
+type Protected<T> = Omit<T, 'clerk_user_id'>;
 
 /**
  * Supabase implementation of the database provider
@@ -156,6 +166,9 @@ export class SupabaseDbAdapter implements DbProvider {
           return null;
         }
         this.handleError('getUserByAuthId', error);
+      }
+      if (!data) {
+        return null;
       }
 
       return this.mapUserFromDb(data);
@@ -384,7 +397,7 @@ export class SupabaseDbAdapter implements DbProvider {
 
     // Note: Using type assertion to work around Supabase client's generic constraints
     // The insert operation returns the correct types but TS can't infer them without this cast
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const { data: result, error } = await (
       client.from('purchase_intents') as any
     )
@@ -492,11 +505,10 @@ export class SupabaseDbAdapter implements DbProvider {
   // ============================================================================
 
   private mapUserFromDb(
-    row: Database['public']['Tables']['users']['Row'],
+    row: Protected<Database['public']['Tables']['users']['Row']>,
   ): User {
     return {
       id: row.id,
-      authUserId: row.clerk_user_id,
       email: row.email,
       passkeyEnrolled: row.passkey_enrolled,
       role: (row.role as UserRole) ?? UserRole.STANDARD,
@@ -521,7 +533,7 @@ export class SupabaseDbAdapter implements DbProvider {
   }
 
   private mapPurchaseIntentFromDb(
-    row: Database['public']['Tables']['purchase_intents']['Row'],
+    row: Protected<Database['public']['Tables']['purchase_intents']['Row']>,
   ): PurchaseIntent {
     return {
       id: row.id,
@@ -531,7 +543,6 @@ export class SupabaseDbAdapter implements DbProvider {
       email: row.email,
       priceId: row.price_id,
       productId: row.product_id,
-      authUserId: row.clerk_user_id,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -795,7 +806,13 @@ export class SupabaseDbAdapter implements DbProvider {
       .order('display_order', { ascending: true });
 
     if (jurisdiction) {
-      query = query.eq('jurisdiction', jurisdiction);
+      const dbJurisdiction: Database['public']['Enums']['goal_jurisdiction'] =
+        jurisdiction === 'uk'
+          ? 'uk'
+          : jurisdiction === 'schengen'
+            ? 'schengen'
+            : 'global';
+      query = query.eq('jurisdiction', dbJurisdiction);
     }
 
     const { data, error } = await query;
@@ -815,13 +832,413 @@ export class SupabaseDbAdapter implements DbProvider {
       category: row.category,
       name: row.name,
       description: row.description,
-      icon: row.icon,
+      // NOTE: icon field removed - icons are now mapped in code (@uth/ui/goal-icons.tsx)
       type: row.type as GoalType,
       defaultConfig: row.default_config as Record<string, unknown>,
       requiredFields: row.required_fields as string[],
       displayOrder: row.display_order,
       isAvailable: row.is_available,
       minTier: row.min_tier,
+    };
+  }
+
+  // ============================================================================
+  // Trip Operations
+  // ============================================================================
+
+  async getTrips(userId: string): Promise<TripData[]> {
+    const client = this.ensureConfigured();
+
+    const { data, error } = await client
+      .from('trips')
+      .select('*')
+      .eq('user_id', userId)
+      .order('out_date', { ascending: false });
+
+    if (error) {
+      this.handleError('getTrips', error);
+    }
+
+    return (data || []).map((row) => this.mapTripFromDb(row));
+  }
+
+  async getTripsByGoal(goalId: string): Promise<TripData[]> {
+    const client = this.ensureConfigured();
+
+    const { data, error } = await client
+      .from('trips')
+      .select('*')
+      .eq('goal_id', goalId)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      this.handleError('getTripsByGoal', error);
+    }
+
+    return (data || []).map((row) => this.mapTripFromDb(row));
+  }
+
+  async getTripById(tripId: string): Promise<TripData | null> {
+    const client = this.ensureConfigured();
+
+    try {
+      const { data, error } = await client
+        .from('trips')
+        .select('*')
+        .eq('id', tripId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        this.handleError('getTripById', error);
+      }
+
+      return this.mapTripFromDb(data);
+    } catch (error) {
+      if (error instanceof DbError && error.is(DbErrorCode.NOT_FOUND)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async createTrip(userId: string, data: CreateTripData): Promise<TripData> {
+    const client = this.ensureConfigured();
+
+    type TripInsert = {
+      user_id: string;
+      goal_id: string;
+      out_date: string;
+      in_date: string;
+      out_route: string | null;
+      in_route: string | null;
+      destination: string | null;
+      notes: string | null;
+      group_id: string | null;
+      sort_order: number;
+      source: string;
+    };
+
+    const insertData: TripInsert = {
+      user_id: userId,
+      goal_id: data.goalId,
+      out_date: data.outDate,
+      in_date: data.inDate,
+      out_route: data.outRoute ?? null,
+      in_route: data.inRoute ?? null,
+      destination: data.destination ?? null,
+      notes: data.notes ?? null,
+      group_id: data.groupId ?? null,
+      sort_order: data.sortOrder ?? 0,
+      source: data.source ?? 'manual',
+    };
+
+    const { data: result, error } = await client
+      .from('trips')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('createTrip', error);
+    }
+
+    if (!result) {
+      throw new DbError(
+        DbErrorCode.PROVIDER_ERROR,
+        'createTrip: No data returned after insert',
+      );
+    }
+
+    return this.mapTripFromDb(result);
+  }
+
+  async bulkCreateTrips(
+    userId: string,
+    bulkData: BulkCreateTripsData,
+  ): Promise<TripData[]> {
+    const client = this.ensureConfigured();
+
+    const insertData = bulkData.trips.map((trip) => ({
+      user_id: userId,
+      goal_id: bulkData.goalId,
+      out_date: trip.outDate,
+      in_date: trip.inDate,
+      out_route: trip.outRoute ?? null,
+      in_route: trip.inRoute ?? null,
+      destination: trip.destination ?? null,
+      notes: trip.notes ?? null,
+      group_id: trip.groupId ?? null,
+      sort_order: trip.sortOrder ?? 0,
+      source: trip.source ?? 'manual',
+    }));
+
+    const { data: result, error } = await client
+      .from('trips')
+      .insert(insertData)
+      .select();
+
+    if (error) {
+      this.handleError('bulkCreateTrips', error);
+    }
+
+    return (result || []).map((row) => this.mapTripFromDb(row));
+  }
+
+  async updateTrip(tripId: string, data: UpdateTripData): Promise<TripData> {
+    const client = this.ensureConfigured();
+
+    type TripUpdate = {
+      out_date?: string;
+      in_date?: string;
+      out_route?: string | null;
+      in_route?: string | null;
+      destination?: string | null;
+      notes?: string | null;
+      group_id?: string | null;
+      sort_order?: number;
+    };
+
+    const updateData: TripUpdate = {};
+    if (data.outDate !== undefined) updateData.out_date = data.outDate;
+    if (data.inDate !== undefined) updateData.in_date = data.inDate;
+    if (data.outRoute !== undefined) updateData.out_route = data.outRoute;
+    if (data.inRoute !== undefined) updateData.in_route = data.inRoute;
+    if (data.destination !== undefined)
+      updateData.destination = data.destination;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.groupId !== undefined) updateData.group_id = data.groupId;
+    if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+
+    const { data: result, error } = await client
+      .from('trips')
+      .update(updateData)
+      .eq('id', tripId)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('updateTrip', error);
+    }
+
+    if (!result) {
+      throw new DbError(
+        DbErrorCode.PROVIDER_ERROR,
+        'updateTrip: No data returned after update',
+      );
+    }
+
+    return this.mapTripFromDb(result);
+  }
+
+  async deleteTrip(tripId: string): Promise<void> {
+    const client = this.ensureConfigured();
+
+    const { error } = await client.from('trips').delete().eq('id', tripId);
+
+    if (error) {
+      this.handleError('deleteTrip', error);
+    }
+  }
+
+  async reorderTrips(tripIds: string[]): Promise<void> {
+    const client = this.ensureConfigured();
+
+    // Update sort_order for each trip
+    const updates = tripIds.map((id, index) => ({
+      id,
+      sort_order: index,
+    }));
+
+    const { error } = await client
+      .from('trips')
+      .update({ sort_order: undefined }) // required by TS, ignored by Postgres
+      .in(
+        'id',
+        updates.map((u) => u.id),
+      );
+
+    if (error) {
+      this.handleError('reorderTrips', error);
+    }
+  }
+
+  private mapTripFromDb(
+    row: Database['public']['Tables']['trips']['Row'],
+  ): TripData {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      goalId: row.goal_id,
+      outDate: row.out_date,
+      inDate: row.in_date,
+      outRoute: row.out_route,
+      inRoute: row.in_route,
+      destination: row.destination,
+      notes: row.notes,
+      groupId: row.group_id,
+      sortOrder: row.sort_order,
+      source: row.source as 'manual' | 'pdf_import' | 'excel_import',
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  // ============================================================================
+  // Trip Group Operations
+  // ============================================================================
+
+  async getTripGroups(userId: string): Promise<TripGroupData[]> {
+    const client = this.ensureConfigured();
+
+    const { data, error } = await client
+      .from('trip_groups')
+      .select('*')
+      .eq('user_id', userId)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      this.handleError('getTripGroups', error);
+    }
+
+    return (data || []).map((row) => this.mapTripGroupFromDb(row));
+  }
+
+  async getTripGroupById(groupId: string): Promise<TripGroupData | null> {
+    const client = this.ensureConfigured();
+
+    try {
+      const { data, error } = await client
+        .from('trip_groups')
+        .select('*')
+        .eq('id', groupId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        this.handleError('getTripGroupById', error);
+      }
+
+      return this.mapTripGroupFromDb(data);
+    } catch (error) {
+      if (error instanceof DbError && error.is(DbErrorCode.NOT_FOUND)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async createTripGroup(
+    userId: string,
+    data: CreateTripGroupData,
+  ): Promise<TripGroupData> {
+    const client = this.ensureConfigured();
+
+    type TripGroupInsert = {
+      user_id: string;
+      name: string;
+      color: string | null;
+      sort_order: number;
+      is_collapsed: boolean;
+    };
+
+    const insertData: TripGroupInsert = {
+      user_id: userId,
+      name: data.name,
+      color: data.color ?? null,
+      sort_order: data.sortOrder ?? 0,
+      is_collapsed: data.isCollapsed ?? false,
+    };
+
+    const { data: result, error } = await client
+      .from('trip_groups')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('createTripGroup', error);
+    }
+
+    if (!result) {
+      throw new DbError(
+        DbErrorCode.PROVIDER_ERROR,
+        'createTripGroup: No data returned after insert',
+      );
+    }
+
+    return this.mapTripGroupFromDb(result);
+  }
+
+  async updateTripGroup(
+    groupId: string,
+    data: UpdateTripGroupData,
+  ): Promise<TripGroupData> {
+    const client = this.ensureConfigured();
+
+    type TripGroupUpdate = {
+      name?: string;
+      color?: string | null;
+      sort_order?: number;
+      is_collapsed?: boolean;
+    };
+
+    const updateData: TripGroupUpdate = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.color !== undefined) updateData.color = data.color;
+    if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+    if (data.isCollapsed !== undefined)
+      updateData.is_collapsed = data.isCollapsed;
+
+    const { data: result, error } = await client
+      .from('trip_groups')
+      .update(updateData)
+      .eq('id', groupId)
+      .select()
+      .single();
+
+    if (error) {
+      this.handleError('updateTripGroup', error);
+    }
+
+    if (!result) {
+      throw new DbError(
+        DbErrorCode.PROVIDER_ERROR,
+        'updateTripGroup: No data returned after update',
+      );
+    }
+
+    return this.mapTripGroupFromDb(result);
+  }
+
+  async deleteTripGroup(groupId: string): Promise<void> {
+    const client = this.ensureConfigured();
+
+    const { error } = await client
+      .from('trip_groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (error) {
+      this.handleError('deleteTripGroup', error);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private mapTripGroupFromDb(row: any): TripGroupData {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      color: row.color,
+      sortOrder: row.sort_order,
+      isCollapsed: row.is_collapsed,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
     };
   }
 }

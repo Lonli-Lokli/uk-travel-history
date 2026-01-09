@@ -1,24 +1,30 @@
 'use client';
 
+/**
+ * TravelPageClient (New) - Phase 4 Implementation
+ *
+ * Mobile-first redesign with drawer patterns and tab navigation.
+ * - Tab navigation (Trackers/Timeline)
+ * - Stats bar with date range picker
+ * - Trackers view (goal cards)
+ * - Timeline view (trips with sticky month headers)
+ * - Floating action button for adding content
+ * - Drawer patterns instead of modals
+ */
+
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRefreshAccessContext, goalsStore } from '@uth/stores';
 import { FeatureGate, useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
-import { SummaryCards } from './SummaryCards';
-import { VisaDetailsCard } from './VisaDetailsCard';
-import { ValidationStatusCard } from './ValidationStatusCard';
-import { RiskAreaChart } from './RiskAreaChart';
-import { TravelHistoryCard } from './TravelHistoryCard';
-import { TravelToolbar } from './TravelToolbar';
-import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
-import {
-  GoalMiniCardsRow,
-  GoalDetailPanel,
-  GoalEmptyState,
-  AddGoalModal,
-} from './goals';
+import { TabSwitcher } from './TabSwitcher';
+import { StatsBar } from './StatsBar';
+import { TrackersView } from './TrackersView';
+import { TimelineView } from './TimelineView';
+import { AddFab } from './AddFab';
+import { AddGoalDrawer } from './goals';
+import { uiStore, tripsStore } from '@uth/stores';
 import {
   useClearAll,
   useCsvImport,
@@ -26,36 +32,32 @@ import {
   useFileUpload,
   useExport,
 } from './hooks';
+import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
 
 /**
- * Travel page client component.
- *
- * This component renders its own toolbar at the top of the page.
+ * Travel page client component with new Phase 4 design.
  */
-export const TravelPageClient = observer(() => {
+export const TravelPageClientNew = observer(() => {
   const { handleClearAll } = useClearAll();
   const searchParams = useSearchParams();
   const router = useRouter();
   const refreshAccessContext = useRefreshAccessContext();
 
   // Refresh access context after successful checkout
-  // This ensures the UI updates with the new subscription tier
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
 
     if (checkoutStatus === 'success') {
-      // Refresh access context to load new subscription from server
       refreshAccessContext();
 
-      // Clear the query parameter to prevent re-triggering on refresh
       const params = new URLSearchParams(searchParams.toString());
       params.delete('checkout');
       const query = params.toString();
-      router.replace(`/travel${query ? `?${query}` : ''}`, { scroll: false });
+      router.replace(`/${query ? `?${query}` : ''}`, { scroll: false });
     }
   }, [searchParams, router, refreshAccessContext]);
 
-  // Hooks for toolbar functionality
+  // Hooks for import/export functionality
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
   const { handleExport } = useExport();
   const {
@@ -80,85 +82,102 @@ export const TravelPageClient = observer(() => {
     cancelImport: cancelClipboardImport,
   } = useClipboardImport();
 
-  // Handlers for goal actions
+  // Handlers for FAB actions
   const handleAddGoal = () => goalsStore.openAddModal();
+  const handleAddTrip = () => {
+    // TODO: Open add trip drawer
+    console.log('Add trip');
+  };
   const handleUpgrade = () => router.push('/account');
 
   // Feature gate for multi-goal tracking
-  const {
-    hasAccess: hasGoalsAccess,
-    isLoading: isGoalsLoading,
-    requiresUpgrade: goalsRequiresUpgrade,
-    handleUpgrade: handleGoalsUpgrade,
-  } = useFeatureGate(FEATURE_KEYS.MULTI_GOAL_TRACKING);
+  const { hasAccess: hasGoalsAccess, isLoading: isGoalsLoading } =
+    useFeatureGate(FEATURE_KEYS.MULTI_GOAL_TRACKING);
+
+  // Get trips from store (hydrated from server)
+  const trips = tripsStore.trips;
+  const totalTrips = tripsStore.totalTrips;
+  const daysAway = tripsStore.totalDaysAway;
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
-        {/* Page Toolbar */}
-        <div className="mb-4 flex justify-end">
-          {/* Hidden file inputs */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <input
-            ref={csvFileInputRef}
-            type="file"
-            accept=".csv,.txt,.xlsx"
-            className="hidden"
-            onChange={handleCsvFileSelect}
-          />
-          <TravelToolbar
-            triggerFileInput={triggerFileInput}
-            triggerCsvFileInput={triggerCsvFileInput}
-            handleClipboardPaste={handleClipboardPaste}
-            handleExport={handleExport}
-          />
-        </div>
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={csvFileInputRef}
+        type="file"
+        accept=".csv,.txt,.xlsx"
+        className="hidden"
+        onChange={handleCsvFileSelect}
+      />
 
-        {/* Multi-Goal Tracking Section (feature-gated) */}
+      <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+        {/* Tab Navigation */}
         <FeatureGate
           hasAccess={hasGoalsAccess}
           isLoading={isGoalsLoading}
           mode="hide"
-          gateReason={goalsRequiresUpgrade ? 'upgrade' : 'login'}
-          onGatedClick={handleGoalsUpgrade}
+          gateReason="login"
+          onGatedClick={handleUpgrade}
           fallback={null}
         >
           <div className="mb-6">
-            {goalsStore.hasGoals ? (
-              <>
-                {/* Goals row */}
-                <GoalMiniCardsRow
-                  onAddGoal={handleAddGoal}
-                  onUpgrade={handleUpgrade}
-                  className="mb-4"
-                />
-
-                {/* Selected goal details */}
-                {goalsStore.activeGoal && (
-                  <GoalDetailPanel
-                    goal={goalsStore.activeGoal}
-                    calculation={goalsStore.activeCalculation}
-                  />
-                )}
-              </>
-            ) : (
-              <GoalEmptyState onAddGoal={handleAddGoal} />
-            )}
+            <TabSwitcher />
           </div>
         </FeatureGate>
 
-        <SummaryCards />
-        <VisaDetailsCard />
-        <ValidationStatusCard />
-        <RiskAreaChart />
-        <TravelHistoryCard onClearAll={handleClearAll} />
+        {/* Stats Bar (only show on Timeline tab) */}
+        {uiStore.activeTab === 'timeline' && (
+          <div className="mb-6">
+            <StatsBar totalTrips={totalTrips} daysAway={daysAway} />
+          </div>
+        )}
+
+        {/* Content Area - switches based on active tab */}
+        <FeatureGate
+          hasAccess={hasGoalsAccess}
+          isLoading={isGoalsLoading}
+          mode="hide"
+          gateReason="login"
+          onGatedClick={handleUpgrade}
+          fallback={null}
+        >
+          {uiStore.activeTab === 'trackers' ? (
+            <TrackersView onAddGoal={handleAddGoal} />
+          ) : (
+            <TimelineView
+              trips={trips}
+              onAddTrip={handleAddTrip}
+              onEditTrip={(tripId) => console.log('Edit trip', tripId)}
+              onDeleteTrip={(tripId) => console.log('Delete trip', tripId)}
+            />
+          )}
+        </FeatureGate>
       </div>
+
+      {/* Floating Action Button */}
+      <FeatureGate
+        hasAccess={hasGoalsAccess}
+        isLoading={isGoalsLoading}
+        mode="hide"
+        gateReason="login"
+        onGatedClick={handleUpgrade}
+        fallback={null}
+      >
+        <AddFab
+          onAddGoal={handleAddGoal}
+          onAddTrip={handleAddTrip}
+          onImportPdf={triggerFileInput}
+          onImportExcel={triggerCsvFileInput}
+          onImportClipboard={handleClipboardPaste}
+        />
+      </FeatureGate>
 
       {/* CSV Import Preview Dialog */}
       {csvPreviewData && (
@@ -193,10 +212,10 @@ export const TravelPageClient = observer(() => {
         />
       )}
 
-      {/* Add Goal Modal - state managed by goalsStore */}
-      <AddGoalModal />
+      {/* Add Goal Drawer - state managed by goalsStore */}
+      <AddGoalDrawer />
     </>
   );
 });
 
-TravelPageClient.displayName = 'TravelPageClient';
+TravelPageClientNew.displayName = 'TravelPageClientNew';

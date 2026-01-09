@@ -10,7 +10,7 @@ import {
   TripWithCalculations,
   TravelCalculationResult,
   calculateTravelData,
-  calculateTripDurations
+  calculateTripDurations,
 } from '@uth/calculators';
 
 /**

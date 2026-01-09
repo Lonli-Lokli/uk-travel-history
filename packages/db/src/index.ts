@@ -33,6 +33,15 @@ export type {
   GoalWarningData,
   GoalTemplate,
   GoalTemplateWithAccess,
+  // Trip types
+  TripData,
+  CreateTripData,
+  UpdateTripData,
+  BulkCreateTripsData,
+  // Trip group types
+  TripGroupData,
+  CreateTripGroupData,
+  UpdateTripGroupData,
 } from './types/domain';
 
 export {
@@ -43,13 +52,6 @@ export {
   SubscriptionStatus,
   UserRole,
 } from './types/domain';
-
-// Export client factory functions
-export {
-  createUserScopedClient,
-  createAdminClient,
-  checkUserHasPremiumAccess,
-} from './lib/client-factory';
 
 // Export public operations
 export {
@@ -82,6 +84,21 @@ export {
   getGoalCount,
   // Goal template operations
   getGoalTemplates,
+  // Trip operations
+  getTrips,
+  getTripsByGoal,
+  getTripById,
+  createTrip,
+  bulkCreateTrips,
+  updateTrip,
+  deleteTrip,
+  reorderTrips,
+  // Trip group operations
+  getTripGroups,
+  getTripGroupById,
+  createTripGroup,
+  updateTripGroup,
+  deleteTripGroup,
 } from './public/db-operations';
 
 // Export testing utilities (for internal use only - consumers should use public API)

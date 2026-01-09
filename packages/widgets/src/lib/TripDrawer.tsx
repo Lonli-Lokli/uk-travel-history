@@ -60,7 +60,9 @@ export const TripDrawer = observer(() => {
             </label>
             <div className="space-y-2">
               <div>
-                <label className="text-xs text-muted-foreground">Date Out</label>
+                <label className="text-xs text-muted-foreground">
+                  Date Out
+                </label>
                 <EditableCell
                   value={formData.outDate || ''}
                   onSave={(value) => handleFieldChange('outDate', value)}
@@ -70,7 +72,9 @@ export const TripDrawer = observer(() => {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Departure Route</label>
+                <label className="text-xs text-muted-foreground">
+                  Departure Route
+                </label>
                 <EditableCell
                   value={formData.outRoute || ''}
                   onSave={(value) => handleFieldChange('outRoute', value)}
@@ -99,7 +103,9 @@ export const TripDrawer = observer(() => {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Return Route</label>
+                <label className="text-xs text-muted-foreground">
+                  Return Route
+                </label>
                 <EditableCell
                   value={formData.inRoute || ''}
                   onSave={(value) => handleFieldChange('inRoute', value)}
@@ -123,7 +129,8 @@ export const TripDrawer = observer(() => {
                     Incomplete Trip
                   </p>
                   <p className="text-xs text-amber-700 mt-1">
-                    This trip will be excluded from calculations until both dates are set.
+                    This trip will be excluded from calculations until both
+                    dates are set.
                   </p>
                   <ul className="mt-2 space-y-1">
                     {!formData.outDate && (

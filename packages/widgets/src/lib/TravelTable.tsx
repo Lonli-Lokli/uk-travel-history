@@ -24,13 +24,10 @@ import {
   DragOverlay,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { formatDate } from '@uth/utils';
 import { travelStore } from '@uth/stores';
 import { Button, UIIcon } from '@uth/ui';
@@ -60,7 +57,7 @@ export const TravelTable = observer(() => {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -116,9 +113,11 @@ export const TravelTable = observer(() => {
         ),
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.outDate
-              ? formatDate(row.original.outDate)
-              : <span className="text-muted-foreground">Not set</span>}
+            {row.original.outDate ? (
+              formatDate(row.original.outDate)
+            ) : (
+              <span className="text-muted-foreground">Not set</span>
+            )}
           </span>
         ),
       },
@@ -137,9 +136,11 @@ export const TravelTable = observer(() => {
         ),
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.inDate
-              ? formatDate(row.original.inDate)
-              : <span className="text-muted-foreground">Not set</span>}
+            {row.original.inDate ? (
+              formatDate(row.original.inDate)
+            ) : (
+              <span className="text-muted-foreground">Not set</span>
+            )}
           </span>
         ),
       },
@@ -277,7 +278,10 @@ export const TravelTable = observer(() => {
                 </tr>
               ))}
             </thead>
-            <SortableContext items={tripIds} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={tripIds}
+              strategy={verticalListSortingStrategy}
+            >
               <tbody className="divide-y divide-slate-100">
                 {table.getRowModel().rows.length === 0 ? (
                   <tr>
@@ -289,13 +293,15 @@ export const TravelTable = observer(() => {
                     </td>
                   </tr>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <SortableTableRow
-                      key={row.id}
-                      row={row}
-                      onRowClick={handleRowClick}
-                    />
-                  ))
+                  table
+                    .getRowModel()
+                    .rows.map((row) => (
+                      <SortableTableRow
+                        key={row.id}
+                        row={row}
+                        onRowClick={handleRowClick}
+                      />
+                    ))
                 )}
               </tbody>
             </SortableContext>
@@ -308,8 +314,12 @@ export const TravelTable = observer(() => {
             <div className="bg-white shadow-2xl rounded-lg opacity-90 border-2 border-primary">
               <SortableTripCard
                 trip={activeTrip}
-                onCardClick={() => {}}
-                onDelete={() => {}}
+                onCardClick={() => {
+                  /* empty */
+                }}
+                onDelete={() => {
+                  /* empty */
+                }}
               />
             </div>
           ) : null}

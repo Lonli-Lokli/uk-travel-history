@@ -13,11 +13,13 @@ import {
   getUserByAuthId,
   getUserGoals,
   getGoalTemplates,
+  getTrips,
   type AccessContext,
   type PricingData,
   type TrackingGoalData,
   type GoalCalculationData,
   type GoalTemplateWithAccess,
+  type TripData,
   SubscriptionTier,
   SubscriptionStatus,
   UserRole,
@@ -112,25 +114,27 @@ export async function loadAccessContext(): Promise<AccessContext> {
       authUser.uid,
     );
 
-    // Step 6: Load goals and templates if multi_goal_tracking feature is enabled
+    // Step 6: Load goals, templates, and trips if multi_goal_tracking feature is enabled
     let goals: TrackingGoalData[] | null = null;
     let goalCalculations: Record<string, GoalCalculationData> | null = null;
     let goalTemplates: GoalTemplateWithAccess[] | null = null;
+    let trips: TripData[] | null = null;
 
     if (entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING]) {
       try {
-        // Load goals and templates in parallel
-        const [userGoals, allTemplates] = await Promise.all([
+        // Load goals, templates, and trips in parallel
+        const [userGoals, allTemplates, userTrips] = await Promise.all([
           getUserGoals(authUser.uid, false), // exclude archived
           getGoalTemplates(),
+          getTrips(authUser.uid),
         ]);
 
         goals = userGoals;
+        trips = userTrips;
 
-        // Note: Goal calculations require trip data which is stored client-side
-        // Server-side calculations would require trips to be stored in DB
+        // Note: Goal calculations require trip data
+        // Server-side calculations would be done here if needed
         // For now, calculations will be done client-side after hydration
-        // This is consistent with the current architecture where trips are in localStorage
         goalCalculations = null;
 
         // Compute template access based on user's tier
@@ -162,10 +166,11 @@ export async function loadAccessContext(): Promise<AccessContext> {
             },
           },
         );
-        // Fail gracefully - user just won't see their goals initially
+        // Fail gracefully - user just won't see their goals/trips initially
         goals = null;
         goalCalculations = null;
         goalTemplates = null;
+        trips = null;
       }
     }
 
@@ -187,6 +192,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
       goals,
       goalCalculations,
       goalTemplates,
+      trips,
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
@@ -298,6 +304,7 @@ function createAnonymousContext(
     goals: null,
     goalCalculations: null,
     goalTemplates: null,
+    trips: null,
   };
 }
 

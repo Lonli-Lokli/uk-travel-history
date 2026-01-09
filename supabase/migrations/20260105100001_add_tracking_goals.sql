@@ -153,7 +153,7 @@ INSERT INTO goal_templates (id, jurisdiction, category, name, description, icon,
 -- Personal / Generic
 ('days_away', 'global', 'personal', 'Days Away', 'Count days spent away from home', 'airplane', 'days_counter', '{"countDirection": "days_away", "referenceLocation": "Home"}', '[]', 100, 'anonymous'),
 ('days_present', 'global', 'personal', 'Days Present', 'Count days in a specific location', 'map-pin', 'days_counter', '{"countDirection": "days_present", "referenceLocation": "UK"}', '[]', 101, 'anonymous'),
-('custom', 'global', 'personal', 'Custom Goal', 'Set your own day limit and window', 'settings', 'custom_threshold', '{"thresholdDays": 180, "windowDays": 365}', '["thresholdDays", "windowDays"]', 110, 'monthly');
+('custom', 'global', 'personal', 'Custom Goal', 'Set your own day limit and window', 'settings', 'custom_threshold', '{"thresholdDays": 180, "windowDays": 365}', '["thresholdDays", "windowDays"]', 110, 'premium');
 
 -- ============================================================================
 -- Updated_at Trigger
