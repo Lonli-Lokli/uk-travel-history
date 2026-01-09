@@ -186,7 +186,7 @@ jobs:
               statusLine = `❌ **E2E Job**: ${e2eJobStatus}\n\n`;
             } else if (report.testResults?.stats.total === 0) {
               statusLine = `⚠️ **E2E Job**: Tests did not run\n\n`;
-            } else if (report.testResults?.stats.failed > 0 || report.accessibility?.totalViolations > 0) {
+            } else if (report.testResults?.stats.failed > 0 || report.accessibility?.totalViolationRules > 0) {
               statusLine = `❌ **E2E Job**: Tests failed\n\n`;
             } else {
               statusLine = `✅ **E2E Job**: All passed\n\n`;

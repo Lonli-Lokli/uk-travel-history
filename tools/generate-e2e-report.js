@@ -83,12 +83,11 @@ function parseTestResults() {
 }
 
 /**
- * Parses accessibility report files and extracts violation counts and tickets
+ * Parses accessibility report files in new rule-based format
  */
 function parseAccessibilityReports() {
   const reports = [];
-  let totalViolations = 0;
-  let totalTickets = 0;
+  let totalViolationRules = 0;
 
   console.log(
     `Looking for accessibility reports in: ${accessibilityReportPath}`,
@@ -96,7 +95,7 @@ function parseAccessibilityReports() {
 
   if (!fs.existsSync(accessibilityReportPath)) {
     console.log('Accessibility report directory does not exist');
-    return { reports, totalViolations, totalTickets, hasReports: false };
+    return { reports, totalViolationRules, hasReports: false, hasViolations: true };
   }
 
   try {
@@ -105,56 +104,72 @@ function parseAccessibilityReports() {
       `Found ${files.length} files in accessibility report directory`,
     );
 
-    const accessibilityFiles = files.filter(
+    // Check for no-violations.md (success case)
+    const hasNoViolations = files.includes('no-violations.md');
+    if (hasNoViolations) {
+      console.log('No violations found - clean accessibility report!');
+      const content = fs.readFileSync(
+        path.join(accessibilityReportPath, 'no-violations.md'),
+        'utf-8',
+      );
+      return {
+        reports: [],
+        totalViolationRules: 0,
+        hasReports: true,
+        hasViolations: false,
+        noViolationsContent: content,
+      };
+    }
+
+    // Check for SUMMARY.md (violations found)
+    const hasSummary = files.includes('SUMMARY.md');
+    let summaryContent = '';
+    if (hasSummary) {
+      summaryContent = fs.readFileSync(
+        path.join(accessibilityReportPath, 'SUMMARY.md'),
+        'utf-8',
+      );
+
+      // Extract total rules from SUMMARY.md
+      const rulesMatch = summaryContent.match(/\*\*Total Violation Rules\*\*:\s*(\d+)/);
+      totalViolationRules = rulesMatch ? parseInt(rulesMatch[1], 10) : 0;
+      console.log(`Found ${totalViolationRules} violation rules`);
+    }
+
+    // Get all rule-based report files (exclude SUMMARY.md, README.md, no-violations.md)
+    const ruleFiles = files.filter(
       (f) =>
-        f.startsWith('accessibility-report-') &&
         f.endsWith('.md') &&
-        f !== 'README.md',
-    );
-    console.log(
-      `Found ${accessibilityFiles.length} accessibility report files`,
+        f !== 'SUMMARY.md' &&
+        f !== 'README.md' &&
+        f !== 'no-violations.md',
     );
 
-    for (const file of accessibilityFiles) {
+    for (const file of ruleFiles) {
       const filePath = path.join(accessibilityReportPath, file);
       const content = fs.readFileSync(filePath, 'utf-8');
 
-      // Extract issue count from the new format
-      const issueMatch = content.match(/\*\*Total Issues\*\*:\s*(\d+)/);
-      // Also check old format for backward compatibility
-      const violationMatch = content.match(/\*\*Total Violations\*\*:\s*(\d+)/);
-
-      const count = issueMatch
-        ? parseInt(issueMatch[1], 10)
-        : violationMatch
-          ? parseInt(violationMatch[1], 10)
-          : 0;
-
-      // Count tickets in the new format
-      const ticketMatches = content.match(/## Ticket \d+:/g) || [];
-      const ticketCount = ticketMatches.length;
-
-      totalViolations += count;
-      totalTickets += ticketCount;
-      console.log(`  ${file}: ${count} violations, ${ticketCount} tickets`);
+      // Extract rule ID from filename (e.g., "color-contrast.md" -> "color-contrast")
+      const ruleId = file.replace('.md', '');
 
       reports.push({
         file,
-        violations: count,
-        tickets: ticketCount,
-        status: count === 0 ? 'passed' : 'failed',
+        ruleId,
         content: content,
       });
     }
+
+    console.log(`Found ${reports.length} rule-based violation reports`);
   } catch (error) {
     console.error('Error reading accessibility reports:', error.message);
   }
 
   return {
     reports,
-    totalViolations,
-    totalTickets,
-    hasReports: reports.length > 0,
+    totalViolationRules,
+    hasReports: true,
+    hasViolations: totalViolationRules > 0,
+    summaryContent: reports.length > 0 ? summaryContent : '',
   };
 }
 
@@ -212,7 +227,7 @@ function generateTestSummary(testResults) {
 }
 
 /**
- * Generates markdown summary for accessibility reports with collapsible details
+ * Generates markdown summary for accessibility reports in new rule-based format
  */
 function generateAccessibilitySummary(accessibilityData) {
   if (!accessibilityData.hasReports) {
@@ -221,57 +236,44 @@ function generateAccessibilitySummary(accessibilityData) {
 
   let summary = '### ♿ Accessibility Reports\n\n';
 
-  if (accessibilityData.totalViolations === 0) {
-    summary += '✅ **No accessibility violations detected**\n\n';
+  // No violations case
+  if (!accessibilityData.hasViolations) {
+    summary += '✅ **No accessibility violations detected across all devices/browsers!**\n\n';
     return summary;
   }
 
-  // Overall summary
-  summary += `⚠️ **Total Violations**: ${accessibilityData.totalViolations}\n`;
-  summary += `🎫 **Total Tickets**: ${accessibilityData.totalTickets}\n\n`;
+  // Violations found case
+  summary += `⚠️ **Total Violation Rules**: ${accessibilityData.totalViolationRules}\n\n`;
 
-  // Generate collapsible sections for each report with violations
-  for (const report of accessibilityData.reports) {
-    if (report.violations === 0) {
-      summary += `✅ **${getSuiteName(report.file)}**: No violations\n\n`;
-      continue;
-    }
-
-    const suiteName = getSuiteName(report.file);
+  // Include SUMMARY.md content in collapsible section
+  if (accessibilityData.summaryContent) {
     summary += `<details>\n`;
-    summary += `<summary>`;
-    summary += `❌ <strong>${suiteName}</strong>: ${report.violations} violation(s) - ${report.tickets} ticket(s) ready to report`;
-    summary += `</summary>\n\n`;
+    summary += `<summary><strong>View Violations Summary</strong></summary>\n\n`;
 
-    // Include truncated report content to avoid "Argument list too long" errors
-    // GitHub Actions has a limit on argument sizes when passing data to scripts
-    const MAX_REPORT_SIZE = 5000; // Max characters per report section
-    const truncatedContent = report.content.length > MAX_REPORT_SIZE
-      ? report.content.substring(0, MAX_REPORT_SIZE) + '\n\n... _(Report truncated. Download the full accessibility report artifact for complete details.)_'
-      : report.content;
+    // Truncate summary if too long to avoid GitHub Actions argument limits
+    const MAX_SUMMARY_SIZE = 8000;
+    const truncatedSummary =
+      accessibilityData.summaryContent.length > MAX_SUMMARY_SIZE
+        ? accessibilityData.summaryContent.substring(0, MAX_SUMMARY_SIZE) +
+          '\n\n... _(Summary truncated. Download the full accessibility report artifact for complete details.)_'
+        : accessibilityData.summaryContent;
 
-    summary += truncatedContent + '\n';
-
+    summary += truncatedSummary + '\n';
     summary += `</details>\n\n`;
+  }
+
+  // List all rule files found
+  if (accessibilityData.reports.length > 0) {
+    summary += `**Individual Rule Reports** (${accessibilityData.reports.length} file${accessibilityData.reports.length > 1 ? 's' : ''}):\n`;
+    accessibilityData.reports.forEach((report) => {
+      summary += `- \`${report.file}\`\n`;
+    });
+    summary += `\n`;
   }
 
   summary += '\n_💡 Tip: Download the accessibility reports artifact for complete details._\n';
 
   return summary;
-}
-
-/**
- * Extracts a human-readable suite name from filename
- */
-function getSuiteName(filename) {
-  // Convert filename like "accessibility-report-homepage-accessibility.md" to "Homepage Accessibility"
-  const match = filename.match(/accessibility-report-(.+)\.md/);
-  if (!match) return filename;
-
-  return match[1]
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
 
 /**

@@ -62,8 +62,78 @@ Unit tests are co-located with source files using the following conventions:
 ### E2E Tests
 E2E tests are located in `apps/uk-travel-history/e2e/` and test critical user flows:
 - `happy-path.spec.ts`: Core user journeys
-- `accessibility.spec.ts`: WCAG compliance
+- `accessibility.spec.ts`: WCAG compliance (axe-core powered)
 - `feature-gating.spec.ts`: Feature flag behavior
+
+#### Accessibility Testing Details
+
+The accessibility test suite (`accessibility.spec.ts`) uses Playwright + axe-core for automated WCAG compliance testing.
+
+**Three-Phase Workflow:**
+
+**Phase 1: Worker Execution**
+- Each Playwright worker runs tests in parallel across devices/browsers
+- Workers collect violations using the `runAxeAndCollect()` helper function
+- Each worker writes intermediate JSON file: `violations-{projectName}-{timestamp}.json`
+- JSON files contain raw violation data for merging
+
+**Phase 2: Global Teardown** (`e2e/global-teardown.ts`)
+- Runs ONCE after all workers complete
+- Merges all worker JSON files
+- Groups violations by rule ID (e.g., `color-contrast`, `button-name`)
+- Generates final reports:
+  - **Success case**: `no-violations.md` (lists all devices tested)
+  - **Violations case**: `SUMMARY.md` + one file per rule (e.g., `color-contrast.md`)
+
+**Phase 3: CI/CD Integration** (`tools/generate-e2e-report.js`)
+- Parses final markdown reports
+- Posts PR comments with violation summary
+- Uploads artifacts for download via GitHub Actions
+
+**Report Format** (rule-based, NOT device-based):
+
+```
+accessibility-reports/
+├── SUMMARY.md              # Overview grouped by priority
+├── color-contrast.md       # Shows which devices have this violation
+├── button-name.md          # Shows which devices have this violation
+└── aria-required-attr.md   # Shows which devices have this violation
+```
+
+Each rule file includes:
+- Description, impact level, and WCAG tags
+- **Devices affected** (e.g., "Chromium, Firefox, Mobile Chrome")
+- Affected elements with CSS selectors and HTML snippets
+- Fix suggestions from axe-core
+- Links to axe documentation
+
+**Working with Accessibility Tests:**
+
+DO:
+- Add new tests using `runAxeAndCollect()` helper (ensures proper reporting)
+- Use `filterViolations` option to focus on specific rule types
+- Test both landing and travel pages (full user journey)
+- Follow existing test patterns for suite names and test names
+
+DON'T:
+- Generate per-worker markdown reports (use JSON intermediate format)
+- Create duplicate reports for each device/browser
+- Bypass the `runAxeAndCollect()` helper (violations won't be tracked)
+- Modify global setup/teardown without understanding the full workflow
+
+**Modifying Accessibility Infrastructure:**
+
+If you need to change the accessibility testing system, update all three layers:
+
+1. **Worker JSON output** (`accessibility.spec.ts`) - Data structure
+2. **Global teardown parsing** (`global-teardown.ts`) - Merging logic
+3. **Report aggregation** (`generate-e2e-report.js`) - CI/CD integration
+
+Always test locally before pushing:
+```bash
+npm run test:e2e
+# Check accessibility-reports/ directory for correct format
+```
 
 ## Test Coverage by Package
 

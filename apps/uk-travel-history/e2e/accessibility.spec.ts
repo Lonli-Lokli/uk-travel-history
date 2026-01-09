@@ -14,7 +14,8 @@ import * as path from 'path';
  * Tests are performed on both the landing page and travel page to ensure accessibility
  * across all user journeys.
  *
- * If violations are found, the test fails and generates a detailed accessibility-report.md file.
+ * Workers write violations to JSON files. Global teardown merges them and generates
+ * either no-violations.md (if clean) or one file per rule (e.g., color-contrast.md).
  */
 
 // Worker-scoped violation tracking (isolated per parallel worker)
@@ -555,28 +556,32 @@ test.describe('Accessibility Tests', () => {
 });
 
 /**
- * Generates final comprehensive report for all tests in this worker
+ * Writes violations to JSON file for this worker (intermediate format).
+ * Global teardown will merge all JSON files and generate final reports.
  */
 async function generateFinalReport(testInfo: TestInfo): Promise<void> {
   // Include project name and timestamp for unique filenames
   const projectName = testInfo.project.name.toLowerCase().replace(/\s+/g, '-');
-  const filename = `accessibility-report-${projectName}-${workerTimestamp}.md`;
-
-  // Generate report from all collected violations
-  const report = generateReport(projectName, allViolations);
-
-  // Attach to Playwright test results
-  await testInfo.attach(filename, {
-    body: report,
-    contentType: 'text/markdown',
-  });
+  const filename = `violations-${projectName}-${workerTimestamp}.json`;
 
   // Write to accessibility-reports directory
   const reportDir = getReportsDir();
   if (!fs.existsSync(reportDir)) {
     fs.mkdirSync(reportDir, { recursive: true });
   }
-  fs.writeFileSync(path.join(reportDir, filename), report, 'utf-8');
+
+  // Write violations as JSON for global teardown to process
+  const jsonData = {
+    projectName,
+    timestamp: workerTimestamp,
+    records: allViolations,
+  };
+
+  fs.writeFileSync(
+    path.join(reportDir, filename),
+    JSON.stringify(jsonData, null, 2),
+    'utf-8',
+  );
 
   // Count stats
   const testsWithViolations = allViolations.filter((r) => r.violations.length > 0);
@@ -586,215 +591,6 @@ async function generateFinalReport(testInfo: TestInfo): Promise<void> {
   );
 
   console.log(
-    `Generated accessibility report: ${filename} (${allViolations.length} tests, ${testsWithViolations.length} with violations, ${totalViolations} total violations)`,
+    `Wrote violations JSON: ${filename} (${allViolations.length} tests, ${testsWithViolations.length} with violations, ${totalViolations} total violations)`,
   );
-}
-
-// Structure for grouping violations by rule
-interface GroupedViolation {
-  ruleId: string;
-  help: string;
-  description: string;
-  impact: string;
-  tags: string[];
-  helpUrl: string;
-  foundIn: Set<string>; // "suiteName: testName" entries
-  elements: Map<string, UniqueElement>; // selector -> element details
-}
-
-interface UniqueElement {
-  selector: string;
-  html: string;
-  failureSummary: string;
-  fixes: string[];
-  foundIn: Set<string>; // tests that found this element
-}
-
-/**
- * Generates GitHub-ready accessibility report
- * Groups violations by rule ID and deduplicates elements across tests/browsers
- */
-function generateReport(projectName: string, records: ViolationRecord[]): string {
-  let report = `# Accessibility Report: ${projectName}\n\n`;
-  report += `**Generated**: ${new Date().toISOString()}\n`;
-  report += `**Browser/Device**: ${projectName}\n\n`;
-
-  // Calculate stats
-  const testsWithViolations = records.filter((r) => r.violations.length > 0);
-
-  report += `## Summary\n\n`;
-  report += `- **Total Tests Run**: ${records.length}\n`;
-  report += `- **Tests with Violations**: ${testsWithViolations.length}\n`;
-
-  if (testsWithViolations.length === 0) {
-    report += `\n## Result\n\n`;
-    report += `No accessibility violations found!\n\n`;
-
-    // List all passing tests
-    report += `### Tests Executed\n\n`;
-    const suites = [...new Set(records.map((r) => r.suiteName))];
-    suites.forEach((suite) => {
-      const suiteTests = records.filter((r) => r.suiteName === suite);
-      report += `**${suite}**\n`;
-      suiteTests.forEach((t) => {
-        report += `- ${t.testName}\n`;
-      });
-      report += `\n`;
-    });
-
-    return report;
-  }
-
-  // Group all violations by rule ID
-  const groupedViolations = new Map<string, GroupedViolation>();
-
-  records.forEach((record) => {
-    const testContext = `${record.suiteName}: ${record.testName}`;
-
-    record.violations.forEach((violation) => {
-      const ruleId = violation.id;
-
-      if (!groupedViolations.has(ruleId)) {
-        groupedViolations.set(ruleId, {
-          ruleId,
-          help: violation.help,
-          description: violation.description,
-          impact: violation.impact || 'unknown',
-          tags: violation.tags,
-          helpUrl: violation.helpUrl,
-          foundIn: new Set(),
-          elements: new Map(),
-        });
-      }
-
-      const group = groupedViolations.get(ruleId)!;
-      group.foundIn.add(testContext);
-
-      // Add elements, deduplicating by selector
-      violation.nodes.forEach((node: NodeResult) => {
-        const selector = node.target.join(' ');
-
-        if (!group.elements.has(selector)) {
-          const fixes: string[] = [];
-          if (node.any) {
-            node.any.forEach((fix) => fixes.push(fix.message));
-          }
-          if (node.all) {
-            node.all.forEach((fix) => fixes.push(fix.message));
-          }
-
-          group.elements.set(selector, {
-            selector,
-            html: node.html,
-            failureSummary: node.failureSummary || '',
-            fixes,
-            foundIn: new Set(),
-          });
-        }
-
-        group.elements.get(selector)!.foundIn.add(testContext);
-      });
-    });
-  });
-
-  // Count unique violations and elements
-  const uniqueRules = groupedViolations.size;
-  const uniqueElements = [...groupedViolations.values()].reduce(
-    (sum, g) => sum + g.elements.size,
-    0,
-  );
-
-  report += `- **Unique Violation Rules**: ${uniqueRules}\n`;
-  report += `- **Unique Affected Elements**: ${uniqueElements}\n\n`;
-
-  // Sort violations by priority (critical first)
-  const priorityOrder: Record<string, number> = {
-    critical: 0,
-    serious: 1,
-    moderate: 2,
-    minor: 3,
-    unknown: 4,
-  };
-
-  const sortedViolations = [...groupedViolations.values()].sort(
-    (a, b) =>
-      (priorityOrder[a.impact.toLowerCase()] ?? 4) -
-      (priorityOrder[b.impact.toLowerCase()] ?? 4),
-  );
-
-  // Generate violations section
-  report += `## Violations by Rule\n\n`;
-
-  sortedViolations.forEach((group, idx) => {
-    const priority = getPriority(group.impact);
-
-    report += `### ${idx + 1}. ${group.help}\n\n`;
-    report += `| Property | Value |\n`;
-    report += `|----------|-------|\n`;
-    report += `| **Rule ID** | \`${group.ruleId}\` |\n`;
-    report += `| **Priority** | ${priority} |\n`;
-    report += `| **Impact** | ${group.impact.toUpperCase()} |\n`;
-    report += `| **WCAG** | ${group.tags.filter((t) => t.startsWith('wcag')).join(', ')} |\n\n`;
-
-    report += `**Description**: ${group.description}\n\n`;
-
-    report += `**Found in tests**:\n`;
-    [...group.foundIn].sort().forEach((test) => {
-      report += `- ${test}\n`;
-    });
-    report += `\n`;
-
-    // Affected elements
-    report += `<details>\n`;
-    report += `<summary><strong>Affected Elements (${group.elements.size} unique)</strong></summary>\n\n`;
-
-    let elementIdx = 1;
-    group.elements.forEach((element) => {
-      report += `#### Element ${elementIdx}\n\n`;
-      report += `**Selector**: \`${element.selector}\`\n\n`;
-      report += `**HTML**:\n\`\`\`html\n${element.html.substring(0, 300)}${element.html.length > 300 ? '...' : ''}\n\`\`\`\n\n`;
-
-      if (element.failureSummary) {
-        report += `**Issue**: ${element.failureSummary}\n\n`;
-      }
-
-      if (element.fixes.length > 0) {
-        report += `**How to fix**:\n`;
-        [...new Set(element.fixes)].forEach((fix) => {
-          report += `- ${fix}\n`;
-        });
-        report += `\n`;
-      }
-
-      if (element.foundIn.size > 1) {
-        report += `*Found in ${element.foundIn.size} tests*\n\n`;
-      }
-
-      elementIdx++;
-    });
-
-    report += `</details>\n\n`;
-    report += `[Axe Documentation](${group.helpUrl})\n\n`;
-    report += `---\n\n`;
-  });
-
-  return report;
-}
-
-/**
- * Maps impact level to priority
- */
-function getPriority(impact: string): string {
-  switch (impact.toLowerCase()) {
-    case 'critical':
-      return 'P1 - Critical';
-    case 'serious':
-      return 'P2 - High';
-    case 'moderate':
-      return 'P3 - Medium';
-    case 'minor':
-      return 'P4 - Low';
-    default:
-      return 'P3 - Medium';
-  }
 }

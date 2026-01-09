@@ -62,6 +62,8 @@ export default defineConfig({
   ...nxE2EPreset(__filename, { testDir: './e2e' }),
   // Global setup runs ONCE before all workers, handles directory initialization
   globalSetup: './e2e/global-setup.ts',
+  // Global teardown runs ONCE after all workers complete, merges JSON files and generates reports
+  globalTeardown: './e2e/global-teardown.ts',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,
