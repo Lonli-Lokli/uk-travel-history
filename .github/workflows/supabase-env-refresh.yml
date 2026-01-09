@@ -1,0 +1,71 @@
+name: Refresh Supabase Env DB From Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Environment to refresh (staging|weekly|monthly)"
+        required: true
+        type: string
+
+concurrency:
+  group: supabase-env-refresh-${{ github.event.inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    env:
+      PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}      
+
+    steps:
+      - name: Validate inputs + choose target DB URL
+        id: pick
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="${{ github.event.inputs.target }}"
+
+          case "$TARGET" in
+            staging) echo "TARGET_DB_URL=${STAGING_DATABASE_URL}" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Invalid target: $TARGET"; exit 1 ;;
+          esac
+
+          if [ -z "${PROD_DATABASE_URL}" ]; then
+            echo "Missing PROD_DATABASE_URL secret" >&2
+            exit 1
+          fi
+
+          TARGET_URL=$(grep -E '^TARGET_DB_URL=' "$GITHUB_OUTPUT" | cut -d= -f2-)
+          if [ -z "${TARGET_URL}" ]; then
+            echo "Missing target DB URL secret for: $TARGET" >&2
+            exit 1
+          fi
+
+      - name: Install Postgres client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Refresh target schema from production (DB-only)
+        shell: bash
+        env:
+          TARGET_DB_URL: ${{ steps.pick.outputs.TARGET_DB_URL }}
+        run: |
+          set -euo pipefail
+
+          echo "Dropping and recreating public schema on target..."
+          psql "${TARGET_DB_URL}" -v ON_ERROR_STOP=1 -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"
+
+          echo "Dumping production and restoring into target..."
+          pg_dump "${PROD_DATABASE_URL}" \
+            --no-owner \
+            --no-privileges \
+            --format=plain \
+            | psql "${TARGET_DB_URL}" -v ON_ERROR_STOP=1
+
+          echo "Refresh complete for ${{ github.event.inputs.target }}."

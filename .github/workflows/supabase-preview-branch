@@ -1,0 +1,89 @@
+name: Supabase Preview Branch (prod clone + migrations)
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/supabase-preview-branch.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preview-branch:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Compute names
+        id: names
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "SB_BRANCH=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "GIT_BRANCH=${{ github.head_ref }}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate Supabase CLI
+        run: supabase login --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Create branch if missing (clone production data on first create)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SB_BRANCH="${{ steps.names.outputs.SB_BRANCH }}"
+          PROD_REF="${SUPABASE_PROJECT_REF_PROD}"
+
+          if supabase branches get "${SB_BRANCH}" --project-ref "${PROD_REF}" >/dev/null 2>&1; then
+            echo "Branch already exists: ${SB_BRANCH}"
+          else
+            echo "Creating Supabase branch with production data: ${SB_BRANCH}"
+            supabase branches create "${SB_BRANCH}" --project-ref "${PROD_REF}" --with-data
+          fi
+
+      - name: Associate Supabase branch to PR git branch (for integrations)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SB_BRANCH="${{ steps.names.outputs.SB_BRANCH }}"
+          GIT_BRANCH="${{ steps.names.outputs.GIT_BRANCH }}"
+          PROD_REF="${SUPABASE_PROJECT_REF_PROD}"
+
+          supabase branches update "${SB_BRANCH}" --project-ref "${PROD_REF}" --git-branch "${GIT_BRANCH}"
+
+      - name: Link CLI to the preview branch project
+        shell: bash
+        run: |
+          set -euo pipefail
+          SB_BRANCH="${{ steps.names.outputs.SB_BRANCH }}"
+          PROD_REF="${SUPABASE_PROJECT_REF_PROD}"
+
+          BRANCH_JSON="$(supabase branches get "${SB_BRANCH}" --project-ref "${PROD_REF}" -o json)"
+          PREVIEW_REF="$(echo "$BRANCH_JSON" | jq -r '.project_ref // .ref // .id // empty')"
+
+          if [ -z "$PREVIEW_REF" ] || [ "$PREVIEW_REF" = "null" ]; then
+            echo "Could not extract preview project ref from branches get output."
+            echo "$BRANCH_JSON"
+            exit 1
+          fi
+
+          supabase link --project-ref "$PREVIEW_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply PR migrations to preview branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --linked
