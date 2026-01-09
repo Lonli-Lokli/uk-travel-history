@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { reorderTrips } from '@uth/db';
+import { reorderTrips, getTripById } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 import { logger } from '@uth/utils';
 
@@ -48,6 +48,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'tripIds array must not be empty' },
         { status: 400 },
+      );
+    }
+
+    // CRITICAL: Verify ALL trips belong to the user before reordering
+    // RLS won't protect this because reorderTrips uses service role key
+    const trips = await Promise.all(
+      body.tripIds.map((id) => getTripById(id)),
+    );
+
+    // Check ownership - all trips must exist and belong to this user
+    const unauthorizedTrip = trips.find(
+      (trip) => !trip || trip.userId !== userContext.userId,
+    );
+
+    if (unauthorizedTrip) {
+      return NextResponse.json(
+        { error: 'Not authorized to reorder these trips' },
+        { status: 403 },
       );
     }
 

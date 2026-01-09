@@ -9,6 +9,7 @@ import {
   getTrips,
   getTripsByGoal,
   createTrip,
+  getGoalById,
   type CreateTripData,
 } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
@@ -89,10 +90,20 @@ export async function POST(request: NextRequest) {
     const outDate = new Date(body.outDate);
     const inDate = new Date(body.inDate);
 
-    if (outDate > inDate) {
+    if (outDate >= inDate) {
       return NextResponse.json(
-        { error: 'Out date must be before or equal to in date' },
+        { error: 'Return date must be after departure date (same-day trips are invalid)' },
         { status: 400 },
+      );
+    }
+
+    // CRITICAL: Verify goal ownership before creating trip
+    const goal = await getGoalById(body.goalId);
+
+    if (!goal || goal.userId !== userContext.userId) {
+      return NextResponse.json(
+        { error: 'Goal not found or not authorized' },
+        { status: 404 },
       );
     }
 

@@ -10,6 +10,7 @@ import {
   getTripById,
   updateTrip,
   deleteTrip,
+  getTripGroupById,
   type UpdateTripData,
 } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
@@ -101,10 +102,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       const outDate = new Date(body.outDate);
       const inDate = new Date(body.inDate);
 
-      if (outDate > inDate) {
+      if (outDate >= inDate) {
         return NextResponse.json(
-          { error: 'Out date must be before or equal to in date' },
+          { error: 'Return date must be after departure date (same-day trips are invalid)' },
           { status: 400 },
+        );
+      }
+    }
+
+    // CRITICAL: Verify trip group ownership if changing groupId
+    if (body.groupId) {
+      const group = await getTripGroupById(body.groupId);
+      if (!group || group.userId !== userContext.userId) {
+        return NextResponse.json(
+          { error: 'Trip group not found or not authorized' },
+          { status: 404 },
         );
       }
     }

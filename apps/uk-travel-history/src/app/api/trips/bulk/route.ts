@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { bulkCreateTrips, type BulkCreateTripsData } from '@uth/db';
+import { bulkCreateTrips, getGoalById, type BulkCreateTripsData } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 import { logger } from '@uth/utils';
 
@@ -62,14 +62,24 @@ export async function POST(request: NextRequest) {
       const outDate = new Date(trip.outDate);
       const inDate = new Date(trip.inDate);
 
-      if (outDate > inDate) {
+      if (outDate >= inDate) {
         return NextResponse.json(
           {
-            error: `Trip at index ${i}: Out date must be before or equal to in date`,
+            error: `Trip at index ${i}: Return date must be after departure date (same-day trips are invalid)`,
           },
           { status: 400 },
         );
       }
+    }
+
+    // CRITICAL: Verify goal ownership before creating trips
+    const goal = await getGoalById(body.goalId);
+
+    if (!goal || goal.userId !== userContext.userId) {
+      return NextResponse.json(
+        { error: 'Goal not found or not authorized' },
+        { status: 404 },
+      );
     }
 
     const trips = await bulkCreateTrips(userContext.userId, body);

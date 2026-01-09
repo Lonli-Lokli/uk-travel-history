@@ -24,6 +24,7 @@ import { TrackersView } from './TrackersView';
 import { TimelineView } from './TimelineView';
 import { AddFab } from './AddFab';
 import { AddGoalDrawer } from './goals';
+import { TripDrawer } from './trips/TripDrawer';
 import { uiStore, tripsStore } from '@uth/stores';
 import {
   useClearAll,
@@ -85,8 +86,9 @@ export const TravelPageClient = observer(() => {
   // Handlers for FAB actions
   const handleAddGoal = () => goalsStore.openAddModal();
   const handleAddTrip = () => {
-    // TODO: Open add trip drawer
-    console.log('Add trip');
+    // Open trip drawer with the first available goal (if any)
+    const firstGoal = goalsStore.goals[0];
+    uiStore.openTripDrawer(firstGoal?.id);
   };
   const handleUpgrade = () => router.push('/account');
 
@@ -154,8 +156,23 @@ export const TravelPageClient = observer(() => {
             <TimelineView
               trips={trips}
               onAddTrip={handleAddTrip}
-              onEditTrip={(tripId) => console.log('Edit trip', tripId)}
-              onDeleteTrip={(tripId) => console.log('Delete trip', tripId)}
+              onEditTrip={(tripId) => {
+                const trip = trips.find((t) => t.id === tripId);
+                if (trip) {
+                  uiStore.openTripDrawerForEdit(tripId, {
+                    outDate: trip.outDate,
+                    inDate: trip.inDate,
+                    outRoute: trip.outRoute || '',
+                    inRoute: trip.inRoute || '',
+                    goalId: trip.goalId,
+                  });
+                }
+              }}
+              onDeleteTrip={async (tripId) => {
+                if (confirm('Are you sure you want to delete this trip?')) {
+                  await tripsStore.deleteTrip(tripId);
+                }
+              }}
             />
           )}
         </FeatureGate>
@@ -214,6 +231,9 @@ export const TravelPageClient = observer(() => {
 
       {/* Add Goal Drawer - state managed by goalsStore */}
       <AddGoalDrawer />
+
+      {/* Add Trip Drawer - state managed by uiStore */}
+      <TripDrawer />
     </>
   );
 });

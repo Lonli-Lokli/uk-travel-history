@@ -1081,22 +1081,17 @@ export class SupabaseDbAdapter implements DbProvider {
   async reorderTrips(tripIds: string[]): Promise<void> {
     const client = this.ensureConfigured();
 
-    // Update sort_order for each trip
-    const updates = tripIds.map((id, index) => ({
-      id,
-      sort_order: index,
-    }));
+    // Supabase doesn't support batch updates with different values per row
+    // We need to execute individual updates for each trip
+    for (let i = 0; i < tripIds.length; i++) {
+      const { error } = await client
+        .from('trips')
+        .update({ sort_order: i })
+        .eq('id', tripIds[i]);
 
-    const { error } = await client
-      .from('trips')
-      .update({ sort_order: undefined }) // required by TS, ignored by Postgres
-      .in(
-        'id',
-        updates.map((u) => u.id),
-      );
-
-    if (error) {
-      this.handleError('reorderTrips', error);
+      if (error) {
+        this.handleError('reorderTrips', error);
+      }
     }
   }
 
