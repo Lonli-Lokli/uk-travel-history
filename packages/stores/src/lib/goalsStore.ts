@@ -90,6 +90,25 @@ class GoalsStore {
   /** Error from add modal operations */
   addModalError: string | null = null;
 
+  // ============================================================================
+  // Edit Goal Modal UI State
+  // ============================================================================
+
+  /** Whether the edit goal modal is open */
+  isEditModalOpen = false;
+
+  /** ID of goal being edited */
+  editingGoalId: string | null = null;
+
+  /** Form data for editing goal */
+  editModalFormData: Record<string, string> = {};
+
+  /** Whether goal is being updated */
+  isUpdating = false;
+
+  /** Error from edit modal operations */
+  editModalError: string | null = null;
+
   constructor() {
     makeAutoObservable(this);
   }
@@ -246,7 +265,6 @@ class GoalsStore {
     // Initialize form data with template defaults
     this.addModalFormData = {
       name: template.name,
-      startDate: new Date().toISOString().split('T')[0],
     };
     // Add default config values to form
     Object.entries(template.defaultConfig).forEach(([key, value]) => {
@@ -294,7 +312,7 @@ class GoalsStore {
         // Handle number fields
         if (['thresholdDays', 'windowDays'].includes(key)) {
           config[key] = parseInt(value, 10);
-        } else if (key !== 'name' && key !== 'startDate') {
+        } else if (key !== 'name') {
           config[key] = value;
         }
       });
@@ -304,9 +322,9 @@ class GoalsStore {
         jurisdiction: this.selectedTemplate.jurisdiction as GoalJurisdiction,
         name: this.addModalFormData.name || this.selectedTemplate.name,
         config: { ...this.selectedTemplate.defaultConfig, ...config },
-        startDate:
-          this.addModalFormData.startDate ||
-          new Date().toISOString().split('T')[0],
+        // Use current date as startDate (required for CreateTrackingGoalData)
+        // This represents when tracking begins, not visa/entry dates (those go in config)
+        startDate: new Date().toISOString().split('T')[0],
       };
 
       const goal = await this.createGoal(goalData);
@@ -331,6 +349,107 @@ class GoalsStore {
         this.isCreating = false;
       });
       return null;
+    }
+  }
+
+  // ============================================================================
+  // Actions - Edit Goal Modal
+  // ============================================================================
+
+  /**
+   * Open the edit goal modal and populate with goal data
+   */
+  openEditModal(goalId: string): void {
+    const goal = this.goals.find((g) => g.id === goalId);
+    if (!goal) return;
+
+    this.isEditModalOpen = true;
+    this.editingGoalId = goalId;
+    this.editModalError = null;
+    this.isUpdating = false;
+
+    // Populate form data with current goal values
+    this.editModalFormData = {
+      name: goal.name,
+    };
+
+    // Add config values to form
+    if (goal.config) {
+      Object.entries(goal.config).forEach(([key, value]) => {
+        if (typeof value === 'string' || typeof value === 'number') {
+          this.editModalFormData[key] = String(value);
+        }
+      });
+    }
+  }
+
+  /**
+   * Close the edit goal modal
+   */
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+    this.editingGoalId = null;
+    this.editModalFormData = {};
+    this.editModalError = null;
+    this.isUpdating = false;
+  }
+
+  /**
+   * Update a form field value in edit modal
+   */
+  setEditFormField(field: string, value: string): void {
+    this.editModalFormData[field] = value;
+  }
+
+  /**
+   * Update the goal from the current form data
+   * @returns true on success, false on error
+   */
+  async updateGoalFromModal(): Promise<boolean> {
+    if (!this.editingGoalId) return false;
+
+    this.isUpdating = true;
+    this.editModalError = null;
+
+    try {
+      // Convert form data to proper types
+      const config: Record<string, unknown> = {};
+      Object.entries(this.editModalFormData).forEach(([key, value]) => {
+        // Handle number fields
+        if (['thresholdDays', 'windowDays'].includes(key)) {
+          config[key] = parseInt(value, 10);
+        } else if (key !== 'name') {
+          config[key] = value;
+        }
+      });
+
+      const updates: UpdateTrackingGoalData = {
+        name: this.editModalFormData.name,
+        config,
+      };
+
+      const goal = await this.updateGoal(this.editingGoalId, updates);
+
+      if (goal) {
+        runInAction(() => {
+          this.isUpdating = false;
+          this.closeEditModal();
+        });
+        return true;
+      } else {
+        runInAction(() => {
+          this.editModalError = this.error || 'Failed to update goal';
+          this.isUpdating = false;
+        });
+        return false;
+      }
+    } catch (err) {
+      runInAction(() => {
+        this.editModalError =
+          err instanceof Error ? err.message : 'Failed to update goal';
+        this.isUpdating = false;
+      });
+      return false;
     }
   }
 
@@ -538,7 +657,7 @@ class GoalsStore {
     this.error = null;
     this.isFeatureEnabled = false;
     this.isHydrated = false;
-    // Reset templates and modal state
+    // Reset templates and add modal state
     this.templates = [];
     this.isAddModalOpen = false;
     this.addModalStep = 'category';
@@ -547,6 +666,12 @@ class GoalsStore {
     this.addModalFormData = {};
     this.isCreating = false;
     this.addModalError = null;
+    // Reset edit modal state
+    this.isEditModalOpen = false;
+    this.editingGoalId = null;
+    this.editModalFormData = {};
+    this.isUpdating = false;
+    this.editModalError = null;
   }
 
   // ============================================================================

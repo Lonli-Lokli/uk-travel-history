@@ -944,7 +944,7 @@ export class SupabaseDbAdapter implements DbProvider {
 
     type TripInsert = {
       user_id: string;
-      goal_id: string;
+      goal_id: string | null; // Optional - trips can exist without being tied to a specific goal
       title: string | null;
       out_date: string;
       in_date: string;
@@ -959,7 +959,7 @@ export class SupabaseDbAdapter implements DbProvider {
 
     const insertData: TripInsert = {
       user_id: userId,
-      goal_id: data.goalId,
+      goal_id: data.goalId ?? null,
       title: data.title ?? null,
       out_date: data.outDate,
       in_date: data.inDate,
@@ -974,7 +974,7 @@ export class SupabaseDbAdapter implements DbProvider {
 
     const { data: result, error } = await client
       .from('trips')
-      .insert(insertData)
+      .insert(insertData as any) // Cast needed until types are regenerated after migration
       .select()
       .single();
 

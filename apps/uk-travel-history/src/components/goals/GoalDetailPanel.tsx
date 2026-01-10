@@ -14,6 +14,43 @@ import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 import { format, differenceInDays } from 'date-fns';
 
+/**
+ * Delete Goal Button with gating logic
+ * - Can delete if user has 2+ goals
+ * - Cannot delete the last remaining goal (shows disabled state with tooltip)
+ */
+const DeleteGoalButton = observer(function DeleteGoalButton({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  const activeGoalCount = goalsStore.activeGoalCount;
+  const canDelete = activeGoalCount > 1;
+
+  if (!canDelete) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        title="Cannot delete the last goal. You must have at least one active goal."
+        className="relative"
+      >
+        <UIIcon iconName="archive" className="w-4 h-4 opacity-40" />
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 border border-amber-300">
+          <span className="text-[10px] text-amber-700 font-bold">!</span>
+        </span>
+      </Button>
+    );
+  }
+
+  return (
+    <Button variant="ghost" size="sm" onClick={onClick} title="Delete goal">
+      <UIIcon iconName="archive" className="w-4 h-4" />
+    </Button>
+  );
+});
+
 /** Status color mapping */
 const statusStyles: Record<string, { badge: string; text: string }> = {
   not_started: { badge: 'bg-slate-100 text-slate-700', text: 'Not Started' },
@@ -159,14 +196,12 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
           </div>
           <div className="flex items-center gap-1">
             {onEdit && (
-              <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Button variant="ghost" size="sm" onClick={onEdit} title="Edit goal">
                 <UIIcon iconName="pencil" className="w-4 h-4" />
               </Button>
             )}
             {onArchive && (
-              <Button variant="ghost" size="sm" onClick={onArchive}>
-                <UIIcon iconName="archive" className="w-4 h-4" />
-              </Button>
+              <DeleteGoalButton onClick={onArchive} />
             )}
           </div>
         </div>

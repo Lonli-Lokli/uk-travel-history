@@ -23,7 +23,7 @@ import { StatsBar } from './StatsBar';
 import { TrackersView } from './TrackersView';
 import { TimelineView } from './TimelineView';
 import { AddFab } from './AddFab';
-import { AddGoalDrawer } from './goals';
+import { AddGoalDrawer, EditGoalDrawer } from './goals';
 import { TripDrawer } from './trips/TripDrawer';
 import { uiStore, tripsStore } from '@uth/stores';
 import {
@@ -73,9 +73,8 @@ export const TravelPageClient = observer(() => {
   // Handlers for FAB actions
   const handleAddGoal = () => goalsStore.openAddModal();
   const handleAddTrip = () => {
-    // Open trip drawer with the first available goal (if any)
-    const firstGoal = goalsStore.goals[0];
-    uiStore.openTripDrawer(firstGoal?.id);
+    // Open trip drawer (no goal required)
+    uiStore.openTripDrawer();
   };
   const handleUpgrade = () => router.push('/account');
 
@@ -151,7 +150,6 @@ export const TravelPageClient = observer(() => {
                     inDate: trip.inDate,
                     outRoute: trip.outRoute || '',
                     inRoute: trip.inRoute || '',
-                    goalId: trip.goalId,
                   });
                 }
               }}
@@ -189,6 +187,9 @@ export const TravelPageClient = observer(() => {
 
       {/* Add Goal Drawer - state managed by goalsStore */}
       <AddGoalDrawer />
+
+      {/* Edit Goal Drawer - state managed by goalsStore */}
+      <EditGoalDrawer />
 
       {/* Add Trip Drawer - state managed by uiStore */}
       <TripDrawer />
