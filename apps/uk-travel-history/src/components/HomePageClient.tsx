@@ -15,7 +15,6 @@ import {
   useCsvImport,
   useClipboardImport,
 } from './hooks';
-import { FullDataImportDialog, ImportPreviewDialog } from '@uth/widgets';
 
 export const HomePageClient = observer(() => {
   const { fileInputRef, handleFileSelect, triggerFileInput } = useFileUpload();
@@ -27,23 +26,11 @@ export const HomePageClient = observer(() => {
     fileInputRef: csvFileInputRef,
     handleFileSelect: handleCsvFileSelect,
     triggerFileInput: triggerCsvFileInput,
-    isDialogOpen: isCsvDialogOpen,
-    previewData: csvPreviewData,
-    confirmImport: confirmCsvImport,
-    cancelImport: cancelCsvImport,
-    isFullDataDialogOpen,
-    fullDataPreviewData,
-    confirmFullDataImport,
-    cancelFullDataImport,
+    isImporting: isCsvImporting,
   } = useCsvImport();
 
-  const {
-    handleClipboardPaste,
-    isDialogOpen: isClipboardDialogOpen,
-    previewData: clipboardPreviewData,
-    confirmImport: confirmClipboardImport,
-    cancelImport: cancelClipboardImport,
-  } = useClipboardImport();
+  const { handleClipboardPaste, isImporting: isClipboardImporting } =
+    useClipboardImport();
 
   const hasTrips = travelStore.trips.length > 0;
 
@@ -102,39 +89,6 @@ export const HomePageClient = observer(() => {
           </>
         )}
       </div>
-
-      {/* CSV Import Preview Dialog */}
-      {csvPreviewData && (
-        <ImportPreviewDialog
-          isOpen={isCsvDialogOpen}
-          tripCount={csvPreviewData.tripCount}
-          onConfirm={confirmCsvImport}
-          onCancel={cancelCsvImport}
-        />
-      )}
-
-      {/* Clipboard Import Preview Dialog */}
-      {clipboardPreviewData && (
-        <ImportPreviewDialog
-          isOpen={isClipboardDialogOpen}
-          tripCount={clipboardPreviewData.tripCount}
-          onConfirm={confirmClipboardImport}
-          onCancel={cancelClipboardImport}
-        />
-      )}
-
-      {/* Full Data Import Preview Dialog */}
-      {fullDataPreviewData && (
-        <FullDataImportDialog
-          isOpen={isFullDataDialogOpen}
-          tripCount={fullDataPreviewData.tripCount}
-          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
-          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
-          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
-          onConfirm={confirmFullDataImport}
-          onCancel={cancelFullDataImport}
-        />
-      )}
     </div>
   );
 });

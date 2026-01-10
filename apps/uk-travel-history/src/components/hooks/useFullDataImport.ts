@@ -12,14 +12,7 @@ export const useFullDataImport = () => {
     FEATURE_KEYS.MULTI_GOAL_TRACKING,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<{
-    tripCount: number;
-    hasVignetteDate: boolean;
-    hasVisaStartDate: boolean;
-    hasIlrTrack: boolean;
-  } | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,8 +24,12 @@ export const useFullDataImport = () => {
         fileInputRef.current.value = '';
       }
 
+      if (isImporting) return;
+
       try {
-        // Preview the file by calling the import API
+        setIsImporting(true);
+
+        // Parse the full data file on server
         const formData = new FormData();
         formData.append('file', file);
 
@@ -44,56 +41,14 @@ export const useFullDataImport = () => {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || 'Failed to preview file');
+          throw new Error(result.error || 'Failed to import file');
         }
 
-        // Show preview dialog
-        setPreviewData({
-          tripCount: result.metadata.tripCount,
-          hasVignetteDate: !!result.data.vignetteEntryDate,
-          hasVisaStartDate: !!result.data.visaStartDate,
-          hasIlrTrack: !!result.data.ilrTrack,
-        });
-        setPendingFile(file);
-        setIsDialogOpen(true);
-      } catch (err) {
-        toast({
-          title: 'Import failed',
-          description:
-            err instanceof Error ? err.message : 'Failed to read file',
-          variant: 'destructive',
-        });
-      }
-    },
-    [toast],
-  );
-
-  const confirmImport = useCallback(
-    async (mode: 'replace' | 'append') => {
-      if (!pendingFile) return;
-
-      try {
-        // For authenticated users with multi-goal access, persist to database
+        // For authenticated users with multi-goal access (paid users), save to database
         if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
-          // Parse the full data file
-          const formData = new FormData();
-          formData.append('file', pendingFile);
-
-          const response = await fetch('/api/import-full', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(result.error || 'Failed to import file');
-          }
-
-          // Use first available goal
           const goalId = goalsStore.goals[0].id;
 
-          // Bulk create trips in database
+          // Save trips to database via bulk endpoint
           if (result.data.trips && result.data.trips.length > 0) {
             await tripsStore.bulkCreateTrips(goalId, result.data.trips);
           }
@@ -104,36 +59,54 @@ export const useFullDataImport = () => {
             variant: 'success' as any,
           });
         } else {
-          // Free users: use legacy in-memory travelStore
-          const result = await travelStore.importFullData(pendingFile, mode);
+          // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
+          // Convert trips to CSV format for legacy import
+          const trips = result.data.trips || [];
+          const tripData = trips
+            .map(
+              (trip: {
+                outDate: string;
+                inDate: string;
+                outRoute: string;
+                inRoute: string;
+              }) =>
+                `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
+            )
+            .join('\n');
+
+          const csvText = `Date Out,Date In,Departure,Return\n${tripData}`;
+          await travelStore.importFromCsv(csvText, 'append');
+
+          // Also update visa details if present (legacy travelStore)
+          if (result.data.vignetteEntryDate) {
+            travelStore.setVignetteEntryDate(result.data.vignetteEntryDate);
+          }
+          if (result.data.visaStartDate) {
+            travelStore.setVisaStartDate(result.data.visaStartDate);
+          }
+          if (result.data.ilrTrack) {
+            travelStore.setILRTrack(result.data.ilrTrack);
+          }
 
           toast({
             title: 'Import successful',
-            description: result.message,
+            description: `Successfully imported ${result.metadata.tripCount} trips`,
             variant: 'success' as any,
           });
         }
-
-        setIsDialogOpen(false);
-        setPreviewData(null);
-        setPendingFile(null);
       } catch (err) {
         toast({
           title: 'Import failed',
           description:
-            err instanceof Error ? err.message : 'Failed to import file',
+            err instanceof Error ? err.message : 'Failed to read file',
           variant: 'destructive',
         });
+      } finally {
+        setIsImporting(false);
       }
     },
-    [pendingFile, toast, hasGoalsAccess],
+    [toast, hasGoalsAccess, isImporting],
   );
-
-  const cancelImport = useCallback(() => {
-    setIsDialogOpen(false);
-    setPreviewData(null);
-    setPendingFile(null);
-  }, []);
 
   const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
@@ -143,9 +116,6 @@ export const useFullDataImport = () => {
     fileInputRef,
     handleFileSelect,
     triggerFileInput,
-    isDialogOpen,
-    previewData,
-    confirmImport,
-    cancelImport,
+    isImporting,
   };
 };

@@ -11,14 +11,14 @@ export const useClipboardImport = () => {
   const { hasAccess: hasGoalsAccess } = useFeatureGate(
     FEATURE_KEYS.MULTI_GOAL_TRACKING,
   );
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<{
-    text: string;
-    tripCount: number;
-  } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleClipboardPaste = useCallback(async () => {
+    if (isImporting) return;
+
     try {
+      setIsImporting(true);
+
       // Check if clipboard API is available
       if (!navigator.clipboard) {
         throw new Error('Clipboard API not supported in this browser');
@@ -35,95 +35,66 @@ export const useClipboardImport = () => {
         return;
       }
 
-      // Quick validation
-      const { parseCsvText } = await import('@uth/parser');
-      const result = parseCsvText(text);
+      // Parse on server
+      const response = await fetch('/api/import/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
 
-      if (!result.success) {
-        toast({
-          title: 'Invalid data',
-          description: result.errors.join('\n'),
-          variant: 'destructive',
-        });
-        return;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.details?.join('\n') || result.error || 'Failed to parse data',
+        );
       }
 
-      // Show preview dialog
-      setPreviewData({
-        text,
-        tripCount: result.trips.length,
-      });
-      setIsDialogOpen(true);
+      // For authenticated users with multi-goal access (paid users), save to database
+      if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
+        const goalId = goalsStore.goals[0].id;
+
+        // Save trips to database via bulk endpoint
+        await tripsStore.bulkCreateTrips(goalId, result.trips);
+
+        toast({
+          title: 'Import successful',
+          description: `Successfully imported ${result.trips.length} trips to database`,
+          variant: 'success' as any,
+        });
+      } else {
+        // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
+        // Use 'append' mode to always add new trips
+        const tripData = result.trips
+          .map(
+            (trip: { outDate: string; inDate: string; outRoute: string; inRoute: string }) =>
+              `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
+          )
+          .join('\n');
+
+        const csvText = `Date Out,Date In,Departure,Return\n${tripData}`;
+        await travelStore.importFromCsv(csvText, 'append');
+
+        toast({
+          title: 'Import successful',
+          description: `Successfully imported ${result.trips.length} trips`,
+          variant: 'success' as any,
+        });
+      }
     } catch (err) {
       toast({
-        title: 'Paste failed',
+        title: 'Import failed',
         description:
-          err instanceof Error ? err.message : 'Failed to read clipboard',
+          err instanceof Error ? err.message : 'Failed to import data',
         variant: 'destructive',
       });
+    } finally {
+      setIsImporting(false);
     }
-  }, [toast]);
-
-  const confirmImport = useCallback(
-    async (mode: 'replace' | 'append') => {
-      if (!previewData) return;
-
-      try {
-        // For authenticated users with multi-goal access, persist to database
-        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
-          // Parse trips from CSV
-          const { parseCsvText } = await import('@uth/parser');
-          const parseResult = parseCsvText(previewData.text);
-
-          if (!parseResult.success) {
-            throw new Error(parseResult.errors.join('\n'));
-          }
-
-          // Use first available goal
-          const goalId = goalsStore.goals[0].id;
-
-          // Bulk create trips in database
-          await tripsStore.bulkCreateTrips(goalId, parseResult.trips);
-
-          toast({
-            title: 'Import successful',
-            description: `Successfully imported ${parseResult.trips.length} trips to database`,
-            variant: 'success' as any,
-          });
-        } else {
-          // Free users: use legacy in-memory travelStore
-          const result = await travelStore.importFromCsv(previewData.text, mode);
-          toast({
-            title: 'Import successful',
-            description: result.message,
-            variant: 'success' as any,
-          });
-        }
-
-        setIsDialogOpen(false);
-        setPreviewData(null);
-      } catch (err) {
-        toast({
-          title: 'Import failed',
-          description:
-            err instanceof Error ? err.message : 'Failed to import data',
-          variant: 'destructive',
-        });
-      }
-    },
-    [previewData, toast, hasGoalsAccess],
-  );
-
-  const cancelImport = useCallback(() => {
-    setIsDialogOpen(false);
-    setPreviewData(null);
-  }, []);
+  }, [toast, hasGoalsAccess, isImporting]);
 
   return {
     handleClipboardPaste,
-    isDialogOpen,
-    previewData,
-    confirmImport,
-    cancelImport,
+    isImporting,
   };
 };

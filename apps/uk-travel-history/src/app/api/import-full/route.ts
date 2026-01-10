@@ -1,3 +1,17 @@
+/**
+ * Full Data Import API Route
+ * POST /api/import-full - Parse 2-sheet XLSX backup file
+ *
+ * Handles full backup files with:
+ * - Sheet 1: Travel History (trips)
+ * - Sheet 2: Visa Details (vignette date, visa start date, ILR track)
+ *
+ * Server-side parsing for all user types:
+ * - Authenticated users (free): Returns parsed trips (not saved to DB)
+ * - Paid users: Can optionally save via /api/trips/bulk after receiving trips
+ * Note: Visa details are returned but not yet supported in goal-based architecture
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { logger } from '@uth/utils';
