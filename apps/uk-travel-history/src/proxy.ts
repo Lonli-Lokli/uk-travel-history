@@ -144,6 +144,7 @@ const routeProtectionMiddleware = async (
     '/travel', // Free tier access to travel tracker
     '/api/parse',
     '/api/export',
+    '/api/calculate', // Anonymous user server-side calculations
     '/api/billing/checkout',
     '/api/webhooks/stripe',
     '/api/webhooks/clerk',

@@ -76,6 +76,7 @@ export const TripDrawer = observer(() => {
       if (mode === 'create') {
         const result = await tripsStore.createTrip({
           goalId: formData.goalId,
+          title: formData.title || null,
           outDate: formData.outDate,
           inDate: formData.inDate,
           outRoute: formData.outRoute,
@@ -84,6 +85,7 @@ export const TripDrawer = observer(() => {
         success = result !== null;
       } else if (mode === 'edit' && uiStore.editingTripId) {
         const result = await tripsStore.updateTrip(uiStore.editingTripId, {
+          title: formData.title || null,
           outDate: formData.outDate,
           inDate: formData.inDate,
           outRoute: formData.outRoute,
@@ -153,27 +155,55 @@ export const TripDrawer = observer(() => {
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4">
-          {/* Goal Selection */}
-          {goalsStore.goals.length > 1 && (
+          {/* Goal Selection - show for authenticated users with multiple goals OR anonymous users with templates */}
+          {(goalsStore.goals.length > 1 || (!isAuthenticated && goalsStore.templates.length > 0)) && (
             <div className="space-y-2">
-              <Label htmlFor="goal-select">Goal</Label>
+              <Label htmlFor="goal-select">
+                {isAuthenticated ? 'Goal' : 'Goal Template'}
+              </Label>
               <Select
-                value={formData.goalId || goalsStore.goals[0]?.id || ''}
+                value={formData.goalId || goalsStore.goals[0]?.id || goalsStore.templates[0]?.id || ''}
                 onValueChange={(value) => handleFieldChange('goalId', value)}
               >
                 <SelectTrigger id="goal-select">
-                  <SelectValue placeholder="Select a goal" />
+                  <SelectValue placeholder={isAuthenticated ? "Select a goal" : "Select a goal template"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {goalsStore.goals.map((goal) => (
-                    <SelectItem key={goal.id} value={goal.id}>
-                      {goal.name}
-                    </SelectItem>
-                  ))}
+                  {isAuthenticated ? (
+                    // Authenticated users see their created goals
+                    goalsStore.goals.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id}>
+                        {goal.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    // Anonymous users see available templates
+                    goalsStore.templates
+                      .filter((t) => t.isAvailableForTier)
+                      .map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
           )}
+
+          {/* Trip Title (optional) */}
+          <div className="space-y-2">
+            <Label htmlFor="trip-title">
+              Trip Title <span className="text-slate-400 font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="trip-title"
+              type="text"
+              value={formData.title || ''}
+              onChange={(e) => handleFieldChange('title', e.target.value)}
+              placeholder="e.g., Summer Vacation, Business Trip to Paris"
+            />
+          </div>
 
           {/* Departure Section */}
           <div className="space-y-2">

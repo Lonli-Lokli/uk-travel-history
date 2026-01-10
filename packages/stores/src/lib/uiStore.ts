@@ -8,6 +8,7 @@ import { logger } from '@uth/utils';
 export type AppTab = 'trackers' | 'timeline';
 
 export interface TripDrawerFormData {
+  title?: string;
   outDate: string;
   inDate: string;
   outRoute?: string;

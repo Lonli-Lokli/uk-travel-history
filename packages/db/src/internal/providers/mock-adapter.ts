@@ -249,6 +249,7 @@ export class MockDbAdapter implements DbProvider {
       id: this.generateId(),
       userId,
       goalId: data.goalId,
+      title: data.title ?? null,
       outDate: data.outDate,
       inDate: data.inDate,
       outRoute: data.outRoute ?? null,
@@ -279,6 +280,7 @@ export class MockDbAdapter implements DbProvider {
         id: this.generateId(),
         userId,
         goalId: data.goalId,
+        title: tripData.title ?? null,
         outDate: tripData.outDate,
         inDate: tripData.inDate,
         outRoute: tripData.outRoute ?? null,
@@ -311,6 +313,7 @@ export class MockDbAdapter implements DbProvider {
 
     const updated: TripData = {
       ...trip,
+      title: data.title !== undefined ? data.title : trip.title,
       outDate: data.outDate ?? trip.outDate,
       inDate: data.inDate ?? trip.inDate,
       outRoute: data.outRoute !== undefined ? data.outRoute : trip.outRoute,

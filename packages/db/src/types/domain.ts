@@ -607,6 +607,7 @@ export interface TripData {
   id: string;
   userId: string;
   goalId: string;
+  title: string | null; // Optional human-readable title
   outDate: string; // ISO date string
   inDate: string; // ISO date string
   outRoute: string | null;
@@ -625,6 +626,7 @@ export interface TripData {
  */
 export interface CreateTripData {
   goalId: string;
+  title?: string | null; // Optional human-readable title
   outDate: string; // ISO date string
   inDate: string; // ISO date string
   outRoute?: string | null;
@@ -640,6 +642,7 @@ export interface CreateTripData {
  * Data for updating a trip
  */
 export interface UpdateTripData {
+  title?: string | null; // Optional human-readable title
   outDate?: string;
   inDate?: string;
   outRoute?: string | null;

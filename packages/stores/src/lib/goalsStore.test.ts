@@ -45,8 +45,7 @@ describe('GoalsStore', () => {
   });
 
   afterEach(() => {
-    // Clean up any reactions
-    goalsStore.disposeTripReaction();
+    // No cleanup needed - trip reactions removed in Phase 1 (Issue #162)
   });
 
   describe('Initial State', () => {
@@ -602,57 +601,8 @@ describe('GoalsStore', () => {
     });
   });
 
-  describe('Trip Reaction', () => {
-    const mockGoal: TrackingGoalData = {
-      id: 'goal-1',
-      userId: 'user-123',
-      type: 'uk_ilr',
-      jurisdiction: 'uk',
-      name: 'UK ILR',
-      config: {},
-      startDate: '2022-03-01',
-      targetDate: null,
-      isActive: true,
-      isArchived: false,
-      displayOrder: 0,
-      color: null,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    };
-
-    const mockTravelStore = {
-      trips: [
-        {
-          id: 'trip-1',
-          outDate: '2024-01-01',
-          inDate: '2024-01-10',
-          outRoute: 'LHR - JFK',
-          inRoute: 'JFK - LHR',
-        },
-      ],
-    };
-
-    it('should not initialize reaction if feature is disabled', () => {
-      goalsStore.hydrate([mockGoal], {}, false);
-      goalsStore.initializeTripReaction(mockTravelStore);
-
-      expect(goalsStore.tripReactionDisposer).toBeNull();
-    });
-
-    it('should initialize trip reaction when feature is enabled', () => {
-      goalsStore.hydrate([mockGoal], {}, true);
-      goalsStore.initializeTripReaction(mockTravelStore);
-
-      expect(goalsStore.tripReactionDisposer).not.toBeNull();
-    });
-
-    it('should dispose trip reaction', () => {
-      goalsStore.hydrate([mockGoal], {}, true);
-      goalsStore.initializeTripReaction(mockTravelStore);
-
-      goalsStore.disposeTripReaction();
-
-      expect(goalsStore.tripReactionDisposer).toBeNull();
-    });
-  });
+  // NOTE: Trip Reaction tests removed as part of Phase 1 (Issue #162)
+  // Client-side trip reactions have been removed in favor of server-side calculations
+  // Calculations are now pre-computed server-side and hydrated via AccessContext
+  // After mutations, components trigger router.refresh() to re-hydrate with fresh calculations
 });
