@@ -1,12 +1,36 @@
 {
   "mcpServers": {
-    "hugeicons": {
+    "nx": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@hugeicons/mcp-server"]
+      "args": ["-y", "nx-mcp@latest"]
     },
-    "nx-mcp": {
+    "next-devtools": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "nx-mcp"]
+      "args": ["-y", "next-devtools-mcp@latest"]
+    },
+
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?read_only=true"
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    },
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com"
+    },
+    "clerk": {
+      "type": "http",
+      "url": "https://mcp.clerk.com/mcp"
+    },
+
+    "grep": {
+      "type": "http",
+      "url": "https://mcp.grep.app"
     }
   }
 }
