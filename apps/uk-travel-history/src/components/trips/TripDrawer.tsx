@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { uiStore, tripsStore, goalsStore } from '@uth/stores';
+import { uiStore, tripsStore, goalsStore, authStore, travelStore } from '@uth/stores';
 import {
   Drawer,
   DrawerContent,
@@ -19,59 +19,112 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@uth/ui';
+import { useState } from 'react';
 
 /**
  * TripDrawer - Drawer-based trip creation and editing (Phase 4)
  *
  * Replaces inline editing with a consistent drawer pattern
  * Uses uiStore for UI state and tripsStore for data operations
+ *
+ * Supports both authenticated and anonymous users:
+ * - Authenticated: Uses tripsStore (server-persisted via API)
+ * - Anonymous: Uses travelStore (client-side only)
  */
 export const TripDrawer = observer(() => {
   const isOpen = uiStore.isTripDrawerOpen;
   const mode = uiStore.tripDrawerMode;
   const formData = uiStore.tripDrawerFormData;
   const isLoading = tripsStore.isLoading;
+  const isAuthenticated = !!authStore.user;
+
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSave = async () => {
+    // Clear previous validation errors
+    setValidationError(null);
+
+    // Validate required fields
     if (!formData.outDate || !formData.inDate) {
-      return; // Don't save incomplete trips
+      setValidationError('Both departure and return dates are required');
+      return;
     }
 
-    if (!formData.goalId) {
-      // If no goal selected, try to use the first available goal
-      const firstGoal = goalsStore.goals[0];
-      if (!firstGoal) {
-        console.error('No goals available');
-        return;
+    // Validate date order (return must be after departure)
+    const outDate = new Date(formData.outDate);
+    const inDate = new Date(formData.inDate);
+
+    if (outDate >= inDate) {
+      setValidationError('Return date must be after departure date');
+      return;
+    }
+
+    // For authenticated users: Use tripsStore with goals
+    if (isAuthenticated) {
+      if (!formData.goalId) {
+        // If no goal selected, try to use the first available goal
+        const firstGoal = goalsStore.goals[0];
+        if (!firstGoal) {
+          setValidationError('No goals available. Please create a goal first.');
+          return;
+        }
+        formData.goalId = firstGoal.id;
       }
-      formData.goalId = firstGoal.id;
-    }
 
-    if (mode === 'create') {
-      await tripsStore.createTrip({
-        goalId: formData.goalId,
-        outDate: formData.outDate,
-        inDate: formData.inDate,
-        outRoute: formData.outRoute,
-        inRoute: formData.inRoute,
-      });
-    } else if (mode === 'edit' && uiStore.editingTripId) {
-      await tripsStore.updateTrip(uiStore.editingTripId, {
-        outDate: formData.outDate,
-        inDate: formData.inDate,
-        outRoute: formData.outRoute,
-        inRoute: formData.inRoute,
-      });
+      if (mode === 'create') {
+        await tripsStore.createTrip({
+          goalId: formData.goalId,
+          outDate: formData.outDate,
+          inDate: formData.inDate,
+          outRoute: formData.outRoute,
+          inRoute: formData.inRoute,
+        });
+      } else if (mode === 'edit' && uiStore.editingTripId) {
+        await tripsStore.updateTrip(uiStore.editingTripId, {
+          outDate: formData.outDate,
+          inDate: formData.inDate,
+          outRoute: formData.outRoute,
+          inRoute: formData.inRoute,
+        });
+      }
+    } else {
+      // For anonymous users: Use travelStore (client-side only)
+      if (mode === 'create') {
+        travelStore.addTrip({
+          outDate: formData.outDate,
+          inDate: formData.inDate,
+          outRoute: formData.outRoute || '',
+          inRoute: formData.inRoute || '',
+        });
+      } else if (mode === 'edit' && uiStore.editingTripId) {
+        // Find and update the trip in travelStore
+        const tripIndex = travelStore.trips.findIndex(
+          (t) => t.id === uiStore.editingTripId
+        );
+        if (tripIndex !== -1) {
+          travelStore.updateTrip(uiStore.editingTripId, {
+            outDate: formData.outDate,
+            inDate: formData.inDate,
+            outRoute: formData.outRoute || '',
+            inRoute: formData.inRoute || '',
+          });
+        }
+      }
     }
 
     uiStore.closeTripDrawer();
   };
 
   const handleClose = () => {
+    setValidationError(null);
     uiStore.closeTripDrawer();
   };
 
   const handleFieldChange = (field: keyof typeof formData, value: string) => {
+    // Clear validation error when user changes fields
+    if (validationError) {
+      setValidationError(null);
+    }
     uiStore.updateTripDrawerFormData({ [field]: value });
   };
 
@@ -173,8 +226,26 @@ export const TripDrawer = observer(() => {
             </div>
           </div>
 
+          {/* Validation Error Panel */}
+          {validationError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <div className="flex items-start gap-2">
+                <UIIcon
+                  iconName="alert-circle"
+                  className="h-4 w-4 text-red-600 mt-0.5"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-900">
+                    Validation Error
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">{validationError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Completeness Panel */}
-          {!isComplete && (
+          {!isComplete && !validationError && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
               <div className="flex items-start gap-2">
                 <UIIcon
