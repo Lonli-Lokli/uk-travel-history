@@ -60,7 +60,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
 
     // Step 3: If not authenticated, return anonymous context with policies/pricing
     if (!authUser) {
-      return createAnonymousContext(policies, pricing);
+      return await createAnonymousContext(policies, pricing);
     }
 
     // Step 4: Load user profile from database to get tier/subscription
@@ -207,7 +207,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
         level: 'error',
       },
     );
-    return createAnonymousContext(DEFAULT_FEATURE_POLICIES, null);
+    return await createAnonymousContext(DEFAULT_FEATURE_POLICIES, null);
   }
 }
 
@@ -270,7 +270,7 @@ async function loadPricing(): Promise<PricingData | null> {
  * Create anonymous (unauthenticated) access context
  * Includes policies for UI display and entitlements for anonymous tier
  */
-function createAnonymousContext(
+async function createAnonymousContext(
   policies: Record<
     string,
     {
@@ -283,13 +283,52 @@ function createAnonymousContext(
     }
   >,
   pricing: PricingData | null,
-): AccessContext {
+): Promise<AccessContext> {
   // Compute entitlements for anonymous tier
   const entitlements = computeEntitlementsFromPolicies(
     policies,
     TIERS.ANONYMOUS,
     null,
   );
+
+  // Load goal templates for anonymous users
+  // This allows anonymous users to see available goal options in the UI
+  let goalTemplates: GoalTemplateWithAccess[] | null = null;
+
+  try {
+    const allTemplates = await getGoalTemplates();
+
+    // Filter templates available to anonymous tier
+    const tierHierarchy: Record<string, number> = {
+      [TIERS.ANONYMOUS]: 0,
+      [TIERS.FREE]: 1,
+      [TIERS.PREMIUM]: 2,
+    };
+    const anonymousTierLevel = tierHierarchy[TIERS.ANONYMOUS];
+
+    goalTemplates = allTemplates.map((template) => {
+      const templateTierLevel = tierHierarchy[template.minTier] ?? 0;
+      const isAvailableForTier = anonymousTierLevel >= templateTierLevel;
+      return {
+        ...template,
+        isAvailableForTier,
+        requiresUpgrade: !isAvailableForTier,
+      };
+    });
+  } catch (error) {
+    getFeatureLogger().warn(
+      'Failed to load goal templates for anonymous user',
+      {
+        level: 'warning',
+        tags: {
+          context: 'access-context',
+          operation: 'getGoalTemplates',
+        },
+      },
+    );
+    // Fail gracefully - anonymous users just won't see templates
+    goalTemplates = null;
+  }
 
   return {
     user: null,
@@ -303,7 +342,7 @@ function createAnonymousContext(
     cancelAtPeriodEnd: false,
     goals: null,
     goalCalculations: null,
-    goalTemplates: null,
+    goalTemplates,
     trips: null,
   };
 }
@@ -512,9 +551,10 @@ async function calculateGoalMetrics(
         continue;
       }
 
+       
       const calculation = engine.calculate(
         tripRecords,
-        goal.config as Parameters<typeof engine.calculate>[1],
+        goal.config as any,
         new Date(goal.startDate),
       );
 

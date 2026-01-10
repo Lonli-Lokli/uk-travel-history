@@ -945,6 +945,7 @@ export class SupabaseDbAdapter implements DbProvider {
     type TripInsert = {
       user_id: string;
       goal_id: string;
+      title: string | null;
       out_date: string;
       in_date: string;
       out_route: string | null;
@@ -959,6 +960,7 @@ export class SupabaseDbAdapter implements DbProvider {
     const insertData: TripInsert = {
       user_id: userId,
       goal_id: data.goalId,
+      title: data.title ?? null,
       out_date: data.outDate,
       in_date: data.inDate,
       out_route: data.outRoute ?? null,
@@ -1026,6 +1028,7 @@ export class SupabaseDbAdapter implements DbProvider {
     const client = this.ensureConfigured();
 
     type TripUpdate = {
+      title?: string | null;
       out_date?: string;
       in_date?: string;
       out_route?: string | null;
@@ -1037,6 +1040,7 @@ export class SupabaseDbAdapter implements DbProvider {
     };
 
     const updateData: TripUpdate = {};
+    if (data.title !== undefined) updateData.title = data.title;
     if (data.outDate !== undefined) updateData.out_date = data.outDate;
     if (data.inDate !== undefined) updateData.in_date = data.inDate;
     if (data.outRoute !== undefined) updateData.out_route = data.outRoute;
@@ -1102,6 +1106,7 @@ export class SupabaseDbAdapter implements DbProvider {
       id: row.id,
       userId: row.user_id,
       goalId: row.goal_id,
+      title: row.title,
       outDate: row.out_date,
       inDate: row.in_date,
       outRoute: row.out_route,

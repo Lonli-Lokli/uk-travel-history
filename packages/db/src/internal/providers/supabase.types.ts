@@ -262,6 +262,7 @@ export type Database = {
           out_route: string | null;
           sort_order: number;
           source: string | null;
+          title: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -278,6 +279,7 @@ export type Database = {
           out_route?: string | null;
           sort_order?: number;
           source?: string | null;
+          title?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -294,6 +296,7 @@ export type Database = {
           out_route?: string | null;
           sort_order?: number;
           source?: string | null;
+          title?: string | null;
           updated_at?: string;
           user_id?: string;
         };
