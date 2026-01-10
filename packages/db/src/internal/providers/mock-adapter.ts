@@ -248,7 +248,7 @@ export class MockDbAdapter implements DbProvider {
     const trip: TripData = {
       id: this.generateId(),
       userId,
-      goalId: data.goalId,
+      goalId: data.goalId ?? null,
       title: data.title ?? null,
       outDate: data.outDate,
       inDate: data.inDate,

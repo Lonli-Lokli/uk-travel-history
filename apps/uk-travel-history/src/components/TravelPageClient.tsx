@@ -73,9 +73,8 @@ export const TravelPageClient = observer(() => {
   // Handlers for FAB actions
   const handleAddGoal = () => goalsStore.openAddModal();
   const handleAddTrip = () => {
-    // Open trip drawer with the first available goal (if any)
-    const firstGoal = goalsStore.goals[0];
-    uiStore.openTripDrawer(firstGoal?.id);
+    // Open trip drawer (no goal required)
+    uiStore.openTripDrawer();
   };
   const handleUpgrade = () => router.push('/account');
 
@@ -151,7 +150,6 @@ export const TravelPageClient = observer(() => {
                     inDate: trip.inDate,
                     outRoute: trip.outRoute || '',
                     inRoute: trip.inRoute || '',
-                    goalId: trip.goalId,
                   });
                 }
               }}

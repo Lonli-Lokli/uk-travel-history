@@ -30,12 +30,6 @@ const fieldConfigs: Record<
   { label: string; type: string; placeholder: string; required?: boolean }
 > = {
   name: { label: 'Goal Name', type: 'text', placeholder: 'e.g., UK ILR 2027', required: true },
-  startDate: {
-    label: 'Start Date',
-    type: 'date',
-    placeholder: '',
-    required: true,
-  },
   visaStartDate: {
     label: 'Visa Start Date',
     type: 'date',
@@ -119,9 +113,9 @@ export const EditGoalDrawer = observer(function EditGoalDrawer({
   if (!editingGoal) return null;
 
   // Determine which fields to show based on goal type
-  const fieldsToShow = ['name', 'startDate'];
+  const fieldsToShow = ['name'];
 
-  // Add type-specific fields
+  // Add type-specific fields from config
   if (editingGoal.type === 'uk_ilr') {
     fieldsToShow.push('visaStartDate', 'vignetteEntryDate');
   }
@@ -155,7 +149,7 @@ export const EditGoalDrawer = observer(function EditGoalDrawer({
               const config = fieldConfigs[fieldKey];
               if (!config) return null;
 
-              const isRequired = config.required || fieldKey === 'name' || fieldKey === 'startDate';
+              const isRequired = config.required || fieldKey === 'name';
 
               return (
                 <div key={fieldKey} className="space-y-1.5">

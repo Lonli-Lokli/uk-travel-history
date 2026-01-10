@@ -606,7 +606,7 @@ export interface GoalTemplate {
 export interface TripData {
   id: string;
   userId: string;
-  goalId: string;
+  goalId: string | null; // Optional - trips can exist without being tied to a specific goal
   title: string | null; // Optional human-readable title
   outDate: string; // ISO date string
   inDate: string; // ISO date string
@@ -625,7 +625,7 @@ export interface TripData {
  * Data for creating a new trip
  */
 export interface CreateTripData {
-  goalId: string;
+  goalId?: string | null; // Optional - trips can exist without being tied to a specific goal
   title?: string | null; // Optional human-readable title
   outDate: string; // ISO date string
   inDate: string; // ISO date string

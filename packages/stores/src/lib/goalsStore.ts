@@ -265,7 +265,6 @@ class GoalsStore {
     // Initialize form data with template defaults
     this.addModalFormData = {
       name: template.name,
-      startDate: new Date().toISOString().split('T')[0],
     };
     // Add default config values to form
     Object.entries(template.defaultConfig).forEach(([key, value]) => {
@@ -313,7 +312,7 @@ class GoalsStore {
         // Handle number fields
         if (['thresholdDays', 'windowDays'].includes(key)) {
           config[key] = parseInt(value, 10);
-        } else if (key !== 'name' && key !== 'startDate') {
+        } else if (key !== 'name') {
           config[key] = value;
         }
       });
@@ -323,9 +322,9 @@ class GoalsStore {
         jurisdiction: this.selectedTemplate.jurisdiction as GoalJurisdiction,
         name: this.addModalFormData.name || this.selectedTemplate.name,
         config: { ...this.selectedTemplate.defaultConfig, ...config },
-        startDate:
-          this.addModalFormData.startDate ||
-          new Date().toISOString().split('T')[0],
+        // Use current date as startDate (required for CreateTrackingGoalData)
+        // This represents when tracking begins, not visa/entry dates (those go in config)
+        startDate: new Date().toISOString().split('T')[0],
       };
 
       const goal = await this.createGoal(goalData);
@@ -372,7 +371,6 @@ class GoalsStore {
     // Populate form data with current goal values
     this.editModalFormData = {
       name: goal.name,
-      startDate: goal.startDate,
     };
 
     // Add config values to form
@@ -420,14 +418,13 @@ class GoalsStore {
         // Handle number fields
         if (['thresholdDays', 'windowDays'].includes(key)) {
           config[key] = parseInt(value, 10);
-        } else if (key !== 'name' && key !== 'startDate') {
+        } else if (key !== 'name') {
           config[key] = value;
         }
       });
 
       const updates: UpdateTrackingGoalData = {
         name: this.editModalFormData.name,
-        startDate: this.editModalFormData.startDate,
         config,
       };
 

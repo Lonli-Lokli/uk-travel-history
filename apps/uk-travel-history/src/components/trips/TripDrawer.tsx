@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { uiStore, tripsStore, goalsStore, authStore, travelStore, useRefreshAccessContext } from '@uth/stores';
+import { uiStore, tripsStore, authStore, travelStore, useRefreshAccessContext } from '@uth/stores';
 import {
   Drawer,
   DrawerContent,
@@ -13,11 +13,6 @@ import {
   UIIcon,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@uth/ui';
 import { useState } from 'react';
 
@@ -60,22 +55,11 @@ export const TripDrawer = observer(() => {
       return;
     }
 
-    // For authenticated users: Use tripsStore with goals
+    // For authenticated users: Use tripsStore (no goal required)
     if (isAuthenticated) {
-      if (!formData.goalId) {
-        // If no goal selected, try to use the first available goal
-        const firstGoal = goalsStore.goals[0];
-        if (!firstGoal) {
-          setValidationError('No goals available. Please create a goal first.');
-          return;
-        }
-        formData.goalId = firstGoal.id;
-      }
-
       let success = false;
       if (mode === 'create') {
         const result = await tripsStore.createTrip({
-          goalId: formData.goalId,
           title: formData.title || null,
           outDate: formData.outDate,
           inDate: formData.inDate,
@@ -155,42 +139,6 @@ export const TripDrawer = observer(() => {
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4">
-          {/* Goal Selection - show for authenticated users with multiple goals OR anonymous users with templates */}
-          {(goalsStore.goals.length > 1 || (!isAuthenticated && goalsStore.templates.length > 0)) && (
-            <div className="space-y-2">
-              <Label htmlFor="goal-select">
-                {isAuthenticated ? 'Goal' : 'Goal Template'}
-              </Label>
-              <Select
-                value={formData.goalId || goalsStore.goals[0]?.id || goalsStore.templates[0]?.id || ''}
-                onValueChange={(value) => handleFieldChange('goalId', value)}
-              >
-                <SelectTrigger id="goal-select">
-                  <SelectValue placeholder={isAuthenticated ? "Select a goal" : "Select a goal template"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {isAuthenticated ? (
-                    // Authenticated users see their created goals
-                    goalsStore.goals.map((goal) => (
-                      <SelectItem key={goal.id} value={goal.id}>
-                        {goal.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    // Anonymous users see available templates
-                    goalsStore.templates
-                      .filter((t) => t.isAvailableForTier)
-                      .map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {/* Trip Title (optional) */}
           <div className="space-y-2">
             <Label htmlFor="trip-title">

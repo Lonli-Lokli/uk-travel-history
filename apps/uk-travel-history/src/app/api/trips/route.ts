@@ -13,6 +13,7 @@ import {
   type CreateTripData,
 } from '@uth/db';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { getCurrentUser } from '@uth/auth-server';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -77,10 +78,10 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreateTripData;
 
     // Basic validation
-    if (!body.goalId || !body.outDate || !body.inDate) {
+    if (!body.outDate || !body.inDate) {
       return NextResponse.json(
         {
-          error: 'Missing required fields: goalId, outDate, inDate',
+          error: 'Missing required fields: outDate, inDate',
         },
         { status: 400 },
       );
@@ -97,14 +98,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CRITICAL: Verify goal ownership before creating trip
-    const goal = await getGoalById(body.goalId);
+    // Optional: Verify goal ownership if goalId is provided
+    if (body.goalId) {
+      const goal = await getGoalById(body.goalId);
 
-    if (!goal || goal.userId !== userContext.userId) {
-      return NextResponse.json(
-        { error: 'Goal not found or not authorized' },
-        { status: 404 },
-      );
+      if (!goal || goal.userId !== userContext.userId) {
+        return NextResponse.json(
+          { error: 'Goal not found or not authorized' },
+          { status: 404 },
+        );
+      }
     }
 
     const trip = await createTrip(userContext.userId, body);
