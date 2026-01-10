@@ -57,7 +57,24 @@ export const TrackersView = observer(function TrackersView({
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Active goal detail panel (if a goal is selected) */}
+      {/* Goal cards grid - displayed on top */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {goals.map((goal) => {
+          const calculation = calculations.get(goal.id) ?? null;
+          const isSelected = activeGoal?.id === goal.id;
+          return (
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              calculation={calculation}
+              onClick={() => handleGoalClick(goal.id)}
+              isSelected={isSelected}
+            />
+          );
+        })}
+      </div>
+
+      {/* Active goal detail panel - displayed below all goals */}
       {activeGoal && (
         <GoalDetailPanel
           goal={activeGoal}
@@ -66,21 +83,6 @@ export const TrackersView = observer(function TrackersView({
           onArchive={() => handleArchive(activeGoal.id)}
         />
       )}
-
-      {/* Goal cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {goals.map((goal) => {
-          const calculation = calculations.get(goal.id) ?? null;
-          return (
-            <GoalCard
-              key={goal.id}
-              goal={goal}
-              calculation={calculation}
-              onClick={() => handleGoalClick(goal.id)}
-            />
-          );
-        })}
-      </div>
     </div>
   );
 });

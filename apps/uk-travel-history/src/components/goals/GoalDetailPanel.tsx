@@ -13,7 +13,6 @@ import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 import { format, differenceInDays } from 'date-fns';
-import { RiskAreaChart } from '../RiskAreaChart';
 
 /**
  * Delete Goal Button with gating logic
@@ -176,12 +175,18 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
   const daysUntil = calculation?.daysUntilEligible ?? null;
 
   return (
-    <Card className={cn('', className)}>
-      <CardHeader className="pb-2">
+    <Card className={cn('border-t-4 border-t-primary', className)}>
+      <CardHeader className="pb-4 pt-4 bg-slate-50/50">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{goal.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <UIIcon iconName="chevron-right" className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium text-primary uppercase tracking-wide">
+                Selected Goal
+              </span>
+            </div>
+            <CardTitle className="text-xl">{goal.name}</CardTitle>
+            <div className="flex items-center gap-2 mt-2">
               <span
                 className={cn(
                   'px-2 py-0.5 text-xs font-medium rounded-full',
@@ -273,11 +278,6 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
           </div>
         )}
       </CardContent>
-
-      {/* Risk Chart */}
-      <div className="px-6 pb-6">
-        <RiskAreaChart />
-      </div>
     </Card>
   );
 });
