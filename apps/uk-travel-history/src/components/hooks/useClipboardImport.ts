@@ -2,18 +2,25 @@
 
 import { useCallback, useState } from 'react';
 import { useToast } from '@uth/ui';
-import { travelStore } from '@uth/stores';
+import { goalsStore } from '@uth/stores';
+import { useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
+import type { TripData } from '@uth/db';
+import { handleImportResult } from './utils/handleImportResult';
 
 export const useClipboardImport = () => {
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<{
-    text: string;
-    tripCount: number;
-  } | null>(null);
+  const { hasAccess: hasGoalsAccess } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
+  );
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleClipboardPaste = useCallback(async () => {
+    if (isImporting) return;
+
     try {
+      setIsImporting(true);
+
       // Check if clipboard API is available
       if (!navigator.clipboard) {
         throw new Error('Clipboard API not supported in this browser');
@@ -30,70 +37,52 @@ export const useClipboardImport = () => {
         return;
       }
 
-      // Quick validation
-      const { parseCsvText } = await import('@uth/parser');
-      const result = parseCsvText(text);
+      // Parse on server (with optional DB save for paid users)
+      const goalId = hasGoalsAccess && goalsStore.goals.length > 0
+        ? goalsStore.goals[0].id
+        : undefined;
 
-      if (!result.success) {
-        toast({
-          title: 'Invalid data',
-          description: result.errors.join('\n'),
-          variant: 'destructive',
-        });
-        return;
+      const response = await fetch('/api/import/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, goalId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.details?.join('\n') || result.error || 'Failed to parse data',
+        );
       }
 
-      // Show preview dialog
-      setPreviewData({
-        text,
-        tripCount: result.trips.length,
+      // Handle import result with tier-based persistence
+      const count = await handleImportResult({
+        trips: result.trips as TripData[],
+        metadata: result.metadata,
       });
-      setIsDialogOpen(true);
+
+      toast({
+        title: 'Import successful',
+        description: result.metadata?.saved
+          ? `Successfully imported ${count} trips to database`
+          : `Successfully imported ${count} trips`,
+        variant: 'success' as any,
+      });
     } catch (err) {
       toast({
-        title: 'Paste failed',
+        title: 'Import failed',
         description:
-          err instanceof Error ? err.message : 'Failed to read clipboard',
+          err instanceof Error ? err.message : 'Failed to import data',
         variant: 'destructive',
       });
+    } finally {
+      setIsImporting(false);
     }
-  }, [toast]);
-
-  const confirmImport = useCallback(
-    async (mode: 'replace' | 'append') => {
-      if (!previewData) return;
-
-      try {
-        const result = await travelStore.importFromCsv(previewData.text, mode);
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
-        setIsDialogOpen(false);
-        setPreviewData(null);
-      } catch (err) {
-        toast({
-          title: 'Import failed',
-          description:
-            err instanceof Error ? err.message : 'Failed to import data',
-          variant: 'destructive',
-        });
-      }
-    },
-    [previewData, toast],
-  );
-
-  const cancelImport = useCallback(() => {
-    setIsDialogOpen(false);
-    setPreviewData(null);
-  }, []);
+  }, [toast, hasGoalsAccess, isImporting]);
 
   return {
     handleClipboardPaste,
-    isDialogOpen,
-    previewData,
-    confirmImport,
-    cancelImport,
+    isImporting,
   };
 };

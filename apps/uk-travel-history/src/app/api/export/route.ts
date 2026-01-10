@@ -23,6 +23,14 @@ interface ExportData {
   vignetteEntryDate?: string;
   visaStartDate?: string;
   ilrTrack?: number | null;
+  goals?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    jurisdiction: string;
+    startDate: string;
+    config: Record<string, unknown>;
+  }>;
   summary?: {
     totalTrips: number;
     completeTrips: number;
@@ -190,6 +198,71 @@ export async function POST(request: NextRequest) {
 
       // Apply border to header cells
       detailsHeader.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          right: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+        };
+      });
+    }
+
+    // Sheet 3: Goals (only for full mode if goals are provided)
+    if (exportMode === 'full' && data.goals && data.goals.length > 0) {
+      const goalsSheet = workbook.addWorksheet('Goals');
+
+      // Add header row
+      goalsSheet.columns = [
+        { header: 'Name', key: 'name', width: 30 },
+        { header: 'Type', key: 'type', width: 20 },
+        { header: 'Jurisdiction', key: 'jurisdiction', width: 15 },
+        { header: 'Start Date', key: 'startDate', width: 16 },
+        { header: 'Config (JSON)', key: 'config', width: 50 },
+      ];
+
+      const goalsHeader = goalsSheet.getRow(1);
+      goalsHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      goalsHeader.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4472C4' },
+      };
+      goalsHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+      goalsHeader.height = 26;
+
+      // Add goal rows
+      data.goals.forEach((goal) => {
+        const row = goalsSheet.addRow({
+          name: goal.name,
+          type: goal.type,
+          jurisdiction: goal.jurisdiction,
+          startDate: formatDate(goal.startDate),
+          config: JSON.stringify(goal.config),
+        });
+
+        row.getCell('name').alignment = { vertical: 'middle' };
+        row.getCell('type').alignment = { vertical: 'middle' };
+        row.getCell('jurisdiction').alignment = { vertical: 'middle' };
+        row.getCell('startDate').alignment = {
+          horizontal: 'center',
+          vertical: 'middle',
+        };
+        row.getCell('config').alignment = { vertical: 'middle', wrapText: true };
+        row.height = 20;
+
+        // Add borders
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+            right: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+          };
+        });
+      });
+
+      // Apply border to header cells
+      goalsHeader.eachCell((cell) => {
         cell.border = {
           top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
           left: { style: 'thin', color: { argb: 'FFB0B0B0' } },

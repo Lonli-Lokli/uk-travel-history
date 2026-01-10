@@ -2,28 +2,19 @@
 
 import { useRef, useCallback, useState } from 'react';
 import { useToast } from '@uth/ui';
-import ExcelJS from 'exceljs';
-import { travelStore } from '@uth/stores';
+import { goalsStore } from '@uth/stores';
+import { useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
+import type { TripData } from '@uth/db';
+import { handleImportResult } from './utils/handleImportResult';
 
 export const useCsvImport = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<{
-    text: string;
-    tripCount: number;
-  } | null>(null);
-  // For full data imports (2-sheet format)
-  const [fullDataPreviewData, setFullDataPreviewData] = useState<{
-    tripCount: number;
-    hasVignetteDate: boolean;
-    hasVisaStartDate: boolean;
-    hasIlrTrack: boolean;
-  } | null>(null);
-  const [isFullDataDialogOpen, setIsFullDataDialogOpen] = useState(false);
-  const [pendingFullDataFile, setPendingFullDataFile] = useState<File | null>(
-    null,
+  const { hasAccess: hasGoalsAccess } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
   );
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,84 +26,131 @@ export const useCsvImport = () => {
         fileInputRef.current.value = '';
       }
 
+      if (isImporting) return;
+
       try {
+        setIsImporting(true);
+
         const isXlsx = file.name.toLowerCase().endsWith('.xlsx');
 
         if (isXlsx) {
-          // Check if this is a 2-sheet backup format by looking for "Travel History" sheet
-          const arrayBuffer = await file.arrayBuffer();
-          const workbook = new ExcelJS.Workbook();
-          await workbook.xlsx.load(arrayBuffer);
+          // For XLSX files, try full import first (which handles both 2-sheet and single-sheet formats)
+          const formData = new FormData();
+          formData.append('file', file);
 
-          const hasTravelHistorySheet =
-            !!workbook.getWorksheet('Travel History');
+          // Add goalId for paid users
+          if (hasGoalsAccess && goalsStore.goals.length > 0) {
+            formData.append('goalId', goalsStore.goals[0].id);
+          }
 
-          if (hasTravelHistorySheet) {
-            // This is a full backup file - use full data import
-            const formData = new FormData();
-            formData.append('file', file);
+          // Try full import endpoint first - it will handle format detection
+          let response = await fetch('/api/import-full', {
+            method: 'POST',
+            body: formData,
+          });
 
-            const response = await fetch('/api/import-full', {
-              method: 'POST',
-              body: formData,
-            });
+          let result = await response.json();
 
-            const result = await response.json();
-
-            if (!response.ok) {
-              throw new Error(result.error || 'Failed to preview file');
+          // If full import fails, try single-sheet XLSX import
+          if (!response.ok && result.error?.includes('sheet')) {
+            const formData2 = new FormData();
+            formData2.append('file', file);
+            if (hasGoalsAccess && goalsStore.goals.length > 0) {
+              formData2.append('goalId', goalsStore.goals[0].id);
             }
 
-            // Show full data preview dialog
-            setFullDataPreviewData({
-              tripCount: result.metadata.tripCount,
-              hasVignetteDate: !!result.data.vignetteEntryDate,
-              hasVisaStartDate: !!result.data.visaStartDate,
-              hasIlrTrack: !!result.data.ilrTrack,
+            response = await fetch('/api/import/xlsx', {
+              method: 'POST',
+              body: formData2,
             });
-            setPendingFullDataFile(file);
-            setIsFullDataDialogOpen(true);
-            return;
+
+            result = await response.json();
           }
 
-          // Legacy single-sheet XLSX format
-          const { parseXlsxFile } = await import('@uth/parser');
-          const result = await parseXlsxFile(arrayBuffer);
+          if (!response.ok) {
+            throw new Error(
+              result.details?.join('\n') ||
+                result.error ||
+                'Failed to import file',
+            );
+          }
 
-          if (!result.success) {
+          // Handle result based on format detected by server
+          if (result.data) {
+            // Full backup format (2-sheet)
+            const trips = result.data.trips || [];
+            const count = await handleImportResult(
+              {
+                trips: trips as TripData[],
+                metadata: result.metadata,
+              },
+              {
+                vignetteEntryDate: result.data.vignetteEntryDate,
+                visaStartDate: result.data.visaStartDate,
+                ilrTrack: result.data.ilrTrack,
+              }
+            );
+
             toast({
-              title: 'Invalid Excel file',
-              description: result.errors.join('\n'),
-              variant: 'destructive',
+              title: 'Import successful',
+              description: result.metadata?.saved
+                ? `Successfully imported ${count} trips to database`
+                : `Successfully imported ${count} trips`,
+              variant: 'success' as any,
             });
-            return;
-          }
+          } else {
+            // Single-sheet XLSX format
+            const count = await handleImportResult({
+              trips: result.trips as TripData[],
+              metadata: result.metadata,
+            });
 
-          setPreviewData({
-            text: `__XLSX__${JSON.stringify(result.trips)}`,
-            tripCount: result.trips.length,
-          });
-          setIsDialogOpen(true);
+            toast({
+              title: 'Import successful',
+              description: result.metadata?.saved
+                ? `Successfully imported ${count} trips to database`
+                : `Successfully imported ${count} trips`,
+              variant: 'success' as any,
+            });
+          }
         } else {
-          // Parse CSV file
+          // Parse CSV file on server
           const text = await file.text();
-          const { parseCsvText } = await import('@uth/parser');
-          const result = parseCsvText(text);
 
-          if (!result.success) {
-            toast({
-              title: 'Invalid CSV file',
-              description: result.errors.join('\n'),
-              variant: 'destructive',
-            });
-            return;
+          // Add goalId for paid users
+          const goalId = hasGoalsAccess && goalsStore.goals.length > 0
+            ? goalsStore.goals[0].id
+            : undefined;
+
+          const response = await fetch('/api/import/csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, goalId }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              result.details?.join('\n') ||
+                result.error ||
+                'Failed to parse data',
+            );
           }
 
-          setPreviewData({
-            text: await file.text(),
-            tripCount: result.trips.length,
+          // Handle import result with tier-based persistence
+          const count = await handleImportResult({
+            trips: result.trips as TripData[],
+            metadata: result.metadata,
           });
-          setIsDialogOpen(true);
+
+          toast({
+            title: 'Import successful',
+            description: result.metadata?.saved
+              ? `Successfully imported ${count} trips to database`
+              : `Successfully imported ${count} trips`,
+            variant: 'success' as any,
+          });
         }
       } catch (err) {
         toast({
@@ -121,82 +159,12 @@ export const useCsvImport = () => {
             err instanceof Error ? err.message : 'Failed to read file',
           variant: 'destructive',
         });
+      } finally {
+        setIsImporting(false);
       }
     },
-    [toast],
+    [toast, hasGoalsAccess, isImporting],
   );
-
-  const confirmImport = useCallback(
-    async (mode: 'replace' | 'append') => {
-      if (!previewData) return;
-
-      try {
-        const result = await travelStore.importFromCsv(previewData.text, mode);
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
-        setIsDialogOpen(false);
-        setPreviewData(null);
-      } catch (err) {
-        toast({
-          title: 'Import failed',
-          description:
-            err instanceof Error ? err.message : 'Failed to import CSV',
-          variant: 'destructive',
-        });
-      }
-    },
-    [previewData, toast],
-  );
-
-  const cancelImport = useCallback(() => {
-    setIsDialogOpen(false);
-    setPreviewData(null);
-  }, []);
-
-  const confirmFullDataImport = useCallback(
-    async (mode: 'replace' | 'append', onSuccess?: () => void) => {
-      if (!pendingFullDataFile) return;
-
-      try {
-        const result = await travelStore.importFullData(
-          pendingFullDataFile,
-          mode,
-        );
-
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
-
-        setIsFullDataDialogOpen(false);
-        setFullDataPreviewData(null);
-        setPendingFullDataFile(null);
-
-        // Call success callback after state updates
-        if (onSuccess) {
-          onSuccess();
-        }
-      } catch (err) {
-        toast({
-          title: 'Import failed',
-          description:
-            err instanceof Error ? err.message : 'Failed to import file',
-          variant: 'destructive',
-        });
-      }
-    },
-    [pendingFullDataFile, toast],
-  );
-
-  const cancelFullDataImport = useCallback(() => {
-    setIsFullDataDialogOpen(false);
-    setFullDataPreviewData(null);
-    setPendingFullDataFile(null);
-  }, []);
 
   const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
@@ -206,14 +174,6 @@ export const useCsvImport = () => {
     fileInputRef,
     handleFileSelect,
     triggerFileInput,
-    isDialogOpen,
-    previewData,
-    confirmImport,
-    cancelImport,
-    // Full data import
-    isFullDataDialogOpen,
-    fullDataPreviewData,
-    confirmFullDataImport,
-    cancelFullDataImport,
+    isImporting,
   };
 };

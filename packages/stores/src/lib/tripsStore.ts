@@ -141,6 +141,57 @@ export class TripsStore {
   }
 
   /**
+   * Bulk create trips (for imports)
+   * @deprecated Use server-side import endpoints instead (e.g., /api/import/csv)
+   * This method is kept for backward compatibility but should not be used directly.
+   * Import endpoints now handle persistence automatically based on user tier.
+   */
+  async bulkCreateTrips(
+    goalId: string,
+    trips: Array<{
+      outDate: string;
+      inDate: string;
+      outRoute?: string;
+      inRoute?: string;
+    }>,
+  ): Promise<TripData[]> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const response = await fetch('/api/trips/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goalId,
+          trips,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to bulk create trips');
+      }
+
+      const data = await response.json();
+
+      runInAction(() => {
+        this.trips = [...this.trips, ...data.trips];
+        this.isLoading = false;
+      });
+
+      return data.trips;
+    } catch (error) {
+      runInAction(() => {
+        this.error =
+          error instanceof Error ? error.message : 'Failed to bulk create trips';
+        this.isLoading = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Get trips for a specific goal
    */
   getTripsForGoal(goalId: string): TripData[] {
@@ -166,6 +217,14 @@ export class TripsStore {
    */
   get totalTrips(): number {
     return this.trips.length;
+  }
+
+  /**
+   * Add multiple trips to the store (for import operations)
+   * This is a proper MobX action for batch updates
+   */
+  addTrips(trips: TripData[]) {
+    this.trips.push(...trips);
   }
 
   /**

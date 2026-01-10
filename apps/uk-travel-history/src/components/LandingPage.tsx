@@ -7,22 +7,25 @@ import { useClipboardImport } from './hooks/useClipboardImport';
 import { useRef, useState } from 'react';
 import { travelStore } from '@uth/stores';
 import { logger } from '@uth/utils';
-import { FeatureButton, ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
+import { FeatureButton } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 
 export const LandingPage = () => {
   const router = useRouter();
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [activeAction, setActiveAction] = useState<
-    'pdf' | 'csv' | 'clipboard' | null
-  >(null);
 
   // CSV Import Hook
-  const csvImport = useCsvImport();
+  const {
+    fileInputRef: csvFileInputRef,
+    handleFileSelect: handleCsvFileSelectInternal,
+    triggerFileInput: triggerCsvFileInput,
+    isImporting: isCsvImporting,
+  } = useCsvImport();
 
   // Clipboard Import Hook
-  const clipboardImport = useClipboardImport();
+  const { handleClipboardPaste, isImporting: isClipboardImporting } =
+    useClipboardImport();
 
   const handlePdfImportClick = () => {
     pdfFileInputRef.current?.click();
@@ -33,12 +36,10 @@ export const LandingPage = () => {
   ) => {
     const file = e.target.files?.[0];
     if (!file) {
-      handleCancelImport();
       return;
     }
 
     setIsImporting(true);
-    setActiveAction('pdf');
     try {
       await travelStore.importFromPdf(file);
       router.push('/travel');
@@ -52,7 +53,6 @@ export const LandingPage = () => {
       });
     } finally {
       setIsImporting(false);
-      setActiveAction(null);
       if (pdfFileInputRef.current) {
         pdfFileInputRef.current.value = '';
       }
@@ -62,77 +62,31 @@ export const LandingPage = () => {
   const handleCsvFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      handleCancelImport();
-      return;
-    }
     try {
-      await csvImport.handleFileSelect(e);
+      await handleCsvFileSelectInternal(e);
+      // Navigate to travel page after successful import
+      router.push('/travel');
     } catch (error) {
       logger.error('Import failed', error);
-      toast({
-        title: 'Import Failed',
-        description:
-          'Failed to import Excel file. Please try again or add trips manually.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsImporting(false);
-      setActiveAction(null);
-      if (csvImport.fileInputRef.current) {
-        csvImport.fileInputRef.current.value = '';
-      }
     }
   };
+
   const handleAddManually = () => {
     router.push('/travel');
   };
 
   const handleCsvImportClick = () => {
-    setActiveAction('csv');
-    csvImport.triggerFileInput();
+    triggerCsvFileInput();
   };
 
   const handleClipboardImportClick = async () => {
-    setActiveAction('clipboard');
     try {
-      await clipboardImport.handleClipboardPaste();
-    } finally {
-      if (!clipboardImport.isDialogOpen) {
-        setActiveAction(null);
-      }
-    }
-  };
-
-  const handleCsvImportConfirm = async (mode: 'replace' | 'append') => {
-    await csvImport.confirmImport(mode);
-    setActiveAction(null);
-    // Navigate to travel page after successful import
-    if (!csvImport.isDialogOpen) {
-      router.push('/travel');
-    }
-  };
-
-  const handleClipboardImportConfirm = async (mode: 'replace' | 'append') => {
-    await clipboardImport.confirmImport(mode);
-    setActiveAction(null);
-    // Navigate to travel page after successful import
-    if (!clipboardImport.isDialogOpen) {
-      router.push('/travel');
-    }
-  };
-
-  const handleFullDataImportConfirm = async (mode: 'replace' | 'append') => {
-    await csvImport.confirmFullDataImport(mode, () => {
+      await handleClipboardPaste();
       // Navigate to travel page after successful import
-      setActiveAction(null);
       router.push('/travel');
-    });
-  };
-
-  const handleCancelImport = () => {
-    setActiveAction(null);
+    } catch (error) {
+      logger.error('Import failed', error);
+    }
   };
 
   return (
@@ -146,50 +100,12 @@ export const LandingPage = () => {
         onChange={handlePdfFileSelect}
       />
       <input
-        ref={csvImport.fileInputRef}
+        ref={csvFileInputRef}
         type="file"
         accept=".csv,.txt,.xlsx"
         className="hidden"
         onChange={handleCsvFileSelect}
       />
-
-      {/* Import Preview Dialogs */}
-      {csvImport.isDialogOpen && csvImport.previewData && (
-        <ImportPreviewDialog
-          isOpen={csvImport.isDialogOpen}
-          tripCount={csvImport.previewData.tripCount}
-          onConfirm={handleCsvImportConfirm}
-          onCancel={() => {
-            csvImport.cancelImport();
-            handleCancelImport();
-          }}
-        />
-      )}
-      {clipboardImport.isDialogOpen && clipboardImport.previewData && (
-        <ImportPreviewDialog
-          isOpen={clipboardImport.isDialogOpen}
-          tripCount={clipboardImport.previewData.tripCount}
-          onConfirm={handleClipboardImportConfirm}
-          onCancel={() => {
-            clipboardImport.cancelImport();
-            handleCancelImport();
-          }}
-        />
-      )}
-      {csvImport.isFullDataDialogOpen && csvImport.fullDataPreviewData && (
-        <FullDataImportDialog
-          isOpen={csvImport.isFullDataDialogOpen}
-          tripCount={csvImport.fullDataPreviewData.tripCount}
-          hasVignetteDate={csvImport.fullDataPreviewData.hasVignetteDate}
-          hasVisaStartDate={csvImport.fullDataPreviewData.hasVisaStartDate}
-          hasIlrTrack={csvImport.fullDataPreviewData.hasIlrTrack}
-          onConfirm={handleFullDataImportConfirm}
-          onCancel={() => {
-            csvImport.cancelFullDataImport();
-            handleCancelImport();
-          }}
-        />
-      )}
 
       <div className="bg-gradient-to-b from-slate-50 to-slate-100">
         {/* Main Content */}
@@ -224,9 +140,9 @@ export const LandingPage = () => {
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handlePdfImportClick}
-                    disabled={isImporting || activeAction !== null}
+                    disabled={isImporting || isCsvImporting || isClipboardImporting}
                   >
-                    {activeAction === 'pdf' ? (
+                    {isImporting ? (
                       <UIIcon
                         iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
@@ -235,7 +151,7 @@ export const LandingPage = () => {
                       <UIIcon iconName="pdf" className="h-4 w-4 mr-2" />
                     )}
                     Import from PDF
-                    {activeAction === 'pdf' && (
+                    {isImporting && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...
                       </span>
@@ -246,9 +162,9 @@ export const LandingPage = () => {
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleCsvImportClick}
-                    disabled={isImporting || activeAction !== null}
+                    disabled={isImporting || isCsvImporting || isClipboardImporting}
                   >
-                    {activeAction === 'csv' ? (
+                    {isCsvImporting ? (
                       <UIIcon
                         iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
@@ -257,7 +173,7 @@ export const LandingPage = () => {
                       <UIIcon iconName="xlsx" className="h-4 w-4 mr-2" />
                     )}
                     Import from Excel
-                    {activeAction === 'csv' && (
+                    {isCsvImporting && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...
                       </span>
@@ -268,9 +184,9 @@ export const LandingPage = () => {
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleClipboardImportClick}
-                    disabled={isImporting || activeAction !== null}
+                    disabled={isImporting || isCsvImporting || isClipboardImporting}
                   >
-                    {activeAction === 'clipboard' ? (
+                    {isClipboardImporting ? (
                       <UIIcon
                         iconName="loading"
                         className="h-4 w-4 mr-2 animate-spin"
@@ -279,7 +195,7 @@ export const LandingPage = () => {
                       <UIIcon iconName="clipboard" className="h-4 w-4 mr-2" />
                     )}
                     Import from Clipboard
-                    {activeAction === 'clipboard' && (
+                    {isClipboardImporting && (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Processing...
                       </span>
@@ -291,7 +207,7 @@ export const LandingPage = () => {
                       variant="ghost"
                       className="w-full justify-start text-slate-600"
                       onClick={handleAddManually}
-                      disabled={isImporting || activeAction !== null}
+                      disabled={isImporting || isCsvImporting || isClipboardImporting}
                     >
                       <UIIcon iconName="note-add" className="h-4 w-4 mr-2" />
                       Or add travel dates manually

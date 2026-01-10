@@ -33,7 +33,6 @@ import {
   useFileUpload,
   useExport,
 } from './hooks';
-import { ImportPreviewDialog, FullDataImportDialog } from '@uth/widgets';
 
 /**
  * Travel page client component with new Phase 4 design.
@@ -65,23 +64,11 @@ export const TravelPageClient = observer(() => {
     fileInputRef: csvFileInputRef,
     handleFileSelect: handleCsvFileSelect,
     triggerFileInput: triggerCsvFileInput,
-    isDialogOpen: isCsvDialogOpen,
-    previewData: csvPreviewData,
-    confirmImport: confirmCsvImport,
-    cancelImport: cancelCsvImport,
-    isFullDataDialogOpen,
-    fullDataPreviewData,
-    confirmFullDataImport,
-    cancelFullDataImport,
+    isImporting: isCsvImporting,
   } = useCsvImport();
 
-  const {
-    handleClipboardPaste,
-    isDialogOpen: isClipboardDialogOpen,
-    previewData: clipboardPreviewData,
-    confirmImport: confirmClipboardImport,
-    cancelImport: cancelClipboardImport,
-  } = useClipboardImport();
+  const { handleClipboardPaste, isImporting: isClipboardImporting } =
+    useClipboardImport();
 
   // Handlers for FAB actions
   const handleAddGoal = () => goalsStore.openAddModal();
@@ -195,39 +182,6 @@ export const TravelPageClient = observer(() => {
           onImportClipboard={handleClipboardPaste}
         />
       </FeatureGate>
-
-      {/* CSV Import Preview Dialog */}
-      {csvPreviewData && (
-        <ImportPreviewDialog
-          isOpen={isCsvDialogOpen}
-          tripCount={csvPreviewData.tripCount}
-          onConfirm={confirmCsvImport}
-          onCancel={cancelCsvImport}
-        />
-      )}
-
-      {/* Clipboard Import Preview Dialog */}
-      {clipboardPreviewData && (
-        <ImportPreviewDialog
-          isOpen={isClipboardDialogOpen}
-          tripCount={clipboardPreviewData.tripCount}
-          onConfirm={confirmClipboardImport}
-          onCancel={cancelClipboardImport}
-        />
-      )}
-
-      {/* Full Data Import Preview Dialog */}
-      {fullDataPreviewData && (
-        <FullDataImportDialog
-          isOpen={isFullDataDialogOpen}
-          tripCount={fullDataPreviewData.tripCount}
-          hasVignetteDate={fullDataPreviewData.hasVignetteDate}
-          hasVisaStartDate={fullDataPreviewData.hasVisaStartDate}
-          hasIlrTrack={fullDataPreviewData.hasIlrTrack}
-          onConfirm={confirmFullDataImport}
-          onCancel={cancelFullDataImport}
-        />
-      )}
 
       {/* Add Goal Drawer - state managed by goalsStore */}
       <AddGoalDrawer />
