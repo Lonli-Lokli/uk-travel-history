@@ -2,7 +2,12 @@
  * Core types for multi-goal tracking rule engines
  */
 
-import type { TripRecord } from './internal';
+import type {
+  TripRecord,
+  RollingDataPoint,
+  TimelinePoint,
+  TripBar,
+} from './internal';
 
 // ============================================================================
 // Jurisdiction & Goal Types
@@ -120,8 +125,8 @@ export interface GoalVisualizationData {
   tripBars?: TripBar[];
 }
 
-// Re-export visualization types from internal for convenience
-export type { RollingDataPoint, TimelinePoint, TripBar } from './internal';
+// Re-export visualization types for external consumption
+export type { RollingDataPoint, TimelinePoint, TripBar };
 
 export interface GoalMetric {
   key: string;
