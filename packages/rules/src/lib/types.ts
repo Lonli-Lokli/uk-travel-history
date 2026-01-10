@@ -108,7 +108,20 @@ export interface GoalCalculation {
 
   // For complex goals: checklist items
   requirements?: GoalRequirement[];
+
+  // Optional visualization data (for charts/graphs)
+  // Populated by rule engines that support visualization (e.g., UK ILR, Schengen)
+  visualization?: GoalVisualizationData;
 }
+
+export interface GoalVisualizationData {
+  rollingAbsenceData?: RollingDataPoint[];
+  timelinePoints?: TimelinePoint[];
+  tripBars?: TripBar[];
+}
+
+// Re-export visualization types from internal for convenience
+export type { RollingDataPoint, TimelinePoint, TripBar } from './internal';
 
 export interface GoalMetric {
   key: string;

@@ -13,6 +13,7 @@ import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 import { format, differenceInDays } from 'date-fns';
+import { RiskAreaChart } from '../RiskAreaChart';
 
 /**
  * Delete Goal Button with gating logic
@@ -277,6 +278,14 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
             ))}
           </div>
         )}
+
+        {/* Risk Chart - shows if visualization data available */}
+        {calculation?.visualization?.rollingAbsenceData &&
+          calculation.visualization.rollingAbsenceData.length > 0 && (
+            <div className="mt-4">
+              <RiskAreaChart />
+            </div>
+          )}
       </CardContent>
     </Card>
   );

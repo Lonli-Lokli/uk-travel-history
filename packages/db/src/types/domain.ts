@@ -559,6 +559,7 @@ export interface GoalCalculationData {
   daysUntilEligible: number | null;
   metrics: GoalMetricData[];
   warnings: GoalWarningData[];
+  visualization?: GoalVisualizationData;
 }
 
 export interface GoalMetricData {
@@ -576,6 +577,39 @@ export interface GoalWarningData {
   title: string;
   message: string;
   action?: string;
+}
+
+export interface GoalVisualizationData {
+  rollingAbsenceData?: RollingDataPoint[];
+  timelinePoints?: TimelinePoint[];
+  tripBars?: TripBar[];
+}
+
+export interface RollingDataPoint {
+  date: string;
+  rollingDays: number;
+  riskLevel: 'low' | 'caution' | 'critical';
+  formattedDate: string;
+  nextExpirationDate: string | null;
+  daysToExpire: number | null;
+}
+
+export interface TimelinePoint {
+  date: string;
+  daysSinceStart: number;
+  tripCount: number;
+  formattedDate: string;
+}
+
+export interface TripBar {
+  date: string;
+  tripStart: number;
+  tripEnd: number;
+  tripDuration: number;
+  tripLabel: string;
+  formattedDate: string;
+  outDate: string;
+  inDate: string;
 }
 
 /**

@@ -10,11 +10,6 @@ import type { AxisSetExtremesEventObject } from 'highcharts';
 import { parseISO } from 'date-fns';
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   Card,
   CardContent,
   CardHeader,
@@ -23,7 +18,7 @@ import {
 } from '@uth/ui';
 import { FeatureChart, useFeatureGate } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/rules';
-import { travelStore } from '@uth/stores';
+import { goalsStore } from '@uth/stores';
 import { FEATURE_KEYS } from '@uth/features';
 
 type TimelinePoint = {
@@ -273,17 +268,22 @@ const FAKE_PLACEHOLDER_DATA = {
 };
 
 export const RiskAreaChart: React.FC = observer(() => {
-  const {
-    rollingAbsenceData,
-    tripBars,
-    selectedTripDetails,
-    effectiveApplicationDate,
-    autoDateUsed,
-  } = travelStore;
+  const { activeCalculation } = goalsStore;
 
   const { hasAccess } = useFeatureGate(FEATURE_KEYS.RISK_CHART);
   const areaChartRef = useRef<HighchartsReactRefObject>(null);
   const ganttChartRef = useRef<HighchartsReactRefObject>(null);
+
+  // Extract visualization data from active goal calculation
+  const rollingAbsenceData =
+    activeCalculation?.visualization?.rollingAbsenceData || [];
+  const tripBars = activeCalculation?.visualization?.tripBars || [];
+
+  // For now, we don't have selectedTripDetails in the new architecture
+  // This will be handled separately if needed
+  const selectedTripDetails = null;
+  const effectiveApplicationDate = activeCalculation?.eligibilityDate || null;
+  const autoDateUsed = false; // This concept doesn't exist in the new architecture
 
   // Use fake data if no access, otherwise use real data
   const displayRollingData = hasAccess
@@ -802,11 +802,8 @@ export const RiskAreaChart: React.FC = observer(() => {
             pointPadding: 0.05, // minimal padding = thicker bars for mobile
             point: {
               events: {
-                click: function () {
-                  // Show trip details on click - delegate to MobX store
-                  const point = this as any;
-                  travelStore.selectTrip(point.name, point.start, point.end);
-                },
+                // Trip selection removed in new architecture
+                // Can be re-added later if needed
               },
             },
           },
@@ -953,37 +950,7 @@ export const RiskAreaChart: React.FC = observer(() => {
           )}
         </FeatureChart>
 
-        {/* Trip Details Dialog */}
-        <Dialog
-          open={!!selectedTripDetails}
-          onOpenChange={(open) => {
-            if (!open) {
-              travelStore.clearSelectedTrip();
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedTripDetails?.name || 'Trip Details'}
-              </DialogTitle>
-              <DialogDescription asChild>
-                {selectedTripDetails ? (
-                  <div className="mt-2 text-sm">
-                    <p>
-                      <strong>Departure:</strong> {selectedTripDetails.start}
-                    </p>
-                    <p>
-                      <strong>Return:</strong> {selectedTripDetails.end}
-                    </p>
-                  </div>
-                ) : (
-                  <span />
-                )}
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+        {/* Trip Details Dialog - removed in new architecture */}
       </CardContent>
     </Card>
   );
