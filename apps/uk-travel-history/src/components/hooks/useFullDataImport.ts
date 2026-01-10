@@ -2,10 +2,15 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@uth/ui';
-import { travelStore } from '@uth/stores';
+import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
+import { useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
 
 export const useFullDataImport = () => {
   const { toast } = useToast();
+  const { hasAccess: hasGoalsAccess } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{
@@ -68,13 +73,46 @@ export const useFullDataImport = () => {
       if (!pendingFile) return;
 
       try {
-        const result = await travelStore.importFullData(pendingFile, mode);
+        // For authenticated users with multi-goal access, persist to database
+        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
+          // Parse the full data file
+          const formData = new FormData();
+          formData.append('file', pendingFile);
 
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
+          const response = await fetch('/api/import-full', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to import file');
+          }
+
+          // Use first available goal
+          const goalId = goalsStore.goals[0].id;
+
+          // Bulk create trips in database
+          if (result.data.trips && result.data.trips.length > 0) {
+            await tripsStore.bulkCreateTrips(goalId, result.data.trips);
+          }
+
+          toast({
+            title: 'Import successful',
+            description: `Successfully imported ${result.metadata.tripCount} trips to database`,
+            variant: 'success' as any,
+          });
+        } else {
+          // Free users: use legacy in-memory travelStore
+          const result = await travelStore.importFullData(pendingFile, mode);
+
+          toast({
+            title: 'Import successful',
+            description: result.message,
+            variant: 'success' as any,
+          });
+        }
 
         setIsDialogOpen(false);
         setPreviewData(null);
@@ -88,7 +126,7 @@ export const useFullDataImport = () => {
         });
       }
     },
-    [pendingFile, toast],
+    [pendingFile, toast, hasGoalsAccess],
   );
 
   const cancelImport = useCallback(() => {

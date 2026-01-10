@@ -3,11 +3,16 @@
 import { useRef, useCallback, useState } from 'react';
 import { useToast } from '@uth/ui';
 import ExcelJS from 'exceljs';
-import { travelStore } from '@uth/stores';
+import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
+import { useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
 
 export const useCsvImport = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { hasAccess: hasGoalsAccess } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{
     text: string;
@@ -131,12 +136,46 @@ export const useCsvImport = () => {
       if (!previewData) return;
 
       try {
-        const result = await travelStore.importFromCsv(previewData.text, mode);
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
+        // For authenticated users with multi-goal access, persist to database
+        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
+          // Parse trips from CSV/XLSX
+          let trips;
+          if (previewData.text.startsWith('__XLSX__')) {
+            const tripsJson = previewData.text.substring(8);
+            trips = JSON.parse(tripsJson);
+          } else {
+            const { parseCsvText } = await import('@uth/parser');
+            const parseResult = parseCsvText(previewData.text);
+            if (!parseResult.success) {
+              throw new Error(parseResult.errors.join('\n'));
+            }
+            trips = parseResult.trips;
+          }
+
+          // Use first available goal
+          const goalId = goalsStore.goals[0].id;
+
+          // For replace mode, we'd need to delete existing trips first
+          // TODO: Implement bulk delete or clear endpoint if replace mode is needed
+
+          // Bulk create trips in database
+          await tripsStore.bulkCreateTrips(goalId, trips);
+
+          toast({
+            title: 'Import successful',
+            description: `Successfully imported ${trips.length} trips to database`,
+            variant: 'success' as any,
+          });
+        } else {
+          // Free users: use legacy in-memory travelStore
+          const result = await travelStore.importFromCsv(previewData.text, mode);
+          toast({
+            title: 'Import successful',
+            description: result.message,
+            variant: 'success' as any,
+          });
+        }
+
         setIsDialogOpen(false);
         setPreviewData(null);
       } catch (err) {
@@ -148,7 +187,7 @@ export const useCsvImport = () => {
         });
       }
     },
-    [previewData, toast],
+    [previewData, toast, hasGoalsAccess],
   );
 
   const cancelImport = useCallback(() => {
@@ -161,16 +200,53 @@ export const useCsvImport = () => {
       if (!pendingFullDataFile) return;
 
       try {
-        const result = await travelStore.importFullData(
-          pendingFullDataFile,
-          mode,
-        );
+        // For authenticated users with multi-goal access, persist to database
+        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
+          // Parse the full data file
+          const formData = new FormData();
+          formData.append('file', pendingFullDataFile);
 
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
+          const response = await fetch('/api/import-full', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to import file');
+          }
+
+          // Use first available goal
+          const goalId = goalsStore.goals[0].id;
+
+          // Bulk create trips in database
+          if (result.data.trips && result.data.trips.length > 0) {
+            await tripsStore.bulkCreateTrips(goalId, result.data.trips);
+          }
+
+          // Note: Visa details (vignetteEntryDate, visaStartDate, ilrTrack) are not yet
+          // supported in the new goal-based architecture. These would need to be stored
+          // at the goal level rather than globally.
+
+          toast({
+            title: 'Import successful',
+            description: `Successfully imported ${result.metadata.tripCount} trips to database`,
+            variant: 'success' as any,
+          });
+        } else {
+          // Free users: use legacy in-memory travelStore
+          const result = await travelStore.importFullData(
+            pendingFullDataFile,
+            mode,
+          );
+
+          toast({
+            title: 'Import successful',
+            description: result.message,
+            variant: 'success' as any,
+          });
+        }
 
         setIsFullDataDialogOpen(false);
         setFullDataPreviewData(null);
@@ -189,7 +265,7 @@ export const useCsvImport = () => {
         });
       }
     },
-    [pendingFullDataFile, toast],
+    [pendingFullDataFile, toast, hasGoalsAccess],
   );
 
   const cancelFullDataImport = useCallback(() => {

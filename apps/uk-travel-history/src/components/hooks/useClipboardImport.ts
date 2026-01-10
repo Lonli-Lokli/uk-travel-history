@@ -2,10 +2,15 @@
 
 import { useCallback, useState } from 'react';
 import { useToast } from '@uth/ui';
-import { travelStore } from '@uth/stores';
+import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
+import { useFeatureGate } from '@uth/widgets';
+import { FEATURE_KEYS } from '@uth/features';
 
 export const useClipboardImport = () => {
   const { toast } = useToast();
+  const { hasAccess: hasGoalsAccess } = useFeatureGate(
+    FEATURE_KEYS.MULTI_GOAL_TRACKING,
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{
     text: string;
@@ -64,12 +69,37 @@ export const useClipboardImport = () => {
       if (!previewData) return;
 
       try {
-        const result = await travelStore.importFromCsv(previewData.text, mode);
-        toast({
-          title: 'Import successful',
-          description: result.message,
-          variant: 'success' as any,
-        });
+        // For authenticated users with multi-goal access, persist to database
+        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
+          // Parse trips from CSV
+          const { parseCsvText } = await import('@uth/parser');
+          const parseResult = parseCsvText(previewData.text);
+
+          if (!parseResult.success) {
+            throw new Error(parseResult.errors.join('\n'));
+          }
+
+          // Use first available goal
+          const goalId = goalsStore.goals[0].id;
+
+          // Bulk create trips in database
+          await tripsStore.bulkCreateTrips(goalId, parseResult.trips);
+
+          toast({
+            title: 'Import successful',
+            description: `Successfully imported ${parseResult.trips.length} trips to database`,
+            variant: 'success' as any,
+          });
+        } else {
+          // Free users: use legacy in-memory travelStore
+          const result = await travelStore.importFromCsv(previewData.text, mode);
+          toast({
+            title: 'Import successful',
+            description: result.message,
+            variant: 'success' as any,
+          });
+        }
+
         setIsDialogOpen(false);
         setPreviewData(null);
       } catch (err) {
@@ -81,7 +111,7 @@ export const useClipboardImport = () => {
         });
       }
     },
-    [previewData, toast],
+    [previewData, toast, hasGoalsAccess],
   );
 
   const cancelImport = useCallback(() => {
