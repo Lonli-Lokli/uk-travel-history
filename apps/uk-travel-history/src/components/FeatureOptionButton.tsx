@@ -12,7 +12,7 @@ export interface FeatureOptionButtonProps {
   description: string;
   onClick?: () => void;
   variant?: 'primary' | 'secondary';
-  feature: FeatureFlagKey;
+  feature?: FeatureFlagKey;
 }
 
 /**
@@ -40,15 +40,6 @@ const FeatureOptionButtonComponent = ({
   variant = 'secondary',
   feature,
 }: FeatureOptionButtonProps) => {
-    // Feature-gated button
-  const {
-    hasAccess,
-    isLoading,
-    requiresSignUp,
-    requiresUpgrade,
-    handleUpgrade,
-  } = useFeatureGate(feature);
-  
   // If no feature specified, render as regular button
   if (!feature) {
     return (
@@ -92,7 +83,14 @@ const FeatureOptionButtonComponent = ({
     );
   }
 
-
+  // Feature-gated button - call hook after early return for non-feature buttons
+  const {
+    hasAccess,
+    isLoading,
+    requiresSignUp,
+    requiresUpgrade,
+    handleUpgrade,
+  } = useFeatureGate(feature);
 
   // Loading state
   if (isLoading) {
