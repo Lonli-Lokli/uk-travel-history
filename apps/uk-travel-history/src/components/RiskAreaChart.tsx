@@ -22,7 +22,7 @@ import {
   UIIcon,
 } from '@uth/ui';
 import { FeatureChart, useFeatureGate } from '@uth/widgets';
-import { RollingDataPoint, TripBar } from '@uth/calculators';
+import { RollingDataPoint, TripBar } from '@uth/rules';
 import { travelStore } from '@uth/stores';
 import { FEATURE_KEYS } from '@uth/features';
 

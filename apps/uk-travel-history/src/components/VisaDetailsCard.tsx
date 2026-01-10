@@ -17,7 +17,7 @@ import {
   UIIcon,
 } from '@uth/ui';
 import { formatDate } from '@uth/utils';
-import { ILRTrack } from '@uth/calculators';
+import { ILRTrack } from '@uth/rules';
 import { travelStore } from '@uth/stores';
 
 export const VisaDetailsCard = observer(() => {

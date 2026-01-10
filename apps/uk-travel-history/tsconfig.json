@@ -47,9 +47,6 @@
   ],
   "references": [
     {
-      "path": "../../packages/calculators"
-    },
-    {
       "path": "../../packages/domain"
     },
     {
@@ -84,6 +81,9 @@
     },
     {
       "path": "../../packages/utils"
+    },
+    {
+      "path": "../../packages/rules"
     }
   ]
 }

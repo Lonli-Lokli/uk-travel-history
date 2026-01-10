@@ -26,6 +26,19 @@ export type {
   TrackingGoal,
 } from './lib/types';
 
+// Re-export commonly used types from internal module
+export type {
+  TripRecord,
+  TripWithCalculations,
+  RollingDataPoint,
+  TimelinePoint,
+  TripBar,
+  ILRTrack,
+  TravelCalculationResult,
+  ILRSummary,
+  PreEntryPeriodInfo,
+} from './lib/internal';
+
 // Registry
 export { ruleEngineRegistry } from './lib/registry';
 

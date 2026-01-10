@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { formatDate } from '@uth/utils';
 import { Button, UIIcon } from '@uth/ui';
-import type { TripWithCalculations } from '@uth/calculators';
+import type { TripWithCalculations } from '@uth/rules';
 
 interface SortableTripCardProps {
   trip: TripWithCalculations;

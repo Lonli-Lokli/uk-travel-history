@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UKILRRuleEngine } from './uk-ilr';
-import { calculateTravelData, type TripRecord } from '@uth/calculators';
+import { calculateTravelData, type TripRecord } from '../internal';
 import type { UKILRConfig } from '../types';
 
 // Mock the calculateTravelData function
-vi.mock('@uth/calculators', () => ({
+vi.mock('../internal', () => ({
   calculateTravelData: vi.fn((_params) => {
     // Return a realistic mock response based on input
     const hasExceeded = false;

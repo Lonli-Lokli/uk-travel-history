@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { flexRender } from '@tanstack/react-table';
 import type { Row } from '@tanstack/react-table';
-import type { TripWithCalculations } from '@uth/calculators';
+import type { TripWithCalculations } from '@uth/rules';
 
 interface SortableTableRowProps {
   row: Row<TripWithCalculations>;

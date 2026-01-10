@@ -2,7 +2,7 @@
  * Core types for multi-goal tracking rule engines
  */
 
-import type { TripRecord } from '@uth/calculators';
+import type { TripRecord } from './internal';
 
 // ============================================================================
 // Jurisdiction & Goal Types

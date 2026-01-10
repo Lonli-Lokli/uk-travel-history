@@ -11,7 +11,7 @@ import {
   isBefore,
   isAfter,
 } from 'date-fns';
-import type { TripRecord } from '@uth/calculators';
+import type { TripRecord } from '../internal';
 import type {
   RuleEngine,
   DaysCounterConfig,
