@@ -14,3 +14,4 @@ export {
   type GoalTemplate,
   type GoalCategory,
 } from './AddGoalFlow';
+export { EditGoalDrawer } from './AddGoalFlow/EditGoalDrawer';

@@ -23,7 +23,7 @@ import { StatsBar } from './StatsBar';
 import { TrackersView } from './TrackersView';
 import { TimelineView } from './TimelineView';
 import { AddFab } from './AddFab';
-import { AddGoalDrawer } from './goals';
+import { AddGoalDrawer, EditGoalDrawer } from './goals';
 import { TripDrawer } from './trips/TripDrawer';
 import { uiStore, tripsStore } from '@uth/stores';
 import {
@@ -189,6 +189,9 @@ export const TravelPageClient = observer(() => {
 
       {/* Add Goal Drawer - state managed by goalsStore */}
       <AddGoalDrawer />
+
+      {/* Edit Goal Drawer - state managed by goalsStore */}
+      <EditGoalDrawer />
 
       {/* Add Trip Drawer - state managed by uiStore */}
       <TripDrawer />
