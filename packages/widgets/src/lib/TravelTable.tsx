@@ -31,7 +31,7 @@ import {
 import { formatDate } from '@uth/utils';
 import { travelStore } from '@uth/stores';
 import { Button, UIIcon } from '@uth/ui';
-import { TripWithCalculations } from '@uth/calculators';
+import { TripWithCalculations } from '@uth/rules';
 import { SortableTableRow } from './SortableTableRow';
 import { SortableTripCard } from './SortableTripCard';
 

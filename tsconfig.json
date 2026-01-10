@@ -16,9 +16,6 @@
       "path": "./packages/utils"
     },
     {
-      "path": "./packages/calculators"
-    },
-    {
       "path": "./packages/features"
     },
     {

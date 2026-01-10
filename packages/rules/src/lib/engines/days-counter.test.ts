@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DaysCounterRuleEngine } from './days-counter';
-import type { TripRecord } from '@uth/calculators';
+import type { TripRecord } from '../internal';
 import type { DaysCounterConfig } from '../types';
 
 describe('DaysCounterRuleEngine', () => {

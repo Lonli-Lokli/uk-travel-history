@@ -11,13 +11,17 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./internal": {
+      "types": "./src/lib/internal/index.ts",
+      "import": "./src/lib/internal/index.ts",
+      "default": "./src/lib/internal/index.ts"
+    },
     "./package.json": "./package.json"
   },
   "nx": {
     "name": "rules"
   },
   "dependencies": {
-    "@uth/calculators": "*",
     "date-fns": "^4.1.0"
   }
 }

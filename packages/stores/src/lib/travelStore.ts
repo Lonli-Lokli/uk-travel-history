@@ -9,9 +9,9 @@ import {
   TripRecord,
   TripWithCalculations,
   TravelCalculationResult,
-  calculateTravelData,
-  calculateTripDurations,
-} from '@uth/calculators';
+} from '@uth/rules';
+// Internal imports for calculation functions
+import { calculateTravelData, calculateTripDurations } from '@uth/rules/internal';
 
 /**
  * HTTP client interface for dependency injection

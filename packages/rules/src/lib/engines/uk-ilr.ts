@@ -4,7 +4,7 @@
  * Wraps the existing @uth/calculators logic to provide a unified rule engine interface.
  */
 
-import { calculateTravelData, type TripRecord } from '@uth/calculators';
+import { calculateTravelData, type TripRecord } from '../internal';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import type {
   RuleEngine,
