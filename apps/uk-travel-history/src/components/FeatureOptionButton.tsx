@@ -12,7 +12,7 @@ export interface FeatureOptionButtonProps {
   description: string;
   onClick?: () => void;
   variant?: 'primary' | 'secondary';
-  feature?: FeatureFlagKey;
+  feature: FeatureFlagKey;
 }
 
 /**
