@@ -61,6 +61,11 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       metrics,
       warnings,
       requirements: this.buildRequirements(result.summary),
+      visualization: {
+        rollingAbsenceData: result.rollingAbsenceData,
+        timelinePoints: result.timelinePoints,
+        tripBars: result.tripBars,
+      },
     };
   }
 

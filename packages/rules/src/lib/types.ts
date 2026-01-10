@@ -2,7 +2,12 @@
  * Core types for multi-goal tracking rule engines
  */
 
-import type { TripRecord } from './internal';
+import type {
+  TripRecord,
+  RollingDataPoint,
+  TimelinePoint,
+  TripBar,
+} from './internal';
 
 // ============================================================================
 // Jurisdiction & Goal Types
@@ -108,7 +113,20 @@ export interface GoalCalculation {
 
   // For complex goals: checklist items
   requirements?: GoalRequirement[];
+
+  // Optional visualization data (for charts/graphs)
+  // Populated by rule engines that support visualization (e.g., UK ILR, Schengen)
+  visualization?: GoalVisualizationData;
 }
+
+export interface GoalVisualizationData {
+  rollingAbsenceData?: RollingDataPoint[];
+  timelinePoints?: TimelinePoint[];
+  tripBars?: TripBar[];
+}
+
+// Re-export visualization types for external consumption
+export type { RollingDataPoint, TimelinePoint, TripBar };
 
 export interface GoalMetric {
   key: string;

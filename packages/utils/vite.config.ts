@@ -1,8 +1,6 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
-
-export default defineConfig(() => ({
-  root: import.meta.dirname,
+export default defineConfig({
   cacheDir: '../../node_modules/.vite/packages/utils',
   plugins: [],
   // Uncomment this if you are using workers.
@@ -21,4 +19,4 @@ export default defineConfig(() => ({
       provider: 'v8' as const,
     },
   },
-}));
+});
