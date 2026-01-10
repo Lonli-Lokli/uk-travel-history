@@ -15,7 +15,7 @@ import {
   createCustomToken,
   isAuthConfigured,
   getSubscription,
-  getSubscriptionBySessionId,
+  hasSubscription,
   createSubscription,
   updateSubscription,
 } from '../index.js';
@@ -222,7 +222,6 @@ describe('Auth Server - Subscription Operations', () => {
 
       const subscription = await createSubscription(subscriptionData);
 
-      expect(subscription.userId).toBe('user123');
       expect(subscription.status).toBe(SubscriptionStatus.ACTIVE);
       expect(subscription.stripeCustomerId).toBe('cus_123');
       expect(subscription.stripeSubscriptionId).toBe('sub_123');
@@ -246,7 +245,6 @@ describe('Auth Server - Subscription Operations', () => {
 
       const subscription = await createSubscription(subscriptionData);
 
-      expect(subscription.userId).toBe('user456');
       expect(subscription.status).toBe(SubscriptionStatus.TRIALING);
       expect(subscription.stripeSessionId).toBeUndefined();
       expect(subscription.stripePriceId).toBeUndefined();
@@ -269,7 +267,6 @@ describe('Auth Server - Subscription Operations', () => {
       const subscription = await getSubscription('user123');
 
       expect(subscription).not.toBeNull();
-      expect(subscription?.userId).toBe('user123');
       expect(subscription?.status).toBe(SubscriptionStatus.ACTIVE);
     });
 
@@ -279,56 +276,6 @@ describe('Auth Server - Subscription Operations', () => {
     });
   });
 
-  describe('getSubscriptionBySessionId', () => {
-    it('should return subscription for existing session', async () => {
-      const subscriptionData = {
-        userId: 'user123',
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
-        stripeSessionId: 'cs_test_123',
-        currentPeriodStart: new Date('2024-01-01'),
-        currentPeriodEnd: new Date('2024-02-01'),
-        cancelAtPeriodEnd: false,
-      };
-
-      await createSubscription(subscriptionData);
-      const subscription = await getSubscriptionBySessionId('cs_test_123');
-
-      expect(subscription).not.toBeNull();
-      expect(subscription?.userId).toBe('user123');
-      expect(subscription?.stripeSessionId).toBe('cs_test_123');
-    });
-
-    it('should return null for non-existent session', async () => {
-      const subscription = await getSubscriptionBySessionId('cs_nonexistent');
-      expect(subscription).toBeNull();
-    });
-
-    it('should detect session reuse (already used check)', async () => {
-      const subscriptionData = {
-        userId: 'user123',
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
-        stripeSessionId: 'cs_test_session',
-        currentPeriodStart: new Date('2024-01-01'),
-        currentPeriodEnd: new Date('2024-02-01'),
-        cancelAtPeriodEnd: false,
-      };
-
-      await createSubscription(subscriptionData);
-
-      // Check if session is already used
-      const existingSubscription =
-        await getSubscriptionBySessionId('cs_test_session');
-      expect(existingSubscription).not.toBeNull();
-
-      // This would be the "already used" check in the application
-      const alreadyUsed = existingSubscription !== null;
-      expect(alreadyUsed).toBe(true);
-    });
-  });
 
   describe('updateSubscription', () => {
     it('should update subscription status to past_due', async () => {
@@ -409,36 +356,6 @@ describe('Auth Server - Subscription Operations', () => {
   });
 
   describe('Subscription workflow scenarios', () => {
-    it('should handle complete new subscription flow', async () => {
-      // 1. Check session not already used
-      const existingBeforeCreate =
-        await getSubscriptionBySessionId('cs_new_session');
-      expect(existingBeforeCreate).toBeNull();
-
-      // 2. Create subscription after successful payment
-      const subscription = await createSubscription({
-        userId: 'new_user',
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId: 'cus_new',
-        stripeSubscriptionId: 'sub_new',
-        stripeSessionId: 'cs_new_session',
-        currentPeriodStart: new Date('2024-01-01'),
-        currentPeriodEnd: new Date('2024-02-01'),
-        cancelAtPeriodEnd: false,
-      });
-
-      expect(subscription.status).toBe(SubscriptionStatus.ACTIVE);
-
-      // 3. Verify session is now used
-      const existingAfterCreate =
-        await getSubscriptionBySessionId('cs_new_session');
-      expect(existingAfterCreate).not.toBeNull();
-
-      // 4. Retrieve by user ID
-      const retrieved = await getSubscription('new_user');
-      expect(retrieved?.stripeSessionId).toBe('cs_new_session');
-    });
-
     it('should handle subscription cancellation flow', async () => {
       // Create active subscription
       await createSubscription({

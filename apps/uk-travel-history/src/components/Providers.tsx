@@ -8,6 +8,7 @@ import {
   paymentStore,
   goalsStore,
   travelStore,
+  tripsStore,
   useRefreshAccessContext,
 } from '@uth/stores';
 import { type FeatureFlagKey, FEATURE_KEYS } from '@uth/features';
@@ -137,6 +138,9 @@ export function Providers({ children, accessContext }: ProvidersProps) {
       isGoalsFeatureEnabled,
       accessContext.goalTemplates ?? null,
     );
+
+    // Hydrate trips store with trips data
+    tripsStore.hydrate(accessContext.trips ?? null);
 
     // Initialize trip reaction for goal recalculation when trips change
     if (isGoalsFeatureEnabled) {

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createUserScopedClient, createAdminClient, checkUserHasPremiumAccess } from './client-factory';
+import {
+  createUserScopedClient,
+  createAdminClient,
+  checkUserHasPremiumAccess,
+} from './client-factory';
 
 // Mock @supabase/supabase-js
 vi.mock('@supabase/supabase-js', () => ({
@@ -44,7 +48,7 @@ describe('client-factory', () => {
             persistSession: false,
             autoRefreshToken: false,
           },
-        }
+        },
       );
       expect(client).toBe(mockClient);
     });
@@ -69,7 +73,7 @@ describe('client-factory', () => {
             persistSession: false,
             autoRefreshToken: false,
           },
-        }
+        },
       );
       expect(client).toBe(mockClient);
     });
@@ -79,7 +83,7 @@ describe('client-factory', () => {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
       expect(() => createUserScopedClient('token')).toThrow(
-        'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+        'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.',
       );
     });
 
@@ -88,7 +92,7 @@ describe('client-factory', () => {
       delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
       expect(() => createUserScopedClient('token')).toThrow(
-        'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+        'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.',
       );
     });
 
@@ -97,7 +101,7 @@ describe('client-factory', () => {
       delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
       expect(() => createUserScopedClient('token')).toThrow(
-        'Missing Supabase configuration'
+        'Missing Supabase configuration',
       );
     });
   });
@@ -120,7 +124,7 @@ describe('client-factory', () => {
             persistSession: false,
             autoRefreshToken: false,
           },
-        }
+        },
       );
       expect(client).toBe(mockClient);
     });
@@ -138,7 +142,7 @@ describe('client-factory', () => {
       expect(createClient).toHaveBeenCalledWith(
         'https://public.supabase.co',
         'test-service-role-key',
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(client).toBe(mockClient);
     });
@@ -148,7 +152,7 @@ describe('client-factory', () => {
       delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       expect(() => createAdminClient()).toThrow(
-        'Missing Supabase service role configuration. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+        'Missing Supabase service role configuration. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.',
       );
     });
 
@@ -158,7 +162,7 @@ describe('client-factory', () => {
       process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
 
       expect(() => createAdminClient()).toThrow(
-        'Missing Supabase service role configuration'
+        'Missing Supabase service role configuration',
       );
     });
 
@@ -168,7 +172,7 @@ describe('client-factory', () => {
       delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       expect(() => createAdminClient()).toThrow(
-        'Missing Supabase service role configuration'
+        'Missing Supabase service role configuration',
       );
     });
   });
@@ -184,7 +188,9 @@ describe('client-factory', () => {
 
       const result = await checkUserHasPremiumAccess('user_123');
 
-      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', { user_id: 'user_123' });
+      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', {
+        user_id: 'user_123',
+      });
       expect(result).toBe(true);
     });
 
@@ -198,7 +204,9 @@ describe('client-factory', () => {
 
       const result = await checkUserHasPremiumAccess('user_456');
 
-      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', { user_id: 'user_456' });
+      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', {
+        user_id: 'user_456',
+      });
       expect(result).toBe(false);
     });
 
@@ -219,18 +227,27 @@ describe('client-factory', () => {
       process.env.SUPABASE_URL = 'https://test.supabase.co';
       process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
-        // Intentionally empty - suppressing console.error during test
-      });
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {
+          // Intentionally empty - suppressing console.error during test
+        });
       const mockError = new Error('RPC failed');
-      const mockRpc = vi.fn().mockResolvedValue({ data: null, error: mockError });
+      const mockRpc = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: mockError });
       const mockClient = { rpc: mockRpc };
       vi.mocked(createClient).mockReturnValue(mockClient as any);
 
       const result = await checkUserHasPremiumAccess('user_error');
 
-      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', { user_id: 'user_error' });
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error checking premium access:', mockError);
+      expect(mockRpc).toHaveBeenCalledWith('has_premium_access', {
+        user_id: 'user_error',
+      });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error checking premium access:',
+        mockError,
+      );
       expect(result).toBe(false);
 
       consoleErrorSpy.mockRestore();
@@ -240,18 +257,25 @@ describe('client-factory', () => {
       process.env.SUPABASE_URL = 'https://test.supabase.co';
       process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
-        // Intentionally empty - suppressing console.error during test
-      });
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {
+          // Intentionally empty - suppressing console.error during test
+        });
       const mockError = { message: 'Connection timeout', code: 'ETIMEDOUT' };
-      const mockRpc = vi.fn().mockResolvedValue({ data: null, error: mockError });
+      const mockRpc = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: mockError });
       const mockClient = { rpc: mockRpc };
       vi.mocked(createClient).mockReturnValue(mockClient as any);
 
       const result = await checkUserHasPremiumAccess('user_timeout');
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error checking premium access:', mockError);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error checking premium access:',
+        mockError,
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -272,7 +296,7 @@ describe('client-factory', () => {
       expect(createClient).toHaveBeenCalledWith(
         expect.any(String),
         'anon-key',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -293,7 +317,7 @@ describe('client-factory', () => {
             persistSession: false,
             autoRefreshToken: false,
           },
-        })
+        }),
       );
     });
 
@@ -314,7 +338,7 @@ describe('client-factory', () => {
             persistSession: false,
             autoRefreshToken: false,
           },
-        })
+        }),
       );
     });
   });

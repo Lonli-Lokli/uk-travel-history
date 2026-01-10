@@ -17,6 +17,13 @@ import type {
   CreateTrackingGoalData,
   UpdateTrackingGoalData,
   GoalTemplate,
+  TripData,
+  CreateTripData,
+  UpdateTripData,
+  BulkCreateTripsData,
+  TripGroupData,
+  CreateTripGroupData,
+  UpdateTripGroupData,
 } from '../types/domain';
 import { getDbProvider } from '../internal/provider-resolver';
 
@@ -106,6 +113,16 @@ export async function updateUserByAuthId(
 export async function deleteUserByAuthId(authUserId: string): Promise<void> {
   const provider = getDbProvider();
   return provider.deleteUserByAuthId(authUserId);
+}
+
+/**
+ * Get user by Stripe checkout session ID
+ * @param sessionId - The Stripe checkout session ID
+ * @returns The user, or null if not found
+ */
+export async function getUserBySessionId(sessionId: string): Promise<User | null> {
+  const provider = getDbProvider();
+  return provider.getUserBySessionId(sessionId);
 }
 
 // ============================================================================
@@ -322,4 +339,161 @@ export async function getGoalTemplates(
 ): Promise<GoalTemplate[]> {
   const provider = getDbProvider();
   return provider.getGoalTemplates(jurisdiction);
+}
+
+// ============================================================================
+// Trip Operations
+// ============================================================================
+
+/**
+ * Get all trips for a user
+ * @param userId - The user ID (clerk_user_id)
+ * @returns Array of trips
+ */
+export async function getTrips(userId: string): Promise<TripData[]> {
+  const provider = getDbProvider();
+  return provider.getTrips(userId);
+}
+
+/**
+ * Get trips for a specific goal
+ * @param goalId - The goal ID
+ * @returns Array of trips for the goal
+ */
+export async function getTripsByGoal(goalId: string): Promise<TripData[]> {
+  const provider = getDbProvider();
+  return provider.getTripsByGoal(goalId);
+}
+
+/**
+ * Get a trip by ID
+ * @param tripId - The trip ID
+ * @returns The trip, or null if not found
+ */
+export async function getTripById(tripId: string): Promise<TripData | null> {
+  const provider = getDbProvider();
+  return provider.getTripById(tripId);
+}
+
+/**
+ * Create a new trip
+ * @param userId - The user ID (clerk_user_id)
+ * @param data - Trip creation data
+ * @returns The created trip
+ */
+export async function createTrip(
+  userId: string,
+  data: CreateTripData,
+): Promise<TripData> {
+  const provider = getDbProvider();
+  return provider.createTrip(userId, data);
+}
+
+/**
+ * Bulk create trips (for imports)
+ * @param userId - The user ID (clerk_user_id)
+ * @param data - Bulk trip creation data
+ * @returns Array of created trips
+ */
+export async function bulkCreateTrips(
+  userId: string,
+  data: BulkCreateTripsData,
+): Promise<TripData[]> {
+  const provider = getDbProvider();
+  return provider.bulkCreateTrips(userId, data);
+}
+
+/**
+ * Update a trip
+ * @param tripId - The trip ID
+ * @param data - Trip update data
+ * @returns The updated trip
+ */
+export async function updateTrip(
+  tripId: string,
+  data: UpdateTripData,
+): Promise<TripData> {
+  const provider = getDbProvider();
+  return provider.updateTrip(tripId, data);
+}
+
+/**
+ * Delete a trip
+ * @param tripId - The trip ID
+ */
+export async function deleteTrip(tripId: string): Promise<void> {
+  const provider = getDbProvider();
+  return provider.deleteTrip(tripId);
+}
+
+/**
+ * Reorder trips by updating their sort_order
+ * @param tripIds - Array of trip IDs in the desired order
+ */
+export async function reorderTrips(tripIds: string[]): Promise<void> {
+  const provider = getDbProvider();
+  return provider.reorderTrips(tripIds);
+}
+
+// ============================================================================
+// Trip Group Operations
+// ============================================================================
+
+/**
+ * Get all trip groups for a user
+ * @param userId - The user ID (clerk_user_id)
+ * @returns Array of trip groups
+ */
+export async function getTripGroups(userId: string): Promise<TripGroupData[]> {
+  const provider = getDbProvider();
+  return provider.getTripGroups(userId);
+}
+
+/**
+ * Get a trip group by ID
+ * @param groupId - The group ID
+ * @returns The trip group, or null if not found
+ */
+export async function getTripGroupById(
+  groupId: string,
+): Promise<TripGroupData | null> {
+  const provider = getDbProvider();
+  return provider.getTripGroupById(groupId);
+}
+
+/**
+ * Create a new trip group
+ * @param userId - The user ID (clerk_user_id)
+ * @param data - Trip group creation data
+ * @returns The created trip group
+ */
+export async function createTripGroup(
+  userId: string,
+  data: CreateTripGroupData,
+): Promise<TripGroupData> {
+  const provider = getDbProvider();
+  return provider.createTripGroup(userId, data);
+}
+
+/**
+ * Update a trip group
+ * @param groupId - The group ID
+ * @param data - Trip group update data
+ * @returns The updated trip group
+ */
+export async function updateTripGroup(
+  groupId: string,
+  data: UpdateTripGroupData,
+): Promise<TripGroupData> {
+  const provider = getDbProvider();
+  return provider.updateTripGroup(groupId, data);
+}
+
+/**
+ * Delete a trip group
+ * @param groupId - The group ID
+ */
+export async function deleteTripGroup(groupId: string): Promise<void> {
+  const provider = getDbProvider();
+  return provider.deleteTripGroup(groupId);
 }

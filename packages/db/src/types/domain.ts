@@ -104,8 +104,6 @@ export enum SubscriptionStatus {
 export interface User {
   /** Unique identifier */
   id: string;
-  /** Authentication provider user ID (e.g., Clerk user ID) */
-  authUserId: string;
   /** User's email address */
   email: string;
   /** Whether user has enrolled in passkey authentication */
@@ -226,8 +224,6 @@ export interface PurchaseIntent {
   priceId: string | null;
   /** Stripe product ID */
   productId: string | null;
-  /** Clerk user ID (after account is created) */
-  authUserId: string | null;
   /** When the purchase intent was created */
   createdAt: Date;
   /** When the purchase intent was last updated */
@@ -266,6 +262,14 @@ export interface UpdatePurchaseIntentData {
 // Webhook Event Types
 // ============================================================================
 
+export type WebhookEventPayload =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: WebhookEventPayload | undefined }
+  | WebhookEventPayload[];
+
 /**
  * Represents a processed webhook event (for idempotency)
  */
@@ -277,7 +281,7 @@ export interface WebhookEvent {
   /** Event type */
   type: string;
   /** Event payload (JSON) */
-  payload: Record<string, unknown>;
+  payload: WebhookEventPayload;
   /** When the webhook was processed */
   processedAt: Date;
 }
@@ -456,6 +460,12 @@ export interface AccessContext {
    * Loaded server-side for instant hydration in add goal wizard
    */
   goalTemplates: GoalTemplateWithAccess[] | null;
+
+  /**
+   * User's trips (null if feature disabled or no trips)
+   * Loaded server-side for instant hydration
+   */
+  trips: TripData[] | null;
 }
 
 /**
@@ -577,11 +587,111 @@ export interface GoalTemplate {
   category: string;
   name: string;
   description: string | null;
-  icon: string | null;
+  // NOTE: Icons are NOT stored in database - see @uth/ui/icons/goal-icons.ts for mapping
   type: GoalType;
   defaultConfig: Record<string, unknown>;
   requiredFields: string[];
   displayOrder: number;
   isAvailable: boolean;
   minTier: string;
+}
+
+// ============================================================================
+// Trip Types
+// ============================================================================
+
+/**
+ * Serializable trip data (ISO strings instead of Date objects)
+ */
+export interface TripData {
+  id: string;
+  userId: string;
+  goalId: string;
+  outDate: string; // ISO date string
+  inDate: string; // ISO date string
+  outRoute: string | null;
+  inRoute: string | null;
+  destination: string | null;
+  notes: string | null;
+  groupId: string | null;
+  sortOrder: number;
+  source: 'manual' | 'pdf_import' | 'excel_import';
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Data for creating a new trip
+ */
+export interface CreateTripData {
+  goalId: string;
+  outDate: string; // ISO date string
+  inDate: string; // ISO date string
+  outRoute?: string | null;
+  inRoute?: string | null;
+  destination?: string | null;
+  notes?: string | null;
+  groupId?: string | null;
+  sortOrder?: number;
+  source?: 'manual' | 'pdf_import' | 'excel_import';
+}
+
+/**
+ * Data for updating a trip
+ */
+export interface UpdateTripData {
+  outDate?: string;
+  inDate?: string;
+  outRoute?: string | null;
+  inRoute?: string | null;
+  destination?: string | null;
+  notes?: string | null;
+  groupId?: string | null;
+  sortOrder?: number;
+}
+
+/**
+ * Data for bulk creating trips (for imports)
+ */
+export interface BulkCreateTripsData {
+  goalId: string;
+  trips: Array<Omit<CreateTripData, 'goalId'>>;
+}
+
+// ============================================================================
+// Trip Group Types
+// ============================================================================
+
+/**
+ * Serializable trip group data
+ */
+export interface TripGroupData {
+  id: string;
+  userId: string;
+  name: string;
+  color: string | null;
+  sortOrder: number;
+  isCollapsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Data for creating a new trip group
+ */
+export interface CreateTripGroupData {
+  name: string;
+  color?: string | null;
+  sortOrder?: number;
+  isCollapsed?: boolean;
+}
+
+/**
+ * Data for updating a trip group
+ */
+export interface UpdateTripGroupData {
+  name?: string;
+  color?: string | null;
+  sortOrder?: number;
+  isCollapsed?: boolean;
 }

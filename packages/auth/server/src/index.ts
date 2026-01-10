@@ -37,7 +37,7 @@ export {
   isAuthConfigured,
   // Subscription operations
   getSubscription,
-  getSubscriptionBySessionId,
+  hasSubscription,
   createSubscription,
   updateSubscription,
   // User management operations

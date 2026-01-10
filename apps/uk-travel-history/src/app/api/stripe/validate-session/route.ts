@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { retrieveCheckoutSession } from '@uth/payments-server';
 import { logger } from '@uth/utils';
-import { getSubscriptionBySessionId } from '@uth/auth-server';
+import { hasSubscription } from '@uth/auth-server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if session has already been used using SDK
-    const existingSubscription = await getSubscriptionBySessionId(session_id);
-    const alreadyUsed = existingSubscription !== null;
+    const alreadyUsed = await hasSubscription(session_id);
 
     if (alreadyUsed) {
       logger.warn('[Validate Session] Session already used', {

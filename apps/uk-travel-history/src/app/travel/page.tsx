@@ -1,12 +1,9 @@
-import type { Metadata } from 'next';
-import { TravelPageClient } from '@/components/TravelPageClient';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Travel History', // Will use template from layout.tsx: 'Travel History | UK Travel History Parser'
-  description: 'Track and calculate your UK travel history, days outside UK, and continuous residence period.',
-};
-
+/**
+ * Legacy route - redirect to home page
+ * The travel tracker is now at the root path
+ */
 export default function TravelPage() {
-  return <TravelPageClient />;
+  redirect('/');
 }
-

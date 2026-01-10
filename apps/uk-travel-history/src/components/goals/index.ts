@@ -10,6 +10,7 @@ export {
 } from './GoalDetailPanel';
 export {
   AddGoalModal,
+  AddGoalDrawer,
   type GoalTemplate,
   type GoalCategory,
 } from './AddGoalFlow';

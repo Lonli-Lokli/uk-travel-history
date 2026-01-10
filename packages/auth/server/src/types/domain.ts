@@ -150,8 +150,6 @@ export enum SubscriptionStatus {
  * Represents a user subscription
  */
 export interface Subscription {
-  /** User ID this subscription belongs to */
-  userId: string;
   /** Subscription status */
   status: SubscriptionStatus | string;
   /** Stripe customer ID */

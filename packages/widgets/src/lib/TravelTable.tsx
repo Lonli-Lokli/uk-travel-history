@@ -11,33 +11,73 @@ import {
   ColumnDef,
   SortingState,
 } from '@tanstack/react-table';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { formatDate } from '@uth/utils';
 import { travelStore } from '@uth/stores';
 import { Button, UIIcon } from '@uth/ui';
 import { TripWithCalculations } from '@uth/calculators';
-import { EditableCell } from './editable-cell';
+import { SortableTableRow } from './SortableTableRow';
+import { SortableTripCard } from './SortableTripCard';
 
 export const TravelTable = observer(() => {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Access observable first so MobX tracks it
   const data = travelStore.tripsWithCalculations;
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
+  // Configure sensors for drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement to start drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 300, // 300ms long-press for mobile
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== dropIndex) {
-      travelStore.reorderTrip(draggedIndex, dropIndex);
+    if (over && active.id !== over.id) {
+      const oldIndex = data.findIndex((item) => item.id === active.id);
+      const newIndex = data.findIndex((item) => item.id === over.id);
+      travelStore.reorderTrip(oldIndex, newIndex);
     }
-    setDraggedIndex(null);
+
+    setActiveId(null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
   };
 
   const columns = useMemo<ColumnDef<TripWithCalculations>[]>(
@@ -47,9 +87,8 @@ export const TravelTable = observer(() => {
         header: () => <span className="sr-only">Reorder</span>,
         cell: ({ row }) => (
           <div
-            className="cursor-move hover:bg-muted/50 rounded p-1 -m-1"
-            draggable
-            onDragStart={() => handleDragStart(row.index)}
+            className="cursor-move hover:bg-muted/50 rounded p-1 -m-1 drag-handle"
+            onClick={(e) => e.stopPropagation()}
           >
             <UIIcon
               iconName="drag-drop"
@@ -73,19 +112,13 @@ export const TravelTable = observer(() => {
           </Button>
         ),
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.outDate}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { outDate: value })
-            }
-            type="date"
-            displayValue={
-              row.original.outDate
-                ? formatDate(row.original.outDate)
-                : undefined
-            }
-            placeholder="Set date (YYYY-MM-DD)"
-          />
+          <span className="text-sm">
+            {row.original.outDate ? (
+              formatDate(row.original.outDate)
+            ) : (
+              <span className="text-muted-foreground">Not set</span>
+            )}
+          </span>
         ),
       },
       {
@@ -102,48 +135,31 @@ export const TravelTable = observer(() => {
           </Button>
         ),
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.inDate}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { inDate: value })
-            }
-            type="date"
-            displayValue={
-              row.original.inDate ? formatDate(row.original.inDate) : undefined
-            }
-            defaultMonth={row.original.outDate}
-            placeholder="Set date (YYYY-MM-DD)"
-          />
+          <span className="text-sm">
+            {row.original.inDate ? (
+              formatDate(row.original.inDate)
+            ) : (
+              <span className="text-muted-foreground">Not set</span>
+            )}
+          </span>
         ),
       },
       {
         accessorKey: 'outRoute',
         header: () => <span className="text-xs font-semibold">Departure</span>,
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.outRoute}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { outRoute: value })
-            }
-            type="text"
-            placeholder="Add route"
-            className="max-w-[200px]"
-          />
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
+            {row.original.outRoute || '—'}
+          </span>
         ),
       },
       {
         accessorKey: 'inRoute',
         header: () => <span className="text-xs font-semibold">Return</span>,
         cell: ({ row }) => (
-          <EditableCell
-            value={row.original.inRoute}
-            onSave={(value) =>
-              travelStore.updateTrip(row.original.id, { inRoute: value })
-            }
-            type="text"
-            placeholder="Add route"
-            className="max-w-[200px]"
-          />
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
+            {row.original.inRoute || '—'}
+          </span>
         ),
       },
       {
@@ -171,7 +187,10 @@ export const TravelTable = observer(() => {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => travelStore.deleteTrip(row.original.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              travelStore.deleteTrip(row.original.id);
+            }}
           >
             <UIIcon iconName="trash" className="h-3.5 w-3.5" />
           </Button>
@@ -191,183 +210,121 @@ export const TravelTable = observer(() => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  const handleRowClick = (tripId: string) => {
+    travelStore.openDrawer('edit', tripId);
+  };
+
+  const activeTrip = activeId
+    ? data.find((trip) => trip.id === activeId)
+    : null;
+
+  const tripIds = useMemo(() => data.map((trip) => trip.id), [data]);
+
   return (
-    <div className="w-full">
-      {/* Add Row Button */}
-      <div className="mb-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full md:w-auto"
-          onClick={() => travelStore.addTrip()}
-        >
-          <UIIcon iconName="plus" className="h-4 w-4 mr-1" />
-          Add Trip
-        </Button>
-      </div>
-
-      {/* Mobile Cards View */}
-      <div className="block md:hidden space-y-2">
-        {table.getRowModel().rows.map((row, index) => (
-          <div
-            key={row.id}
-            className={`p-2 rounded-lg border ${
-              row.original.isIncomplete
-                ? 'bg-red-50 border-red-200'
-                : 'bg-white border-slate-200'
-            } ${draggedIndex === index ? 'opacity-50' : ''}`}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, index)}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="w-full">
+        {/* Add Row Button */}
+        <div className="mb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full md:w-auto"
+            onClick={() => travelStore.openDrawer('create')}
           >
-            {/* Header with drag handle and full days */}
-            <div className="flex items-center justify-between mb-2">
-              <div
-                className="cursor-move flex-shrink-0"
-                onTouchStart={() => handleDragStart(index)}
-              >
-                <UIIcon
-                  iconName="drag-drop"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-              </div>
-              <div className="text-center flex-1">
-                <div className="text-xl font-bold text-primary">
-                  {row.original.fullDays ?? '—'}
-                </div>
-                <div className="text-[0.625rem] text-muted-foreground uppercase leading-tight">
-                  Full Days
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
-                onClick={() => travelStore.deleteTrip(row.original.id)}
-              >
-                <UIIcon iconName="trash" className="h-3 w-3" />
-              </Button>
-            </div>
+            <UIIcon iconName="plus" className="h-4 w-4 mr-1" />
+            Add Trip
+          </Button>
+        </div>
 
-            {/* Departure section */}
-            <div className="space-y-1 mb-2">
-              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
-                Departure
-              </div>
-              <EditableCell
-                value={row.original.outDate}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { outDate: value })
-                }
-                type="date"
-                displayValue={
-                  row.original.outDate
-                    ? formatDate(row.original.outDate)
-                    : 'Tap to set date'
-                }
+        {/* Mobile Cards View */}
+        <SortableContext items={tripIds} strategy={verticalListSortingStrategy}>
+          <div className="block md:hidden space-y-2">
+            {data.map((trip) => (
+              <SortableTripCard
+                key={trip.id}
+                trip={trip}
+                onCardClick={handleRowClick}
+                onDelete={travelStore.deleteTrip.bind(travelStore)}
               />
-              <EditableCell
-                value={row.original.outRoute}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { outRoute: value })
-                }
-                type="text"
-                placeholder="Add departure location"
-                className="text-xs text-muted-foreground"
-              />
-            </div>
-
-            {/* Return section */}
-            <div className="space-y-1">
-              <div className="text-[0.625rem] text-muted-foreground uppercase font-semibold">
-                Return
-              </div>
-              <EditableCell
-                value={row.original.inDate}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { inDate: value })
-                }
-                type="date"
-                displayValue={
-                  row.original.inDate
-                    ? formatDate(row.original.inDate)
-                    : 'Tap to set date'
-                }
-                defaultMonth={row.original.outDate}
-              />
-              <EditableCell
-                value={row.original.inRoute}
-                onSave={(value) =>
-                  travelStore.updateTrip(row.original.id, { inRoute: value })
-                }
-                type="text"
-                placeholder="Add return location"
-                className="text-xs text-muted-foreground"
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-3 py-2 text-left font-medium text-slate-600"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </th>
-                ))}
-              </tr>
             ))}
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-8 text-center text-muted-foreground"
-                >
-                  No trips yet. Add a trip or import.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row, index) => (
-                <tr
-                  key={row.id}
-                  className={`transition-colors ${
-                    row.original.isIncomplete
-                      ? 'bg-red-50 hover:bg-red-100'
-                      : 'bg-white hover:bg-slate-50'
-                  } ${draggedIndex === index ? 'opacity-50' : ''}`}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </td>
+          </div>
+        </SortableContext>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className="px-3 py-2 text-left font-medium text-slate-600"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </th>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <SortableContext
+              items={tripIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <tbody className="divide-y divide-slate-100">
+                {table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="px-3 py-8 text-center text-muted-foreground"
+                    >
+                      No trips yet. Add a trip or import.
+                    </td>
+                  </tr>
+                ) : (
+                  table
+                    .getRowModel()
+                    .rows.map((row) => (
+                      <SortableTableRow
+                        key={row.id}
+                        row={row}
+                        onRowClick={handleRowClick}
+                      />
+                    ))
+                )}
+              </tbody>
+            </SortableContext>
+          </table>
+        </div>
+
+        {/* Drag Overlay - shows the item being dragged */}
+        <DragOverlay>
+          {activeTrip ? (
+            <div className="bg-white shadow-2xl rounded-lg opacity-90 border-2 border-primary">
+              <SortableTripCard
+                trip={activeTrip}
+                onCardClick={() => {
+                  /* empty */
+                }}
+                onDelete={() => {
+                  /* empty */
+                }}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </div>
-    </div>
+    </DndContext>
   );
 });

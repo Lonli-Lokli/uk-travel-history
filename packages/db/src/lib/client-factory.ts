@@ -36,13 +36,15 @@ import type { Database } from '../internal/providers/supabase.types';
  * const token = await getToken({ template: 'supabase' });
  * const client = createUserScopedClient(token);
  */
-export function createUserScopedClient(clerkToken: string | null): SupabaseClient<Database> {
+export function createUserScopedClient(
+  clerkToken: string | null,
+): SupabaseClient<Database> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+      'Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.',
     );
   }
 
@@ -86,12 +88,13 @@ export function createUserScopedClient(clerkToken: string | null): SupabaseClien
  * }
  */
 export function createAdminClient(): SupabaseClient<Database> {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error(
-      'Missing Supabase service role configuration. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+      'Missing Supabase service role configuration. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.',
     );
   }
 
@@ -112,11 +115,15 @@ export function createAdminClient(): SupabaseClient<Database> {
  * @param clerkUserId - The Clerk user ID to check
  * @returns Promise resolving to true if user has premium access
  */
-export async function checkUserHasPremiumAccess(clerkUserId: string): Promise<boolean> {
+export async function checkUserHasPremiumAccess(
+  clerkUserId: string,
+): Promise<boolean> {
   const client = createAdminClient();
 
   // Note: Using type assertion because RPC function types aren't defined in Database type
-  const { data, error } = await (client.rpc as any)('has_premium_access', { user_id: clerkUserId });
+  const { data, error } = await (client.rpc as any)('has_premium_access', {
+    user_id: clerkUserId,
+  });
 
   if (error) {
     console.error('Error checking premium access:', error);

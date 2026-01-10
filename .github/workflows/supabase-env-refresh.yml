@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Environment to refresh (staging|weekly|monthly)"
+        description: 'Environment to refresh (staging)'
         required: true
         type: string
 
@@ -18,7 +18,7 @@ jobs:
 
     env:
       PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}      
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 
     steps:
       - name: Validate inputs + choose target DB URL
@@ -28,21 +28,24 @@ jobs:
           set -euo pipefail
           TARGET="${{ github.event.inputs.target }}"
 
-          case "$TARGET" in
-            staging) echo "TARGET_DB_URL=${STAGING_DATABASE_URL}" >> "$GITHUB_OUTPUT" ;;
-            *) echo "Invalid target: $TARGET"; exit 1 ;;
-          esac
-
-          if [ -z "${PROD_DATABASE_URL}" ]; then
+          if [ -z "${PROD_DATABASE_URL:-}" ]; then
             echo "Missing PROD_DATABASE_URL secret" >&2
             exit 1
           fi
 
-          TARGET_URL=$(grep -E '^TARGET_DB_URL=' "$GITHUB_OUTPUT" | cut -d= -f2-)
-          if [ -z "${TARGET_URL}" ]; then
-            echo "Missing target DB URL secret for: $TARGET" >&2
-            exit 1
-          fi
+          case "$TARGET" in
+            staging)
+              if [ -z "${STAGING_DATABASE_URL:-}" ]; then
+                echo "Missing STAGING_DATABASE_URL secret" >&2
+                exit 1
+              fi
+              echo "TARGET_DB_URL=${STAGING_DATABASE_URL}" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Invalid target: $TARGET (expected: staging)" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Install Postgres client
         shell: bash

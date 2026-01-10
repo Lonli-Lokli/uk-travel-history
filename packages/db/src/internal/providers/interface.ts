@@ -17,6 +17,13 @@ import type {
   CreateTrackingGoalData,
   UpdateTrackingGoalData,
   GoalTemplate,
+  TripData,
+  CreateTripData,
+  UpdateTripData,
+  BulkCreateTripsData,
+  TripGroupData,
+  CreateTripGroupData,
+  UpdateTripGroupData,
 } from '../../types/domain';
 
 /**
@@ -109,6 +116,13 @@ export interface DbProvider {
   getPurchaseIntentBySessionId(
     sessionId: string,
   ): Promise<PurchaseIntent | null>;
+
+  /**
+   * Get user by Stripe checkout session ID
+   * @param sessionId - The Stripe checkout session ID
+   * @returns The user, or null if not found
+   */
+  getUserBySessionId(sessionId: string): Promise<User | null>;
 
   /**
    * Get purchase intents by auth user ID
@@ -237,4 +251,114 @@ export interface DbProvider {
    * @returns Array of goal templates
    */
   getGoalTemplates(jurisdiction?: string): Promise<GoalTemplate[]>;
+
+  // ============================================================================
+  // Trip Operations
+  // ============================================================================
+
+  /**
+   * Get all trips for a user
+   * @param userId - The user ID (clerk_user_id)
+   * @returns Array of trips
+   */
+  getTrips(userId: string): Promise<TripData[]>;
+
+  /**
+   * Get trips for a specific goal
+   * @param goalId - The goal ID
+   * @returns Array of trips for the goal
+   */
+  getTripsByGoal(goalId: string): Promise<TripData[]>;
+
+  /**
+   * Get a trip by ID
+   * @param tripId - The trip ID
+   * @returns The trip, or null if not found
+   */
+  getTripById(tripId: string): Promise<TripData | null>;
+
+  /**
+   * Create a new trip
+   * @param userId - The user ID (clerk_user_id)
+   * @param data - Trip creation data
+   * @returns The created trip
+   */
+  createTrip(userId: string, data: CreateTripData): Promise<TripData>;
+
+  /**
+   * Bulk create trips (for imports)
+   * @param userId - The user ID (clerk_user_id)
+   * @param data - Bulk trip creation data
+   * @returns Array of created trips
+   */
+  bulkCreateTrips(
+    userId: string,
+    data: BulkCreateTripsData,
+  ): Promise<TripData[]>;
+
+  /**
+   * Update a trip
+   * @param tripId - The trip ID
+   * @param data - Trip update data
+   * @returns The updated trip
+   */
+  updateTrip(tripId: string, data: UpdateTripData): Promise<TripData>;
+
+  /**
+   * Delete a trip
+   * @param tripId - The trip ID
+   */
+  deleteTrip(tripId: string): Promise<void>;
+
+  /**
+   * Reorder trips by updating their sort_order
+   * @param tripIds - Array of trip IDs in the desired order
+   */
+  reorderTrips(tripIds: string[]): Promise<void>;
+
+  // ============================================================================
+  // Trip Group Operations
+  // ============================================================================
+
+  /**
+   * Get all trip groups for a user
+   * @param userId - The user ID (clerk_user_id)
+   * @returns Array of trip groups
+   */
+  getTripGroups(userId: string): Promise<TripGroupData[]>;
+
+  /**
+   * Get a trip group by ID
+   * @param groupId - The group ID
+   * @returns The trip group, or null if not found
+   */
+  getTripGroupById(groupId: string): Promise<TripGroupData | null>;
+
+  /**
+   * Create a new trip group
+   * @param userId - The user ID (clerk_user_id)
+   * @param data - Trip group creation data
+   * @returns The created trip group
+   */
+  createTripGroup(
+    userId: string,
+    data: CreateTripGroupData,
+  ): Promise<TripGroupData>;
+
+  /**
+   * Update a trip group
+   * @param groupId - The group ID
+   * @param data - Trip group update data
+   * @returns The updated trip group
+   */
+  updateTripGroup(
+    groupId: string,
+    data: UpdateTripGroupData,
+  ): Promise<TripGroupData>;
+
+  /**
+   * Delete a trip group
+   * @param groupId - The group ID
+   */
+  deleteTripGroup(groupId: string): Promise<void>;
 }

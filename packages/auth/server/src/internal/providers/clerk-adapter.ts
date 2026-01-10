@@ -26,6 +26,7 @@ import {
   getPurchaseIntentBySessionId,
   SubscriptionStatus as DbSubscriptionStatus,
   type User as DbUser,
+  getUserBySessionId,
 } from '@uth/db';
 
 /**
@@ -242,7 +243,6 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     }
 
     return {
-      userId: user.authUserId,
       status: user.subscriptionStatus || DbSubscriptionStatus.ACTIVE,
       stripeCustomerId: user.stripeCustomerId,
       stripeSubscriptionId: user.stripeSubscriptionId || '',
@@ -253,9 +253,10 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
       cancelAtPeriodEnd: user.cancelAtPeriodEnd,
       createdAt: user.createdAt,
       updatedAt: user.createdAt, // Users table doesn't track updatedAt separately
-      canceledAt: user.subscriptionStatus === DbSubscriptionStatus.CANCELED
-        ? user.currentPeriodEnd || undefined
-        : undefined,
+      canceledAt:
+        user.subscriptionStatus === DbSubscriptionStatus.CANCELED
+          ? user.currentPeriodEnd || undefined
+          : undefined,
     };
   }
 
@@ -277,36 +278,16 @@ export class ClerkAuthServerAdapter implements AuthServerProvider {
     }
   }
 
-  async getSubscriptionBySessionId(
-    sessionId: string,
-  ): Promise<Subscription | null> {
+  async hasSubscription(sessionId: string): Promise<boolean> {
     try {
-      // Get purchase intent by session ID
-      const intent = await getPurchaseIntentBySessionId(sessionId);
+      // Get user by session ID
+      const user = await getUserBySessionId(sessionId);
 
-      if (!intent || !intent.authUserId) {
-        return null;
-      }
-
-      // Get user subscription data
-      const user = await getUserByAuthId(intent.authUserId);
-
-      if (!user) {
-        return null;
-      }
-
-      const subscription = this.mapUserToSubscription(user);
-
-      // Add session ID to the subscription if found
-      if (subscription) {
-        subscription.stripeSessionId = sessionId;
-      }
-
-      return subscription;
+      return user !== null;
     } catch (error: any) {
       throw new AuthError(
         AuthErrorCode.PROVIDER_ERROR,
-        `Failed to get subscription by session ID: ${error.message}`,
+        `Failed to get user by session ID: ${error.message}`,
         error,
       );
     }

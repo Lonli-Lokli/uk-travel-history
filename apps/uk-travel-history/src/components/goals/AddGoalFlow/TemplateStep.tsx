@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, UIIcon, type IconName } from '@uth/ui';
+import { Button, GoalIcon, UIIcon, type IconName } from '@uth/ui';
 import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { GoalTemplateWithAccess } from '@uth/db';
@@ -57,8 +57,8 @@ export function TemplateStep({ templates, isLoading }: TemplateStepProps) {
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <UIIcon
-                  iconName={(template.icon as IconName) || 'target'}
+                <GoalIcon
+                  templateId={template.id}
                   className="w-4 h-4 text-slate-600"
                 />
               </div>

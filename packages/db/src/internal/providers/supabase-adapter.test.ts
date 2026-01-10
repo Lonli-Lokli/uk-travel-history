@@ -202,7 +202,6 @@ describe('SupabaseDbAdapter', () => {
       const user = await adapter.getUserByAuthId('clerk_123');
 
       expect(user).not.toBeNull();
-      expect(user?.authUserId).toBe('clerk_123');
       expect(user?.email).toBe('test@example.com');
       expect(user?.passkeyEnrolled).toBe(true);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
@@ -347,7 +346,6 @@ describe('SupabaseDbAdapter', () => {
 
       const user = await adapter.createUser(data);
 
-      expect(user.authUserId).toBe('clerk_new');
       expect(user.email).toBe('new@example.com');
       expect(mockQuery.insert).toHaveBeenCalledWith(
         expect.objectContaining({

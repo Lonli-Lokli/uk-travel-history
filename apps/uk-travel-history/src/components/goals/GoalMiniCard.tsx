@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, UIIcon, type IconName } from '@uth/ui';
+import { Card, CardContent, GoalTypeIcon } from '@uth/ui';
 import { cn } from '@uth/utils';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 
@@ -51,16 +51,6 @@ const statusLabels: Record<string, string> = {
   achieved: 'Achieved',
 };
 
-/** Goal type to icon mapping */
-const goalTypeIcons: Record<string, IconName> = {
-  uk_ilr: 'home',
-  uk_citizenship: 'uk-flag',
-  uk_tax_residency: 'calculator',
-  schengen_90_180: 'eu-flag',
-  days_counter: 'calendar',
-  custom_threshold: 'settings',
-};
-
 export interface GoalMiniCardProps {
   goal: TrackingGoalData;
   calculation: GoalCalculationData | null;
@@ -79,7 +69,6 @@ export function GoalMiniCard({
   const status = calculation?.status ?? 'not_started';
   const colors = statusColors[status] ?? statusColors.not_started;
   const statusLabel = statusLabels[status] ?? 'Unknown';
-  const icon = goalTypeIcons[goal.type] ?? 'target';
   const progress = calculation?.progressPercent ?? 0;
 
   // Format progress percentage
@@ -105,7 +94,10 @@ export function GoalMiniCard({
           {/* Icon + Progress */}
           <div className="relative">
             <div className="w-8 h-8 rounded-full bg-white/60 flex items-center justify-center">
-              <UIIcon iconName={icon} className="w-4 h-4 text-slate-700" />
+              <GoalTypeIcon
+                goalType={goal.type}
+                className="w-4 h-4 text-slate-700"
+              />
             </div>
             {/* Progress badge */}
             <div className="absolute -top-1 -right-1 text-[10px] font-bold bg-white rounded-full px-1 shadow-sm">

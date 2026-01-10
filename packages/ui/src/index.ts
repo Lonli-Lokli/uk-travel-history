@@ -15,3 +15,4 @@ export * from './icon';
 export * from './popover';
 export * from './navigation-menu';
 export * from './drawer';
+export * from './goal-icons';

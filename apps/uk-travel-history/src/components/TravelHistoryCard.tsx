@@ -17,7 +17,7 @@ import {
   UIIcon,
 } from '@uth/ui';
 import { travelStore } from '@uth/stores';
-import { TravelTable } from '@uth/widgets';
+import { TravelTable, TripDrawer } from '@uth/widgets';
 
 interface TravelHistoryCardProps {
   onClearAll: () => void;
@@ -29,62 +29,65 @@ export const TravelHistoryCard = observer(
     const tripCount = travelStore.trips.length;
 
     return (
-      <Card className="bg-white mb-3">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <UIIcon
-                iconName="history"
-                className="w-4 h-4 text-muted-foreground"
-              />
-              Travel History
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
-              Click on any cell to edit. Full days exclude travel days.
-            </p>
-          </div>
+      <>
+        <TripDrawer />
+        <Card className="bg-white mb-3">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <UIIcon
+                  iconName="history"
+                  className="w-4 h-4 text-muted-foreground"
+                />
+                Travel History
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
+                Click any trip to edit. Full days exclude travel days.
+              </p>
+            </div>
 
-          {hasTrips && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <UIIcon iconName="trash" className="h-4 w-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Clear All</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Clear all trips?</DialogTitle>
-                  <DialogDescription>
-                    This will remove all {tripCount} trips. This action cannot
-                    be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" className="flex-1 sm:flex-none">
-                    Cancel
-                  </Button>
+            {hasTrips && (
+              <Dialog>
+                <DialogTrigger asChild>
                   <Button
-                    variant="destructive"
-                    className="flex-1 sm:flex-none"
-                    onClick={onClearAll}
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-destructive"
                   >
-                    Clear All
+                    <UIIcon iconName="trash" className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Clear All</span>
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </CardHeader>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Clear all trips?</DialogTitle>
+                    <DialogDescription>
+                      This will remove all {tripCount} trips. This action cannot
+                      be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" className="flex-1 sm:flex-none">
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 sm:flex-none"
+                      onClick={onClearAll}
+                    >
+                      Clear All
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </CardHeader>
 
-        <CardContent>
-          <TravelTable />
-        </CardContent>
-      </Card>
+          <CardContent>
+            <TravelTable />
+          </CardContent>
+        </Card>
+      </>
     );
   },
 );
