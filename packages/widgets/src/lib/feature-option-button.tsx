@@ -83,6 +83,35 @@ const FeatureOptionButtonComponent = ({
     );
   }
 
+  return (
+    <FeatureOptionButtonComponentInner
+      icon={icon}
+      label={label}
+      description={description}
+      onClick={onClick}
+      feature={feature}
+      variant={variant}
+    />
+  );
+};
+
+export interface FeatureOptionButtonInnerProps {
+  icon: string;
+  label: string;
+  description: string;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary';
+  feature: FeatureFlagKey;
+}
+
+const FeatureOptionButtonComponentInner = ({
+  icon,
+  label,
+  description,
+  onClick,
+  variant = 'secondary',
+  feature,
+}: FeatureOptionButtonInnerProps) => {
   // Feature-gated button - call hook after early return for non-feature buttons
   const {
     hasAccess,
@@ -214,6 +243,5 @@ const FeatureOptionButtonComponent = ({
     </button>
   );
 };
-
 // Export as observer to make it reactive to MobX changes
 export const FeatureOptionButton = observer(FeatureOptionButtonComponent);

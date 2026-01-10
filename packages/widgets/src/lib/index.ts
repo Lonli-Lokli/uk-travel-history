@@ -9,5 +9,6 @@ export * from './FullDataImportDialog';
 export * from './ImportPreviewDialog';
 export * from './feature-button';
 export * from './feature-chart';
+export * from './feature-option-button';
 export * from './premium-gate';
 export * from './use-premium-access';

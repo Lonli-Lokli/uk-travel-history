@@ -19,7 +19,7 @@ import {
   DrawerDescription,
 } from '@uth/ui';
 import { FEATURE_KEYS } from '@uth/features';
-import { FeatureOptionButton } from './FeatureOptionButton';
+import { FeatureOptionButton } from '@uth/widgets';
 
 export interface AddOptionsDrawerProps {
   isOpen: boolean;
