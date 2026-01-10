@@ -40,6 +40,15 @@ const FeatureOptionButtonComponent = ({
   variant = 'secondary',
   feature,
 }: FeatureOptionButtonProps) => {
+    // Feature-gated button
+  const {
+    hasAccess,
+    isLoading,
+    requiresSignUp,
+    requiresUpgrade,
+    handleUpgrade,
+  } = useFeatureGate(feature);
+  
   // If no feature specified, render as regular button
   if (!feature) {
     return (
@@ -83,14 +92,7 @@ const FeatureOptionButtonComponent = ({
     );
   }
 
-  // Feature-gated button
-  const {
-    hasAccess,
-    isLoading,
-    requiresSignUp,
-    requiresUpgrade,
-    handleUpgrade,
-  } = useFeatureGate(feature);
+
 
   // Loading state
   if (isLoading) {
