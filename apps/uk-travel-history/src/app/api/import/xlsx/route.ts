@@ -1,15 +1,20 @@
 /**
  * XLSX Import API Route
- * POST /api/import/xlsx - Parse single-sheet XLSX file to trips
+ * POST /api/import/xlsx - Parse single-sheet XLSX file and optionally save to DB
  *
- * Server-side parsing for single-sheet Excel imports:
+ * Server-side parsing with tier-based persistence:
  * - Authenticated users (free): Returns parsed trips (not saved to DB)
- * - Paid users: Can optionally save via /api/trips/bulk after receiving trips
+ * - Paid users (multi-goal): Saves to DB and returns saved trips
+ *
+ * Request: FormData with:
+ * - file: XLSX file to parse
+ * - goalId: (optional) Goal ID to save trips to (for paid users)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { parseXlsxFile } from '@uth/parser';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { assertFeatureAccess, checkFeatureAccess, getUserContext, FEATURE_KEYS } from '@uth/features/server';
+import { bulkCreateTrips, getGoalById } from '@uth/db';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -17,11 +22,12 @@ export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
-    // Enforce feature access - Excel import feature
-    await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_IMPORT);
+    // Enforce feature access - Excel import feature (base requirement)
+    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_IMPORT);
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const goalId = formData.get('goalId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -55,13 +61,59 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Return parsed trips (hydrated data, not saved to DB)
+    // Check if user has multi-goal tracking (paid feature)
+    const multiGoalUserContext = await getUserContext(request);
+    const multiGoalAccessResult = await checkFeatureAccess(
+      FEATURE_KEYS.MULTI_GOAL_TRACKING,
+      multiGoalUserContext,
+    );
+    const hasMultiGoalAccess = multiGoalAccessResult.allowed;
+
+    // For paid users with a goalId, save trips to database
+    if (hasMultiGoalAccess && goalId && userContext.userId) {
+      // Verify goal ownership
+      const goal = await getGoalById(goalId);
+
+      if (!goal || goal.userId !== userContext.userId) {
+        return NextResponse.json(
+          { error: 'Goal not found or not authorized' },
+          { status: 404 },
+        );
+      }
+
+      // Save trips to database
+      const savedTrips = await bulkCreateTrips(userContext.userId, {
+        goalId,
+        trips: result.trips,
+      });
+
+      logger.info('XLSX trips saved to database', {
+        extra: {
+          userId: userContext.userId,
+          goalId,
+          count: savedTrips.length,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        trips: savedTrips,
+        warnings: result.warnings,
+        metadata: {
+          tripCount: savedTrips.length,
+          saved: true,
+        },
+      });
+    }
+
+    // For free users, return parsed trips (in-memory only)
     return NextResponse.json({
       success: true,
       trips: result.trips,
       warnings: result.warnings,
       metadata: {
         tripCount: result.trips.length,
+        saved: false,
       },
     });
   } catch (error) {

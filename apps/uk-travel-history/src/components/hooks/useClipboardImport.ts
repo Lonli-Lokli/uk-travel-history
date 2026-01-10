@@ -35,11 +35,15 @@ export const useClipboardImport = () => {
         return;
       }
 
-      // Parse on server
+      // Parse on server (with optional DB save for paid users)
+      const goalId = hasGoalsAccess && goalsStore.goals.length > 0
+        ? goalsStore.goals[0].id
+        : undefined;
+
       const response = await fetch('/api/import/csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, goalId }),
       });
 
       const result = await response.json();
@@ -50,12 +54,12 @@ export const useClipboardImport = () => {
         );
       }
 
-      // For authenticated users with multi-goal access (paid users), save to database
-      if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
-        const goalId = goalsStore.goals[0].id;
-
-        // Save trips to database via bulk endpoint
-        await tripsStore.bulkCreateTrips(goalId, result.trips);
+      // For paid users, trips are already saved to DB by server
+      if (result.metadata?.saved) {
+        // Update local store with saved trips
+        result.trips.forEach((trip: any) => {
+          tripsStore.trips.push(trip);
+        });
 
         toast({
           title: 'Import successful',
@@ -63,8 +67,7 @@ export const useClipboardImport = () => {
           variant: 'success' as any,
         });
       } else {
-        // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
-        // Use 'append' mode to always add new trips
+        // For free users, hydrate trips in-memory (legacy travelStore)
         const tripData = result.trips
           .map(
             (trip: { outDate: string; inDate: string; outRoute: string; inRoute: string }) =>

@@ -46,6 +46,11 @@ export const useCsvImport = () => {
             const formData = new FormData();
             formData.append('file', file);
 
+            // Add goalId for paid users
+            if (hasGoalsAccess && goalsStore.goals.length > 0) {
+              formData.append('goalId', goalsStore.goals[0].id);
+            }
+
             const response = await fetch('/api/import-full', {
               method: 'POST',
               body: formData,
@@ -57,18 +62,12 @@ export const useCsvImport = () => {
               throw new Error(result.error || 'Failed to import file');
             }
 
-            // For authenticated users with multi-goal access (paid users), save to database
-            if (
-              hasGoalsAccess &&
-              authStore.user &&
-              goalsStore.goals.length > 0
-            ) {
-              const goalId = goalsStore.goals[0].id;
-
-              // Save trips to database via bulk endpoint
-              if (result.data.trips && result.data.trips.length > 0) {
-                await tripsStore.bulkCreateTrips(goalId, result.data.trips);
-              }
+            // For paid users, trips are already saved to DB by server
+            if (result.metadata?.saved) {
+              // Update local store with saved trips
+              result.data.trips.forEach((trip: any) => {
+                tripsStore.trips.push(trip);
+              });
 
               toast({
                 title: 'Import successful',
@@ -76,8 +75,7 @@ export const useCsvImport = () => {
                 variant: 'success' as any,
               });
             } else {
-              // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
-              // Convert trips to CSV format for legacy import
+              // For free users, hydrate trips in-memory (legacy travelStore)
               const trips = result.data.trips || [];
               const tripData = trips
                 .map(
@@ -118,6 +116,11 @@ export const useCsvImport = () => {
           const formData = new FormData();
           formData.append('file', file);
 
+          // Add goalId for paid users
+          if (hasGoalsAccess && goalsStore.goals.length > 0) {
+            formData.append('goalId', goalsStore.goals[0].id);
+          }
+
           const response = await fetch('/api/import/xlsx', {
             method: 'POST',
             body: formData,
@@ -133,14 +136,12 @@ export const useCsvImport = () => {
             );
           }
 
-          // For authenticated users with multi-goal access (paid users), save to database
-          if (
-            hasGoalsAccess &&
-            authStore.user &&
-            goalsStore.goals.length > 0
-          ) {
-            const goalId = goalsStore.goals[0].id;
-            await tripsStore.bulkCreateTrips(goalId, result.trips);
+          // For paid users, trips are already saved to DB by server
+          if (result.metadata?.saved) {
+            // Update local store with saved trips
+            result.trips.forEach((trip: any) => {
+              tripsStore.trips.push(trip);
+            });
 
             toast({
               title: 'Import successful',
@@ -148,7 +149,7 @@ export const useCsvImport = () => {
               variant: 'success' as any,
             });
           } else {
-            // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
+            // For free users, hydrate trips in-memory (legacy travelStore)
             const tripData = result.trips
               .map(
                 (trip: {
@@ -174,10 +175,15 @@ export const useCsvImport = () => {
           // Parse CSV file on server
           const text = await file.text();
 
+          // Add goalId for paid users
+          const goalId = hasGoalsAccess && goalsStore.goals.length > 0
+            ? goalsStore.goals[0].id
+            : undefined;
+
           const response = await fetch('/api/import/csv', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({ text, goalId }),
           });
 
           const result = await response.json();
@@ -190,14 +196,12 @@ export const useCsvImport = () => {
             );
           }
 
-          // For authenticated users with multi-goal access (paid users), save to database
-          if (
-            hasGoalsAccess &&
-            authStore.user &&
-            goalsStore.goals.length > 0
-          ) {
-            const goalId = goalsStore.goals[0].id;
-            await tripsStore.bulkCreateTrips(goalId, result.trips);
+          // For paid users, trips are already saved to DB by server
+          if (result.metadata?.saved) {
+            // Update local store with saved trips
+            result.trips.forEach((trip: any) => {
+              tripsStore.trips.push(trip);
+            });
 
             toast({
               title: 'Import successful',
@@ -205,7 +209,7 @@ export const useCsvImport = () => {
               variant: 'success' as any,
             });
           } else {
-            // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
+            // For free users, hydrate trips in-memory (legacy travelStore)
             const tripData = result.trips
               .map(
                 (trip: {

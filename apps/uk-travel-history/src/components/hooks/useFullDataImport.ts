@@ -29,9 +29,14 @@ export const useFullDataImport = () => {
       try {
         setIsImporting(true);
 
-        // Parse the full data file on server
+        // Parse the full data file on server (with optional DB save for paid users)
         const formData = new FormData();
         formData.append('file', file);
+
+        // Add goalId for paid users
+        if (hasGoalsAccess && goalsStore.goals.length > 0) {
+          formData.append('goalId', goalsStore.goals[0].id);
+        }
 
         const response = await fetch('/api/import-full', {
           method: 'POST',
@@ -44,14 +49,12 @@ export const useFullDataImport = () => {
           throw new Error(result.error || 'Failed to import file');
         }
 
-        // For authenticated users with multi-goal access (paid users), save to database
-        if (hasGoalsAccess && authStore.user && goalsStore.goals.length > 0) {
-          const goalId = goalsStore.goals[0].id;
-
-          // Save trips to database via bulk endpoint
-          if (result.data.trips && result.data.trips.length > 0) {
-            await tripsStore.bulkCreateTrips(goalId, result.data.trips);
-          }
+        // For paid users, trips are already saved to DB by server
+        if (result.metadata?.saved) {
+          // Update local store with saved trips
+          result.data.trips.forEach((trip: any) => {
+            tripsStore.trips.push(trip);
+          });
 
           toast({
             title: 'Import successful',
@@ -59,8 +62,7 @@ export const useFullDataImport = () => {
             variant: 'success' as any,
           });
         } else {
-          // Authenticated users without multi-goal access: hydrate trips in-memory (legacy travelStore)
-          // Convert trips to CSV format for legacy import
+          // For free users, hydrate trips in-memory (legacy travelStore)
           const trips = result.data.trips || [];
           const tripData = trips
             .map(

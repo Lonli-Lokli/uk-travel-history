@@ -142,6 +142,9 @@ export class TripsStore {
 
   /**
    * Bulk create trips (for imports)
+   * @deprecated Use server-side import endpoints instead (e.g., /api/import/csv)
+   * This method is kept for backward compatibility but should not be used directly.
+   * Import endpoints now handle persistence automatically based on user tier.
    */
   async bulkCreateTrips(
     goalId: string,
