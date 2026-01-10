@@ -29,6 +29,7 @@ import { getAllFeaturePolicies, DEFAULT_FEATURE_POLICIES } from './features';
 import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
 import { TierId, TIERS } from '@uth/domain';
 import { getFeatureLogger } from './feature-logger';
+import { ruleEngineRegistry } from '@uth/rules';
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -132,10 +133,9 @@ export async function loadAccessContext(): Promise<AccessContext> {
         goals = userGoals;
         trips = userTrips;
 
-        // Note: Goal calculations require trip data
-        // Server-side calculations would be done here if needed
-        // For now, calculations will be done client-side after hydration
-        goalCalculations = null;
+        // Server-side calculation of goal metrics
+        // This ensures calculations happen on the server and are hydrated to client
+        goalCalculations = await calculateGoalMetrics(userGoals, userTrips);
 
         // Compute template access based on user's tier
         const tierHierarchy: Record<string, number> = {
@@ -463,4 +463,80 @@ function mapSubscriptionTierToTierId(tier: SubscriptionTier): TierId {
       );
       return TIERS.FREE;
   }
+}
+
+/**
+ * Calculate goal metrics server-side using rule engines
+ *
+ * @param goals - User's tracking goals
+ * @param trips - User's trip data
+ * @returns Record of goal IDs to calculation results
+ */
+async function calculateGoalMetrics(
+  goals: TrackingGoalData[],
+  trips: TripData[],
+): Promise<Record<string, GoalCalculationData>> {
+  const calculations: Record<string, GoalCalculationData> = {};
+
+  // Convert TripData to TripRecord format (required by rule engines)
+  const tripRecords = trips.map((trip) => ({
+    id: trip.id,
+    outDate: trip.outDate,
+    inDate: trip.inDate,
+    outRoute: trip.outRoute || '',
+    inRoute: trip.inRoute || '',
+  }));
+
+  // Calculate metrics for each active goal
+  for (const goal of goals) {
+    if (!goal.isActive || goal.isArchived) {
+      continue;
+    }
+
+    try {
+      const engine = ruleEngineRegistry.get(goal.type);
+
+      if (!engine) {
+        getFeatureLogger().warn(
+          `No rule engine found for goal type: ${goal.type}`,
+          {
+            level: 'warning',
+            tags: {
+              context: 'access-context',
+              operation: 'calculateGoalMetrics',
+              goalId: goal.id,
+              goalType: goal.type,
+            },
+          },
+        );
+        continue;
+      }
+
+      const calculation = engine.calculate(
+        tripRecords,
+        goal.config as Parameters<typeof engine.calculate>[1],
+        new Date(goal.startDate),
+      );
+
+      // Set the goal ID on the calculation
+      calculation.goalId = goal.id;
+
+      calculations[goal.id] = calculation as GoalCalculationData;
+    } catch (error) {
+      getFeatureLogger().error(
+        `Failed to calculate goal ${goal.id}:`,
+        error,
+        {
+          tags: {
+            context: 'access-context',
+            operation: 'calculateGoalMetrics',
+            goalId: goal.id,
+            goalType: goal.type,
+          },
+        },
+      );
+    }
+  }
+
+  return calculations;
 }

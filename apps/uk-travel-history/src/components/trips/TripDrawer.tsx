@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { uiStore, tripsStore, goalsStore, authStore, travelStore } from '@uth/stores';
+import { uiStore, tripsStore, goalsStore, authStore, travelStore, useRefreshAccessContext } from '@uth/stores';
 import {
   Drawer,
   DrawerContent,
@@ -37,6 +37,7 @@ export const TripDrawer = observer(() => {
   const formData = uiStore.tripDrawerFormData;
   const isLoading = tripsStore.isLoading;
   const isAuthenticated = !!authStore.user;
+  const refreshAccessContext = useRefreshAccessContext();
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -71,21 +72,29 @@ export const TripDrawer = observer(() => {
         formData.goalId = firstGoal.id;
       }
 
+      let success = false;
       if (mode === 'create') {
-        await tripsStore.createTrip({
+        const result = await tripsStore.createTrip({
           goalId: formData.goalId,
           outDate: formData.outDate,
           inDate: formData.inDate,
           outRoute: formData.outRoute,
           inRoute: formData.inRoute,
         });
+        success = result !== null;
       } else if (mode === 'edit' && uiStore.editingTripId) {
-        await tripsStore.updateTrip(uiStore.editingTripId, {
+        const result = await tripsStore.updateTrip(uiStore.editingTripId, {
           outDate: formData.outDate,
           inDate: formData.inDate,
           outRoute: formData.outRoute,
           inRoute: formData.inRoute,
         });
+        success = result !== null;
+      }
+
+      // Trigger server-side re-hydration to get fresh calculations
+      if (success) {
+        refreshAccessContext();
       }
     } else {
       // For anonymous users: Use travelStore (client-side only)

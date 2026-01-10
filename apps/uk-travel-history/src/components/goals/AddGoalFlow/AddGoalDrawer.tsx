@@ -15,7 +15,7 @@ import {
   DrawerTitle,
   UIIcon,
 } from '@uth/ui';
-import { goalsStore } from '@uth/stores';
+import { goalsStore, useRefreshAccessContext } from '@uth/stores';
 import { CategoryStep } from './CategoryStep';
 import { TemplateStep } from './TemplateStep';
 import { ConfigureStep } from './ConfigureStep';
@@ -60,6 +60,8 @@ export const AddGoalDrawer = observer(function AddGoalDrawer({
     addModalError,
   } = goalsStore;
 
+  const refreshAccessContext = useRefreshAccessContext();
+
   const handleOpenChange = (open: boolean) => {
     if (open) {
       goalsStore.openAddModal();
@@ -71,6 +73,8 @@ export const AddGoalDrawer = observer(function AddGoalDrawer({
   const handleCreate = async () => {
     const goal = await goalsStore.createGoalFromModal();
     if (goal) {
+      // Trigger server-side re-hydration to get fresh calculations
+      refreshAccessContext();
       onSuccess?.();
     }
   };

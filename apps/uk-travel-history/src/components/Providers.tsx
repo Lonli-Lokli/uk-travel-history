@@ -142,10 +142,9 @@ export function Providers({ children, accessContext }: ProvidersProps) {
     // Hydrate trips store with trips data
     tripsStore.hydrate(accessContext.trips ?? null);
 
-    // Initialize trip reaction for goal recalculation when trips change
-    if (isGoalsFeatureEnabled) {
-      goalsStore.initializeTripReaction(travelStore);
-    }
+    // NOTE: Client-side trip reactions for goal recalculation have been removed.
+    // All calculations now happen server-side in loadAccessContext().
+    // After trip/goal mutations, components should call router.refresh() to re-hydrate.
 
     // Initialize auth state subscription AFTER hydration
     // This prevents hydration mismatches by ensuring the subscription
