@@ -157,7 +157,11 @@ export const TravelPageClient = observer(() => {
               }}
               onDeleteTrip={async (tripId) => {
                 if (confirm('Are you sure you want to delete this trip?')) {
-                  await tripsStore.deleteTrip(tripId);
+                  const success = await tripsStore.deleteTrip(tripId);
+                  // Trigger server-side re-hydration to get fresh calculations
+                  if (success) {
+                    refreshAccessContext();
+                  }
                 }
               }}
             />

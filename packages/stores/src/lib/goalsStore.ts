@@ -5,19 +5,22 @@
  * HYDRATION STRATEGY:
  * - Goals and calculations are loaded server-side in loadAccessContext()
  * - This store is hydrated from AccessContext in Providers.tsx
- * - Client-side recalculations happen when trips change
+ * - NO client-side recalculations (removed - calculations are server-side only)
  *
  * IMPORTANT: This store does NOT fetch data itself. All initial data comes from:
  * 1. Initial hydration via AccessContext (from loadAccessContext())
  * 2. Re-hydration after router.refresh() when auth state changes
  * 3. API calls for CRUD operations (create, update, delete)
+ *
+ * CALCULATION ARCHITECTURE:
+ * - All calculations happen server-side in loadAccessContext()
+ * - Calculations are pre-computed and hydrated via AccessContext
+ * - After mutations, components trigger router.refresh() to re-hydrate with fresh calculations
  */
 
 import {
   makeAutoObservable,
   runInAction,
-  reaction,
-  IReactionDisposer,
 } from 'mobx';
 import type {
   TrackingGoalData,
@@ -55,9 +58,6 @@ class GoalsStore {
   /** Whether store has been hydrated with server data */
   isHydrated = false;
 
-  /** Reaction disposer for trip change observation (not observable) */
-  tripReactionDisposer: IReactionDisposer | null = null;
-
   // ============================================================================
   // Templates State (hydrated from server)
   // ============================================================================
@@ -91,12 +91,7 @@ class GoalsStore {
   addModalError: string | null = null;
 
   constructor() {
-    makeAutoObservable(this, {
-      // Exclude disposer from observability
-      tripReactionDisposer: false,
-      // Exclude private methods from being treated as actions
-      disposeTripReaction: false,
-    });
+    makeAutoObservable(this);
   }
 
   // ============================================================================
@@ -536,7 +531,6 @@ class GoalsStore {
    * Called on sign-out or when feature is disabled
    */
   reset(): void {
-    this.disposeTripReaction();
     this.goals = [];
     this.calculations.clear();
     this.activeGoalId = null;
@@ -556,169 +550,26 @@ class GoalsStore {
   }
 
   // ============================================================================
-  // Trip Change Reaction
+  // REMOVED: Client-Side Trip Change Reactions and Calculations
   // ============================================================================
-
-  /**
-   * Initialize reaction to recalculate goals when trips change
-   * Should be called after hydration when feature is enabled
-   *
-   * @param travelStore - The travel store to observe for trip changes
-   */
-  initializeTripReaction(travelStore: {
-    trips: Array<{
-      id: string;
-      outDate: string;
-      inDate: string;
-      outRoute: string;
-      inRoute: string;
-    }>;
-  }): void {
-    // Dispose any existing reaction first
-    this.disposeTripReaction();
-
-    if (!this.isFeatureEnabled) {
-      return;
-    }
-
-    // Create reaction that observes trips array
-    this.tripReactionDisposer = reaction(
-      // Observe the trips array (using slice to trigger on any change)
-      () => travelStore.trips.slice(),
-      // When trips change, recalculate all active goals
-      () => {
-        if (this.isFeatureEnabled && this.hasGoals) {
-          this.recalculateAllGoals(travelStore);
-        }
-      },
-      {
-        // Debounce to avoid excessive recalculations during rapid edits
-        delay: 300,
-        // Run immediately on first observation to compute initial calculations
-        fireImmediately: true,
-      },
-    );
-  }
-
-  /**
-   * Dispose the trip reaction (cleanup)
-   */
-  disposeTripReaction(): void {
-    if (this.tripReactionDisposer) {
-      this.tripReactionDisposer();
-      this.tripReactionDisposer = null;
-    }
-  }
-
-  /**
-   * Recalculate all active goals using the rule engines
-   * Called when trips change or goals are modified
-   *
-   * @param travelStore - The travel store containing trip data
-   */
-  recalculateAllGoals(travelStore: {
-    trips: Array<{
-      id: string;
-      outDate: string;
-      inDate: string;
-      outRoute: string;
-      inRoute: string;
-    }>;
-  }): void {
-    // Dynamically import rule engines to avoid circular dependencies
-    // and to ensure this works in both client and server contexts
-    import('@uth/rules')
-      .then(({ ruleEngineRegistry }) => {
-        runInAction(() => {
-          for (const goal of this.activeGoals) {
-            const engine = ruleEngineRegistry.get(
-              goal.type as Parameters<typeof ruleEngineRegistry.get>[0],
-            );
-
-            if (!engine) {
-              console.warn(`No rule engine found for goal type: ${goal.type}`);
-              continue;
-            }
-
-            try {
-              const calculation = engine.calculate(
-                travelStore.trips,
-                goal.config as unknown as Parameters<
-                  typeof engine.calculate
-                >[1],
-                new Date(goal.startDate),
-              );
-
-              // Set the goal ID on the calculation
-              calculation.goalId = goal.id;
-
-              // Store the calculation
-              this.calculations.set(
-                goal.id,
-                calculation as GoalCalculationData,
-              );
-            } catch (error) {
-              console.error(`Failed to calculate goal ${goal.id}:`, error);
-            }
-          }
-        });
-      })
-      .catch((error) => {
-        console.error('Failed to load rule engines:', error);
-      });
-  }
-
-  /**
-   * Recalculate a single goal
-   * @param goalId - ID of goal to recalculate
-   * @param travelStore - The travel store containing trip data
-   */
-  recalculateGoal(
-    goalId: string,
-    travelStore: {
-      trips: Array<{
-        id: string;
-        outDate: string;
-        inDate: string;
-        outRoute: string;
-        inRoute: string;
-      }>;
-    },
-  ): void {
-    const goal = this.goals.find((g) => g.id === goalId);
-    if (!goal) return;
-
-    import('@uth/rules')
-      .then(({ ruleEngineRegistry }) => {
-        const engine = ruleEngineRegistry.get(
-          goal.type as Parameters<typeof ruleEngineRegistry.get>[0],
-        );
-
-        if (!engine) {
-          console.warn(`No rule engine found for goal type: ${goal.type}`);
-          return;
-        }
-
-        try {
-          const calculation = engine.calculate(
-            travelStore.trips,
-            goal.config as unknown as Parameters<typeof engine.calculate>[1],
-            new Date(goal.startDate),
-          );
-
-          calculation.goalId = goal.id;
-
-          runInAction(() => {
-            this.calculations.set(goal.id, calculation as GoalCalculationData);
-          });
-        } catch (error) {
-          console.error(`Failed to calculate goal ${goal.id}:`, error);
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to load rule engines:', error);
-      });
-  }
+  //
+  // The following methods have been removed to enforce server-side-only calculations:
+  // - initializeTripReaction() - Previously set up MobX reactions to recalculate on trip changes
+  // - disposeTripReaction() - Previously cleaned up the reaction
+  // - recalculateAllGoals() - Previously ran calculations client-side using @uth/rules
+  // - recalculateGoal() - Previously ran single goal calculations client-side
+  //
+  // NEW ARCHITECTURE:
+  // - All calculations happen server-side in loadAccessContext() via calculateGoalMetrics()
+  // - Calculations are hydrated to the client via AccessContext
+  // - After trip/goal mutations, components should trigger router.refresh() to re-hydrate
+  // - No explicit data fetching or calculation happens in the UI layer
+  //
+  // This ensures:
+  // ✅ Server is the single source of truth for calculations
+  // ✅ No client-side calculation logic duplication
+  // ✅ Consistent calculation results across all users
+  // ✅ Calculations benefit from server-side performance and caching
 }
 
 export const goalsStore = new GoalsStore();
