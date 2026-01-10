@@ -2,10 +2,11 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@uth/ui';
-import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
+import { goalsStore } from '@uth/stores';
 import { useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 import type { TripData } from '@uth/db';
+import { handleImportResult } from './utils/handleImportResult';
 
 export const useFullDataImport = () => {
   const { toast } = useToast();
@@ -52,50 +53,26 @@ export const useFullDataImport = () => {
 
         const trips = result.data.trips || [];
 
-        // For paid users, trips are already saved to DB by server
-        if (result.metadata?.saved) {
-          // Update local store with saved trips using proper MobX action
-          tripsStore.addTrips(trips as TripData[]);
-
-          toast({
-            title: 'Import successful',
-            description: `Successfully imported ${result.metadata.tripCount} trips to database`,
-            variant: 'success' as any,
-          });
-        } else {
-          // For free users, hydrate trips in-memory (legacy travelStore)
-          const tripData = trips
-            .map(
-              (trip: {
-                outDate: string;
-                inDate: string;
-                outRoute?: string;
-                inRoute?: string;
-              }) =>
-                `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
-            )
-            .join('\n');
-
-          const csvText = `Date Out,Date In,Departure,Return\n${tripData}`;
-          await travelStore.importFromCsv(csvText, 'append');
-
-          // Also update visa details if present (legacy travelStore)
-          if (result.data.vignetteEntryDate) {
-            travelStore.setVignetteEntryDate(result.data.vignetteEntryDate);
+        // Handle import result with tier-based persistence
+        const count = await handleImportResult(
+          {
+            trips: trips as TripData[],
+            metadata: result.metadata,
+          },
+          {
+            vignetteEntryDate: result.data.vignetteEntryDate,
+            visaStartDate: result.data.visaStartDate,
+            ilrTrack: result.data.ilrTrack,
           }
-          if (result.data.visaStartDate) {
-            travelStore.setVisaStartDate(result.data.visaStartDate);
-          }
-          if (result.data.ilrTrack) {
-            travelStore.setILRTrack(result.data.ilrTrack);
-          }
+        );
 
-          toast({
-            title: 'Import successful',
-            description: `Successfully imported ${result.metadata.tripCount} trips`,
-            variant: 'success' as any,
-          });
-        }
+        toast({
+          title: 'Import successful',
+          description: result.metadata?.saved
+            ? `Successfully imported ${count} trips to database`
+            : `Successfully imported ${count} trips`,
+          variant: 'success' as any,
+        });
       } catch (err) {
         toast({
           title: 'Import failed',
