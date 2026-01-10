@@ -121,7 +121,7 @@ export const TripDrawer = observer(() => {
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
               <div className="flex items-start gap-2">
                 <UIIcon
-                  iconName="alert-02"
+                  iconName="alert-circle"
                   className="h-4 w-4 text-amber-600 mt-0.5"
                 />
                 <div className="flex-1">
@@ -155,7 +155,7 @@ export const TripDrawer = observer(() => {
             Cancel
           </Button>
           <Button onClick={handleSave} className="flex-1">
-            <UIIcon iconName="tick-02" className="h-4 w-4 mr-1" />
+            <UIIcon iconName="check" className="h-4 w-4 mr-1" />
             Save Trip
           </Button>
         </DrawerFooter>
