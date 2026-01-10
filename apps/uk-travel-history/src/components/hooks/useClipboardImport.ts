@@ -5,6 +5,7 @@ import { useToast } from '@uth/ui';
 import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
 import { useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
+import type { TripData } from '@uth/db';
 
 export const useClipboardImport = () => {
   const { toast } = useToast();
@@ -56,21 +57,26 @@ export const useClipboardImport = () => {
 
       // For paid users, trips are already saved to DB by server
       if (result.metadata?.saved) {
-        // Update local store with saved trips
-        result.trips.forEach((trip: any) => {
-          tripsStore.trips.push(trip);
-        });
+        // Update local store with saved trips using proper MobX action
+        const trips = result.trips as TripData[];
+        tripsStore.addTrips(trips);
 
         toast({
           title: 'Import successful',
-          description: `Successfully imported ${result.trips.length} trips to database`,
+          description: `Successfully imported ${trips.length} trips to database`,
           variant: 'success' as any,
         });
       } else {
         // For free users, hydrate trips in-memory (legacy travelStore)
-        const tripData = result.trips
+        const trips = result.trips as Array<{
+          outDate: string;
+          inDate: string;
+          outRoute?: string;
+          inRoute?: string;
+        }>;
+        const tripData = trips
           .map(
-            (trip: { outDate: string; inDate: string; outRoute: string; inRoute: string }) =>
+            (trip) =>
               `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
           )
           .join('\n');
@@ -80,7 +86,7 @@ export const useClipboardImport = () => {
 
         toast({
           title: 'Import successful',
-          description: `Successfully imported ${result.trips.length} trips`,
+          description: `Successfully imported ${trips.length} trips`,
           variant: 'success' as any,
         });
       }

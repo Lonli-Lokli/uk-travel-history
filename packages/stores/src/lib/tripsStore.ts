@@ -220,6 +220,14 @@ export class TripsStore {
   }
 
   /**
+   * Add multiple trips to the store (for import operations)
+   * This is a proper MobX action for batch updates
+   */
+  addTrips(trips: TripData[]) {
+    this.trips.push(...trips);
+  }
+
+  /**
    * Clear all trips (useful for testing)
    */
   clearTrips() {

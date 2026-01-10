@@ -2,10 +2,10 @@
 
 import { useRef, useCallback, useState } from 'react';
 import { useToast } from '@uth/ui';
-import ExcelJS from 'exceljs';
 import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
 import { useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
+import type { TripData } from '@uth/db';
 
 export const useCsvImport = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,41 +33,55 @@ export const useCsvImport = () => {
         const isXlsx = file.name.toLowerCase().endsWith('.xlsx');
 
         if (isXlsx) {
-          // Check if this is a 2-sheet backup format by looking for "Travel History" sheet
-          const arrayBuffer = await file.arrayBuffer();
-          const workbook = new ExcelJS.Workbook();
-          await workbook.xlsx.load(arrayBuffer);
+          // For XLSX files, try full import first (which handles both 2-sheet and single-sheet formats)
+          const formData = new FormData();
+          formData.append('file', file);
 
-          const hasTravelHistorySheet =
-            !!workbook.getWorksheet('Travel History');
+          // Add goalId for paid users
+          if (hasGoalsAccess && goalsStore.goals.length > 0) {
+            formData.append('goalId', goalsStore.goals[0].id);
+          }
 
-          if (hasTravelHistorySheet) {
-            // This is a full backup file - delegate to full data import
-            const formData = new FormData();
-            formData.append('file', file);
+          // Try full import endpoint first - it will handle format detection
+          let response = await fetch('/api/import-full', {
+            method: 'POST',
+            body: formData,
+          });
 
-            // Add goalId for paid users
+          let result = await response.json();
+
+          // If full import fails, try single-sheet XLSX import
+          if (!response.ok && result.error?.includes('sheet')) {
+            const formData2 = new FormData();
+            formData2.append('file', file);
             if (hasGoalsAccess && goalsStore.goals.length > 0) {
-              formData.append('goalId', goalsStore.goals[0].id);
+              formData2.append('goalId', goalsStore.goals[0].id);
             }
 
-            const response = await fetch('/api/import-full', {
+            response = await fetch('/api/import/xlsx', {
               method: 'POST',
-              body: formData,
+              body: formData2,
             });
 
-            const result = await response.json();
+            result = await response.json();
+          }
 
-            if (!response.ok) {
-              throw new Error(result.error || 'Failed to import file');
-            }
+          if (!response.ok) {
+            throw new Error(
+              result.details?.join('\n') ||
+                result.error ||
+                'Failed to import file',
+            );
+          }
 
-            // For paid users, trips are already saved to DB by server
+          // Handle result based on format detected by server
+          if (result.data) {
+            // Full backup format (2-sheet)
+            const trips = result.data.trips || [];
+
             if (result.metadata?.saved) {
-              // Update local store with saved trips
-              result.data.trips.forEach((trip: any) => {
-                tripsStore.trips.push(trip);
-              });
+              // Update local store with saved trips using proper MobX action
+              tripsStore.addTrips(trips as TripData[]);
 
               toast({
                 title: 'Import successful',
@@ -76,14 +90,13 @@ export const useCsvImport = () => {
               });
             } else {
               // For free users, hydrate trips in-memory (legacy travelStore)
-              const trips = result.data.trips || [];
               const tripData = trips
                 .map(
                   (trip: {
                     outDate: string;
                     inDate: string;
-                    outRoute: string;
-                    inRoute: string;
+                    outRoute?: string;
+                    inRoute?: string;
                   }) =>
                     `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
                 )
@@ -109,67 +122,37 @@ export const useCsvImport = () => {
                 variant: 'success' as any,
               });
             }
-            return;
-          }
-
-          // Legacy single-sheet XLSX format - use new server endpoint
-          const formData = new FormData();
-          formData.append('file', file);
-
-          // Add goalId for paid users
-          if (hasGoalsAccess && goalsStore.goals.length > 0) {
-            formData.append('goalId', goalsStore.goals[0].id);
-          }
-
-          const response = await fetch('/api/import/xlsx', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(
-              result.details?.join('\n') ||
-                result.error ||
-                'Failed to import file',
-            );
-          }
-
-          // For paid users, trips are already saved to DB by server
-          if (result.metadata?.saved) {
-            // Update local store with saved trips
-            result.trips.forEach((trip: any) => {
-              tripsStore.trips.push(trip);
-            });
-
-            toast({
-              title: 'Import successful',
-              description: `Successfully imported ${result.trips.length} trips to database`,
-              variant: 'success' as any,
-            });
           } else {
-            // For free users, hydrate trips in-memory (legacy travelStore)
-            const tripData = result.trips
-              .map(
-                (trip: {
-                  outDate: string;
-                  inDate: string;
-                  outRoute: string;
-                  inRoute: string;
-                }) =>
-                  `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
-              )
-              .join('\n');
+            // Single-sheet XLSX format
+            const trips = result.trips as TripData[];
 
-            const csvText = `Date Out,Date In,Departure,Return\n${tripData}`;
-            await travelStore.importFromCsv(csvText, 'append');
+            if (result.metadata?.saved) {
+              // Update local store with saved trips using proper MobX action
+              tripsStore.addTrips(trips);
 
-            toast({
-              title: 'Import successful',
-              description: `Successfully imported ${result.trips.length} trips`,
-              variant: 'success' as any,
-            });
+              toast({
+                title: 'Import successful',
+                description: `Successfully imported ${trips.length} trips to database`,
+                variant: 'success' as any,
+              });
+            } else {
+              // For free users, hydrate trips in-memory (legacy travelStore)
+              const tripData = trips
+                .map(
+                  (trip) =>
+                    `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
+                )
+                .join('\n');
+
+              const csvText = `Date Out,Date In,Departure,Return\n${tripData}`;
+              await travelStore.importFromCsv(csvText, 'append');
+
+              toast({
+                title: 'Import successful',
+                description: `Successfully imported ${trips.length} trips`,
+                variant: 'success' as any,
+              });
+            }
           }
         } else {
           // Parse CSV file on server
@@ -196,28 +179,23 @@ export const useCsvImport = () => {
             );
           }
 
+          const trips = result.trips as TripData[];
+
           // For paid users, trips are already saved to DB by server
           if (result.metadata?.saved) {
-            // Update local store with saved trips
-            result.trips.forEach((trip: any) => {
-              tripsStore.trips.push(trip);
-            });
+            // Update local store with saved trips using proper MobX action
+            tripsStore.addTrips(trips);
 
             toast({
               title: 'Import successful',
-              description: `Successfully imported ${result.trips.length} trips to database`,
+              description: `Successfully imported ${trips.length} trips to database`,
               variant: 'success' as any,
             });
           } else {
             // For free users, hydrate trips in-memory (legacy travelStore)
-            const tripData = result.trips
+            const tripData = trips
               .map(
-                (trip: {
-                  outDate: string;
-                  inDate: string;
-                  outRoute: string;
-                  inRoute: string;
-                }) =>
+                (trip) =>
                   `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
               )
               .join('\n');
@@ -227,7 +205,7 @@ export const useCsvImport = () => {
 
             toast({
               title: 'Import successful',
-              description: `Successfully imported ${result.trips.length} trips`,
+              description: `Successfully imported ${trips.length} trips`,
               variant: 'success' as any,
             });
           }

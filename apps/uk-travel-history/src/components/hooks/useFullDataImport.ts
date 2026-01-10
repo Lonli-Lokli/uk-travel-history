@@ -5,6 +5,7 @@ import { useToast } from '@uth/ui';
 import { travelStore, tripsStore, goalsStore, authStore } from '@uth/stores';
 import { useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
+import type { TripData } from '@uth/db';
 
 export const useFullDataImport = () => {
   const { toast } = useToast();
@@ -49,12 +50,12 @@ export const useFullDataImport = () => {
           throw new Error(result.error || 'Failed to import file');
         }
 
+        const trips = result.data.trips || [];
+
         // For paid users, trips are already saved to DB by server
         if (result.metadata?.saved) {
-          // Update local store with saved trips
-          result.data.trips.forEach((trip: any) => {
-            tripsStore.trips.push(trip);
-          });
+          // Update local store with saved trips using proper MobX action
+          tripsStore.addTrips(trips as TripData[]);
 
           toast({
             title: 'Import successful',
@@ -63,14 +64,13 @@ export const useFullDataImport = () => {
           });
         } else {
           // For free users, hydrate trips in-memory (legacy travelStore)
-          const trips = result.data.trips || [];
           const tripData = trips
             .map(
               (trip: {
                 outDate: string;
                 inDate: string;
-                outRoute: string;
-                inRoute: string;
+                outRoute?: string;
+                inRoute?: string;
               }) =>
                 `${trip.outDate},${trip.inDate},${trip.outRoute || ''},${trip.inRoute || ''}`,
             )
