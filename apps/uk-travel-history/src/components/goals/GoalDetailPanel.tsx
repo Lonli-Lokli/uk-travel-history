@@ -13,6 +13,7 @@ import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 import { format, differenceInDays } from 'date-fns';
+import { RiskAreaChart } from '../RiskAreaChart';
 
 /**
  * Delete Goal Button with gating logic
@@ -272,6 +273,11 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
           </div>
         )}
       </CardContent>
+
+      {/* Risk Chart */}
+      <div className="px-6 pb-6">
+        <RiskAreaChart />
+      </div>
     </Card>
   );
 });
