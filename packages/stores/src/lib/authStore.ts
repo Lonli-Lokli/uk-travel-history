@@ -17,6 +17,8 @@ import {
 } from '@uth/auth-client';
 import { logger } from '@uth/utils';
 
+
+
 class AuthStore {
   user: AuthUser | null = null;
   // Start with isLoading = false to match server-side rendering

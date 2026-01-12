@@ -8,22 +8,13 @@
  * Icons are mapped from goal template IDs to React components.
  */
 
-import {
-  Home03Icon,
-  CalculateIcon,
-  Airplane01Icon,
-  MapPinIcon,
-  Configuration01Icon,
-} from '@hugeicons/core-free-icons';
-import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
-import UKFlagIcon from './cutom-icons/uk-flag.svg';
-import EUFlagIcon from './cutom-icons/eu-flag.svg';
 import { FC } from 'react';
+import { IconName, UIIcon } from './icon';
 
 /**
  * Icon wrapper component that handles both standard and custom icons
  */
-export const GoalIcon: FC<{
+export const  GoalIcon: FC<{
   templateId: string;
   className?: string;
 }> = ({ templateId, className }) => {
@@ -31,24 +22,12 @@ export const GoalIcon: FC<{
 
   if (!iconConfig) {
     // Fallback to airplane icon if template not found
-    return (
-      <HugeiconsIcon
-        icon={Airplane01Icon}
-        className={className}
-        aria-label="Unknown goal type"
-      />
-    );
+    return <UIIcon iconName="airplane" className={className} aria-label="Unknown goal template" />;
   }
 
-  if (iconConfig.type === 'custom') {
-    const CustomIcon = iconConfig.icon as React.FC<{ className?: string }>;
-    return <CustomIcon className={className} />;
-  }
-
-  // Standard icon
   return (
-    <HugeiconsIcon
-      icon={iconConfig.icon as IconSvgElement}
+    <UIIcon
+      iconName={iconConfig.icon}
       className={className}
       aria-label={iconConfig.label}
     />
@@ -58,17 +37,10 @@ export const GoalIcon: FC<{
 /**
  * Icon configuration type
  */
-type IconConfig =
-  | {
-      type: 'standard';
-      icon: IconSvgElement;
-      label: string;
-    }
-  | {
-      type: 'custom';
-      icon: React.FC<{ className?: string }>;
-      label: string;
-    };
+type IconConfig = {
+  icon: IconName;
+  label: string;
+};
 
 /**
  * Maps goal template IDs to their icons.
@@ -81,54 +53,45 @@ type IconConfig =
 export const GOAL_TEMPLATE_ICONS: Record<string, IconConfig> = {
   // UK Immigration
   uk_ilr_5yr: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'UK ILR 5-Year',
   },
   uk_ilr_3yr: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'UK ILR 3-Year',
   },
   uk_ilr_10yr: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'UK ILR 10-Year',
   },
   uk_citizenship: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'British Citizenship',
   },
 
   // UK Tax
   uk_tax: {
-    type: 'standard',
-    icon: CalculateIcon,
+    icon: 'calculator',
     label: 'UK Tax Residency',
   },
 
   // Schengen
   schengen_90_180: {
-    type: 'custom',
-    icon: EUFlagIcon,
+    icon: 'eu-flag',
     label: 'Schengen 90/180',
   },
 
   // Personal / Generic
   days_away: {
-    type: 'standard',
-    icon: Airplane01Icon,
+    icon: 'airplane',
     label: 'Days Away',
   },
   days_present: {
-    type: 'standard',
-    icon: MapPinIcon,
+    icon: 'map-pin',
     label: 'Days Present',
   },
   custom: {
-    type: 'standard',
-    icon: Configuration01Icon,
+    icon: 'settings',
     label: 'Custom Goal',
   },
 } as const;
@@ -155,33 +118,27 @@ export function hasGoalIcon(templateId: string): boolean {
  */
 export const GOAL_TYPE_ICONS: Record<string, IconConfig> = {
   uk_ilr: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'UK ILR',
   },
   uk_citizenship: {
-    type: 'custom',
-    icon: UKFlagIcon,
+    icon: 'uk-flag',
     label: 'British Citizenship',
   },
   uk_tax_residency: {
-    type: 'standard',
-    icon: CalculateIcon,
+    icon: 'calculator',
     label: 'UK Tax Residency',
   },
   schengen_90_180: {
-    type: 'custom',
-    icon: EUFlagIcon,
+    icon: 'eu-flag',
     label: 'Schengen 90/180',
   },
   days_counter: {
-    type: 'standard',
-    icon: Airplane01Icon,
+    icon: 'airplane',
     label: 'Days Counter',
   },
   custom_threshold: {
-    type: 'standard',
-    icon: Configuration01Icon,
+    icon: 'settings',
     label: 'Custom Threshold',
   },
 } as const;
@@ -198,24 +155,12 @@ export const GoalTypeIcon: FC<{
 
   if (!iconConfig) {
     // Fallback to airplane icon if type not found
-    return (
-      <HugeiconsIcon
-        icon={Airplane01Icon}
-        className={className}
-        aria-label="Unknown goal type"
-      />
-    );
+    return <UIIcon iconName="airplane" className={className} aria-label="Unknown goal template" />;
   }
 
-  if (iconConfig.type === 'custom') {
-    const CustomIcon = iconConfig.icon as React.FC<{ className?: string }>;
-    return <CustomIcon className={className} />;
-  }
-
-  // Standard icon
   return (
-    <HugeiconsIcon
-      icon={iconConfig.icon as IconSvgElement}
+    <UIIcon
+      iconName={iconConfig.icon}
       className={className}
       aria-label={iconConfig.label}
     />

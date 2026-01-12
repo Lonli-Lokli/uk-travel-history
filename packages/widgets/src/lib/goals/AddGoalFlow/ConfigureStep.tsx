@@ -1,7 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { Button, Input, Label, UIIcon } from '@uth/ui';
+import { Button, DatePicker, Input, Label, UIIcon } from '@uth/ui';
 import { goalsStore } from '@uth/stores';
 import type { GoalTemplateWithAccess } from '@uth/db';
 
@@ -11,10 +11,11 @@ interface ConfigureStepProps {
   onSubmit: () => void;
 }
 
+type FieldType = 'date' | 'text' | 'number';
 /** Field configuration based on required fields */
 const fieldConfigs: Record<
   string,
-  { label: string; type: string; placeholder: string; required?: boolean }
+  { label: string; type: FieldType; placeholder: string; required?: boolean }
 > = {
   name: { label: 'Goal Name', type: 'text', placeholder: 'e.g., UK ILR 2027' },
   startDate: {
@@ -103,14 +104,22 @@ export const ConfigureStep = observer(function ConfigureStep({
               {config.label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            <Input
-              id={fieldKey}
-              type={config.type}
-              placeholder={config.placeholder}
-              value={formData[fieldKey] || ''}
-              onChange={(e) => handleChange(fieldKey, e.target.value)}
-              required={isRequired}
-            />
+            {config.type === 'date' ? (
+              <DatePicker
+                value={formData[fieldKey] || ''}
+                onChange={(e) => handleChange(fieldKey, e)}
+                placeholder={config.placeholder}
+              />
+            ) : (
+              <Input
+                id={fieldKey}
+                type={config.type}
+                placeholder={config.placeholder}
+                value={formData[fieldKey] || ''}
+                onChange={(e) => handleChange(fieldKey, e.target.value)}
+                required={isRequired}
+              />
+            )}
           </div>
         );
       })}

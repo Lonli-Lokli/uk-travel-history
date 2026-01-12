@@ -50,8 +50,8 @@ import {
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
 import { ComponentProps, FC } from 'react';
-import UKFlagIcon from './cutom-icons/uk-flag.svg';
-import EUFlagIcon from './cutom-icons/eu-flag.svg';
+import UKFlagIcon from './custom-icons/uk-flag.svg';
+import EUFlagIcon from './custom-icons/eu-flag.svg';
 import { StaticImageData } from 'next/image';
 
 type CustomIconName = keyof typeof CUSTOM_ICONS;
@@ -120,25 +120,28 @@ export const UIIcon: FC<{
 };
 
 type IconProps = Omit<ComponentProps<'img'>, 'src'> & {
+  /* Icon path and dimensions */
   src: StaticImageData;
+  /* Disables filling with the current color and renders the original icon colors */
+  nofill?: boolean;
 };
 
 const EMPTY_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E`;
 
-function SvgIcon({ src, width, height, style, ...props }: IconProps) {
-  return (
-    <img
-      width={width ?? src.width}
-      height={height ?? src.height}
-      src={EMPTY_SVG}
-      style={{
+function SvgIcon({ src, nofill, width, height, alt, style, ...props }: IconProps) {
+  const mainSrc = nofill ? src.src : EMPTY_SVG;
+  width ??= src.width;
+  height ??= src.height;
+  alt ??= 'icon';
+  style = nofill
+    ? style
+    : {
         ...style,
         backgroundColor: `currentcolor`,
         mask: `url("${src.src}") no-repeat center / contain`,
-      }}
-      {...props}
-    />
-  );
+      };
+
+  return <img src={mainSrc} width={width} height={height} alt={alt} style={style} {...props} />;
 }
 
 function getIconByName(iconName: StandardIconName): IconSvgElement {
