@@ -65,13 +65,13 @@ export const Navbar = observer(() => {
             className="flex items-center gap-2 hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 rounded shrink-0"
             aria-label="UK Travel Parser home"
           >
-            <div className="w-100 h-100 rounded-lg flex items-center justify-center">
+            <div className="w-82 h-55 rounded-lg flex items-center justify-center">
               <Image
                 src="/logo.svg"
                 alt="UK Travel Parser Logo"
-                width={100}
-                height={100}
-                className="w-100 h-100"
+                width={82}
+                height={55}
+                className="w-82 h-55"
               />
             </div>
           </Link>

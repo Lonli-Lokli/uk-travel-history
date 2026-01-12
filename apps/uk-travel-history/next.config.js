@@ -25,7 +25,7 @@ const nextConfig = {
       '*.svg': {
         loaders: ['turbopack-inline-svg-loader'],
         as: '*.js',
-      }
+      },
     },
   },
 };
