@@ -17,10 +17,13 @@
       "path": "../utils/tsconfig.lib.json"
     },
     {
-      "path": "../domain/tsconfig.lib.json"
+      "path": "../rules/tsconfig.lib.json"
     },
     {
       "path": "../payments/server/tsconfig.lib.json"
+    },
+    {
+      "path": "../domain/tsconfig.lib.json"
     },
     {
       "path": "../db/tsconfig.lib.json"

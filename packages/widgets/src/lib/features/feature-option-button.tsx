@@ -2,12 +2,12 @@
 
 import { observer } from 'mobx-react-lite';
 import type { FeatureFlagKey } from '@uth/features';
-import { UIIcon } from '@uth/ui';
+import { IconName, UIIcon } from '@uth/ui';
 import { cn } from '@uth/utils';
 import { useFeatureGate } from '@uth/widgets';
 
 export interface FeatureOptionButtonProps {
-  icon: string;
+  icon: IconName;
   label: string;
   description: string;
   onClick?: () => void;
@@ -96,7 +96,7 @@ const FeatureOptionButtonComponent = ({
 };
 
 export interface FeatureOptionButtonInnerProps {
-  icon: string;
+  icon: IconName;
   label: string;
   description: string;
   onClick?: () => void;

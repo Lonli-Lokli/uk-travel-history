@@ -12,8 +12,8 @@ import {
 import { cn } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
-import { format, differenceInDays } from 'date-fns';
-import { RiskAreaChart } from '../RiskAreaChart';
+import { format } from 'date-fns';
+import { RiskAreaChart } from './RiskAreaChart';
 
 /**
  * Delete Goal Button with gating logic

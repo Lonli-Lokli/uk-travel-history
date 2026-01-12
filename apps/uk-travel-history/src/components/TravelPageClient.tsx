@@ -16,15 +16,13 @@ import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRefreshAccessContext, goalsStore } from '@uth/stores';
-import { FeatureGate, useFeatureGate } from '@uth/widgets';
+import { AddGoalDrawer, EditGoalDrawer, FeatureGate, TripDrawer, useFeatureGate } from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 import { TabSwitcher } from './TabSwitcher';
 import { StatsBar } from './StatsBar';
 import { TrackersView } from './TrackersView';
 import { TimelineView } from './TimelineView';
 import { AddFab } from './AddFab';
-import { AddGoalDrawer, EditGoalDrawer } from './goals';
-import { TripDrawer } from './trips/TripDrawer';
 import { uiStore, tripsStore } from '@uth/stores';
 import {
   useClearAll,

@@ -15,8 +15,8 @@ import { useMemo } from 'react';
 import { cn } from '@uth/utils';
 import type { TripData } from '@uth/db';
 import { format, parseISO } from 'date-fns';
-import { TripCard } from './trips/TripCard';
 import { uiStore } from '@uth/stores';
+import { TripCard} from '@uth/widgets';
 
 export interface TimelineViewProps {
   trips: TripData[];
@@ -59,7 +59,7 @@ export const TimelineView = observer(function TimelineView({
 
       return true;
     });
-  }, [trips, uiStore.dateRangeStart, uiStore.dateRangeEnd]);
+  }, [trips]);
 
   // Group trips by month (based on outDate)
   const groupedTrips = useMemo(() => {

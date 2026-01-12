@@ -43,12 +43,16 @@ import {
   Archive02Icon,
   MapPinIcon,
   Configuration01Icon,
+  LockKeyIcon,
+  ArrowUp01Icon,
+  ArrowDown01Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, IconSvgElement } from '@hugeicons/react';
 import { NeverError } from '@uth/utils';
-import { FC } from 'react';
+import { ComponentProps, FC } from 'react';
 import UKFlagIcon from './cutom-icons/uk-flag.svg';
 import EUFlagIcon from './cutom-icons/eu-flag.svg';
+import { StaticImageData } from 'next/image';
 
 type CustomIconName = keyof typeof CUSTOM_ICONS;
 type StandardIconName =
@@ -95,9 +99,12 @@ type StandardIconName =
   | 'calculator'
   | 'chevron-right'
   | 'chevron-left'
+  | 'chevron-up'
+  | 'chevron-down'
   | 'archive'
   | 'map-pin'
-  | 'settings';
+  | 'settings'
+  | 'lock';
 export type IconName = StandardIconName | CustomIconName;
 
 export const UIIcon: FC<{
@@ -105,12 +112,34 @@ export const UIIcon: FC<{
   className?: string;
 }> = ({ iconName, className }) => {
   if (isCustomIconName(iconName)) {
-    const CustomIcon = CUSTOM_ICONS[iconName];
-    return <CustomIcon className={className} />;
+    const customIcon = CUSTOM_ICONS[iconName];
+    return <SvgIcon src={customIcon} className={className} />;
   }
   const icon = getIconByName(iconName);
   return <HugeiconsIcon icon={icon} className={className} />;
 };
+
+type IconProps = Omit<ComponentProps<'img'>, 'src'> & {
+  src: StaticImageData;
+};
+
+const EMPTY_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E`;
+
+function SvgIcon({ src, width, height, style, ...props }: IconProps) {
+  return (
+    <img
+      width={width ?? src.width}
+      height={height ?? src.height}
+      src={EMPTY_SVG}
+      style={{
+        ...style,
+        backgroundColor: `currentcolor`,
+        mask: `url("${src.src}") no-repeat center / contain`,
+      }}
+      {...props}
+    />
+  );
+}
 
 function getIconByName(iconName: StandardIconName): IconSvgElement {
   switch (iconName) {
@@ -198,19 +227,25 @@ function getIconByName(iconName: StandardIconName): IconSvgElement {
       return ArrowRight01Icon;
     case 'chevron-left':
       return ArrowLeft01Icon;
+    case 'chevron-up':
+      return ArrowUp01Icon;
+    case 'chevron-down':
+      return ArrowDown01Icon;
     case 'archive':
       return Archive02Icon;
     case 'map-pin':
       return MapPinIcon;
     case 'settings':
       return Configuration01Icon;
+    case 'lock':
+      return LockKeyIcon;
     default:
       throw new NeverError(iconName);
   }
 }
 
 // taken from https://nucleoapp.com/svg-flag-icons
-const CUSTOM_ICONS: Record<string, React.FC<{ className?: string }>> = {
+const CUSTOM_ICONS = {
   'uk-flag': UKFlagIcon,
   'eu-flag': EUFlagIcon,
 } as const;

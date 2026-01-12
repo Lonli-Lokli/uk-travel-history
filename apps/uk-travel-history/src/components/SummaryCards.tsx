@@ -3,7 +3,7 @@
 import { observer } from 'mobx-react-lite';
 import { travelStore } from '@uth/stores';
 import { formatDate } from '@uth/utils';
-import { CompoundStatCard } from './CompoundStatCard';
+import { CompoundStatCard } from '@uth/ui';
 
 export const SummaryCards = observer(() => {
   const summary = travelStore.summary;

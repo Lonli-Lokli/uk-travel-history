@@ -10,9 +10,8 @@
 import { observer } from 'mobx-react-lite';
 import { cn } from '@uth/utils';
 import { goalsStore, useRefreshAccessContext } from '@uth/stores';
-import { GoalCard } from './goals/GoalCard';
-import { GoalDetailPanel } from './goals/GoalDetailPanel';
 import { NoTrackersEmptyState } from './NoTrackersEmptyState';
+import { GoalCard, GoalDetailPanel } from '@uth/widgets';
 
 export interface TrackersViewProps {
   className?: string;
