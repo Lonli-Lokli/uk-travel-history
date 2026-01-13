@@ -107,7 +107,7 @@ export function parseTravelRecords(text: string): TravelRecord[] {
     if (match) {
       const [, dateStr, voyageCode, direction, embarkPort, , disembarkPort] =
         match;
-      const date = formatDate(dateStr);
+      const date = formatDate(dateStr, 'api');
 
       if (date) {
         const normalizedDirection =

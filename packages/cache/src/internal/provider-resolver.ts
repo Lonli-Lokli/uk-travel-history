@@ -1,5 +1,5 @@
 /**
- * Provider resolver - determines which database provider to use
+ * Provider resolver - determines which cache provider to use
  * Allows for provider injection for testing
  */
 
@@ -11,7 +11,7 @@ let providerInstance: CacheProvider | null = null;
 let injectedProvider: CacheProvider | null = null;
 
 /**
- * Get the configured database provider
+ * Get the configured cache provider
  * Uses injected provider if set (for testing), otherwise uses environment config
  */
 export function getCacheProvider(): CacheProvider {

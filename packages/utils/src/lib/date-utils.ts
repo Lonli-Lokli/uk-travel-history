@@ -17,7 +17,7 @@ dayjs.locale('en-gb');
 
 export type FormattingType = 'ui' | 'api' | 'keyMonth' | 'keyLabel';
 /**
- * Format date string (YYYY-MM-DD) to January 1, 2026 format
+ * Format date string (YYYY-MM-DD) to required format
  * This ensures consistent formatting between server and client to avoid hydration mismatches
  */
 export function formatDate(
@@ -26,8 +26,9 @@ export function formatDate(
 ): string | null {
   if (!dateObj) return null;
 
-  const date = dayjs(dateObj);
-  if (!date.isValid()) return null;
+  const date =
+    typeof dateObj === 'string' ? parseDate(dateObj) : dayjs(dateObj);
+  if (!date || !date.isValid()) return null;
 
   switch (purpose) {
     case 'keyMonth':
