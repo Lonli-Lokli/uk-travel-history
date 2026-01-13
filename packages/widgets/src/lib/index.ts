@@ -3,3 +3,4 @@ export * from './trips';
 export * from './goals';
 export * from './import';
 export * from './payments';
+export * from './bug-report'

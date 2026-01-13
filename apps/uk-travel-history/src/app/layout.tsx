@@ -8,9 +8,9 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Footer } from '../components/Footer';
 import { Navbar } from '../components/Navbar';
 import { Providers } from '../components/Providers';
+import { UserRole } from '../../../../packages/db/src/types/domain';
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -137,7 +137,7 @@ export default async function RootLayout({
               <Navbar />
               <main className="flex-1 overflow-y-auto">{children}</main>
             </div>
-            <Footer role={accessContext.role} />
+            <Footer isAdmin={accessContext.role === UserRole.ADMIN} />
             <Toaster />
           </Providers>
         </body>

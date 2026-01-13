@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { Resend } from 'resend';
 import { render } from '@react-email/components';
-import BugReportEmail from '../../../emails/bug-report';
 import {
+  BugReportEmail,
   FILE_SIZE_LIMITS,
   MESSAGE_LENGTH,
   ALLOWED_FILE_TYPES,
-} from '../../../components/bug-report/constants';
-import {
   sanitizeFilename,
   sanitizeUrl,
   rateLimiter,
-} from '../../../components/bug-report/utils';
+} from '@uth/widgets';
 
 // Force dynamic route to prevent static generation during build
 export const dynamic = 'force-dynamic';
