@@ -10,33 +10,32 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: {
-    default: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
-    template: '%s | UK Travel History Parser',
+ title: {
+    default: 'Travel History Tracker — UK Residency, Schengen & Tax Compliance',
+    template: '%s | Travel History Tracker',
   },
   description:
-    'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence. Upload SAR documents, edit trips, and export to Excel.',
+    'The all-in-one compliance tracker for UK ILR, British Citizenship, and Schengen 90/180 rules. Automatically parse Home Office travel history and calculate residency for tax and visa purposes.',
   keywords: [
-    'UK travel history',
-    'Home Office SAR',
-    'travel calculator',
-    'days outside UK',
-    'UK residency calculator',
-    'ILR eligibility',
-    'continuous residence',
-    '180 day rule',
-    'border control data',
-    'PDF parser',
-    'excel export',
-    'UK visa compliance',
-    'settlement calculator',
-    'ilr track time',
-    'ILR when can I apply',
+    // UK Core
+    'UK travel history tracker',
+    'ILR residency calculator',
+    'British citizenship travel days',
+    'Home Office SAR parser',
+    // Schengen
+    'Schengen 90/180 calculator',
+    'Schengen visa stay tracker',
+    // Tax & Custom
+    'statutory residence test tracker',
+    'UK tax residency calculator',
+    'custom travel date tracker',
+    '180 day rule compliance',
+    'travel history export excel',
   ],
-  authors: [{ name: 'UK Travel History Parser' }],
-  creator: 'UK Travel History Parser',
-  publisher: 'UK Travel History Parser',
-  applicationName: 'UK Travel History Parser',
+  authors: [{ name: 'Travel History Parser' }],
+  creator: 'Travel History Parser',
+  publisher: 'Travel History Parser',
+  applicationName: 'Travel History Parser',
   category: 'Tools',
   formatDetection: {
     email: false,
@@ -57,29 +56,21 @@ export const metadata: Metadata = {
     },
   ],
   manifest: '/site.webmanifest',
-  openGraph: {
+ openGraph: {
     type: 'website',
     locale: 'en_GB',
     url: siteUrl,
-    title: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
+    title: 'Travel History Tracker — UK Residency & Schengen Tools',
     description:
-      'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence for UK settlement.',
-    siteName: 'UK Travel History Parser',
-    images: [
-      {
-        url: `${siteUrl}/og-image.png`,
-        width: 1200,
-        height: 630,
-        alt: 'UK Travel History Parser - Calculate days outside UK for visa and ILR compliance',
-        type: 'image/png',
-      },
-    ],
+      'Manage global residency compliance. Automated tools for UK Citizenship, ILR, and Schengen 90/180 day rules.',
+    siteName: 'Travel History Tracker',
+    images: [{ url: `${siteUrl}/og-image.png` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'UK Travel History Parser - Track Your UK Residency & Travel Days',
-    description:
-      'Free tool to parse UK Home Office travel history PDFs and calculate days outside the UK. Track visa compliance, ILR eligibility, and continuous residence.',
+    title: 'Travel History Parser - Track Your UK Residency & Travel Days',
+   description:
+    'The all-in-one compliance tracker for UK ILR, British Citizenship, and Schengen 90/180 rules. Automatically parse Home Office travel history and calculate residency for tax and visa purposes.',
     images: [`${siteUrl}/og-image.png`],
     creator: '@uk_travel_history',
   },
