@@ -7,19 +7,13 @@ import HighchartsReact, {
   HighchartsReactRefObject,
 } from 'highcharts-react-official';
 import type { AxisSetExtremesEventObject } from 'highcharts';
-import { parseISO } from 'date-fns';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  UIIcon,
-} from '@uth/ui';
+import { Card, CardContent, CardHeader, CardTitle, UIIcon } from '@uth/ui';
 import { FeatureChart, useFeatureGate } from '@uth/widgets';
 import { RollingDataPoint, TripBar } from '@uth/rules';
 import { goalsStore } from '@uth/stores';
 import { FEATURE_KEYS } from '@uth/features';
+import { parseDate, parseDateUnsafe, toDate } from '@uth/utils';
 
 type TimelinePoint = {
   id: string;
@@ -297,12 +291,12 @@ export const RiskAreaChart: React.FC = observer(() => {
     const ts: number[] = [];
 
     displayRollingData.forEach((d: RollingDataPoint) => {
-      ts.push(parseISO(d.date).getTime());
+      ts.push(toDate(parseDateUnsafe(d.date))?.getTime() ?? 0);
     });
 
     displayTripBars.forEach((trip: TripBar) => {
-      const s = parseISO(trip.outDate).getTime();
-      const e = parseISO(trip.inDate).getTime();
+      const s = toDate(parseDateUnsafe(trip.outDate))?.getTime() ?? 0;
+      const e = toDate(parseDateUnsafe(trip.inDate))?.getTime() ?? 0;
       if (!Number.isNaN(s)) ts.push(s);
       if (!Number.isNaN(e)) ts.push(e);
     });
@@ -320,20 +314,20 @@ export const RiskAreaChart: React.FC = observer(() => {
     // This ensures the chart shows risk based on the calculated/auto application date
     const effectiveEndDate =
       effectiveApplicationDate && autoDateUsed && hasAccess
-        ? parseISO(effectiveApplicationDate).getTime()
+        ? (toDate(parseDateUnsafe(effectiveApplicationDate))?.getTime() ?? null)
         : null;
 
     const filteredData = effectiveEndDate
       ? displayRollingData.filter(
           (d: RollingDataPoint) =>
-            parseISO(d.date).getTime() <= effectiveEndDate,
+            toDate(parseDateUnsafe(d.date))?.getTime() ?? 0 <= effectiveEndDate,
         )
       : displayRollingData;
 
     // Cap risk at 180 days - if eligible with future date, risk cannot exceed 180
     // (otherwise the calculated date would have been pushed further out)
     return filteredData.map((d: RollingDataPoint) => {
-      const timestamp = parseISO(d.date).getTime();
+      const timestamp = toDate(parseDateUnsafe(d.date))?.getTime() ?? 0;
       const rollingDays =
         effectiveApplicationDate && autoDateUsed
           ? Math.min(d.rollingDays, 180)
@@ -379,8 +373,8 @@ export const RiskAreaChart: React.FC = observer(() => {
 
     const parsed = displayTripBars
       .map((trip: TripBar, index: number) => {
-        const start = parseISO(trip.outDate).getTime();
-        const end = parseISO(trip.inDate).getTime();
+        const start = toDate(parseDateUnsafe(trip.outDate))?.getTime() ?? 0;
+        const end = toDate(parseDateUnsafe(trip.inDate))?.getTime() ?? 0;
         return { trip, start, end, index };
       })
       .filter((t) => !Number.isNaN(t.start) && !Number.isNaN(t.end))
@@ -504,7 +498,8 @@ export const RiskAreaChart: React.FC = observer(() => {
 
           // Find the data point to get nextExpirationDate info
           const dataPoint = displayRollingData.find(
-            (d: RollingDataPoint) => parseISO(d.date).getTime() === x,
+            (d: RollingDataPoint) =>
+              toDate(parseDateUnsafe(d.date))?.getTime() === x,
           );
 
           let html =
@@ -564,7 +559,9 @@ export const RiskAreaChart: React.FC = observer(() => {
             if (dataPoint?.nextExpirationDate && dataPoint.daysToExpire) {
               const expirationDateLabel = Highcharts.dateFormat(
                 '%e %b %Y',
-                parseISO(dataPoint.nextExpirationDate).getTime(),
+                toDate(
+                  parseDateUnsafe(dataPoint.nextExpirationDate),
+                )?.getTime() ?? 0,
               );
               const futureQuota = availableQuota + dataPoint.daysToExpire;
 

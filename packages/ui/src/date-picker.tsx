@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { format, parse, isValid } from 'date-fns';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { cn } from '@uth/utils';
+import { cn, formatDate, isValidDate, parseDate, toDate } from '@uth/utils';
 import { Input } from './input';
 import { Calendar } from './calendar';
 import { UIIcon } from './icon';
 
 interface DatePickerProps {
+  id?: string;
   value: string; // ISO date string (YYYY-MM-DD)
   onChange: (value: string) => void;
   placeholder?: string;
@@ -24,6 +24,7 @@ export function DatePicker({
   disabled = false,
   className,
   defaultMonth,
+  id,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState('');
@@ -31,13 +32,13 @@ export function DatePicker({
 
   // Memoize the parsed date to avoid re-parsing on every render
   const selectedDate = React.useMemo<Date | undefined>(() => {
-    return value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined;
+    return value ? (toDate(parseDate(value)) ?? undefined) : undefined;
   }, [value]);
 
   // Initialize input value when component mounts or value changes
   React.useEffect(() => {
     if (selectedDate) {
-      setInputValue(format(selectedDate, 'yyyy-MM-dd'));
+      setInputValue(formatDate(selectedDate, 'api'));
     } else {
       setInputValue('');
     }
@@ -45,7 +46,7 @@ export function DatePicker({
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(format(date, 'yyyy-MM-dd'));
+      onChange(formatDate(date, 'api'));
       setIsOpen(false);
     }
   };
@@ -55,18 +56,18 @@ export function DatePicker({
     setInputValue(newValue);
 
     // Only parse YYYY-MM-DD format
-    const parsedDate = parse(newValue, 'yyyy-MM-dd', new Date());
+    const parsedDate = parseDate(newValue);
 
     // If we successfully parsed a valid date, update the value
-    if (parsedDate && isValid(parsedDate)) {
-      onChange(format(parsedDate, 'yyyy-MM-dd'));
+    if (parsedDate && isValidDate(parsedDate)) {
+      onChange(formatDate(parsedDate, 'api'));
     }
   };
 
   const handleInputBlur = () => {
     // Restore formatted value on blur if we have a valid date
     if (selectedDate) {
-      setInputValue(format(selectedDate, 'yyyy-MM-dd'));
+      setInputValue(formatDate(selectedDate, 'api'));
     } else {
       setInputValue('');
     }
@@ -84,6 +85,7 @@ export function DatePicker({
   return (
     <div className="flex items-center gap-1">
       <Input
+        id={id}
         ref={inputRef}
         value={inputValue}
         onChange={handleInputChange}

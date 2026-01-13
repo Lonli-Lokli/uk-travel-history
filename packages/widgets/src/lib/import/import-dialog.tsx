@@ -1,13 +1,7 @@
 'use client';
 
 import { Sheet } from 'react-modal-sheet';
-import {
-  Button,
-  RadioGroup,
-  RadioGroupItem,
-  Label,
-  UIIcon,
-} from '@uth/ui';
+import { Button, RadioGroup, RadioGroupItem, Label, UIIcon } from '@uth/ui';
 import { useState } from 'react';
 
 interface FullDataImportDialogProps {
@@ -122,8 +116,8 @@ export const FullDataImportDialog = ({
                     <Label htmlFor="append" className="flex-1 cursor-pointer">
                       <div className="font-medium">Append to existing data</div>
                       <div className="text-sm text-muted-foreground">
-                        Keep current trips and add imported ones (visa details will
-                        be updated)
+                        Keep current trips and add imported ones (visa details
+                        will be updated)
                       </div>
                     </Label>
                   </div>
@@ -133,7 +127,9 @@ export const FullDataImportDialog = ({
 
             <div className="flex flex-col gap-2 mt-6">
               <Button onClick={handleConfirm} className="w-full">
-                {importMode === 'replace' ? 'Replace & Import' : 'Append & Import'}
+                {importMode === 'replace'
+                  ? 'Replace & Import'
+                  : 'Append & Import'}
               </Button>
               <Button variant="outline" onClick={onCancel} className="w-full">
                 Cancel

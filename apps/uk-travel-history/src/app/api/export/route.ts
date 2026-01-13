@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { format, parseISO } from 'date-fns';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 import { getRouteLogger } from '@uth/flow';
+import { formatDate } from '@uth/utils';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -63,17 +63,6 @@ export async function POST(request: NextRequest) {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'UK Travel Parser';
 
-    // Helper function to format dates
-    const formatDate = (dateStr: string): string => {
-      if (!dateStr) return '';
-      try {
-        const date = parseISO(dateStr);
-        return format(date, 'dd/MM/yyyy');
-      } catch {
-        return '';
-      }
-    };
-
     // Sheet 1: Travel History (identical for both modes)
     const sheet = workbook.addWorksheet('Travel History', {
       views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
@@ -100,8 +89,8 @@ export async function POST(request: NextRequest) {
     trips.forEach((trip, index) => {
       const row = sheet.addRow({
         num: index + 1,
-        outDate: formatDate(trip.outDate),
-        inDate: formatDate(trip.inDate),
+        outDate: formatDate(trip.outDate, 'api'),
+        inDate: formatDate(trip.inDate, 'api'),
         outRoute: trip.outRoute || '',
         inRoute: trip.inRoute || '',
       });
@@ -184,11 +173,13 @@ export async function POST(request: NextRequest) {
 
       addDetailRow(
         'Vignette Entry Date',
-        data.vignetteEntryDate ? formatDate(data.vignetteEntryDate) : '',
+        data.vignetteEntryDate
+          ? (formatDate(data.vignetteEntryDate) ?? '')
+          : '',
       );
       addDetailRow(
         'Visa Start Date',
-        data.visaStartDate ? formatDate(data.visaStartDate) : '',
+        data.visaStartDate ? (formatDate(data.visaStartDate) ?? '') : '',
       );
       addDetailRow('ILR Track (Years)', data.ilrTrack?.toString() || '5');
 
@@ -247,7 +238,10 @@ export async function POST(request: NextRequest) {
           horizontal: 'center',
           vertical: 'middle',
         };
-        row.getCell('config').alignment = { vertical: 'middle', wrapText: true };
+        row.getCell('config').alignment = {
+          vertical: 'middle',
+          wrapText: true,
+        };
         row.height = 20;
 
         // Add borders

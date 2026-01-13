@@ -23,18 +23,6 @@ class UIStore {
   dateRangeStart: string | null = null; // ISO date string (YYYY-MM-DD)
   dateRangeEnd: string | null = null; // ISO date string (YYYY-MM-DD)
 
-  // Trip drawer state
-  isTripDrawerOpen = false;
-  tripDrawerMode: TripDrawerMode = 'create';
-  tripDrawerFormData: TripDrawerFormData = {
-    outDate: '',
-    inDate: '',
-    outRoute: '',
-    inRoute: '',
-    goalId: '',
-  };
-  editingTripId: string | null = null;
-
   constructor() {
     makeAutoObservable(this);
   }
@@ -86,57 +74,6 @@ class UIStore {
    */
   get hasDateRange() {
     return this.dateRangeStart !== null || this.dateRangeEnd !== null;
-  }
-
-  /**
-   * Open trip drawer for creating a new trip
-   */
-  openTripDrawer(goalId?: string) {
-    this.isTripDrawerOpen = true;
-    this.tripDrawerMode = 'create';
-    this.editingTripId = null;
-    this.tripDrawerFormData = {
-      outDate: '',
-      inDate: '',
-      outRoute: '',
-      inRoute: '',
-      goalId: goalId || '',
-    };
-  }
-
-  /**
-   * Open trip drawer for editing an existing trip
-   */
-  openTripDrawerForEdit(tripId: string, tripData: TripDrawerFormData) {
-    this.isTripDrawerOpen = true;
-    this.tripDrawerMode = 'edit';
-    this.editingTripId = tripId;
-    this.tripDrawerFormData = { ...tripData };
-  }
-
-  /**
-   * Close trip drawer
-   */
-  closeTripDrawer() {
-    this.isTripDrawerOpen = false;
-    this.editingTripId = null;
-    this.tripDrawerFormData = {
-      outDate: '',
-      inDate: '',
-      outRoute: '',
-      inRoute: '',
-      goalId: '',
-    };
-  }
-
-  /**
-   * Update trip drawer form data
-   */
-  updateTripDrawerFormData(updates: Partial<TripDrawerFormData>) {
-    this.tripDrawerFormData = {
-      ...this.tripDrawerFormData,
-      ...updates,
-    };
   }
 }
 

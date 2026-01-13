@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
-import { parseDate } from './parser';
+import { formatDate, parseDate } from '@uth/utils';
 
 export interface CSVTripRow {
   outDate: string;
@@ -154,7 +154,7 @@ export function parseCsvText(csvText: string): CSVParseResult {
     let inDate: string | null = null;
 
     if (outDateStr) {
-      outDate = parseDate(outDateStr);
+      outDate = formatDate(parseDate(outDateStr), 'api');
       if (!outDate) {
         errors.push(
           `Row ${rowNum}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
@@ -164,7 +164,7 @@ export function parseCsvText(csvText: string): CSVParseResult {
     }
 
     if (inDateStr) {
-      inDate = parseDate(inDateStr);
+      inDate = formatDate(parseDate(inDateStr), 'api');
       if (!inDate) {
         errors.push(
           `Row ${rowNum}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
@@ -181,8 +181,8 @@ export function parseCsvText(csvText: string): CSVParseResult {
     }
 
     trips.push({
-      outDate: outDate || '',  // Already in ISO format (YYYY-MM-DD)
-      inDate: inDate || '',    // Already in ISO format (YYYY-MM-DD)
+      outDate: outDate || '', // Already in ISO format (YYYY-MM-DD)
+      inDate: inDate || '', // Already in ISO format (YYYY-MM-DD)
       outRoute: sanitizeField(row.outRoute || ''),
       inRoute: sanitizeField(row.inRoute || ''),
     });
@@ -282,7 +282,7 @@ export async function parseXlsxFile(
       let inDate: string | null = null;
 
       if (outDateStr) {
-        outDate = parseDate(outDateStr);
+        outDate = formatDate(parseDate(outDateStr), 'api');
         if (!outDate) {
           errors.push(
             `Row ${rowNumber}: Invalid departure date format "${outDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
@@ -292,7 +292,7 @@ export async function parseXlsxFile(
       }
 
       if (inDateStr) {
-        inDate = parseDate(inDateStr);
+        inDate = formatDate(parseDate(inDateStr), 'api');
         if (!inDate) {
           errors.push(
             `Row ${rowNumber}: Invalid return date format "${inDateStr}". Use DD/MM/YYYY or YYYY-MM-DD`,
@@ -309,8 +309,8 @@ export async function parseXlsxFile(
       }
 
       trips.push({
-        outDate: outDate || '',  // Already in ISO format (YYYY-MM-DD)
-        inDate: inDate || '',    // Already in ISO format (YYYY-MM-DD)
+        outDate: outDate || '', // Already in ISO format (YYYY-MM-DD)
+        inDate: inDate || '', // Already in ISO format (YYYY-MM-DD)
         outRoute: sanitizeField(outRouteCell?.toString() || ''),
         inRoute: sanitizeField(inRouteCell?.toString() || ''),
       });

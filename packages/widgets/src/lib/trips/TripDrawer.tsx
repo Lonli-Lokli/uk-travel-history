@@ -1,7 +1,12 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { uiStore, tripsStore, authStore, travelStore, useRefreshAccessContext } from '@uth/stores';
+import {
+  tripsStore,
+  authStore,
+  travelStore,
+  useRefreshAccessContext,
+} from '@uth/stores';
 import {
   Drawer,
   DrawerContent,
@@ -13,6 +18,7 @@ import {
   UIIcon,
   Input,
   Label,
+  DatePicker,
 } from '@uth/ui';
 import { useState } from 'react';
 
@@ -27,9 +33,9 @@ import { useState } from 'react';
  * - Anonymous: Uses travelStore (client-side only)
  */
 export const TripDrawer = observer(() => {
-  const isOpen = uiStore.isTripDrawerOpen;
-  const mode = uiStore.tripDrawerMode;
-  const formData = uiStore.tripDrawerFormData;
+  const isOpen = travelStore.isDrawerOpen;
+  const mode = travelStore.drawerMode;
+  const formData = travelStore.drawerFormData;
   const isLoading = tripsStore.isLoading;
   const isAuthenticated = !!authStore.user;
   const refreshAccessContext = useRefreshAccessContext();
@@ -50,8 +56,8 @@ export const TripDrawer = observer(() => {
     const outDate = new Date(formData.outDate);
     const inDate = new Date(formData.inDate);
 
-    if (outDate >= inDate) {
-      setValidationError('Return date must be after departure date');
+    if (outDate > inDate) {
+      setValidationError('Return date must not be before departure date');
       return;
     }
 
@@ -67,8 +73,8 @@ export const TripDrawer = observer(() => {
           inRoute: formData.inRoute,
         });
         success = result !== null;
-      } else if (mode === 'edit' && uiStore.editingTripId) {
-        const result = await tripsStore.updateTrip(uiStore.editingTripId, {
+      } else if (mode === 'edit' && travelStore.editingTripId) {
+        const result = await tripsStore.updateTrip(travelStore.editingTripId, {
           title: formData.title || null,
           outDate: formData.outDate,
           inDate: formData.inDate,
@@ -91,13 +97,13 @@ export const TripDrawer = observer(() => {
           outRoute: formData.outRoute || '',
           inRoute: formData.inRoute || '',
         });
-      } else if (mode === 'edit' && uiStore.editingTripId) {
+      } else if (mode === 'edit' && travelStore.editingTripId) {
         // Find and update the trip in travelStore
         const tripIndex = travelStore.trips.findIndex(
-          (t) => t.id === uiStore.editingTripId
+          (t) => t.id === travelStore.editingTripId,
         );
         if (tripIndex !== -1) {
-          travelStore.updateTrip(uiStore.editingTripId, {
+          travelStore.updateTrip(travelStore.editingTripId, {
             outDate: formData.outDate,
             inDate: formData.inDate,
             outRoute: formData.outRoute || '',
@@ -107,12 +113,12 @@ export const TripDrawer = observer(() => {
       }
     }
 
-    uiStore.closeTripDrawer();
+    travelStore.closeDrawer();
   };
 
   const handleClose = () => {
     setValidationError(null);
-    uiStore.closeTripDrawer();
+    travelStore.closeDrawer();
   };
 
   const handleFieldChange = (field: keyof typeof formData, value: string) => {
@@ -120,7 +126,7 @@ export const TripDrawer = observer(() => {
     if (validationError) {
       setValidationError(null);
     }
-    uiStore.updateTripDrawerFormData({ [field]: value });
+    travelStore.updateDrawerFormData({ [field]: value });
   };
 
   const title = mode === 'create' ? 'Add Trip' : 'Edit Trip';
@@ -142,7 +148,8 @@ export const TripDrawer = observer(() => {
           {/* Trip Title (optional) */}
           <div className="space-y-2">
             <Label htmlFor="trip-title">
-              Trip Title <span className="text-slate-400 font-normal">(optional)</span>
+              Trip Title{' '}
+              <span className="text-slate-400 font-normal">(optional)</span>
             </Label>
             <Input
               id="trip-title"
@@ -161,11 +168,10 @@ export const TripDrawer = observer(() => {
             <div className="space-y-2">
               <div>
                 <Label htmlFor="out-date">Date Out</Label>
-                <Input
+                <DatePicker
                   id="out-date"
-                  type="date"
                   value={formData.outDate || ''}
-                  onChange={(e) => handleFieldChange('outDate', e.target.value)}
+                  onChange={(e) => handleFieldChange('outDate', e)}
                   placeholder="YYYY-MM-DD"
                 />
               </div>
@@ -192,11 +198,10 @@ export const TripDrawer = observer(() => {
             <div className="space-y-2">
               <div>
                 <Label htmlFor="in-date">Date In</Label>
-                <Input
+                <DatePicker
                   id="in-date"
-                  type="date"
                   value={formData.inDate || ''}
-                  onChange={(e) => handleFieldChange('inDate', e.target.value)}
+                  onChange={(e) => handleFieldChange('inDate', e)}
                   placeholder="YYYY-MM-DD"
                 />
               </div>

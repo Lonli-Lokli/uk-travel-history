@@ -106,6 +106,7 @@ export const ConfigureStep = observer(function ConfigureStep({
             </Label>
             {config.type === 'date' ? (
               <DatePicker
+                id={fieldKey}
                 value={formData[fieldKey] || ''}
                 onChange={(e) => handleChange(fieldKey, e)}
                 placeholder={config.placeholder}

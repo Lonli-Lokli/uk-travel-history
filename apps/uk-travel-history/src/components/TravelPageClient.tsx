@@ -16,14 +16,20 @@ import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRefreshAccessContext, goalsStore } from '@uth/stores';
-import { AddGoalDrawer, EditGoalDrawer, FeatureGate, TripDrawer, useFeatureGate } from '@uth/widgets';
+import {
+  AddGoalDrawer,
+  EditGoalDrawer,
+  FeatureGate,
+  TripDrawer,
+  useFeatureGate,
+} from '@uth/widgets';
 import { FEATURE_KEYS } from '@uth/features';
 import { TabSwitcher } from './TabSwitcher';
 import { StatsBar } from './StatsBar';
 import { TrackersView } from './TrackersView';
 import { TimelineView } from './TimelineView';
 import { AddFab } from './AddFab';
-import { uiStore, tripsStore } from '@uth/stores';
+import { uiStore, tripsStore, travelStore } from '@uth/stores';
 import {
   useClearAll,
   useCsvImport,
@@ -72,7 +78,7 @@ export const TravelPageClient = observer(() => {
   const handleAddGoal = () => goalsStore.openAddModal();
   const handleAddTrip = () => {
     // Open trip drawer (no goal required)
-    uiStore.openTripDrawer();
+    travelStore.openDrawer('create');
   };
   const handleUpgrade = () => router.push('/account');
 
@@ -142,14 +148,15 @@ export const TravelPageClient = observer(() => {
               onAddTrip={handleAddTrip}
               onEditTrip={(tripId) => {
                 const trip = trips.find((t) => t.id === tripId);
-                if (trip) {
-                  uiStore.openTripDrawerForEdit(tripId, {
-                    outDate: trip.outDate,
-                    inDate: trip.inDate,
-                    outRoute: trip.outRoute || '',
-                    inRoute: trip.inRoute || '',
-                  });
-                }
+                // we need to solve issue with anonymous trips
+                // if (trip) {
+                //   travelStore.openDrawer('edit', {
+                //     outDate: trip.outDate,
+                //     inDate: trip.inDate,
+                //     outRoute: trip.outRoute || '',
+                //     inRoute: trip.inRoute || '',
+                //   });
+                // }
               }}
               onDeleteTrip={async (tripId) => {
                 if (confirm('Are you sure you want to delete this trip?')) {

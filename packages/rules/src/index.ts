@@ -37,6 +37,7 @@ export type {
   TravelCalculationResult,
   ILRSummary,
   PreEntryPeriodInfo,
+  ILRValidationResult,
 } from './lib/internal';
 
 // Registry

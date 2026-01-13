@@ -1,5 +1,6 @@
 export interface TripRecord {
   id: string;
+  title?: string;
   outDate: string;
   inDate: string;
   outRoute: string;

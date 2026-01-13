@@ -24,12 +24,7 @@ interface RuleEngine<TConfig extends GoalConfig> {
   readonly goalType: GoalType;
   readonly jurisdiction: Jurisdiction;
 
-  calculate(
-    trips: TripRecord[],
-    config: TConfig,
-    startDate: Date,
-    asOfDate?: Date
-  ): GoalCalculation;
+  calculate(trips: TripRecord[], config: TConfig, startDate: Date, asOfDate?: Date): GoalCalculation;
 
   validateConfig(config: unknown): config is TConfig;
 
@@ -77,13 +72,7 @@ if (ruleEngineRegistry.isSupported('uk_ilr')) {
 Each goal type has its own configuration schema, defined as a discriminated union:
 
 ```typescript
-type GoalConfig =
-  | UKILRConfig
-  | UKCitizenshipConfig
-  | UKTaxConfig
-  | SchengenConfig
-  | DaysCounterConfig
-  | CustomThresholdConfig;
+type GoalConfig = UKILRConfig | UKCitizenshipConfig | UKTaxConfig | SchengenConfig | DaysCounterConfig | CustomThresholdConfig;
 
 interface UKILRConfig {
   type: 'uk_ilr';
@@ -189,7 +178,7 @@ const result = engine.calculate(
   trips,
   config,
   new Date('2020-01-01'),
-  new Date() // as of date
+  new Date(), // as of date
 );
 
 // Access results
@@ -217,12 +206,7 @@ class GoalsStore {
     const engine = ruleEngineRegistry.get(goal.type);
     if (!engine) return;
 
-    const calculation = engine.calculate(
-      trips,
-      goal.config,
-      new Date(goal.startDate),
-      new Date()
-    );
+    const calculation = engine.calculate(trips, goal.config, new Date(goal.startDate), new Date());
 
     this.calculations.set(goal.id, calculation);
   }
@@ -238,10 +222,7 @@ To add support for a new goal type, follow these steps:
 Add the goal type to the union in `src/lib/types.ts`:
 
 ```typescript
-export type GoalType =
-  | 'uk_ilr'
-  | 'uk_citizenship'
-  | 'my_new_goal'; // Add here
+export type GoalType = 'uk_ilr' | 'uk_citizenship' | 'my_new_goal'; // Add here
 ```
 
 ### 2. Define the Configuration Schema
@@ -256,10 +237,7 @@ export interface MyNewGoalConfig {
 }
 
 // Add to the GoalConfig union
-export type GoalConfig =
-  | UKILRConfig
-  | UKCitizenshipConfig
-  | MyNewGoalConfig; // Add here
+export type GoalConfig = UKILRConfig | UKCitizenshipConfig | MyNewGoalConfig; // Add here
 ```
 
 ### 3. Create the Rule Engine
@@ -267,27 +245,14 @@ export type GoalConfig =
 Create a new file `src/lib/engines/my-new-goal.ts`:
 
 ```typescript
-import type {
-  RuleEngine,
-  GoalCalculation,
-  MyNewGoalConfig,
-  GoalMetric,
-  GoalWarning,
-} from '../types';
+import type { RuleEngine, GoalCalculation, MyNewGoalConfig, GoalMetric, GoalWarning } from '../types';
 import type { TripRecord } from '@uth/calculators';
 
-export class MyNewGoalRuleEngine
-  implements RuleEngine<MyNewGoalConfig>
-{
+export class MyNewGoalRuleEngine implements RuleEngine<MyNewGoalConfig> {
   readonly goalType = 'my_new_goal' as const;
   readonly jurisdiction = 'global' as const;
 
-  calculate(
-    trips: TripRecord[],
-    config: MyNewGoalConfig,
-    startDate: Date,
-    asOfDate: Date = new Date()
-  ): GoalCalculation {
+  calculate(trips: TripRecord[], config: MyNewGoalConfig, startDate: Date, asOfDate: Date = new Date()): GoalCalculation {
     // Implement calculation logic here
     const metrics: GoalMetric[] = [
       {
@@ -316,10 +281,7 @@ export class MyNewGoalRuleEngine
   validateConfig(config: unknown): config is MyNewGoalConfig {
     if (typeof config !== 'object' || config === null) return false;
     const c = config as Record<string, unknown>;
-    return (
-      c.type === 'my_new_goal' &&
-      typeof c.someRequiredField === 'string'
-    );
+    return c.type === 'my_new_goal' && typeof c.someRequiredField === 'string';
   }
 
   getDisplayInfo() {
@@ -375,12 +337,7 @@ describe('MyNewGoalRuleEngine', () => {
       type: 'my_new_goal',
       someRequiredField: 'test',
     };
-    const result = engine.calculate(
-      [],
-      config,
-      new Date('2024-01-01'),
-      new Date('2024-06-01')
-    );
+    const result = engine.calculate([], config, new Date('2024-01-01'), new Date('2024-06-01'));
     expect(result.goalType).toBe('my_new_goal');
     expect(result.status).toBe('in_progress');
   });
@@ -498,7 +455,7 @@ warnings.push({
   severity: 'warning',
   title: 'Approaching 180-day limit',
   message: 'You have 150 days outside UK in the last 12 months. Limit is 180 days.',
-  action: 'Plan your trips carefully to avoid breaking continuous residence.'
+  action: 'Plan your trips carefully to avoid breaking continuous residence.',
 });
 ```
 
@@ -529,7 +486,7 @@ npm run test:coverage
 ## Dependencies
 
 - **`@uth/calculators`** - Trip calculation utilities (days outside, date ranges, etc.)
-- **`date-fns`** - Date manipulation
+- **`dayjs`** - Date manipulation
 
 ## Related Packages
 

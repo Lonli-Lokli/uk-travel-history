@@ -12,11 +12,10 @@
 
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
-import { cn } from '@uth/utils';
+import { cn, formatDate, isAfter, isBefore } from '@uth/utils';
 import type { TripData } from '@uth/db';
-import { format, parseISO } from 'date-fns';
 import { uiStore } from '@uth/stores';
-import { TripCard} from '@uth/widgets';
+import { TripCard } from '@uth/widgets';
 
 export interface TimelineViewProps {
   trips: TripData[];
@@ -46,17 +45,13 @@ export const TimelineView = observer(function TimelineView({
     }
 
     return trips.filter((trip) => {
-      const outDate = parseISO(trip.outDate);
-      const inDate = parseISO(trip.inDate);
-
-      const start = uiStore.dateRangeStart
-        ? parseISO(uiStore.dateRangeStart)
-        : null;
-      const end = uiStore.dateRangeEnd ? parseISO(uiStore.dateRangeEnd) : null;
-
-      if (start && outDate < start) return false;
-      if (end && inDate > end) return false;
-
+      if (
+        uiStore.dateRangeStart &&
+        isBefore(trip.outDate, uiStore.dateRangeStart)
+      )
+        return false;
+      if (uiStore.dateRangeEnd && isAfter(trip.inDate, uiStore.dateRangeEnd))
+        return false;
       return true;
     });
   }, [trips]);
@@ -71,8 +66,8 @@ export const TimelineView = observer(function TimelineView({
     });
 
     sortedTrips.forEach((trip) => {
-      const monthKey = format(parseISO(trip.outDate), 'yyyy-MM');
-      const monthLabel = format(parseISO(trip.outDate), 'MMMM yyyy');
+      const monthKey = formatDate(trip.outDate, 'keyMonth') ?? '<unknown>';
+      const monthLabel = formatDate(trip.outDate, 'keyLabel') ?? '<Unknown>';
 
       if (!groups.has(monthKey)) {
         groups.set(monthKey, {

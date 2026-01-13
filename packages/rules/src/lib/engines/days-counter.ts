@@ -4,13 +4,6 @@
  * Simple engine for counting days away or present without any limits.
  */
 
-import {
-  differenceInDays,
-  format,
-  parseISO,
-  isBefore,
-  isAfter,
-} from 'date-fns';
 import type { TripRecord } from '../internal';
 import type {
   RuleEngine,
@@ -20,6 +13,13 @@ import type {
   GoalStatus,
   GoalCategory,
 } from '../types';
+import {
+  formatDate,
+  differenceInDays,
+  parseDate,
+  isBefore,
+  isAfter,
+} from '@uth/utils';
 
 export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
   readonly goalType = 'days_counter' as const;
@@ -49,7 +49,7 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
         value: primaryValue,
         unit: 'days',
         status: 'ok',
-        tooltip: `Since ${format(startDate, 'MMM d, yyyy')}`,
+        tooltip: `Since ${formatDate(startDate)}`,
       },
       {
         key: 'tracking_period',
@@ -138,11 +138,16 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
     for (const trip of trips) {
       if (!trip.outDate || !trip.inDate) continue;
 
-      const tripOut = parseISO(trip.outDate);
-      const tripIn = parseISO(trip.inDate);
+      const tripOut = parseDate(trip.outDate);
+      const tripIn = parseDate(trip.inDate);
 
       // Skip trips entirely outside our date range
-      if (isAfter(tripOut, endDate) || isBefore(tripIn, startDate)) {
+      if (
+        !tripOut ||
+        !tripIn ||
+        isAfter(tripOut, endDate) ||
+        isBefore(tripIn, startDate)
+      ) {
         continue;
       }
 

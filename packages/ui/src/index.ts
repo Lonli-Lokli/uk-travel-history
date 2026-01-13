@@ -17,3 +17,4 @@ export * from './navigation-menu';
 export * from './drawer';
 export * from './goal-icons';
 export * from './compound-stat-card';
+export * from './editable-cell';

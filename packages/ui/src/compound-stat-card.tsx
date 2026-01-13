@@ -4,7 +4,7 @@ import { Card, CardContent, IconName, UIIcon } from '@uth/ui';
 import { ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
-interface StatItem {
+export interface StatItem {
   value: string | number;
   label: string;
   variant?: 'default' | 'success' | 'warning';

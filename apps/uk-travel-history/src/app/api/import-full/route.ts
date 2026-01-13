@@ -18,9 +18,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { logger } from '@uth/utils';
-import { parse, format } from 'date-fns';
-import { assertFeatureAccess, checkFeatureAccess, getUserContext, FEATURE_KEYS } from '@uth/features/server';
+import { formatDate, logger, parseDate } from '@uth/utils';
+import {
+  assertFeatureAccess,
+  checkFeatureAccess,
+  getUserContext,
+  FEATURE_KEYS,
+} from '@uth/features/server';
 import { bulkCreateTrips, getGoalById } from '@uth/db';
 
 export const runtime = 'nodejs';
@@ -29,7 +33,10 @@ export const maxDuration = 30;
 export async function POST(request: NextRequest) {
   try {
     // Enforce feature access - Excel import feature (base requirement)
-    const userContext = await assertFeatureAccess(request, FEATURE_KEYS.EXCEL_IMPORT);
+    const userContext = await assertFeatureAccess(
+      request,
+      FEATURE_KEYS.EXCEL_IMPORT,
+    );
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -55,18 +62,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse date from DD/MM/YYYY format to ISO string
-    const parseDate = (dateStr: string): string => {
-      if (!dateStr || typeof dateStr !== 'string') return '';
-      try {
-        // Handle DD/MM/YYYY format
-        const date = parse(dateStr.trim(), 'dd/MM/yyyy', new Date());
-        return format(date, 'yyyy-MM-dd');
-      } catch {
-        return '';
-      }
-    };
-
     // Read trips from Sheet 1 (skip header row)
     const trips: Array<{
       outDate: string;
@@ -81,8 +76,10 @@ export async function POST(request: NextRequest) {
     while (currentRow && currentRow.getCell(2).value) {
       const outDateCell = currentRow.getCell(2).value;
       const inDateCell = currentRow.getCell(3).value;
-      const outDate = parseDate(outDateCell?.toString() || '');
-      const inDate = parseDate(inDateCell?.toString() || '');
+      const outDate =
+        formatDate(parseDate(outDateCell?.toString() || ''), 'api') ?? '';
+      const inDate =
+        formatDate(parseDate(inDateCell?.toString() || ''), 'api') ?? '';
 
       if (outDate || inDate) {
         trips.push({
@@ -112,9 +109,9 @@ export async function POST(request: NextRequest) {
         const value = row.getCell(2).value?.toString().trim() || '';
 
         if (field.includes('Vignette Entry Date') && value) {
-          vignetteEntryDate = parseDate(value);
+          vignetteEntryDate = formatDate(parseDate(value), 'api') ?? '';
         } else if (field.includes('Visa Start Date') && value) {
-          visaStartDate = parseDate(value);
+          visaStartDate = formatDate(parseDate(value), 'api') ?? '';
         } else if (field.includes('ILR Track') && value) {
           const trackNum = parseInt(value, 10);
           if (
@@ -164,7 +161,7 @@ export async function POST(request: NextRequest) {
             name,
             type,
             jurisdiction,
-            startDate: parseDate(startDate),
+            startDate: formatDate(parseDate(startDate), 'api') ?? '',
             config,
           });
         }

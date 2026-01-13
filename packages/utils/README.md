@@ -89,7 +89,7 @@ Add breadcrumb for error context.
 
 #### `formatDate(date, format): string`
 
-Format date using date-fns pattern.
+Format date using dayjs pattern.
 
 #### `parseDate(str): Date | null`
 
@@ -122,7 +122,7 @@ nx test utils
 ## Dependencies
 
 - `@sentry/nextjs` - Error tracking
-- `date-fns` - Date manipulation
+- `dayjs` - Date manipulation
 - `clsx` - className utility
 - `tailwind-merge` - Tailwind class merging
 

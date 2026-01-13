@@ -12,9 +12,8 @@
 
 import { useState } from 'react';
 import { Card, CardContent, UIIcon } from '@uth/ui';
-import { cn } from '@uth/utils';
+import { cn, differenceInDays, formatDate } from '@uth/utils';
 import type { TripData } from '@uth/db';
-import { format, differenceInDays } from 'date-fns';
 
 export interface TripCardProps {
   trip: TripData;
@@ -56,9 +55,9 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
                   {trip.destination || 'Unknown destination'}
                 </p>
                 <div className="flex items-center gap-2 mt-1 text-xs text-slate-600">
-                  <span>{format(outDate, 'MMM d, yyyy')}</span>
+                  <span>{formatDate(outDate, 'ui')}</span>
                   <UIIcon iconName="arrow-right" className="w-3 h-3" />
-                  <span>{format(inDate, 'MMM d, yyyy')}</span>
+                  <span>{formatDate(inDate, 'ui')}</span>
                 </div>
               </div>
 

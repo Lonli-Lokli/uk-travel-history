@@ -38,7 +38,7 @@ A professional Next.js web application for tracking UK travel history and calcul
 - **Charts**: Highcharts
 - **PDF Parsing**: pdf-parse
 - **Excel Generation**: ExcelJS
-- **Date Handling**: date-fns
+- **Date Handling**: dayjs
 - **Error Tracking**: Sentry
 - **Monorepo**: Nx
 

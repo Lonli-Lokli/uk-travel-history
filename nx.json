@@ -40,7 +40,8 @@
         "packages/db/*",
         "packages/flow/*",
         "packages/domain/*",
-        "packages/rules/*"
+        "packages/rules/*",
+        "packages/cache/*"
       ]
     },
     {
@@ -76,7 +77,8 @@
         "packages/db/*",
         "packages/flow/*",
         "packages/domain/*",
-        "packages/rules/*"
+        "packages/rules/*",
+        "packages/cache/*"
       ],
       "options": {
         "typecheck": {

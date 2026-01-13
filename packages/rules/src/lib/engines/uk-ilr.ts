@@ -5,7 +5,6 @@
  */
 
 import { calculateTravelData, type TripRecord } from '../internal';
-import { differenceInDays, parseISO, format } from 'date-fns';
 import type {
   RuleEngine,
   UKILRConfig,
@@ -15,6 +14,7 @@ import type {
   GoalStatus,
   GoalCategory,
 } from '../types';
+import { formatDate, differenceInDays, parseDate } from '@uth/utils';
 
 export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
   readonly goalType = 'uk_ilr' as const;
@@ -44,7 +44,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
     const totalDays = config.trackYears * 365;
     const elapsedDays = differenceInDays(
       asOfDate,
-      parseISO(config.visaStartDate),
+      parseDate(config.visaStartDate),
     );
     const progressPercent = Math.min(
       100,
@@ -254,7 +254,7 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
           ? ('met' as const)
           : ('pending' as const),
         detail: summary.ilrEligibilityDate
-          ? `Eligible from ${format(parseISO(summary.ilrEligibilityDate), 'dd MMM yyyy')}`
+          ? `Eligible from ${formatDate(summary.ilrEligibilityDate)}`
           : 'In progress',
       },
       {

@@ -20,8 +20,5 @@
   },
   "nx": {
     "name": "rules"
-  },
-  "dependencies": {
-    "date-fns": "^4.1.0"
   }
 }

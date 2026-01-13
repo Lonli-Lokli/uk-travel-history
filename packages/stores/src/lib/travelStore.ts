@@ -1,5 +1,4 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { format } from 'date-fns';
 import {
   ILRTrack,
   PreEntryPeriodInfo,
@@ -11,7 +10,11 @@ import {
   TravelCalculationResult,
 } from '@uth/rules';
 // Internal imports for calculation functions
-import { calculateTravelData, calculateTripDurations } from '@uth/rules/internal';
+import {
+  calculateTravelData,
+  calculateTripDurations,
+} from '@uth/rules/internal';
+import { formatDate } from '@uth/utils';
 
 /**
  * HTTP client interface for dependency injection
@@ -242,8 +245,8 @@ class TravelStore {
     // Convert timestamp to ISO date string, then format for display
     const startDate = new Date(startTimestamp);
     const endDate = new Date(endTimestamp);
-    const startStr = format(startDate, 'dd/MM/yyyy');
-    const endStr = format(endDate, 'dd/MM/yyyy');
+    const startStr = formatDate(startDate);
+    const endStr = formatDate(endDate);
     this.setSelectedTripDetails({ name, start: startStr, end: endStr });
   }
 

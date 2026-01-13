@@ -1,4 +1,8 @@
-import { differenceInDays, format, parse, parseISO } from 'date-fns';
+import {
+  differenceInDays,
+  formatDate,
+  parseDate as parseDateFn,
+} from '@uth/utils';
 
 export interface TravelRecord {
   date: string; // ISO date string (YYYY-MM-DD)
@@ -66,35 +70,9 @@ const portNames: Record<string, string> = {
   GBSPX: 'St Pancras/Eurostar',
 };
 
-/**
- * Parse date string to ISO format (YYYY-MM-DD)
- * @param dateStr - Date string in various formats
- * @returns ISO date string (YYYY-MM-DD) or null if invalid
- */
 export function parseDate(dateStr: string): string | null {
-  const patterns = [
-    { regex: /(\d{2})\/(\d{2})\/(\d{4})/, format: 'dd/MM/yyyy' }, // DD/MM/YYYY
-    { regex: /(\d{4})-(\d{2})-(\d{2})/, format: 'yyyy-MM-dd' }, // YYYY-MM-DD
-    { regex: /(\d{2})-(\d{2})-(\d{4})/, format: 'dd-MM-yyyy' }, // DD-MM-YYYY
-  ];
-
-  for (const pattern of patterns) {
-    const match = dateStr.match(pattern.regex);
-    if (match) {
-      try {
-        const parsed = parse(dateStr, pattern.format, new Date());
-        // Validate the parsed date is valid
-        if (!isNaN(parsed.getTime())) {
-          return format(parsed, 'yyyy-MM-dd');
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
+  return formatDate(parseDateFn(dateStr), 'api');
 }
-
 export function formatRoute(
   embarkPort: string,
   disembarkPort: string,
@@ -129,7 +107,7 @@ export function parseTravelRecords(text: string): TravelRecord[] {
     if (match) {
       const [, dateStr, voyageCode, direction, embarkPort, , disembarkPort] =
         match;
-      const date = parseDate(dateStr);
+      const date = formatDate(dateStr);
 
       if (date) {
         const normalizedDirection =
@@ -197,11 +175,8 @@ export function pairTrips(records: TravelRecord[]): Trip[] {
 
       if (inboundIndex !== -1) {
         const inbound = records[inboundIndex];
-        // Calculate calendar days between ISO date strings using date-fns
-        const calendarDays = differenceInDays(
-          parseISO(inbound.date),
-          parseISO(record.date),
-        );
+        // Calculate calendar days between ISO date strings
+        const calendarDays = differenceInDays(inbound.date, record.date);
         // Full days excludes departure and return days (per UK Home Office guidance)
         const fullDays = Math.max(0, calendarDays - 1);
 

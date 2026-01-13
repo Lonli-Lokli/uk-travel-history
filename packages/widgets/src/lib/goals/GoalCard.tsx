@@ -14,9 +14,8 @@ import {
   CardTitle,
   GoalTypeIcon,
 } from '@uth/ui';
-import { cn } from '@uth/utils';
+import { cn, formatDate } from '@uth/utils';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
-import { format } from 'date-fns';
 
 /** Status color mapping */
 const statusColors: Record<
@@ -132,7 +131,7 @@ export function GoalCard({
   const progress = calculation?.progressPercent ?? 0;
 
   const eligibilityDateStr = calculation?.eligibilityDate
-    ? format(new Date(calculation.eligibilityDate), 'MMM d, yyyy')
+    ? formatDate(calculation.eligibilityDate, 'ui')
     : 'Not calculated';
 
   const daysUntil = calculation?.daysUntilEligible ?? null;
@@ -183,9 +182,7 @@ export function GoalCard({
               {eligibilityDateStr}
             </p>
             {daysUntil !== null && daysUntil > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {daysUntil} days
-              </p>
+              <p className="text-xs text-muted-foreground">{daysUntil} days</p>
             )}
           </div>
         </div>
@@ -198,7 +195,9 @@ export function GoalCard({
                 key={metric.key}
                 className="flex-1 bg-white/60 rounded-md p-2"
               >
-                <p className="text-xs text-slate-600 truncate">{metric.label}</p>
+                <p className="text-xs text-slate-600 truncate">
+                  {metric.label}
+                </p>
                 <p className="text-sm font-semibold text-slate-900 truncate">
                   {metric.value}
                   {metric.unit !== 'days' && ` ${metric.unit}`}

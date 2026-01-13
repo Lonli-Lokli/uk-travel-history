@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseDate, parseTravelRecords, pairTrips, analyzeTravelHistory } from './parser';
+import {
+  parseTravelRecords,
+  pairTrips,
+  analyzeTravelHistory,
+  parseDate,
+} from './parser';
 
 describe('Parser - Date Handling', () => {
   describe('parseDate', () => {
@@ -124,8 +129,16 @@ describe('Parser - Date Handling', () => {
   describe('pairTrips', () => {
     it('should return ISO date strings in trips', () => {
       const records = [
-        { date: '2024-01-15', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-01-20', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2024-01-15',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-01-20',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -139,8 +152,16 @@ describe('Parser - Date Handling', () => {
 
     it('should calculate calendar days correctly using ISO strings', () => {
       const records = [
-        { date: '2024-01-15', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-01-20', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2024-01-15',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-01-20',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -152,8 +173,16 @@ describe('Parser - Date Handling', () => {
 
     it('should handle same-day trips', () => {
       const records = [
-        { date: '2024-01-15', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-01-15', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2024-01-15',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-01-15',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -164,8 +193,16 @@ describe('Parser - Date Handling', () => {
 
     it('should handle trips spanning year boundaries', () => {
       const records = [
-        { date: '2023-12-20', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-01-05', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2023-12-20',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-01-05',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -177,8 +214,16 @@ describe('Parser - Date Handling', () => {
 
     it('should handle trips across leap year date', () => {
       const records = [
-        { date: '2024-02-28', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-03-01', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2024-02-28',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-03-01',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -190,7 +235,11 @@ describe('Parser - Date Handling', () => {
 
     it('should handle incomplete trips (no return)', () => {
       const records = [
-        { date: '2024-01-15', direction: 'Outbound' as const, route: 'LHR → CDG' },
+        {
+          date: '2024-01-15',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -204,7 +253,11 @@ describe('Parser - Date Handling', () => {
 
     it('should handle incomplete trips (no departure)', () => {
       const records = [
-        { date: '2024-01-20', direction: 'Inbound' as const, route: 'CDG → LHR' },
+        {
+          date: '2024-01-20',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
       ];
 
       const trips = pairTrips(records);
@@ -218,10 +271,26 @@ describe('Parser - Date Handling', () => {
 
     it('should handle multiple consecutive trips', () => {
       const records = [
-        { date: '2024-01-15', direction: 'Outbound' as const, route: 'LHR → CDG' },
-        { date: '2024-01-20', direction: 'Inbound' as const, route: 'CDG → LHR' },
-        { date: '2024-02-01', direction: 'Outbound' as const, route: 'LHR → AMS' },
-        { date: '2024-02-10', direction: 'Inbound' as const, route: 'AMS → LHR' },
+        {
+          date: '2024-01-15',
+          direction: 'Outbound' as const,
+          route: 'LHR → CDG',
+        },
+        {
+          date: '2024-01-20',
+          direction: 'Inbound' as const,
+          route: 'CDG → LHR',
+        },
+        {
+          date: '2024-02-01',
+          direction: 'Outbound' as const,
+          route: 'LHR → AMS',
+        },
+        {
+          date: '2024-02-10',
+          direction: 'Inbound' as const,
+          route: 'AMS → LHR',
+        },
       ];
 
       const trips = pairTrips(records);

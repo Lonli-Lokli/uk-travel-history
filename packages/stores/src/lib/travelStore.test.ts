@@ -376,13 +376,17 @@ describe('TravelStore', () => {
 
       expect(travelStore.selectedTripDetails).toEqual({
         name: 'Summer Trip',
-        start: '01/06/2020',
-        end: '15/06/2020',
+        start: 'June 1, 2020',
+        end: 'June 15, 2020',
       });
     });
 
     it('should clear selected trip', () => {
-      travelStore.setSelectedTripDetails({ name: 'Test', start: '01/01/2020', end: '15/01/2020' });
+      travelStore.setSelectedTripDetails({
+        name: 'Test',
+        start: '01/01/2020',
+        end: '15/01/2020',
+      });
 
       travelStore.clearSelectedTrip();
 
@@ -393,9 +397,27 @@ describe('TravelStore', () => {
   describe('Trip Reordering', () => {
     beforeEach(() => {
       travelStore.setTrips([
-        { id: '1', outDate: '2020-01-01', inDate: '2020-01-15', outRoute: 'A', inRoute: 'B' },
-        { id: '2', outDate: '2020-02-01', inDate: '2020-02-15', outRoute: 'C', inRoute: 'D' },
-        { id: '3', outDate: '2020-03-01', inDate: '2020-03-15', outRoute: 'E', inRoute: 'F' },
+        {
+          id: '1',
+          outDate: '2020-01-01',
+          inDate: '2020-01-15',
+          outRoute: 'A',
+          inRoute: 'B',
+        },
+        {
+          id: '2',
+          outDate: '2020-02-01',
+          inDate: '2020-02-15',
+          outRoute: 'C',
+          inRoute: 'D',
+        },
+        {
+          id: '3',
+          outDate: '2020-03-01',
+          inDate: '2020-03-15',
+          outRoute: 'E',
+          inRoute: 'F',
+        },
       ]);
     });
 
@@ -448,7 +470,8 @@ describe('TravelStore', () => {
 
   describe('importFromCsv', () => {
     it('should import trips from CSV in append mode', async () => {
-      const csvText = 'outDate,inDate,outRoute,inRoute\n2020-06-01,2020-06-15,Heathrow,Gatwick';
+      const csvText =
+        'outDate,inDate,outRoute,inRoute\n2020-06-01,2020-06-15,Heathrow,Gatwick';
 
       const result = await travelStore.importFromCsv(csvText, 'append');
 
@@ -460,7 +483,8 @@ describe('TravelStore', () => {
     it('should import trips from CSV in replace mode', async () => {
       travelStore.addTrip({ outDate: '2019-01-01', inDate: '2019-01-15' });
 
-      const csvText = 'outDate,inDate,outRoute,inRoute\n2020-06-01,2020-06-15,Heathrow,Gatwick';
+      const csvText =
+        'outDate,inDate,outRoute,inRoute\n2020-06-01,2020-06-15,Heathrow,Gatwick';
 
       await travelStore.importFromCsv(csvText, 'replace');
 
@@ -470,7 +494,12 @@ describe('TravelStore', () => {
 
     it('should handle XLSX JSON format', async () => {
       const trips = [
-        { outDate: '2020-06-01', inDate: '2020-06-15', outRoute: 'A', inRoute: 'B' },
+        {
+          outDate: '2020-06-01',
+          inDate: '2020-06-15',
+          outRoute: 'A',
+          inRoute: 'B',
+        },
       ];
       const xlsxFormat = `__XLSX__${JSON.stringify(trips)}`;
 
@@ -484,7 +513,7 @@ describe('TravelStore', () => {
       const csvText = 'invalid,data\nno,trips';
 
       await expect(
-        travelStore.importFromCsv(csvText, 'replace')
+        travelStore.importFromCsv(csvText, 'replace'),
       ).rejects.toThrow();
     });
   });

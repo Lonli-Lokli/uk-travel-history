@@ -9,10 +9,9 @@ import {
   Button,
   UIIcon,
 } from '@uth/ui';
-import { cn } from '@uth/utils';
+import { cn, formatDate } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
-import { format } from 'date-fns';
 import { RiskAreaChart } from './RiskAreaChart';
 
 /**
@@ -170,7 +169,7 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
 
   // Format eligibility date
   const eligibilityDateStr = calculation?.eligibilityDate
-    ? format(new Date(calculation.eligibilityDate), 'MMMM d, yyyy')
+    ? formatDate(calculation.eligibilityDate, 'ui')
     : 'Not calculated';
 
   const daysUntil = calculation?.daysUntilEligible ?? null;
@@ -181,7 +180,10 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <UIIcon iconName="chevron-right" className="w-4 h-4 text-primary" />
+              <UIIcon
+                iconName="chevron-right"
+                className="w-4 h-4 text-primary"
+              />
               <span className="text-xs font-medium text-primary uppercase tracking-wide">
                 Selected Goal
               </span>
@@ -197,19 +199,22 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                 {statusStyle.text}
               </span>
               <span className="text-xs text-muted-foreground">
-                Since {format(new Date(goal.startDate), 'MMM d, yyyy')}
+                Since {formatDate(goal.startDate, 'ui')}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {onEdit && (
-              <Button variant="ghost" size="sm" onClick={onEdit} title="Edit goal">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onEdit}
+                title="Edit goal"
+              >
                 <UIIcon iconName="pencil" className="w-4 h-4" />
               </Button>
             )}
-            {onArchive && (
-              <DeleteGoalButton onClick={onArchive} />
-            )}
+            {onArchive && <DeleteGoalButton onClick={onArchive} />}
           </div>
         </div>
       </CardHeader>

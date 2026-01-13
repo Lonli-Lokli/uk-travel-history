@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { parse } from 'date-fns';
-import { cn } from '@uth/utils';
-import { Button, DatePicker, Input, UIIcon } from '@uth/ui';
+import { cn, parseDate, toDate } from '@uth/utils';
+import { DatePicker } from './date-picker';
+import { UIIcon } from './icon';
+import { Input } from './input';
+import { Button } from './button';
 
 interface EditableCellProps {
   value: string;
@@ -72,7 +74,7 @@ export function EditableCell({
   if (type === 'date') {
     // Parse defaultMonth if provided
     const defaultMonthDate = defaultMonth
-      ? parse(defaultMonth, 'yyyy-MM-dd', new Date())
+      ? (toDate(parseDate(defaultMonth)) ?? undefined)
       : undefined;
 
     return (

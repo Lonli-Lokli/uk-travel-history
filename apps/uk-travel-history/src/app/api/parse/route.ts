@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logger } from '@uth/utils';
+import { formatDate, logger } from '@uth/utils';
 import type { ParseResult } from '@uth/parser';
-import { format } from 'date-fns';
 import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
 
 export const runtime = 'nodejs';
@@ -100,8 +99,8 @@ export async function POST(request: NextRequest) {
       data: {
         trips: result.trips.map((trip) => ({
           ...trip,
-          outDate: trip.outDate ? format(trip.outDate, 'yyyy-MM-dd') : null,
-          inDate: trip.inDate ? format(trip.inDate, 'yyyy-MM-dd') : null,
+          outDate: trip.outDate ? formatDate(trip.outDate, 'api') : null,
+          inDate: trip.inDate ? formatDate(trip.inDate, 'api') : null,
         })),
         summary: result.summary,
       },
