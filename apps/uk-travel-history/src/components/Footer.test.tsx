@@ -21,8 +21,10 @@ describe('Footer', () => {
     });
 
     it('should have Terms link but not Status link for non-admin users', () => {
-      render(<Footer  isAdmin={false} />);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      render(<Footer isAdmin={false} />);
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       const statusLink = screen.queryByRole('link', { name: 'Status' });
 
       expect(termsLink).toBeTruthy();
@@ -31,7 +33,9 @@ describe('Footer', () => {
 
     it('should have both Terms and Status links for admin users', () => {
       render(<Footer isAdmin={true} />);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       const statusLink = screen.getByRole('link', { name: 'Status' });
 
       expect(termsLink).toBeTruthy();
@@ -39,16 +43,20 @@ describe('Footer', () => {
     });
 
     it('should render developer info trigger button', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
       expect(trigger).toBeTruthy();
     });
   });
 
   describe('Navigation Links', () => {
     it('should have correct href for Terms link', () => {
-      render(<Footer isAdmin={false}/>);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      render(<Footer isAdmin={false} />);
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       expect(termsLink.getAttribute('href')).toBe('/terms');
     });
 
@@ -59,27 +67,31 @@ describe('Footer', () => {
     });
 
     it('should not render Status link for non-admin users', () => {
-      render(<Footer isAdmin={false}/>);
+      render(<Footer isAdmin={false} />);
       const statusLink = screen.queryByRole('link', { name: 'Status' });
       expect(statusLink).toBeFalsy();
     });
 
     it('should have proper hover states on links', () => {
-      render(<Footer isAdmin={false}/>);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      render(<Footer isAdmin={false} />);
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       expect(termsLink.className).toContain('hover:text-slate-900');
     });
   });
 
   describe('Developer Info Popover', () => {
     it('should not show popover content initially', () => {
-      render(<Footer isAdmin={false}/>);
+      render(<Footer isAdmin={false} />);
       expect(screen.queryByText('Build Information')).not.toBeTruthy();
     });
 
     it('should show popover content when trigger is clicked', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       fireEvent.click(trigger);
 
@@ -87,8 +99,10 @@ describe('Footer', () => {
     });
 
     it('should display commit hash in trigger', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       // Should display first 7 chars of commit hash
       expect(trigger.textContent).toBeTruthy();
@@ -96,8 +110,10 @@ describe('Footer', () => {
     });
 
     it('should display commit hash in popover content', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       fireEvent.click(trigger);
 
@@ -106,7 +122,9 @@ describe('Footer', () => {
 
     it('should display build time in popover content', () => {
       render(<Footer isAdmin={false} />);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       fireEvent.click(trigger);
 
@@ -115,7 +133,9 @@ describe('Footer', () => {
 
     it('should display environment in popover content', () => {
       render(<Footer isAdmin={false} />);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       fireEvent.click(trigger);
 
@@ -124,7 +144,9 @@ describe('Footer', () => {
 
     it('should close popover when clicking outside', () => {
       const { container } = render(<Footer isAdmin={false} />);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       // Open popover
       fireEvent.click(trigger);
@@ -141,14 +163,18 @@ describe('Footer', () => {
     });
 
     it('should have proper aria-label on trigger', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
       expect(trigger.getAttribute('aria-label')).toBe('View build information');
     });
 
     it('should show copyright year in trigger', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
       const currentYear = new Date().getFullYear();
       expect(trigger.textContent).toContain(`© ${currentYear}`);
     });
@@ -156,35 +182,41 @@ describe('Footer', () => {
 
   describe('Accessibility', () => {
     it('should have focus styles on navigation links', () => {
-      render(<Footer isAdmin={false}/>);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      render(<Footer isAdmin={false} />);
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       expect(termsLink.className).toContain('focus:outline-none');
       expect(termsLink.className).toContain('focus:ring-2');
     });
 
     it('should have focus styles on developer info trigger', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
       expect(trigger.className).toContain('focus:outline-none');
       expect(trigger.className).toContain('focus:ring-2');
     });
 
     it('should have proper color contrast', () => {
-      render(<Footer isAdmin={false}/>);
-      const termsLink = screen.getByRole('link', { name: 'Terms and Conditions' });
+      render(<Footer isAdmin={false} />);
+      const termsLink = screen.getByRole('link', {
+        name: 'Terms and Conditions',
+      });
       expect(termsLink.className).toContain('text-slate-600');
     });
   });
 
   describe('Responsive Design', () => {
     it('should have responsive layout classes', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const layout = container.querySelector('.flex-col.sm\\:flex-row');
       expect(layout).toBeTruthy();
     });
 
     it('should have responsive gap classes', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const layout = container.querySelector('.gap-3');
       expect(layout).toBeTruthy();
     });
@@ -195,8 +227,10 @@ describe('Footer', () => {
       const originalEnv = process.env.NEXT_PUBLIC_GIT_COMMIT_HASH;
       delete process.env.NEXT_PUBLIC_GIT_COMMIT_HASH;
 
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       // Open popover to check commit hash inside
       fireEvent.click(trigger);
@@ -212,8 +246,10 @@ describe('Footer', () => {
       const originalEnv = process.env.NEXT_PUBLIC_BUILD_TIME;
       delete process.env.NEXT_PUBLIC_BUILD_TIME;
 
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       fireEvent.click(trigger);
 
@@ -227,8 +263,10 @@ describe('Footer', () => {
       const originalEnv = process.env.NEXT_PUBLIC_GIT_COMMIT_HASH;
       process.env.NEXT_PUBLIC_GIT_COMMIT_HASH = 'abc123def456';
 
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       // Open popover to check commit hash
       fireEvent.click(trigger);
@@ -243,31 +281,31 @@ describe('Footer', () => {
 
   describe('Styling', () => {
     it('should have border-top styling', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const footer = container.querySelector('footer');
       expect(footer?.className).toContain('border-t');
     });
 
     it('should have white background', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const footer = container.querySelector('footer');
       expect(footer?.className).toContain('bg-white');
     });
 
     it('should have proper padding', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const innerDiv = container.querySelector('.px-3.py-4');
       expect(innerDiv).toBeTruthy();
     });
 
     it('should have max-width constraint', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const maxWidthDiv = container.querySelector('.max-w-6xl');
       expect(maxWidthDiv).toBeTruthy();
     });
 
     it('should have mt-auto for sticky footer behavior', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const footer = container.querySelector('footer');
       expect(footer?.className).toContain('mt-auto');
     });
@@ -275,7 +313,7 @@ describe('Footer', () => {
 
   describe('Visual Separator', () => {
     it('should have visual separator between navigation links', () => {
-      const { container } = render(<Footer isAdmin={false}/>);
+      const { container } = render(<Footer isAdmin={false} />);
       const separator = container.querySelector('.text-slate-300');
       expect(separator).toBeTruthy();
       expect(separator?.textContent).toBe('•');
@@ -284,8 +322,10 @@ describe('Footer', () => {
 
   describe('Popover State Management', () => {
     it('should toggle popover state correctly', () => {
-      render(<Footer isAdmin={false}/>);
-      const trigger = screen.getByRole('button', { name: /view build information/i });
+      render(<Footer isAdmin={false} />);
+      const trigger = screen.getByRole('button', {
+        name: /view build information/i,
+      });
 
       // Initially closed
       expect(screen.queryByText('Build Information')).not.toBeTruthy();
