@@ -22,6 +22,16 @@ export const ALLOWED_FILE_TYPES = [
   'text/x-log',
 ] as const;
 
+export const ALLOWED_FILE_EXTENSIONS = [
+  '.txt',
+  '.json',
+  '.pdf',
+  '.png', 
+  '.jpg',
+  '.jpeg',
+  '.log',
+]
+
 /**
  * Rate limiting configuration
  * 3 submissions per hour per IP address

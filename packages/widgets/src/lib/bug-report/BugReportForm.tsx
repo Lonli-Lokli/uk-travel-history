@@ -7,6 +7,8 @@ import { Button, Input, Label } from '@uth/ui';
 import { bugReportSchema, type BugReportFormData } from './types';
 import { useScreenshotCapture } from './useScreenshotCapture';
 import { useToast } from '@uth/ui';
+import { ALLOWED_FILE_EXTENSIONS, FILE_SIZE_LIMITS } from './constants';
+import { formatBytes } from '@uth/utils';
 
 interface BugReportFormProps {
   onSuccess: () => void;
@@ -33,14 +35,16 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
       setIsSubmitting(true);
 
       // Step 1: Capture screenshot
-      const { blob: screenshotBlob, error: screenshotError } = await captureScreenshot();
+      const { blob: screenshotBlob, error: screenshotError } =
+        await captureScreenshot();
 
       if (screenshotError) {
         console.warn('Screenshot capture failed:', screenshotError);
         // Show toast notification if screenshot fails
         toast({
           title: 'Screenshot capture failed',
-          description: 'Continuing with bug report submission without screenshot.',
+          description:
+            'Continuing with bug report submission without screenshot.',
           variant: 'default',
         });
       }
@@ -74,7 +78,8 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
       // Success!
       toast({
         title: 'Bug report submitted',
-        description: 'Thank you for your feedback! We will review your report shortly.',
+        description:
+          'Thank you for your feedback! We will review your report shortly.',
       });
 
       reset();
@@ -84,7 +89,8 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
       console.error('Bug report submission failed:', error);
       toast({
         title: 'Submission failed',
-        description: error instanceof Error ? error.message : 'Please try again later.',
+        description:
+          error instanceof Error ? error.message : 'Please try again later.',
         variant: 'destructive',
       });
     } finally {
@@ -171,14 +177,16 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
             onChange={handleFileChange}
             disabled={isLoading}
             aria-invalid={!!errors.attachment}
-            aria-describedby={errors.attachment ? 'attachment-error' : undefined}
+            aria-describedby={
+              errors.attachment ? 'attachment-error' : undefined
+            }
           />
           {selectedFile && (
             <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium">{selectedFile.name}</span>
                 <span className="text-slate-500">
-                  ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  ({formatBytes(selectedFile.size)})
                 </span>
               </div>
               <Button
@@ -194,12 +202,17 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
             </div>
           )}
           {errors.attachment && (
-            <p id="attachment-error" className="text-sm text-red-500" role="alert">
+            <p
+              id="attachment-error"
+              className="text-sm text-red-500"
+              role="alert"
+            >
               {errors.attachment.message}
             </p>
           )}
           <p className="text-xs text-slate-500">
-            Max 5MB. Allowed: .txt, .log, .json, .pdf, .png, .jpg
+            Max {formatBytes(FILE_SIZE_LIMITS.ATTACHMENT)}. Allowed:{' '}
+            {ALLOWED_FILE_EXTENSIONS.join(', ')}.
           </p>
         </div>
       </div>
@@ -208,9 +221,8 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
       <div className="space-y-2">
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
           <p className="text-xs text-yellow-900">
-            <strong>Privacy Notice:</strong> The screenshot will capture the current page visible
-            on your screen. Please ensure no sensitive information (passwords, personal data) is
-            visible before submitting.
+            <strong>Privacy Notice:</strong> The screenshot will capture the
+            current page visible on your screen.
           </p>
         </div>
       </div>
