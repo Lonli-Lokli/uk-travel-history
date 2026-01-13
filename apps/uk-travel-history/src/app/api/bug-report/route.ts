@@ -20,6 +20,7 @@ export const dynamic = 'force-dynamic';
 // Email configuration
 const FROM_EMAIL = process.env.BUG_REPORT_FROM_EMAIL || 'bugs@busel.uk';
 const TO_EMAIL = process.env.BUG_REPORT_TO_EMAIL || 'support@busel.uk';
+const BCC_EMAIL = process.env.BUG_REPORT_BCC_EMAIL || undefined;
 
 // Allowed origins for CSRF protection
 const ALLOWED_ORIGINS = [
@@ -233,6 +234,7 @@ export async function POST(request: NextRequest) {
     const emailResponse = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,
+      bcc: BCC_EMAIL,
       replyTo: email,
       subject: `Bug Report: ${message.slice(0, 50)}${message.length > 50 ? '...' : ''}`,
       html: emailHtml,
