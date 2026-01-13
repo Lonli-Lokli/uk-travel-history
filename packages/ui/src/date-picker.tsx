@@ -38,7 +38,7 @@ export function DatePicker({
   // Initialize input value when component mounts or value changes
   React.useEffect(() => {
     if (selectedDate) {
-      setInputValue(formatDate(selectedDate, 'api'));
+      setInputValue(formatDate(selectedDate, 'api') ?? '');
     } else {
       setInputValue('');
     }
@@ -46,7 +46,7 @@ export function DatePicker({
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(formatDate(date, 'api'));
+      onChange(formatDate(date, 'api') ?? '');
       setIsOpen(false);
     }
   };
@@ -60,14 +60,14 @@ export function DatePicker({
 
     // If we successfully parsed a valid date, update the value
     if (parsedDate && isValidDate(parsedDate)) {
-      onChange(formatDate(parsedDate, 'api'));
+      onChange(formatDate(parsedDate, 'api') ?? '');
     }
   };
 
   const handleInputBlur = () => {
     // Restore formatted value on blur if we have a valid date
     if (selectedDate) {
-      setInputValue(formatDate(selectedDate, 'api'));
+      setInputValue(formatDate(selectedDate, 'api') ?? '');
     } else {
       setInputValue('');
     }

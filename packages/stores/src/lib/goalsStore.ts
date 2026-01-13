@@ -458,35 +458,6 @@ class GoalsStore {
   // ============================================================================
 
   /**
-   * Fetch goals from API (for refresh/sync)
-   * Note: Initial data comes from hydration, this is for manual refresh
-   */
-  async fetchGoals(): Promise<void> {
-    this.isLoading = true;
-    this.error = null;
-
-    try {
-      const response = await fetch('/api/goals');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch goals');
-      }
-
-      runInAction(() => {
-        this.goals = data.goals;
-        this.isLoading = false;
-      });
-    } catch (err) {
-      runInAction(() => {
-        this.error =
-          err instanceof Error ? err.message : 'Failed to fetch goals';
-        this.isLoading = false;
-      });
-    }
-  }
-
-  /**
    * Create a new tracking goal
    * @param input - Goal creation data
    * @returns Created goal, or null on error

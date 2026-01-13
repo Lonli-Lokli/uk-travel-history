@@ -245,8 +245,8 @@ class TravelStore {
     // Convert timestamp to ISO date string, then format for display
     const startDate = new Date(startTimestamp);
     const endDate = new Date(endTimestamp);
-    const startStr = formatDate(startDate);
-    const endStr = formatDate(endDate);
+    const startStr = formatDate(startDate) ?? '';
+    const endStr = formatDate(endDate) ?? '';
     this.setSelectedTripDetails({ name, start: startStr, end: endStr });
   }
 

@@ -418,30 +418,6 @@ describe('GoalsStore', () => {
       updatedAt: '2024-01-01T00:00:00Z',
     };
 
-    it('should fetch goals from API', async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ goals: [mockGoal] }),
-      });
-
-      await goalsStore.fetchGoals();
-
-      expect(goalsStore.goals).toEqual([mockGoal]);
-      expect(goalsStore.isLoading).toBe(false);
-      expect(goalsStore.error).toBeNull();
-    });
-
-    it('should handle fetch error', async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: 'Failed to fetch' }),
-      });
-
-      await goalsStore.fetchGoals();
-
-      expect(goalsStore.error).toBe('Failed to fetch');
-      expect(goalsStore.isLoading).toBe(false);
-    });
 
     it('should create a goal', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
