@@ -18,10 +18,8 @@ import {
 export const dynamic = 'force-dynamic';
 
 // Email configuration
-const FROM_EMAIL =
-  process.env.BUG_REPORT_FROM_EMAIL || 'bugs@busel.uk';
-const TO_EMAIL =
-  process.env.BUG_REPORT_TO_EMAIL || 'support@busel.uk';
+const FROM_EMAIL = process.env.BUG_REPORT_FROM_EMAIL || 'bugs@busel.uk';
+const TO_EMAIL = process.env.BUG_REPORT_TO_EMAIL || 'support@busel.uk';
 
 // Allowed origins for CSRF protection
 const ALLOWED_ORIGINS = [
@@ -75,17 +73,11 @@ export async function POST(request: NextRequest) {
     // Allow requests from allowed origins or if origin header is missing (same-origin requests)
     const isValidOrigin =
       !origin ||
-      ALLOWED_ORIGINS.some(
-        (allowed) => origin === allowed || origin.startsWith(allowed || ''),
-      );
+      ALLOWED_ORIGINS.some((allowed) => isHostAllowed(allowed, origin));
 
     const isValidReferer =
       !referer ||
-      ALLOWED_ORIGINS.some(
-        (allowed) =>
-          referer.startsWith(allowed || '') ||
-          referer.startsWith('http://localhost'),
-      );
+      ALLOWED_ORIGINS.some((allowed) => isHostAllowed(allowed, referer));
 
     if (!isValidOrigin && !isValidReferer) {
       console.warn('Invalid request origin:', origin, 'referer:', referer);
@@ -266,5 +258,29 @@ export async function POST(request: NextRequest) {
       { error: 'An unexpected error occurred. Please try again later.' },
       { status: 500 },
     );
+  }
+}
+
+function isHostAllowed(allowed: string | undefined, toVerify: string): boolean {
+  if (!allowed) return false;
+
+  // 1. Direct match or localhost exception
+  if (toVerify === allowed || toVerify.startsWith('http://localhost')) {
+    return true;
+  }
+
+  try {
+    const refUrl = new URL(toVerify);
+    const allowedUrl = new URL(allowed);
+
+    // 2. Subdomain check: e.g., 'www.me.to' ends with '.me.to'
+    return (
+      refUrl.protocol === allowedUrl.protocol &&
+      (refUrl.hostname === allowedUrl.hostname ||
+        refUrl.hostname.endsWith('.' + allowedUrl.hostname))
+    );
+  } catch (_e) {
+    // Fallback for non-URL strings or malformed data
+    return toVerify.endsWith('.' + allowed) || toVerify === allowed;
   }
 }

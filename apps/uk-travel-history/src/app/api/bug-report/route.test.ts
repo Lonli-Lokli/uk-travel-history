@@ -48,7 +48,7 @@ describe('Bug Report API Route', () => {
 
   const createMockRequest = (
     formData: Record<string, string | File>,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
   ) => {
     const form = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -58,7 +58,7 @@ describe('Bug Report API Route', () => {
     const headersObj = new Headers(
       headers || {
         origin: 'https://busel.uk',
-      }
+      },
     );
 
     // Use unique IP for each test to avoid rate limiting issues
@@ -102,7 +102,7 @@ describe('Bug Report API Route', () => {
       {
         origin: 'https://evil.com',
         referer: 'https://evil.com',
-      }
+      },
     );
 
     const response = await POST(request);
@@ -186,9 +186,13 @@ describe('Bug Report API Route', () => {
   });
 
   it('should reject screenshot file that is too large', async () => {
-    const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'screenshot.jpg', {
-      type: 'image/jpeg',
-    });
+    const largeFile = new File(
+      ['x'.repeat(11 * 1024 * 1024)],
+      'screenshot.jpg',
+      {
+        type: 'image/jpeg',
+      },
+    );
 
     const request = createMockRequest({
       email: 'test@example.com',
@@ -348,7 +352,9 @@ describe('Bug Report API Route', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe('An unexpected error occurred. Please try again later.');
+    expect(data.error).toBe(
+      'An unexpected error occurred. Please try again later.',
+    );
     // Should not expose internal error details
     expect(data.error).not.toContain('Blob storage');
   });
@@ -356,7 +362,7 @@ describe('Bug Report API Route', () => {
   it('should not expose internal errors to user', async () => {
     const { put } = await import('@vercel/blob');
     (put as any).mockRejectedValueOnce(
-      new Error('Internal database connection failed')
+      new Error('Internal database connection failed'),
     );
 
     const screenshot = new File(['screenshot'], 'screenshot.jpg', {
@@ -377,7 +383,9 @@ describe('Bug Report API Route', () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe('An unexpected error occurred. Please try again later.');
+    expect(data.error).toBe(
+      'An unexpected error occurred. Please try again later.',
+    );
     // Should not expose internal error details
     expect(data.error).not.toContain('database');
   });
