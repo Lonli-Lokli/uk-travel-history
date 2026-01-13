@@ -10,7 +10,7 @@ import { Navbar } from '../components/Navbar';
 import { Providers } from '../components/Providers';
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://uk-travel-history.vercel.app';
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

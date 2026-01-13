@@ -206,14 +206,6 @@ export function BugReportForm({ onSuccess }: BugReportFormProps) {
 
       {/* Screenshot Info and Privacy Notice */}
       <div className="space-y-2">
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-sm text-blue-900 flex items-center gap-2">
-            <span role="img" aria-label="camera">
-              📸
-            </span>
-            Screenshot will be captured automatically when you submit
-          </p>
-        </div>
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
           <p className="text-xs text-yellow-900">
             <strong>Privacy Notice:</strong> The screenshot will capture the current page visible

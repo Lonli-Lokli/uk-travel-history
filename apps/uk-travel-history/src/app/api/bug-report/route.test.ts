@@ -35,7 +35,7 @@ vi.mock('../../../emails/bug-report', () => ({
 // Mock environment variables
 process.env.RESEND_API_KEY = 'test-api-key';
 process.env.BLOB_READ_WRITE_TOKEN = 'test-blob-token';
-process.env.NEXT_PUBLIC_SITE_URL = 'https://uk-travel-history.vercel.app';
+process.env.NEXT_PUBLIC_SITE_URL = 'https://busel.uk';
 
 describe('Bug Report API Route', () => {
   let testCounter = 0;
@@ -57,7 +57,7 @@ describe('Bug Report API Route', () => {
 
     const headersObj = new Headers(
       headers || {
-        origin: 'https://uk-travel-history.vercel.app',
+        origin: 'https://busel.uk',
       }
     );
 

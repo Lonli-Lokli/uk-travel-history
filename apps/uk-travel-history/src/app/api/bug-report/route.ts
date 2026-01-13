@@ -19,16 +19,16 @@ export const dynamic = 'force-dynamic';
 
 // Email configuration
 const FROM_EMAIL =
-  process.env.BUG_REPORT_FROM_EMAIL || 'bugs@uk-travel-history.com';
+  process.env.BUG_REPORT_FROM_EMAIL || 'bugs@busel.uk';
 const TO_EMAIL =
-  process.env.BUG_REPORT_TO_EMAIL || 'support@uk-travel-history.com';
+  process.env.BUG_REPORT_TO_EMAIL || 'support@busel.uk';
 
 // Allowed origins for CSRF protection
 const ALLOWED_ORIGINS = [
   process.env.NEXT_PUBLIC_SITE_URL,
   'http://localhost:3000',
   'http://localhost:4200',
-  'https://uk-travel-history.vercel.app',
+  'https://busel.uk',
 ].filter(Boolean); // Remove undefined values
 
 /**

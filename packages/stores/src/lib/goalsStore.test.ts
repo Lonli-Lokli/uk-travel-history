@@ -418,7 +418,6 @@ describe('GoalsStore', () => {
       updatedAt: '2024-01-01T00:00:00Z',
     };
 
-
     it('should create a goal', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,

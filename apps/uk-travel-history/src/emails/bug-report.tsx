@@ -151,7 +151,7 @@ BugReportEmail.PreviewProps = {
   email: 'user@example.com',
   message:
     'I found a bug where the travel calculator is not correctly counting days when trips span multiple months.',
-  pageUrl: 'https://uk-travel-history.vercel.app/travel',
+  pageUrl: 'https://busel.uk/travel',
   userAgent:
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   timestamp: new Date().toISOString(),

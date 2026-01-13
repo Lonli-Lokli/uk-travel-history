@@ -30,11 +30,6 @@ export function BugReportDialog({ children }: BugReportDialogProps) {
           <Sheet.Content>
             <div className="px-4 pb-6 max-w-2xl mx-auto">
               <h2 className="text-2xl font-semibold mb-2">Report a Bug</h2>
-              <p className="text-sm text-slate-600 mb-4">
-                Help us improve by reporting any issues you encounter. We&apos;ll
-                automatically capture a screenshot of the current page to help us
-                understand the problem.
-              </p>
               <BugReportForm onSuccess={handleSuccess} />
             </div>
           </Sheet.Content>
