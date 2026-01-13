@@ -83,7 +83,7 @@ vi.mock('./features', () => ({
 }));
 
 // Import the module after mocking
-import { loadAccessContext } from './access-context';
+import { loadIdentityContext } from './access-context';
 import { getCurrentUser } from '@uth/auth-server';
 import { getUserByAuthId, SubscriptionStatus, SubscriptionTier } from '@uth/db';
 import { getAllFeaturePolicies } from './features';
@@ -129,7 +129,6 @@ async function testFeatureAccess(
 
   vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
     id: '123',
-    authUserId: userId,
     email: 'test@example.com',
     subscriptionTier:
       userTier === TIERS.PREMIUM
@@ -161,7 +160,7 @@ async function testFeatureAccess(
   );
 
   // Load access context and check entitlements
-  const context = await loadAccessContext();
+  const context = await loadIdentityContext();
   return context.entitlements.clipboard_import || false;
 }
 
@@ -556,7 +555,7 @@ describe('loadAccessContext()', () => {
     it('should return anonymous context when user is not authenticated', async () => {
       vi.mocked(getCurrentUser).mockResolvedValue(null);
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.user).toBeNull();
       expect(context.tier).toBe('anonymous');
@@ -576,7 +575,7 @@ describe('loadAccessContext()', () => {
       vi.mocked(getUserByAuthId).mockResolvedValue(null);
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.user).toBeDefined();
       expect(context.tier).toBe('free');
@@ -592,7 +591,7 @@ describe('loadAccessContext()', () => {
       vi.mocked(getUserByAuthId).mockRejectedValue(new Error('DB error'));
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.user).toBeDefined();
       expect(context.tier).toBe('free');
@@ -602,7 +601,7 @@ describe('loadAccessContext()', () => {
     it('should return anonymous context on critical error', async () => {
       vi.mocked(getCurrentUser).mockRejectedValue(new Error('Auth error'));
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.user).toBeNull();
       expect(context.tier).toBe('anonymous');
@@ -655,7 +654,6 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: '123',
-        authUserId: 'user1',
         email: 'test@example.com',
         subscriptionTier: SubscriptionTier.FREE,
         subscriptionStatus: null,
@@ -667,7 +665,7 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.tier).toBe('free');
     });
@@ -680,7 +678,6 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: '123',
-        authUserId: 'user1',
         email: 'test@example.com',
         subscriptionTier: SubscriptionTier.MONTHLY,
         subscriptionStatus: SubscriptionStatus.ACTIVE,
@@ -692,7 +689,7 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.tier).toBe('monthly');
     });
@@ -705,7 +702,6 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: '123',
-        authUserId: 'user1',
         email: 'test@example.com',
         subscriptionTier: SubscriptionTier.YEARLY,
         subscriptionStatus: SubscriptionStatus.ACTIVE,
@@ -717,7 +713,7 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.tier).toBe('yearly');
     });
@@ -730,7 +726,6 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: '123',
-        authUserId: 'user1',
         email: 'test@example.com',
         subscriptionTier: SubscriptionTier.LIFETIME,
         subscriptionStatus: SubscriptionStatus.ACTIVE,
@@ -742,7 +737,7 @@ describe('loadAccessContext()', () => {
       });
       vi.mocked(getAllFeaturePolicies, { partial: true }).mockResolvedValue({});
 
-      const context = await loadAccessContext();
+      const context = await loadIdentityContext();
 
       expect(context.tier).toBe('lifetime');
     });

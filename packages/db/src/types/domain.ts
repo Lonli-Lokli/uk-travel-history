@@ -380,13 +380,40 @@ export interface PricingData {
 }
 
 /**
- * Server-computed access context containing auth, tier, role, and entitlements.
- * This is the single source of truth for access control, computed server-side
- * and hydrated to the client to prevent flicker and ensure consistency.
- *
+ * Server-computed data access context 
  * All fields are serializable for RSC → client hydration.
  */
-export interface AccessContext {
+export interface DataContext {
+  /**
+   * User's tracking goals (null if feature disabled or no goals)
+   * Loaded server-side for instant hydration
+   */
+  goals: TrackingGoalData[] | null;
+
+  /**
+   * Pre-computed goal calculations (null if no goals)
+   * Calculations done server-side to prevent client-side flicker
+   */
+  goalCalculations: Record<string, GoalCalculationData> | null;
+
+  /**
+   * Goal templates available for the user's tier
+   * Loaded server-side for instant hydration in add goal wizard
+   */
+  goalTemplates: GoalTemplateWithAccess[] | null;
+
+  /**
+   * User's trips (null if feature disabled or no trips)
+   * Loaded server-side for instant hydration
+   */
+  trips: TripData[] | null;
+}
+
+/**
+ * Server-computed identity context 
+ * All fields are serializable for RSC → client hydration.
+ */
+export interface IdentityContext {
   /**
    * Authenticated user (null if not signed in)
    * Minimal serializable subset - does NOT include full AuthUser
@@ -442,30 +469,6 @@ export interface AccessContext {
    * True if subscription is scheduled to cancel at period end
    */
   cancelAtPeriodEnd: boolean;
-
-  /**
-   * User's tracking goals (null if feature disabled or no goals)
-   * Loaded server-side for instant hydration
-   */
-  goals: TrackingGoalData[] | null;
-
-  /**
-   * Pre-computed goal calculations (null if no goals)
-   * Calculations done server-side to prevent client-side flicker
-   */
-  goalCalculations: Record<string, GoalCalculationData> | null;
-
-  /**
-   * Goal templates available for the user's tier
-   * Loaded server-side for instant hydration in add goal wizard
-   */
-  goalTemplates: GoalTemplateWithAccess[] | null;
-
-  /**
-   * User's trips (null if feature disabled or no trips)
-   * Loaded server-side for instant hydration
-   */
-  trips: TripData[] | null;
 }
 
 /**

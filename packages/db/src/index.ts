@@ -17,7 +17,8 @@ export type {
   WebhookEvent,
   CreateWebhookEventData,
   FeaturePolicy,
-  AccessContext,
+  DataContext,
+  IdentityContext,
   // New types for hydration
   FeaturePolicyData,
   PriceData,

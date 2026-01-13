@@ -7,20 +7,20 @@ import {
   monetizationStore,
   paymentStore,
   goalsStore,
-  travelStore,
   tripsStore,
   useRefreshAccessContext,
 } from '@uth/stores';
 import { type FeatureFlagKey, FEATURE_KEYS } from '@uth/features';
 import type { FeaturePolicy } from '@uth/features';
-import type { AccessContext, SubscriptionTier, UserRole } from '@uth/db';
+import type { DataContext, IdentityContext, SubscriptionTier, UserRole } from '@uth/db';
 import type { AuthUser } from '@uth/auth-client';
 import { reaction } from 'mobx';
 import { RoleId, ROLES, TIERS } from '@uth/domain';
 
 interface ProvidersProps {
   children: ReactNode;
-  accessContext: AccessContext;
+  identityContext: IdentityContext;
+  dataContext: DataContext;
 }
 
 /**
@@ -72,7 +72,7 @@ function mapUserRoleToRoleId(role: UserRole): RoleId {
  * The AccessContext contains a minimal subset of AuthUser fields
  */
 function mapAccessContextUserToAuthUser(
-  contextUser: AccessContext['user'],
+  contextUser: IdentityContext['user'],
 ): AuthUser | null {
   if (!contextUser) return null;
 
@@ -98,59 +98,59 @@ function mapAccessContextUserToAuthUser(
  * - Stores are hydrated immediately to prevent flicker
  * - Client-side auth listeners will update state on subsequent changes
  */
-export function Providers({ children, accessContext }: ProvidersProps) {
+export function Providers({ children, identityContext, dataContext }: ProvidersProps) {
   const refreshAccessContext = useRefreshAccessContext();
   const previousUserRef = useRef<AuthUser | null>(null);
 
   // Hydrate all stores with server-side access context on mount
   useEffect(() => {
     // Hydrate auth store with user data
-    const authUser = mapAccessContextUserToAuthUser(accessContext.user);
+    const authUser = mapAccessContextUserToAuthUser(identityContext.user);
     authStore.hydrate(authUser);
     previousUserRef.current = authUser;
 
     // Hydrate monetization store with tier, role, and policies
     // Pass isAuthenticated to correctly map anonymous vs free tier
-    const isAuthenticated = accessContext.user !== null;
+    const isAuthenticated = identityContext.user !== null;
     const tierId = mapSubscriptionTierToTierId(
-      accessContext.tier,
+      identityContext.tier,
       isAuthenticated,
     );
-    const roleId = mapUserRoleToRoleId(accessContext.role);
-    const policies = accessContext.policies as Record<
+    const roleId = mapUserRoleToRoleId(identityContext.role);
+    const policies = identityContext.policies as Record<
       FeatureFlagKey,
       FeaturePolicy
     >;
     monetizationStore.hydrate(tierId, roleId, policies);
 
     // Hydrate payment store with pricing data
-    if (accessContext.pricing) {
-      paymentStore.hydrate(accessContext.pricing);
+    if (identityContext.pricing) {
+      paymentStore.hydrate(identityContext.pricing);
     }
 
     // Hydrate goals store with goals data and templates
     // Check if multi_goal_tracking feature is enabled via entitlements
     const isGoalsFeatureEnabled =
-      accessContext.entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING] ?? false;
+      identityContext.entitlements[FEATURE_KEYS.MULTI_GOAL_TRACKING] ?? false;
     goalsStore.hydrate(
-      accessContext.goals ?? null,
-      accessContext.goalCalculations ?? null,
+      dataContext.goals ?? null,
+      dataContext.goalCalculations ?? null,
       isGoalsFeatureEnabled,
-      accessContext.goalTemplates ?? null,
+      dataContext.goalTemplates ?? null,
     );
 
     // Hydrate trips store with trips data
-    tripsStore.hydrate(accessContext.trips ?? null);
+    tripsStore.hydrate(dataContext.trips ?? null);
 
     // NOTE: Client-side trip reactions for goal recalculation have been removed.
-    // All calculations now happen server-side in loadAccessContext().
+    // All calculations now happen server-side in loadDataContext().
     // After trip/goal mutations, components should call router.refresh() to re-hydrate.
 
     // Initialize auth state subscription AFTER hydration
     // This prevents hydration mismatches by ensuring the subscription
     // doesn't fire before React has finished hydrating
     authStore.initializeAuthSubscription();
-  }, [accessContext]);
+  }, [dataContext, identityContext]);
 
   // Refresh access context when user signs in or out
   useEffect(() => {

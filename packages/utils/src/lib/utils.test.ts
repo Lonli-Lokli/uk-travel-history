@@ -18,7 +18,7 @@ describe('utils', () => {
 
     it('should remove trailing zeros via parseFloat', () => {
       // 1024 * 1024 * 5 is exactly 5 MB, shouldn't show 5.00 MB
-      expect(formatBytes(1024*1024*5, 2)).toBe('5 MB');
+      expect(formatBytes(1024 * 1024 * 5, 2)).toBe('5 MB');
     });
 
     it('should handle very large numbers', () => {

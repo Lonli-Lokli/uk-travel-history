@@ -14,7 +14,6 @@ import {
   getUserGoals,
   getGoalTemplates,
   getTrips,
-  type AccessContext,
   type PricingData,
   type TrackingGoalData,
   type GoalCalculationData,
@@ -23,6 +22,8 @@ import {
   SubscriptionTier,
   SubscriptionStatus,
   UserRole,
+  type IdentityContext,
+  type DataContext,
 } from '@uth/db';
 import { getPriceDetails } from '@uth/payments-server';
 import { getAllFeaturePolicies, DEFAULT_FEATURE_POLICIES } from './features';
@@ -30,6 +31,54 @@ import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
 import { TierId, TIERS } from '@uth/domain';
 import { getFeatureLogger } from './feature-logger';
 import { ruleEngineRegistry } from '@uth/rules';
+import { unstable_cache } from 'next/cache';
+
+/**
+ * 1. CACHE GLOBAL DATA (Cross-request)
+ * These don't change per user. We cache them for 1 hour.
+ */
+const getCachedPolicies = unstable_cache(
+  async () => {
+    try {
+      return await getAllFeaturePolicies();
+    } catch (error) {
+      console.error('[loadDataAccessContext] Failed to load policies:', error);
+      return DEFAULT_FEATURE_POLICIES;
+    }
+  },
+  ['global-feature-policies'],
+  { revalidate: 3600 },
+);
+
+const getCachedPricing = unstable_cache(
+  async () => {
+    try {
+      const prices = await getPriceDetails();
+      return {
+        monthly: {
+          id: prices.monthly.id,
+          amount: prices.monthly.amount,
+          currency: prices.monthly.currency,
+        },
+        annual: {
+          id: prices.annual.id,
+          amount: prices.annual.amount,
+          currency: prices.annual.currency,
+        },
+        lifetime: {
+          id: prices.lifetime.id,
+          amount: prices.lifetime.amount,
+          currency: prices.lifetime.currency,
+        },
+      };
+    } catch (error) {
+      console.error('[loadDataAccessContext] Failed to load pricing:', error);
+      return null;
+    }
+  },
+  ['global-pricing-data'],
+  { revalidate: 3600, tags: ['pricing'] },
+);
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -47,38 +96,27 @@ import { ruleEngineRegistry } from '@uth/rules';
  * - If DB lookup fails → FREE tier (for authenticated users)
  * - If feature policies fail to load → no entitlements
  */
-export async function loadAccessContext(): Promise<AccessContext> {
+export async function loadDataContext(): Promise<DataContext> {
   try {
-    // Step 1: Load policies and pricing in parallel (needed for all users)
-    const [policies, pricing] = await Promise.all([
-      loadPolicies(),
-      loadPricing(),
-    ]);
-
     // Step 2: Get current user from Clerk (via auth SDK)
     const authUser: AuthUser | null = await getCurrentUser();
 
     // Step 3: If not authenticated, return anonymous context with policies/pricing
     if (!authUser) {
-      return await createAnonymousContext(policies, pricing);
+      return await createAnonymousDataContext();
     }
+
+    // Step 1: Load policies and pricing in parallel (needed for all users)
+    const policies = await getCachedPolicies();
 
     // Step 4: Load user profile from database to get tier/subscription
     let tier: SubscriptionTier = SubscriptionTier.FREE;
-    let subscriptionStatus: SubscriptionStatus | null = null;
-    let currentPeriodEnd: Date | null = null;
-    let cancelAtPeriodEnd = false;
-    let role: UserRole = UserRole.STANDARD;
 
     try {
       const dbUser = await getUserByAuthId(authUser.uid);
 
       if (dbUser) {
         tier = dbUser.subscriptionTier;
-        subscriptionStatus = dbUser.subscriptionStatus;
-        currentPeriodEnd = dbUser.currentPeriodEnd;
-        cancelAtPeriodEnd = dbUser.cancelAtPeriodEnd;
-        role = dbUser.role;
       } else {
         // User exists in Clerk but not in DB - fail-closed to FREE tier
         getFeatureLogger().warn(
@@ -95,7 +133,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
     } catch (error) {
       // DB lookup failed - fail-closed to FREE tier
       getFeatureLogger().error(
-        '[loadAccessContext] Failed to load user from database:',
+        '[loadDataAccessContext] Failed to load user from database:',
         error,
         {
           tags: {
@@ -176,6 +214,114 @@ export async function loadAccessContext(): Promise<AccessContext> {
 
     // Step 7: Return complete access context
     return {
+      goals,
+      goalCalculations,
+      goalTemplates,
+      trips,
+    };
+  } catch (error) {
+    // Critical failure - log and return anonymous context
+    getFeatureLogger().error(
+      '[loadDataAccessContext] Critical error loading access context:',
+      error,
+      {
+        tags: {
+          context: 'access-context',
+          operation: 'loadAccessContext',
+        },
+        level: 'error',
+      },
+    );
+    return await createAnonymousDataContext();
+  }
+}
+
+/**
+ * Load server-authoritative access context from Clerk + Supabase
+ *
+ * This function computes the complete access context server-side, ensuring:
+ * 1. User authentication status
+ * 2. Subscription tier (from Supabase users table)
+ * 3. User role (standard/admin)
+ * 4. Feature entitlements (computed from tier + feature policies)
+ *
+ * @returns AccessContext - Serializable context for RSC → client hydration
+ *
+ * FAIL-CLOSED BEHAVIOR:
+ * - If user not authenticated → ANONYMOUS tier, no entitlements
+ * - If DB lookup fails → FREE tier (for authenticated users)
+ * - If feature policies fail to load → no entitlements
+ */
+export async function loadIdentityContext(): Promise<IdentityContext> {
+  try {
+    // Step 1: Load policies and pricing in parallel (needed for all users)
+    const [policies, pricing] = await Promise.all([
+      getCachedPolicies(),
+      getCachedPricing(),
+    ]);
+
+    // Step 2: Get current user from Clerk (via auth SDK)
+    const authUser: AuthUser | null = await getCurrentUser();
+
+    // Step 3: If not authenticated, return anonymous context with policies/pricing
+    if (!authUser) {
+      return await createAnonymousIdentityContext(policies, pricing);
+    }
+
+    // Step 4: Load user profile from database to get tier/subscription
+    let tier: SubscriptionTier = SubscriptionTier.FREE;
+    let subscriptionStatus: SubscriptionStatus | null = null;
+    let currentPeriodEnd: Date | null = null;
+    let cancelAtPeriodEnd = false;
+    let role: UserRole = UserRole.STANDARD;
+
+    try {
+      const dbUser = await getUserByAuthId(authUser.uid);
+
+      if (dbUser) {
+        tier = dbUser.subscriptionTier;
+        subscriptionStatus = dbUser.subscriptionStatus;
+        currentPeriodEnd = dbUser.currentPeriodEnd;
+        cancelAtPeriodEnd = dbUser.cancelAtPeriodEnd;
+        role = dbUser.role;
+      } else {
+        // User exists in Clerk but not in DB - fail-closed to FREE tier
+        getFeatureLogger().warn(
+          `User ${authUser.uid} not found in database, defaulting to FREE tier`,
+          {
+            level: 'warning',
+            tags: {
+              context: 'access-context',
+              userId: authUser.uid,
+            },
+          },
+        );
+      }
+    } catch (error) {
+      // DB lookup failed - fail-closed to FREE tier
+      getFeatureLogger().error(
+        '[loadDataAccessContext] Failed to load user from database:',
+        error,
+        {
+          tags: {
+            context: 'access-context',
+            operation: 'getUserByAuthId',
+            userId: authUser.uid,
+          },
+        },
+      );
+    }
+
+    // Step 5: Compute entitlements from loaded policies
+    const tierId = mapSubscriptionTierToTierId(tier);
+    const entitlements = computeEntitlementsFromPolicies(
+      policies,
+      tierId,
+      authUser.uid,
+    );
+
+    // Step 7: Return complete identity context
+    return {
       user: {
         uid: authUser.uid,
         email: authUser.email,
@@ -189,15 +335,11 @@ export async function loadAccessContext(): Promise<AccessContext> {
       subscriptionStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd,
-      goals,
-      goalCalculations,
-      goalTemplates,
-      trips,
     };
   } catch (error) {
     // Critical failure - log and return anonymous context
     getFeatureLogger().error(
-      '[loadAccessContext] Critical error loading access context:',
+      '[loadDataAccessContext] Critical error loading access context:',
       error,
       {
         tags: {
@@ -207,62 +349,7 @@ export async function loadAccessContext(): Promise<AccessContext> {
         level: 'error',
       },
     );
-    return await createAnonymousContext(DEFAULT_FEATURE_POLICIES, null);
-  }
-}
-
-/**
- * Load feature policies from database
- * Returns default policies on error
- */
-async function loadPolicies(): Promise<
-  Record<
-    string,
-    {
-      enabled: boolean;
-      minTier: TierId;
-      rolloutPercentage?: number;
-      allowlist?: string[];
-      denylist?: string[];
-      betaUsers?: string[];
-    }
-  >
-> {
-  try {
-    return await getAllFeaturePolicies();
-  } catch (error) {
-    console.error('[loadAccessContext] Failed to load policies:', error);
-    return DEFAULT_FEATURE_POLICIES;
-  }
-}
-
-/**
- * Load pricing data from payments provider
- * Returns null on error (client will use fallback values)
- */
-async function loadPricing(): Promise<PricingData | null> {
-  try {
-    const prices = await getPriceDetails();
-    return {
-      monthly: {
-        id: prices.monthly.id,
-        amount: prices.monthly.amount,
-        currency: prices.monthly.currency,
-      },
-      annual: {
-        id: prices.annual.id,
-        amount: prices.annual.amount,
-        currency: prices.annual.currency,
-      },
-      lifetime: {
-        id: prices.lifetime.id,
-        amount: prices.lifetime.amount,
-        currency: prices.lifetime.currency,
-      },
-    };
-  } catch (error) {
-    console.error('[loadAccessContext] Failed to load pricing:', error);
-    return null;
+    return await createAnonymousIdentityContext(DEFAULT_FEATURE_POLICIES, null);
   }
 }
 
@@ -270,7 +357,7 @@ async function loadPricing(): Promise<PricingData | null> {
  * Create anonymous (unauthenticated) access context
  * Includes policies for UI display and entitlements for anonymous tier
  */
-async function createAnonymousContext(
+async function createAnonymousIdentityContext(
   policies: Record<
     string,
     {
@@ -283,7 +370,7 @@ async function createAnonymousContext(
     }
   >,
   pricing: PricingData | null,
-): Promise<AccessContext> {
+): Promise<IdentityContext> {
   // Compute entitlements for anonymous tier
   const entitlements = computeEntitlementsFromPolicies(
     policies,
@@ -291,6 +378,24 @@ async function createAnonymousContext(
     null,
   );
 
+  return {
+    user: null,
+    tier: SubscriptionTier.ANONYMOUS,
+    role: UserRole.STANDARD,
+    entitlements,
+    policies,
+    pricing,
+    subscriptionStatus: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  };
+}
+
+/**
+ * Create anonymous (unauthenticated) access context
+ * Includes policies for UI display and entitlements for anonymous tier
+ */
+async function createAnonymousDataContext(): Promise<DataContext> {
   // Load goal templates for anonymous users
   // This allows anonymous users to see available goal options in the UI
   let goalTemplates: GoalTemplateWithAccess[] | null = null;
@@ -331,15 +436,6 @@ async function createAnonymousContext(
   }
 
   return {
-    user: null,
-    tier: SubscriptionTier.ANONYMOUS,
-    role: UserRole.STANDARD,
-    entitlements,
-    policies,
-    pricing,
-    subscriptionStatus: null,
-    currentPeriodEnd: null,
-    cancelAtPeriodEnd: false,
     goals: null,
     goalCalculations: null,
     goalTemplates,
@@ -551,7 +647,6 @@ async function calculateGoalMetrics(
         continue;
       }
 
-       
       const calculation = engine.calculate(
         tripRecords,
         goal.config as any,
@@ -563,18 +658,14 @@ async function calculateGoalMetrics(
 
       calculations[goal.id] = calculation as GoalCalculationData;
     } catch (error) {
-      getFeatureLogger().error(
-        `Failed to calculate goal ${goal.id}:`,
-        error,
-        {
-          tags: {
-            context: 'access-context',
-            operation: 'calculateGoalMetrics',
-            goalId: goal.id,
-            goalType: goal.type,
-          },
+      getFeatureLogger().error(`Failed to calculate goal ${goal.id}:`, error, {
+        tags: {
+          context: 'access-context',
+          operation: 'calculateGoalMetrics',
+          goalId: goal.id,
+          goalType: goal.type,
         },
-      );
+      });
     }
   }
 

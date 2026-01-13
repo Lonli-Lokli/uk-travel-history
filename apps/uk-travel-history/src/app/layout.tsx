@@ -1,14 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Toaster } from '@uth/ui';
-import { loadAccessContext } from '@uth/features/server';
 import * as Sentry from '@sentry/nextjs';
 import './global.css';
 import { Geist } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
-import { Footer } from '../components/Footer';
-import { Navbar } from '../components/Navbar';
-import { Providers } from '../components/Providers';
-import { UserRole } from '../../../../packages/db/src/types/domain';
+import { Suspense } from 'react';
+import { LayoutClient } from './LayoutClient';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
 
@@ -116,32 +112,25 @@ const geist = Geist({
   subsets: ['latin'],
 });
 
-export const dynamic = 'force-dynamic';
-
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Load server-authoritative access context (auth + tier + entitlements + policies + pricing)
-  // This is computed server-side and hydrated to client stores to prevent flicker
-  // All data is loaded in a single call to avoid duplicate fetches
-  const accessContext = await loadAccessContext();
-
   return (
     <ClerkProvider>
       <html lang="en" className={geist.className}>
         <body className="h-screen bg-slate-50 flex flex-col">
-          <Providers accessContext={accessContext}>
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <Navbar />
-              <main className="flex-1 overflow-y-auto">{children}</main>
-            </div>
-            <Footer isAdmin={accessContext.role === UserRole.ADMIN} />
-            <Toaster />
-          </Providers>
+          <Suspense fallback={<NavPlaceholder />}>
+            <LayoutClient>{children}</LayoutClient>
+          </Suspense>
         </body>
       </html>
     </ClerkProvider>
   );
+}
+
+// Minimal placeholder to prevent layout shift while Identity loads (~100ms)
+function NavPlaceholder() {
+  return <nav className="h-16 border-b bg-white w-full animate-pulse" />;
 }
