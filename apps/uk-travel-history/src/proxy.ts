@@ -145,6 +145,8 @@ const routeProtectionMiddleware = async (
     '/api/parse',
     '/api/export',
     '/api/calculate', // Anonymous user server-side calculations
+    '/api/trips', // Trip CRUD for all users (auth handled via session/cookie)
+    '/api/trips/(.*)', // Trip sub-routes (bulk, reorder, [tripId])
     '/api/billing/checkout',
     '/api/webhooks/stripe',
     '/api/webhooks/clerk',

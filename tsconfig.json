@@ -50,6 +50,9 @@
     },
     {
       "path": "./packages/cache"
+    },
+    {
+      "path": "./packages/trip-store"
     }
   ]
 }

@@ -2,53 +2,58 @@
  * Trips API Routes
  * GET /api/trips - List user's trips
  * POST /api/trips - Create a new trip
+ *
+ * Supports both authenticated (paid) and anonymous (free) users:
+ * - Paid users: Trips stored in Supabase (persistent)
+ * - Free/anonymous users: Trips stored in cache (ephemeral, TTL expires at end of day)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getTrips,
-  getTripsByGoal,
-  createTrip,
-  getGoalById,
-  type CreateTripData,
-} from '@uth/db';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
-import { getCurrentUser } from '@uth/auth-server';
+import { getGoalById, type CreateTripData } from '@uth/db';
 import { logger } from '@uth/utils';
+import {
+  createTripStoreContext,
+  getTrips,
+  createTrip,
+  setSessionCookie,
+  clearSessionCookie,
+} from '@uth/trip-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 /**
  * GET /api/trips
- * List all trips for the authenticated user
+ * List all trips for the current user/session
  * Query params:
- * - goalId: Filter trips by goal ID
+ * - goalId: Filter trips by goal ID (only for authenticated users)
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
+    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
 
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Get trips from the appropriate storage
+    const trips = await getTrips(context);
 
+    // Filter by goalId if provided (client-side filtering for cache storage)
     const goalId = request.nextUrl.searchParams.get('goalId');
+    const filteredTrips = goalId
+      ? trips.filter((t) => t.goalId === goalId)
+      : trips;
 
-    const trips = goalId
-      ? await getTripsByGoal(goalId)
-      : await getTrips(userContext.userId);
+    const response = NextResponse.json({ trips: filteredTrips });
 
-    return NextResponse.json({ trips });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    // Handle session cookie based on migration/session state
+    if (didMigrate) {
+      // Clear session cookie after successful migration
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      // Set session cookie if this is a new session
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to fetch trips', {
       extra: { error: (error as Error).message },
     });
@@ -65,15 +70,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
-
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
 
     const body = (await request.json()) as CreateTripData;
 
@@ -98,11 +95,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: Verify goal ownership if goalId is provided
-    if (body.goalId) {
+    // Optional: Verify goal ownership if goalId is provided (only for authenticated users)
+    if (body.goalId && context.userId) {
       const goal = await getGoalById(body.goalId);
 
-      if (!goal || goal.userId !== userContext.userId) {
+      if (!goal || goal.userId !== context.userId) {
         return NextResponse.json(
           { error: 'Goal not found or not authorized' },
           { status: 404 },
@@ -110,22 +107,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const trip = await createTrip(userContext.userId, body);
+    const trip = await createTrip(context, body);
 
     logger.info('Trip created', {
       extra: {
-        userId: userContext.userId,
+        userId: context.userId ?? 'anonymous',
+        sessionId: context.sessionId,
         tripId: trip.id,
         goalId: trip.goalId,
+        isPersistent: context.isPaidUser,
       },
     });
 
-    return NextResponse.json({ trip }, { status: 201 });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json({ trip }, { status: 201 });
+
+    // Handle session cookie based on migration/session state
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to create trip', {
       extra: { error: (error as Error).message },
     });
