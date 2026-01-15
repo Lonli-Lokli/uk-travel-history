@@ -19,7 +19,7 @@
     "test:e2e:debug": "nx run-many --all --target=e2e --debug",
     "test:e2e:report": "playwright show-report",
     "update": "cross-env NX_SKIP_PROVENANCE_CHECK=true npx nx migrate latest && npm install && npx nx migrate --run-migrations",
-    "deploy": "run-s build"
+    "deploy": "run-s test build"
   },
   "private": true,
   "dependencies": {
