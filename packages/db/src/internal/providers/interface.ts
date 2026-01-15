@@ -49,6 +49,11 @@ export interface DbProvider {
    */
   isConfigured(): boolean;
 
+    /**
+   * Check if the provider is alive
+   */
+  isAlive(): Promise<boolean>;
+
   /**
    * Execute a function to keep the database connection alive
    * Returns the result of the keepalive function

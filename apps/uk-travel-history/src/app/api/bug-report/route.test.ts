@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
-import { rateLimiter } from '../../../components/bug-report/utils';
+import { rateLimiter } from '@uth/widgets';
 
 // Mock dependencies
 vi.mock('@vercel/blob', () => ({
@@ -28,9 +28,13 @@ vi.mock('@react-email/components', () => ({
 }));
 
 // Mock the email template
-vi.mock('../../../emails/bug-report', () => ({
-  default: vi.fn(() => null),
-}));
+vi.mock('@uth/widgets', async () => {
+  const actual = await vi.importActual('@uth/widgets');
+  return {
+    ...actual,
+    BugReportEmail: vi.fn(() => null),
+  };
+});
 
 // Mock environment variables
 process.env.RESEND_API_KEY = 'test-api-key';

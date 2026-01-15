@@ -27,7 +27,7 @@ export default appFlow.page(async function* AccountPage() {
     redirect('/sign-in?redirect_url=/account');
   }
 
-  // Fetch user subscription data from Supabase
+  // Fetch user subscription data from db
   // Use optional policy to handle missing user gracefully
   const dbUser = yield* call(getUserByAuthId, user.uid).optional(null);
 

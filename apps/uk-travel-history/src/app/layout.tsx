@@ -10,40 +10,42 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busel.uk';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
- title: {
-    default: 'Travel History Tracker — UK Residency, Schengen & Tax Compliance',
+  title: {
+    default: 'Travel History Tracker — Global Residency & Tax Compliance',
     template: '%s | Travel History Tracker',
   },
   description:
-    'The all-in-one compliance tracker for UK ILR, British Citizenship, and Schengen 90/180 rules. Automatically parse Home Office travel history and calculate residency for tax and visa purposes.',
+    'The automated compliance suite for global residents. Track UK ILR, British Citizenship, Schengen 90/180-day rules, and Statutory Residence Test (SRT) for tax purposes.',
   keywords: [
-    // UK Core
+    // UK & Citizenship
     'UK travel history tracker',
-    'ILR residency calculator',
-    'British citizenship travel days',
-    'Home Office SAR parser',
-    // Schengen
-    'Schengen 90/180 calculator',
-    'Schengen visa stay tracker',
-    // Tax & Custom
+    'British citizenship residency calculator',
+    'ILR continuous residence tracker',
+    'Home Office SAR data parser',
+    // Schengen & EU
+    'Schengen 90/180 rule calculator',
+    'EU travel days tracker',
+    'Schengen visa compliance tool',
+    // Tax & Global
     'statutory residence test tracker',
     'UK tax residency calculator',
-    'custom travel date tracker',
-    '180 day rule compliance',
-    'travel history export excel',
+    'digital nomad tax compliance',
+    '183 day rule tracker',
+    // General Utility
+    'custom travel log',
+    'automated travel history',
+    'residency requirements monitor',
   ],
-  authors: [{ name: 'Travel History Parser' }],
-  creator: 'Travel History Parser',
-  publisher: 'Travel History Parser',
-  applicationName: 'Travel History Parser',
-  category: 'Tools',
+  authors: [{ name: 'Travel History Tracker' }],
+  creator: 'Travel History Tracker',
+  publisher: 'Travel History Tracker',
+  applicationName: 'Travel History Tracker',
+  category: 'Finance & Compliance',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  // Note: Next.js will automatically serve icon.svg from src/app/icon.svg
-  // Adding explicit fallbacks for browsers that need specific formats
   icons: [
     {
       rel: 'icon',
@@ -56,21 +58,21 @@ export const metadata: Metadata = {
     },
   ],
   manifest: '/site.webmanifest',
- openGraph: {
+  openGraph: {
     type: 'website',
     locale: 'en_GB',
     url: siteUrl,
-    title: 'Travel History Tracker — UK Residency & Schengen Tools',
+    title: 'Travel History Tracker — UK, Schengen & Tax Residency Tools',
     description:
-      'Manage global residency compliance. Automated tools for UK Citizenship, ILR, and Schengen 90/180 day rules.',
+      'Manage global residency compliance. Automated tracking for UK Citizenship, Schengen 90/180 day rules, and tax residence tests.',
     siteName: 'Travel History Tracker',
     images: [{ url: `${siteUrl}/og-image.png` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Travel History Parser - Track Your UK Residency & Travel Days',
-   description:
-    'The all-in-one compliance tracker for UK ILR, British Citizenship, and Schengen 90/180 rules. Automatically parse Home Office travel history and calculate residency for tax and visa purposes.',
+    title: 'Automated Residency & Compliance Tracker',
+    description:
+      'Track UK ILR, British Citizenship, and Schengen 90/180 rules in one place. Automated SAR parsing and tax residency monitoring.',
     images: [`${siteUrl}/og-image.png`],
     creator: '@uk_travel_history',
   },

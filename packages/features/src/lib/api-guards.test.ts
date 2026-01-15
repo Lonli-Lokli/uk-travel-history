@@ -17,11 +17,11 @@ import {
   type UserContext,
 } from './api-guards';
 import { getUserByAuthId } from '@uth/db';
-import { DEFAULT_FEATURE_POLICIES } from './features';
 import { FEATURE_KEYS } from './shapes';
 import { auth } from '@clerk/nextjs/server';
 import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
 import { TIERS } from '@uth/domain';
+import { DEFAULT_FEATURE_POLICIES } from './defaults';
 
 // Mock dependencies
 vi.mock('@uth/db', () => ({
@@ -471,7 +471,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -495,7 +494,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -519,7 +517,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -550,7 +547,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -581,7 +577,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -624,7 +619,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'firebase-user-123',
         email: 'test@example.com',
       });
 
@@ -689,7 +683,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -723,7 +716,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -794,7 +786,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
         email: 'test@example.com',
       });
 
@@ -850,7 +841,6 @@ describe('API Feature Guards', () => {
 
       vi.mocked(getUserByAuthId, { partial: true }).mockResolvedValue({
         id: 'db-user-1',
-        authUserId: 'user-123',
       });
 
       vi.mocked(getSubscription).mockResolvedValue(null);

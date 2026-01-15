@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_FEATURE_POLICIES } from './features';
 import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
 import { TierId, TIERS } from '@uth/domain';
+import { DEFAULT_FEATURE_POLICIES } from './defaults';
 
 describe('Feature System', () => {
   describe('Tier Constants', () => {

@@ -25,60 +25,12 @@ import {
   type IdentityContext,
   type DataContext,
 } from '@uth/db';
-import { getPriceDetails } from '@uth/payments-server';
-import { getAllFeaturePolicies, DEFAULT_FEATURE_POLICIES } from './features';
 import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
 import { TierId, TIERS } from '@uth/domain';
 import { getFeatureLogger } from './feature-logger';
 import { ruleEngineRegistry } from '@uth/rules';
-import { unstable_cache } from 'next/cache';
-
-/**
- * 1. CACHE GLOBAL DATA (Cross-request)
- * These don't change per user. We cache them for 1 hour.
- */
-const getCachedPolicies = unstable_cache(
-  async () => {
-    try {
-      return await getAllFeaturePolicies();
-    } catch (error) {
-      console.error('[loadDataAccessContext] Failed to load policies:', error);
-      return DEFAULT_FEATURE_POLICIES;
-    }
-  },
-  ['global-feature-policies'],
-  { revalidate: 3600 },
-);
-
-const getCachedPricing = unstable_cache(
-  async () => {
-    try {
-      const prices = await getPriceDetails();
-      return {
-        monthly: {
-          id: prices.monthly.id,
-          amount: prices.monthly.amount,
-          currency: prices.monthly.currency,
-        },
-        annual: {
-          id: prices.annual.id,
-          amount: prices.annual.amount,
-          currency: prices.annual.currency,
-        },
-        lifetime: {
-          id: prices.lifetime.id,
-          amount: prices.lifetime.amount,
-          currency: prices.lifetime.currency,
-        },
-      };
-    } catch (error) {
-      console.error('[loadDataAccessContext] Failed to load pricing:', error);
-      return null;
-    }
-  },
-  ['global-pricing-data'],
-  { revalidate: 3600, tags: ['pricing'] },
-);
+import { getCachedPolicies, getCachedPriceDetails } from './cached-data';
+import { DEFAULT_FEATURE_POLICIES } from './defaults';
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -257,7 +209,7 @@ export async function loadIdentityContext(): Promise<IdentityContext> {
     // Step 1: Load policies and pricing in parallel (needed for all users)
     const [policies, pricing] = await Promise.all([
       getCachedPolicies(),
-      getCachedPricing(),
+      getCachedPriceDetails(),
     ]);
 
     // Step 2: Get current user from Clerk (via auth SDK)

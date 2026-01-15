@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { getAllFeaturePolicies, isSupabaseFeaturePoliciesAvailable } from '@uth/features';
+import { getAllFeaturePolicies } from '@uth/features';
+import { isDbAlive } from '@uth/db';
 import { StatusPageClient } from '@/components/StatusPageClient';
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default async function StatusPage() {
   // Fetch feature policies from Supabase
   const policies = await getAllFeaturePolicies();
-  const isSupabaseAvailable = await isSupabaseFeaturePoliciesAvailable();
+  const isAlive = await isDbAlive();
 
-  return <StatusPageClient featurePolicies={policies} isSupabaseAvailable={isSupabaseAvailable} />;
+  return <StatusPageClient featurePolicies={policies} isDbAlive={isAlive} />;
 }

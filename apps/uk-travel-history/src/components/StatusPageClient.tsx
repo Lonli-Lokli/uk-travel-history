@@ -136,11 +136,11 @@ function FeatureAccessBadge({
 
 interface StatusPageClientProps {
   featurePolicies: Record<FeatureFlagKey, FeaturePolicy>;
-  isSupabaseAvailable: boolean;
+  isDbAlive: boolean;
 }
 
 export const StatusPageClient = observer(
-  ({ featurePolicies, isSupabaseAvailable }: StatusPageClientProps) => {
+  ({ featurePolicies, isDbAlive }: StatusPageClientProps) => {
     const { monetizationStore, authStore } = useFeatureGateContext();
 
     const userTier = monetizationStore.tier;
@@ -181,24 +181,24 @@ export const StatusPageClient = observer(
           {/* Data Source Indicator */}
           <div
             className={`mb-4 p-3 rounded-lg border flex items-center gap-2 ${
-              isSupabaseAvailable
+              isDbAlive
                 ? 'bg-green-50 border-green-200'
                 : 'bg-yellow-50 border-yellow-300'
             }`}
           >
             <UIIcon
-              iconName={isSupabaseAvailable ? 'check-circle' : 'alert-triangle'}
+              iconName={isDbAlive ? 'check-circle' : 'alert-triangle'}
               className={`h-4 w-4 flex-shrink-0 ${
-                isSupabaseAvailable ? 'text-green-700' : 'text-yellow-700'
+                isDbAlive ? 'text-green-700' : 'text-yellow-700'
               }`}
             />
             <div
               className={`text-xs md:text-sm ${
-                isSupabaseAvailable ? 'text-green-800' : 'text-yellow-800'
+                isDbAlive ? 'text-green-800' : 'text-yellow-800'
               }`}
             >
               <strong>Data Source:</strong>{' '}
-              {isSupabaseAvailable
+              {isDbAlive
                 ? 'Database (live policies)'
                 : 'Using default fallback values'}
             </div>

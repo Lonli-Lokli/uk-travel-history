@@ -57,6 +57,7 @@ export {
 // Export public operations
 export {
   isDbConfigured,
+  isDbAlive,
   keepalive,
   // User operations
   getUserByAuthId,

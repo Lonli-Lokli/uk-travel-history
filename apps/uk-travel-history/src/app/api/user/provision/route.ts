@@ -69,8 +69,7 @@ export async function POST() {
     const supabase = createAdminClient();
 
     // Use type assertion to match the pattern in the webhook handler
-    // Supabase client types don't correctly infer the upsert operation
-    const { error: upsertError } = await (supabase.from('users').upsert as any)(
+    const { error: upsertError } = await supabase.from('users').upsert(
       {
         clerk_user_id: userId,
         email: email,
@@ -88,7 +87,7 @@ export async function POST() {
     );
 
     if (upsertError) {
-      logger.error('Failed to provision user in Supabase', {
+      logger.error('Failed to provision user in database', {
         extra: { userId, error: upsertError },
       });
       return NextResponse.json(

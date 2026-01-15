@@ -131,6 +131,15 @@ export class SupabaseDbAdapter implements DbProvider {
     );
   }
 
+  async isAlive(): Promise<boolean> {
+    try {
+      const num = await this.keepalive();
+      return num !== null && num !== undefined;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async keepalive(): Promise<number> {
     const client = this.ensureConfigured();
 

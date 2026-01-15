@@ -148,7 +148,7 @@ export const TravelPageClient = observer(() => {
               onAddTrip={handleAddTrip}
               onEditTrip={(tripId) => {
                 const trip = trips.find((t) => t.id === tripId);
-                // we need to solve issue with anonymous trips
+                // TODO: we need to solve issue with anonymous trips
                 // if (trip) {
                 //   travelStore.openDrawer('edit', {
                 //     outDate: trip.outDate,

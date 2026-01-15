@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import StatusPage from './page';
 import * as features from '@uth/features';
+import * as db from '@uth/db';
 import { FEATURE_KEYS } from '@uth/features';
 
 // Mock the features module
@@ -10,7 +11,14 @@ vi.mock('@uth/features', async () => {
   return {
     ...actual,
     getAllFeaturePolicies: vi.fn(),
-    isSupabaseFeaturePoliciesAvailable: vi.fn(),
+  };
+});
+
+vi.mock('@uth/db', async () => {
+  const actual = await vi.importActual('@uth/db');
+  return {
+    ...actual,
+    isDbAlive: vi.fn(),
   };
 });
 
@@ -34,7 +42,7 @@ vi.mock('@uth/widgets', () => ({
 }));
 
 describe('StatusPage', () => {
-  const mockPolicies = {
+  const mockPolicies:  Record<features.FeatureFlagKey, features.FeaturePolicy> = {
     [FEATURE_KEYS.MONETIZATION]: { enabled: false, minTier: 'anonymous' as const },
     [FEATURE_KEYS.AUTH]: { enabled: false, minTier: 'anonymous' as const },
     [FEATURE_KEYS.PAYMENTS]: { enabled: false, minTier: 'anonymous' as const },
@@ -43,12 +51,13 @@ describe('StatusPage', () => {
     [FEATURE_KEYS.PDF_IMPORT]: { enabled: false, minTier: 'premium' as const },
     [FEATURE_KEYS.CLIPBOARD_IMPORT]: { enabled: true, minTier: 'anonymous' as const },
     [FEATURE_KEYS.RISK_CHART]: { enabled: false, minTier: 'anonymous' as const },
+    [FEATURE_KEYS.MULTI_GOAL_TRACKING]: {enabled: false, minTier: 'premium' as const}
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(features.getAllFeaturePolicies).mockResolvedValue(mockPolicies);
-    vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(true);
+    vi.mocked(db.isDbAlive).mockResolvedValue(true);
   });
 
   describe('Page Structure', () => {
@@ -112,7 +121,7 @@ describe('StatusPage', () => {
 
   describe('Data Source Indicator', () => {
     it('should show database source when Supabase is available', async () => {
-      vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(true);
+      vi.mocked(db.isDbAlive).mockResolvedValue(true);
 
       const page = await StatusPage();
       render(page);
@@ -121,7 +130,7 @@ describe('StatusPage', () => {
     });
 
     it('should show fallback source when Supabase is unavailable', async () => {
-      vi.mocked(features.isSupabaseFeaturePoliciesAvailable).mockResolvedValue(false);
+      vi.mocked(db.isDbAlive).mockResolvedValue(false);
 
       const page = await StatusPage();
       render(page);
@@ -159,7 +168,7 @@ describe('StatusPage', () => {
     it('should call isSupabaseFeaturePoliciesAvailable on render', async () => {
       await StatusPage();
 
-      expect(features.isSupabaseFeaturePoliciesAvailable).toHaveBeenCalledTimes(1);
+      expect(db.isDbAlive).toHaveBeenCalledTimes(1);
     });
   });
 

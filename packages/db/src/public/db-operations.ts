@@ -45,6 +45,19 @@ export function isDbConfigured(): boolean {
 }
 
 /**
+ * Check if the database is alive
+ * @returns true if configured and ready to use
+ */
+export async function isDbAlive(): Promise<boolean> {
+  try {
+    const provider = getDbProvider();
+    return await provider.isAlive();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Execute keepalive function to maintain database connection
  * @returns Result from keepalive function
  */

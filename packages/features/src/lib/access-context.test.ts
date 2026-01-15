@@ -10,8 +10,14 @@ vi.mock('@uth/auth-server', () => ({
   getCurrentUser: vi.fn(),
 }));
 
+// Mock next/cache to avoid incrementalCache errors in tests
+vi.mock('next/cache', () => ({
+  unstable_cache: vi.fn((fn) => fn),
+}));
+
 vi.mock('@uth/db', () => ({
   getUserByAuthId: vi.fn(),
+  getAllFeaturePolicies: vi.fn(),
   SubscriptionTier: {
     ANONYMOUS: 'anonymous',
     FREE: 'free',
@@ -38,9 +44,7 @@ vi.mock('@uth/payments-server', () => ({
   }),
 }));
 
-vi.mock('./features', () => ({
-  getAllFeaturePolicies: vi.fn(),
-  isFeatureEnabled: vi.fn(),
+vi.mock('./defaults', () => ({
   DEFAULT_FEATURE_POLICIES: {
     // Master switches (ANONYMOUS - can be checked without auth)
     monetization: {
@@ -80,6 +84,10 @@ vi.mock('./features', () => ({
       minTier: 'premium',
     },
   },
+}));
+vi.mock('./features', () => ({
+  getAllFeaturePolicies: vi.fn(),
+  isFeatureEnabled: vi.fn(),
 }));
 
 // Import the module after mocking
@@ -739,6 +747,7 @@ describe('loadAccessContext()', () => {
 
       const context = await loadIdentityContext();
 
+      expect(mockLogger.error).not.toBeCalled();
       expect(context.tier).toBe('lifetime');
     });
   });

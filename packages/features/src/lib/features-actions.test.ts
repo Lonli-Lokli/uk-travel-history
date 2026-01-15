@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  isFeatureEnabled,
-  isSupabaseFeaturePoliciesAvailable
+  isFeatureEnabled
 } from './features';
 import { FEATURE_KEYS, FeatureFlagKey } from './shapes';
 import type { FeaturePolicy } from '@uth/db';
@@ -204,28 +203,6 @@ describe('Edge Config Feature Flags', () => {
       );
 
       expect(result1).toBe(result2);
-    });
-  });
-
-  // Note: getAllFeatureFlags, client-side caching, and isFeatureEnabledClient
-  // have been removed in favor of tier-based feature access computed via hooks.
-  // Feature flags are now computed dynamically based on user tier via useFeatureFlags hook.
-
-  describe('isSupabaseFeaturePoliciesAvailable', () => {
-    it('should return true when Supabase is accessible', async () => {
-      mockGetAllFeaturePolicies.mockResolvedValue(convertToDbFormat({
-        [FEATURE_KEYS.AUTH]: { enabled: true },
-      }));
-
-      const result = await isSupabaseFeaturePoliciesAvailable();
-      expect(result).toBe(true);
-    });
-
-    it('should return false when Supabase throws error', async () => {
-      mockGetAllFeaturePolicies.mockRejectedValue(new Error('Not configured'));
-
-      const result = await isSupabaseFeaturePoliciesAvailable();
-      expect(result).toBe(false);
     });
   });
 

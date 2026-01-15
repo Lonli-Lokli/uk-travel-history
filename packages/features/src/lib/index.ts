@@ -1,16 +1,17 @@
 // Unified feature flag system (Supabase-backed)
 export {
   isFeatureEnabled,
-  DEFAULT_FEATURE_POLICIES,
-  type FeaturePolicy,
-  type SupabasePolicies,
   getFeaturePolicy,
   getAllFeaturePolicies,
-  isSupabaseFeaturePoliciesAvailable,
 } from './features';
 
+export { DEFAULT_FEATURE_POLICIES } from './defaults';
 // Feature keys and types
-export { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
+export {
+  FEATURE_KEYS,
+  type FeatureFlagKey,
+  type FeaturePolicy,
+} from './shapes';
 
 // NOTE: Server-only exports (api-guards, server-validation) moved to './server'
 // Import from '@uth/features/server' for server-side code

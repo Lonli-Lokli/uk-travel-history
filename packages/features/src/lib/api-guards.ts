@@ -16,11 +16,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@uth/utils';
 import type { LogOptions } from '@uth/utils';
 import { getUserByAuthId } from '@uth/db';
-import {
-  getFeaturePolicy as getFeaturePolicyFromEdgeConfig,
-  type FeaturePolicy,
-} from './features';
-import { FeatureFlagKey } from './shapes';
+import { getFeaturePolicy as getFeaturePolicyFromEdgeConfig } from './features';
+import type { FeatureFlagKey, FeaturePolicy } from './shapes';
 import { auth } from '@clerk/nextjs/server';
 import { getSessionFromRequest, getSubscription } from '@uth/auth-server';
 import { TierId, TIERS } from '@uth/domain';

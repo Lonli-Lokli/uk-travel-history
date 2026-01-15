@@ -66,6 +66,10 @@ export class MockDbAdapter implements DbProvider {
     return this.configured;
   }
 
+  async isAlive(): Promise<boolean> {
+    return this.isConfigured();
+  }
+
   async keepalive(): Promise<number> {
     return 1; // Mock response
   }
