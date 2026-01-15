@@ -35,7 +35,8 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
     const trip = await getTripById(context, tripId);
@@ -45,7 +46,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // For persistent storage, verify ownership
-    if (usesPersistentStorage(context) && context.userId && trip.userId !== context.userId) {
+    if (
+      usesPersistentStorage(context) &&
+      context.userId &&
+      trip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
@@ -75,7 +80,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
     const existingTrip = await getTripById(context, tripId);
@@ -85,7 +91,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // For persistent storage, verify ownership
-    if (usesPersistentStorage(context) && context.userId && existingTrip.userId !== context.userId) {
+    if (
+      usesPersistentStorage(context) &&
+      context.userId &&
+      existingTrip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
@@ -98,7 +108,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
       if (outDate >= inDate) {
         return NextResponse.json(
-          { error: 'Return date must be after departure date (same-day trips are invalid)' },
+          {
+            error:
+              'Return date must be after departure date (same-day trips are invalid)',
+          },
           { status: 400 },
         );
       }
@@ -151,7 +164,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
     const existingTrip = await getTripById(context, tripId);
@@ -161,7 +175,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // For persistent storage, verify ownership
-    if (usesPersistentStorage(context) && context.userId && existingTrip.userId !== context.userId) {
+    if (
+      usesPersistentStorage(context) &&
+      context.userId &&
+      existingTrip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 

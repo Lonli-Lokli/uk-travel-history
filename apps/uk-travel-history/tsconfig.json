@@ -50,10 +50,13 @@
       "path": "../../packages/auth/client"
     },
     {
+      "path": "../../packages/parser"
+    },
+    {
       "path": "../../packages/trip-store"
     },
     {
-      "path": "../../packages/parser"
+      "path": "../../packages/cache"
     },
     {
       "path": "../../packages/rules"
