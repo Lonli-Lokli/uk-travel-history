@@ -16,6 +16,7 @@ import type { DataContext, IdentityContext, SubscriptionTier, UserRole } from '@
 import type { AuthUser } from '@uth/auth-client';
 import { reaction } from 'mobx';
 import { RoleId, ROLES, TIERS } from '@uth/domain';
+import { useToast } from '@uth/ui';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -101,6 +102,8 @@ function mapAccessContextUserToAuthUser(
 export function Providers({ children, identityContext, dataContext }: ProvidersProps) {
   const refreshAccessContext = useRefreshAccessContext();
   const previousUserRef = useRef<AuthUser | null>(null);
+  const hasShownExpirationToast = useRef(false);
+  const { toast } = useToast();
 
   // Hydrate all stores with server-side access context on mount
   useEffect(() => {
@@ -150,7 +153,20 @@ export function Providers({ children, identityContext, dataContext }: ProvidersP
     // This prevents hydration mismatches by ensuring the subscription
     // doesn't fire before React has finished hydrating
     authStore.initializeAuthSubscription();
-  }, [dataContext, identityContext]);
+
+    // Show toast if ephemeral data expired (anonymous user's cached data expired)
+    if (dataContext.ephemeralDataExpired && !hasShownExpirationToast.current) {
+      hasShownExpirationToast.current = true;
+      // Use setTimeout to ensure toast is shown after hydration completes
+      setTimeout(() => {
+        toast({
+          title: 'Session expired',
+          description: 'Your previously saved data has expired. Sign up to save your data permanently.',
+          variant: 'default',
+        });
+      }, 100);
+    }
+  }, [dataContext, identityContext, toast]);
 
   // Refresh access context when user signs in or out
   useEffect(() => {

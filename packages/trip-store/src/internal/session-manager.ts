@@ -4,6 +4,7 @@
 
 import type { NextRequest } from 'next/server';
 import type { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const SESSION_COOKIE_NAME = 'uth_session_id';
 
@@ -29,7 +30,10 @@ export function createSessionId(): string {
  * @param response Next.js response
  * @param sessionId Session ID to set
  */
-export function setSessionCookie(response: NextResponse, sessionId: string): void {
+export function setSessionCookie(
+  response: NextResponse,
+  sessionId: string,
+): void {
   response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -80,4 +84,19 @@ export function getEndOfDayTTLSeconds(): number {
  */
 export function getSessionCookieName(): string {
   return SESSION_COOKIE_NAME;
+}
+
+/**
+ * Get session ID from Next.js headers (for Server Components/RSC)
+ * This uses the cookies() function from next/headers which works in Server Components
+ * @returns Session ID or null if not present
+ */
+export async function getSessionIdFromHeaders(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+  } catch {
+    // cookies() may throw if called outside of a request context
+    return null;
+  }
 }

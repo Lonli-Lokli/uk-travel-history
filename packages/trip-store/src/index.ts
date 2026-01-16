@@ -37,7 +37,11 @@ export {
 } from './public/migration';
 
 // Export session utilities directly
-export { getEndOfDayTTLSeconds } from './internal/session-manager';
+export { getEndOfDayTTLSeconds, getSessionIdFromHeaders } from './internal/session-manager';
+
+// NOTE: Server-only exports (getSessionIdFromHeaders) are in './server'
+// Import from '@uth/trip-store/server' for server-side code
+// This prevents accidental imports in client components
 
 // DO NOT export:
 // - Internal provider interfaces (TripStoreProvider)

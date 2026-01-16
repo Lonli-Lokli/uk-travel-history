@@ -25,12 +25,46 @@ import {
   type IdentityContext,
   type DataContext,
 } from '@uth/db';
+import { get } from '@uth/cache';
+import { getSessionIdFromHeaders } from '@uth/trip-store';
 import { FEATURE_KEYS, type FeatureFlagKey } from './shapes';
 import { TierId, TIERS } from '@uth/domain';
 import { getFeatureLogger } from './feature-logger';
 import { ruleEngineRegistry } from '@uth/rules';
 import { getCachedPolicies, getCachedPriceDetails } from './cached-data';
 import { DEFAULT_FEATURE_POLICIES } from './defaults';
+
+/**
+ * Cache key for anonymous user goals
+ */
+function getGoalsCacheKey(sessionId: string): string {
+  return `goals:session:${sessionId}`;
+}
+
+/**
+ * Cache key for anonymous user trips
+ */
+function getTripsCacheKey(sessionId: string): string {
+  return `trips:session:${sessionId}`;
+}
+
+/**
+ * Get goals from cache for anonymous users
+ */
+async function getCachedGoals(sessionId: string): Promise<TrackingGoalData[]> {
+  const key = getGoalsCacheKey(sessionId);
+  const goals = await get<TrackingGoalData[]>(key);
+  return goals || [];
+}
+
+/**
+ * Get trips from cache for anonymous users
+ */
+async function getCachedTrips(sessionId: string): Promise<TripData[]> {
+  const key = getTripsCacheKey(sessionId);
+  const trips = await get<TripData[]>(key);
+  return trips || [];
+}
 
 /**
  * Load server-authoritative access context from Clerk + Supabase
@@ -346,11 +380,22 @@ async function createAnonymousIdentityContext(
 /**
  * Create anonymous (unauthenticated) access context
  * Includes policies for UI display and entitlements for anonymous tier
+ *
+ * For anonymous users with a session cookie, we also load their cached data
+ * from the ephemeral storage (Redis cache with TTL).
  */
 async function createAnonymousDataContext(): Promise<DataContext> {
   // Load goal templates for anonymous users
   // This allows anonymous users to see available goal options in the UI
   let goalTemplates: GoalTemplateWithAccess[] | null = null;
+  let goals: TrackingGoalData[] | null = null;
+  let goalCalculations: Record<string, GoalCalculationData> | null = null;
+  let trips: TripData[] | null = null;
+  let ephemeralDataExpired = false;
+  let isEphemeral = false;
+
+  // Check for session cookie - if present, load cached data
+  const sessionId = await getSessionIdFromHeaders();
 
   try {
     const allTemplates = await getGoalTemplates();
@@ -387,11 +432,57 @@ async function createAnonymousDataContext(): Promise<DataContext> {
     goalTemplates = null;
   }
 
+  // If session exists, attempt to load cached goals and trips
+  if (sessionId) {
+    try {
+      const [cachedGoals, cachedTrips] = await Promise.all([
+        getCachedGoals(sessionId),
+        getCachedTrips(sessionId),
+      ]);
+
+      // Check if we have any cached data
+      const hasCachedData = cachedGoals.length > 0 || cachedTrips.length > 0;
+
+      if (hasCachedData) {
+        goals = cachedGoals.length > 0 ? cachedGoals : null;
+        trips = cachedTrips.length > 0 ? cachedTrips : null;
+        isEphemeral = true;
+
+        // Calculate metrics for cached goals if we have both goals and trips
+        if (goals && goals.length > 0) {
+          goalCalculations = await calculateGoalMetrics(goals, cachedTrips);
+        }
+      } else {
+        // Session exists but cache is empty - data may have expired
+        // This happens when:
+        // 1. User created data previously (got session cookie)
+        // 2. Cache TTL expired (midnight UTC)
+        // 3. User returns - session cookie exists but cache is empty
+        ephemeralDataExpired = true;
+      }
+    } catch (error) {
+      getFeatureLogger().warn(
+        'Failed to load cached data for anonymous user',
+        {
+          level: 'warning',
+          tags: {
+            context: 'access-context',
+            operation: 'getCachedData',
+            sessionId,
+          },
+        },
+      );
+      // Fail gracefully - return empty data
+    }
+  }
+
   return {
-    goals: null,
-    goalCalculations: null,
+    goals,
+    goalCalculations,
     goalTemplates,
-    trips: null,
+    trips,
+    ephemeralDataExpired,
+    isEphemeral,
   };
 }
 

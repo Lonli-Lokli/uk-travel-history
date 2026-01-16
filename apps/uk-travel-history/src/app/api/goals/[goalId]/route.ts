@@ -102,11 +102,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const goal = await getGoalById(goalId);
 
         if (!goal) {
-          return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+          return NextResponse.json(
+            { error: 'Goal not found' },
+            { status: 404 },
+          );
         }
 
         if (goal.userId !== authUser.uid) {
-          return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+          return NextResponse.json(
+            { error: 'Not authorized' },
+            { status: 403 },
+          );
         }
 
         return NextResponse.json({ goal });
@@ -166,11 +172,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const existingGoal = await getGoalById(goalId);
 
         if (!existingGoal) {
-          return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+          return NextResponse.json(
+            { error: 'Goal not found' },
+            { status: 404 },
+          );
         }
 
         if (existingGoal.userId !== authUser.uid) {
-          return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+          return NextResponse.json(
+            { error: 'Not authorized' },
+            { status: 403 },
+          );
         }
 
         const goal = await updateGoal(goalId, body);
@@ -252,11 +264,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         const existingGoal = await getGoalById(goalId);
 
         if (!existingGoal) {
-          return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+          return NextResponse.json(
+            { error: 'Goal not found' },
+            { status: 404 },
+          );
         }
 
         if (existingGoal.userId !== authUser.uid) {
-          return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+          return NextResponse.json(
+            { error: 'Not authorized' },
+            { status: 403 },
+          );
         }
 
         // Soft delete - archive the goal
