@@ -24,6 +24,14 @@ import {
 import { migrateTripsFromCache, hasCachedTrips } from './migration';
 import type { TripStoreContext } from '../types/domain';
 import { logger } from '@uth/utils';
+import {
+  validateSessionId,
+  validateUserId,
+  validateCreateTripData,
+  validateUpdateTripData,
+  validateTripId,
+  validateBulkCreateData,
+} from '../internal/validation';
 
 /**
  * Paid subscription tiers that use persistent storage
@@ -186,6 +194,9 @@ export async function createTrip(
   context: TripStoreContext,
   data: CreateTripData,
 ): Promise<TripData> {
+  // Validate input data
+  validateCreateTripData(data);
+
   const provider = getTripStoreProvider(context);
   const identifier = getIdentifier(context);
   return provider.createTrip(identifier, data);
@@ -203,6 +214,10 @@ export async function updateTrip(
   tripId: string,
   data: UpdateTripData,
 ): Promise<TripData> {
+  // Validate input data
+  validateTripId(tripId);
+  validateUpdateTripData(data);
+
   const provider = getTripStoreProvider(context);
   const identifier = getIdentifier(context);
   return provider.updateTrip(identifier, tripId, data);
@@ -217,6 +232,9 @@ export async function deleteTrip(
   context: TripStoreContext,
   tripId: string,
 ): Promise<void> {
+  // Validate input
+  validateTripId(tripId);
+
   const provider = getTripStoreProvider(context);
   const identifier = getIdentifier(context);
   return provider.deleteTrip(identifier, tripId);
@@ -232,6 +250,9 @@ export async function bulkCreateTrips(
   context: TripStoreContext,
   trips: CreateTripData[],
 ): Promise<TripData[]> {
+  // Validate bulk input
+  validateBulkCreateData(trips);
+
   const provider = getTripStoreProvider(context);
   const identifier = getIdentifier(context);
   return provider.bulkCreateTrips(identifier, trips);
