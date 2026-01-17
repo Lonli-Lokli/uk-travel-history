@@ -10,16 +10,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getTripGroupById, type UpdateTripData } from '@uth/db';
+import { getTripGroupById } from '@uth/db';
 import { logger } from '@uth/utils';
 import {
   createTripStoreContext,
   getTripById,
-  updateTrip,
-  deleteTrip,
+  updateTripEntity,
+  deleteTripEntity,
   setSessionCookie,
   clearSessionCookie,
-  usesPersistentStorage,
+  tripStoreUsesPersistentStorage,
+  type UpdateTripInput,
 } from '@uth/trip-store';
 
 export const runtime = 'nodejs';
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // For persistent storage, verify ownership
     if (
-      usesPersistentStorage(context) &&
+      tripStoreUsesPersistentStorage(context) &&
       context.userId &&
       trip.userId !== context.userId
     ) {
@@ -92,14 +93,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // For persistent storage, verify ownership
     if (
-      usesPersistentStorage(context) &&
+      tripStoreUsesPersistentStorage(context) &&
       context.userId &&
       existingTrip.userId !== context.userId
     ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    const body = (await request.json()) as UpdateTripData;
+    const body = (await request.json()) as UpdateTripInput;
 
     // Validate dates if provided
     if (body.outDate && body.inDate) {
@@ -128,7 +129,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const trip = await updateTrip(context, tripId, body);
+    const trip = await updateTripEntity(context, tripId, body);
 
     logger.info('Trip updated', {
       extra: {
@@ -176,14 +177,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // For persistent storage, verify ownership
     if (
-      usesPersistentStorage(context) &&
+      tripStoreUsesPersistentStorage(context) &&
       context.userId &&
       existingTrip.userId !== context.userId
     ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    await deleteTrip(context, tripId);
+    await deleteTripEntity(context, tripId);
 
     logger.info('Trip deleted', {
       extra: {

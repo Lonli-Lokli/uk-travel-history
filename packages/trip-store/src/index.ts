@@ -6,39 +6,54 @@
  * - Free/anonymous users: Cache (ephemeral, TTL expires at end of day)
  *
  * Provides:
- * - Trip store (backward compatible)
- * - Goal store (new)
+ * - Trip store (uses domain types)
+ * - Goal store (uses domain types)
  * - Generic entity store factories (for custom entities)
  */
 
 // ============================================================================
-// TRIP STORE (Backward Compatible)
+// DOMAIN TYPES (Business Logic)
 // ============================================================================
 
-// Export error types
-export { TripStoreError, TripStoreErrorCode } from './types/domain';
-export type { TripStoreContext } from './types/domain';
+// Trip domain types
+export type {
+  Trip,
+  CreateTripInput,
+  UpdateTripInput,
+  BulkCreateTripsInput,
+} from './types/trip-domain';
 
-// Export public trip operations
+// Goal domain types
+export type {
+  TrackingGoal,
+  CreateGoalInput,
+  UpdateGoalInput,
+  GoalType,
+  GoalJurisdiction,
+} from './types/goal-domain';
+
+// ============================================================================
+// TRIP STORE
+// ============================================================================
+
+// Export trip store operations
 export {
   createTripStoreContext,
   getTrips,
   getTripById,
-  createTrip,
-  updateTrip,
-  deleteTrip,
+  createTripEntity,
+  updateTripEntity,
+  deleteTripEntity,
   bulkCreateTrips,
-  usesPersistentStorage,
-} from './public/trip-operations';
-
-// Export migration utilities
-export {
+  tripStoreUsesPersistentStorage,
   migrateTripsFromCache,
   hasCachedTrips,
   getCachedTripCount,
   clearCachedTrips,
-  type MigrationResult,
-} from './public/migration';
+  TripStoreError,
+  TripStoreErrorCode,
+} from './stores/trip-store';
+export type { TripStoreContext } from './stores/trip-store';
 
 // ============================================================================
 // GOAL STORE

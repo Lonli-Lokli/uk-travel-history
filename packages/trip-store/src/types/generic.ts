@@ -93,7 +93,7 @@ export class EntityStoreError extends Error {
   constructor(
     public code: EntityStoreErrorCode,
     message: string,
-    public cause?: unknown,
+    public override cause?: unknown,
   ) {
     super(message);
     this.name = 'EntityStoreError';
@@ -115,29 +115,49 @@ export interface MigrationResult {
 }
 
 /**
- * Configuration for entity store
+ * Type converters for transforming between domain and database types
+ * TDomain = Domain type (business logic, ISO strings)
+ * TDb = Database type (persistence layer, may have Date objects)
  */
-export interface EntityStoreConfig<T extends BaseEntityData> {
+export interface TypeConverters<TDomain extends BaseEntityData, TDb> {
+  /** Convert from database type to domain type */
+  fromDb: (dbEntity: TDb) => TDomain;
+  /** Convert from domain type to database type */
+  toDb: (domainEntity: TDomain) => TDb;
+  /** Convert create input from domain to DB */
+  createInputToDb: (input: CreateEntityData<TDomain>) => any;
+  /** Convert update input from domain to DB */
+  updateInputToDb: (input: UpdateEntityData<TDomain>) => any;
+}
+
+/**
+ * Configuration for entity store
+ * TDomain = Domain type (what the business logic uses)
+ * TDb = Database type (what the database returns)
+ */
+export interface EntityStoreConfig<
+  TDomain extends BaseEntityData,
+  TDb = TDomain,
+> {
   /** Entity name (e.g., 'trip', 'goal') - used for cache keys and logging */
   entityName: string;
   /** Cache key prefix (e.g., 'trips:session:', 'goals:session:') */
   cacheKeyPrefix: string;
-  /** Database operations for Supabase provider */
+  /** Database operations for Supabase provider (operates on DB types) */
   dbOperations: {
-    getAll: (userId: string) => Promise<T[]>;
-    getById: (entityId: string) => Promise<T | null>;
-    create: (userId: string, data: CreateEntityData<T>) => Promise<T>;
-    update: (entityId: string, data: UpdateEntityData<T>) => Promise<T>;
+    getAll: (userId: string) => Promise<TDb[]>;
+    getById: (entityId: string) => Promise<TDb | null>;
+    create: (userId: string, data: any) => Promise<TDb>;
+    update: (entityId: string, data: any) => Promise<TDb>;
     delete: (entityId: string) => Promise<void>;
-    bulkCreate?: (
-      userId: string,
-      entities: CreateEntityData<T>[],
-    ) => Promise<T[]>;
+    bulkCreate?: (userId: string, entities: any[]) => Promise<TDb[]>;
   };
-  /** Optional: Custom validation for entity data */
+  /** Type converters (domain <-> DB) */
+  converters: TypeConverters<TDomain, TDb>;
+  /** Optional: Custom validation for entity data (operates on domain types) */
   validate?: {
     sessionId?: (sessionId: string) => void;
-    createData?: (data: CreateEntityData<T>) => void;
-    updateData?: (data: UpdateEntityData<T>) => void;
+    createData?: (data: CreateEntityData<TDomain>) => void;
+    updateData?: (data: UpdateEntityData<TDomain>) => void;
   };
 }

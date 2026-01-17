@@ -3,7 +3,7 @@
  * Built on top of generic entity store infrastructure
  */
 
-import type { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import type {
   TrackingGoalData,
   CreateTrackingGoalData,
@@ -28,11 +28,18 @@ import {
   setSessionCookie,
   clearSessionCookie,
 } from '../internal/session-manager';
+import type { TrackingGoal } from '../types/goal-domain';
+import {
+  goalFromDb,
+  goalToDb,
+  createGoalInputToDb,
+  updateGoalInputToDb,
+} from '../internal/converters/goal-converter';
 
 /**
  * Goal entity store configuration
  */
-const goalStoreConfig: EntityStoreConfig<TrackingGoalData> = {
+const goalStoreConfig: EntityStoreConfig<TrackingGoal, TrackingGoalData> = {
   entityName: 'goal',
   cacheKeyPrefix: 'goals:session:',
   dbOperations: {
@@ -41,6 +48,12 @@ const goalStoreConfig: EntityStoreConfig<TrackingGoalData> = {
     create: dbCreateGoal,
     update: dbUpdateGoal,
     delete: dbDeleteGoal,
+  },
+  converters: {
+    fromDb: goalFromDb,
+    toDb: goalToDb,
+    createInputToDb: createGoalInputToDb,
+    updateInputToDb: updateGoalInputToDb,
   },
   validate: {
     sessionId: validateSessionId,

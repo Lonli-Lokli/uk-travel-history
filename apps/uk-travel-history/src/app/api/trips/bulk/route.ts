@@ -8,13 +8,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getGoalById, type CreateTripData } from '@uth/db';
+import { getGoalById } from '@uth/db';
 import { logger } from '@uth/utils';
 import {
   createTripStoreContext,
   bulkCreateTrips,
   setSessionCookie,
   clearSessionCookie,
+  type CreateTripInput,
 } from '@uth/trip-store';
 
 export const runtime = 'nodejs';
@@ -22,7 +23,7 @@ export const maxDuration = 60; // Longer timeout for bulk operations
 
 interface BulkCreateRequestData {
   goalId?: string;
-  trips: Array<Omit<CreateTripData, 'goalId'>>;
+  trips: Array<Omit<CreateTripInput, 'goalId'>>;
 }
 
 /**
@@ -91,12 +92,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Add goalId to each trip if provided
-    const tripsWithGoal: CreateTripData[] = body.trips.map((trip) => ({
+    const tripsWithGoal = body.trips.map((trip) => ({
       ...trip,
       goalId: body.goalId ?? null,
     }));
 
-    const trips = await bulkCreateTrips(context, tripsWithGoal);
+    const trips = await bulkCreateTrips(context, tripsWithGoal as any);
 
     logger.info('Trips bulk created', {
       extra: {

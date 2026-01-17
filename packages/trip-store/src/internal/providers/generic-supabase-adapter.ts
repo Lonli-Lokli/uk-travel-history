@@ -17,17 +17,19 @@ import { EntityStoreError, EntityStoreErrorCode } from '../../types/generic';
  * @param config Entity store configuration
  * @returns Supabase adapter instance
  */
-export function createSupabaseAdapter<T extends BaseEntityData>(
-  config: EntityStoreConfig<T>,
-): EntityStoreProvider<T> {
-  const { entityName, dbOperations, validate } = config;
+export function createSupabaseAdapter<
+  TDomain extends BaseEntityData,
+  TDb = TDomain,
+>(config: EntityStoreConfig<TDomain, TDb>): EntityStoreProvider<TDomain> {
+  const { entityName, dbOperations, converters, validate } = config;
 
   /**
    * Get all entities for a user
    */
-  async function getEntities(userId: string): Promise<T[]> {
+  async function getEntities(userId: string): Promise<TDomain[]> {
     try {
-      return await dbOperations.getAll(userId);
+      const dbEntities = await dbOperations.getAll(userId);
+      return dbEntities.map(converters.fromDb);
     } catch (error) {
       throw new EntityStoreError(
         EntityStoreErrorCode.PROVIDER_ERROR,
@@ -43,9 +45,10 @@ export function createSupabaseAdapter<T extends BaseEntityData>(
   async function getEntityById(
     userId: string,
     entityId: string,
-  ): Promise<T | null> {
+  ): Promise<TDomain | null> {
     try {
-      return await dbOperations.getById(entityId);
+      const dbEntity = await dbOperations.getById(entityId);
+      return dbEntity ? converters.fromDb(dbEntity) : null;
     } catch (error) {
       throw new EntityStoreError(
         EntityStoreErrorCode.PROVIDER_ERROR,
@@ -60,14 +63,16 @@ export function createSupabaseAdapter<T extends BaseEntityData>(
    */
   async function createEntity(
     userId: string,
-    data: CreateEntityData<T>,
-  ): Promise<T> {
+    data: CreateEntityData<TDomain>,
+  ): Promise<TDomain> {
     if (validate?.createData) {
       validate.createData(data);
     }
 
     try {
-      return await dbOperations.create(userId, data);
+      const dbData = converters.createInputToDb(data);
+      const dbEntity = await dbOperations.create(userId, dbData);
+      return converters.fromDb(dbEntity);
     } catch (error) {
       throw new EntityStoreError(
         EntityStoreErrorCode.PROVIDER_ERROR,
@@ -83,14 +88,16 @@ export function createSupabaseAdapter<T extends BaseEntityData>(
   async function updateEntity(
     userId: string,
     entityId: string,
-    data: UpdateEntityData<T>,
-  ): Promise<T> {
+    data: UpdateEntityData<TDomain>,
+  ): Promise<TDomain> {
     if (validate?.updateData) {
       validate.updateData(data);
     }
 
     try {
-      return await dbOperations.update(entityId, data);
+      const dbData = converters.updateInputToDb(data);
+      const dbEntity = await dbOperations.update(entityId, dbData);
+      return converters.fromDb(dbEntity);
     } catch (error) {
       throw new EntityStoreError(
         EntityStoreErrorCode.PROVIDER_ERROR,
@@ -123,19 +130,23 @@ export function createSupabaseAdapter<T extends BaseEntityData>(
    */
   async function bulkCreateEntities(
     userId: string,
-    entitiesData: CreateEntityData<T>[],
-  ): Promise<T[]> {
+    entitiesData: CreateEntityData<TDomain>[],
+  ): Promise<TDomain[]> {
     try {
+      // Convert domain data to DB data
+      const dbDataArray = entitiesData.map(converters.createInputToDb);
+
       // Use bulk create if available
       if (dbOperations.bulkCreate) {
-        return await dbOperations.bulkCreate(userId, entitiesData);
+        const dbEntities = await dbOperations.bulkCreate(userId, dbDataArray);
+        return dbEntities.map(converters.fromDb);
       }
 
       // Fall back to individual creates
-      const results: T[] = [];
-      for (const data of entitiesData) {
-        const entity = await dbOperations.create(userId, data);
-        results.push(entity);
+      const results: TDomain[] = [];
+      for (const dbData of dbDataArray) {
+        const dbEntity = await dbOperations.create(userId, dbData);
+        results.push(converters.fromDb(dbEntity));
       }
       return results;
     } catch (error) {

@@ -9,14 +9,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getGoalById, type CreateTripData } from '@uth/db';
+import { getGoalById } from '@uth/db';
 import { logger } from '@uth/utils';
 import {
   createTripStoreContext,
   getTrips,
-  createTrip,
+  createTripEntity,
   setSessionCookie,
   clearSessionCookie,
+  type CreateTripInput,
 } from '@uth/trip-store';
 
 export const runtime = 'nodejs';
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
   try {
     const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
 
-    const body = (await request.json()) as CreateTripData;
+    const body = (await request.json()) as CreateTripInput;
 
     // Basic validation
     if (!body.outDate || !body.inDate) {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const trip = await createTrip(context, body);
+    const trip = await createTripEntity(context, body as any);
 
     logger.info('Trip created', {
       extra: {

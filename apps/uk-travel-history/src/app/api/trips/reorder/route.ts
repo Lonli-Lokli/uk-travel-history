@@ -13,11 +13,11 @@ import { logger } from '@uth/utils';
 import {
   createTripStoreContext,
   getTrips,
-  updateTrip,
+  updateTripEntity,
   getTripById,
   setSessionCookie,
   clearSessionCookie,
-  usesPersistentStorage,
+  tripStoreUsesPersistentStorage,
 } from '@uth/trip-store';
 
 export const runtime = 'nodejs';
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (usesPersistentStorage(context)) {
+    if (tripStoreUsesPersistentStorage(context)) {
       // For persistent storage, use the database reorder function
       // CRITICAL: Verify ALL trips belong to the user before reordering
       const trips = await Promise.all(
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     } else {
       // For cache storage, update sort_order for each trip
       for (let i = 0; i < body.tripIds.length; i++) {
-        await updateTrip(context, body.tripIds[i], { sortOrder: i });
+        await updateTripEntity(context, body.tripIds[i], { sortOrder: i });
       }
     }
 
