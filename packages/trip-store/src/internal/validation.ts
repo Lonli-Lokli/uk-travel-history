@@ -267,20 +267,7 @@ export function validateUpdateTripData(data: UpdateTripData): void {
     );
   }
 
-  // Validate optional ID fields
-  if (data.goalId !== undefined && typeof data.goalId !== 'string') {
-    throw new TripStoreError(
-      TripStoreErrorCode.VALIDATION_ERROR,
-      'goalId must be a string',
-    );
-  }
-
-  if (data.groupId !== undefined && typeof data.groupId !== 'string') {
-    throw new TripStoreError(
-      TripStoreErrorCode.VALIDATION_ERROR,
-      'groupId must be a string',
-    );
-  }
+  // Note: goalId and groupId validation removed as they don't exist in TripData type
 
   // Validate optional numeric fields
   if (

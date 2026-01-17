@@ -14,6 +14,8 @@ export enum TripStoreErrorCode {
   SESSION_ERROR = 'SESSION_ERROR',
   /** Trip not found */
   NOT_FOUND = 'NOT_FOUND',
+  /** Validation error (invalid input) */
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
   /** Unknown error */
   UNKNOWN = 'UNKNOWN',
 }

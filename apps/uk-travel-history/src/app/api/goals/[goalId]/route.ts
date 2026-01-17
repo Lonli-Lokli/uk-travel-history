@@ -10,21 +10,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getGoalById,
-  updateGoal,
-  getUserByAuthId,
-  SubscriptionTier,
-  type UpdateTrackingGoalData,
-  type TrackingGoalData,
-} from '@uth/db';
+import type { UpdateTrackingGoalData } from '@uth/db';
 import { getCurrentUser } from '@uth/auth-server';
-import { get, withTTL } from '@uth/cache';
 import {
-  getSessionId,
-  createSessionId,
-  setSessionCookie,
-  getEndOfDayTTLSeconds,
+  createGoalStoreContext,
+  getGoalById,
+  updateGoalEntity,
+  deleteGoalEntity,
 } from '@uth/trip-store';
 import { logger } from '@uth/utils';
 
@@ -36,107 +28,27 @@ interface RouteParams {
 }
 
 /**
- * Paid subscription tiers that use persistent storage
- */
-const PAID_TIERS: SubscriptionTier[] = [
-  SubscriptionTier.MONTHLY,
-  SubscriptionTier.YEARLY,
-  SubscriptionTier.LIFETIME,
-];
-
-/**
- * Check if a subscription tier is a paid tier
- */
-function isPaidTier(tier: SubscriptionTier): boolean {
-  return PAID_TIERS.includes(tier);
-}
-
-/**
- * Get cache key for goals
- */
-function getGoalsCacheKey(sessionId: string): string {
-  return `goals:session:${sessionId}`;
-}
-
-/**
- * Get goals from cache
- */
-async function getCachedGoals(sessionId: string): Promise<TrackingGoalData[]> {
-  const key = getGoalsCacheKey(sessionId);
-  const goals = await get<TrackingGoalData[]>(key);
-  return goals || [];
-}
-
-/**
- * Save goals to cache with TTL
- */
-async function setCachedGoals(
-  sessionId: string,
-  goals: TrackingGoalData[],
-): Promise<void> {
-  const key = getGoalsCacheKey(sessionId);
-  const ttl = getEndOfDayTTLSeconds();
-  const cache = withTTL(ttl);
-  await cache.set(key, goals);
-}
-
-/**
  * GET /api/goals/[goalId]
  * Get a specific goal by ID
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const authUser = await getCurrentUser();
-    let sessionId = getSessionId(request);
-    const isNewSession = !sessionId;
+    const context = await createGoalStoreContext(authUser, request);
     const { goalId } = await params;
 
-    if (authUser) {
-      // Authenticated user - check subscription tier
-      const dbUser = await getUserByAuthId(authUser.uid);
-      const tier = dbUser?.subscriptionTier ?? SubscriptionTier.FREE;
-      const isPaid = isPaidTier(tier);
-
-      if (isPaid) {
-        // Paid user - use Supabase
-        const goal = await getGoalById(goalId);
-
-        if (!goal) {
-          return NextResponse.json(
-            { error: 'Goal not found' },
-            { status: 404 },
-          );
-        }
-
-        if (goal.userId !== authUser.uid) {
-          return NextResponse.json(
-            { error: 'Not authorized' },
-            { status: 403 },
-          );
-        }
-
-        return NextResponse.json({ goal });
-      }
-    }
-
-    // Free/anonymous user - use cache
-    if (!sessionId) {
-      sessionId = createSessionId();
-    }
-
-    const goals = await getCachedGoals(sessionId);
-    const goal = goals.find((g) => g.id === goalId);
+    const goal = await getGoalById(context, goalId);
 
     if (!goal) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    const response = NextResponse.json({ goal });
-    if (isNewSession && sessionId) {
-      setSessionCookie(response, sessionId);
+    // Authorization check for paid users
+    if (context.isPaidUser && goal.userId !== authUser?.uid) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    return response;
+    return context.response.json({ goal });
   } catch (error) {
     logger.error('Failed to fetch goal', {
       extra: { error: (error as Error).message },
@@ -155,82 +67,37 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const authUser = await getCurrentUser();
-    let sessionId = getSessionId(request);
-    const isNewSession = !sessionId;
+    const context = await createGoalStoreContext(authUser, request);
     const { goalId } = await params;
 
     const body = (await request.json()) as UpdateTrackingGoalData;
 
-    if (authUser) {
-      // Authenticated user - check subscription tier
-      const dbUser = await getUserByAuthId(authUser.uid);
-      const tier = dbUser?.subscriptionTier ?? SubscriptionTier.FREE;
-      const isPaid = isPaidTier(tier);
-
-      if (isPaid) {
-        // Paid user - use Supabase
-        const existingGoal = await getGoalById(goalId);
-
-        if (!existingGoal) {
-          return NextResponse.json(
-            { error: 'Goal not found' },
-            { status: 404 },
-          );
-        }
-
-        if (existingGoal.userId !== authUser.uid) {
-          return NextResponse.json(
-            { error: 'Not authorized' },
-            { status: 403 },
-          );
-        }
-
-        const goal = await updateGoal(goalId, body);
-
-        logger.info('Goal updated (paid)', {
-          extra: { userId: authUser.uid, goalId },
-        });
-
-        return NextResponse.json({ goal });
+    // Authorization check for paid users
+    if (context.isPaidUser) {
+      const existingGoal = await getGoalById(context, goalId);
+      if (!existingGoal) {
+        return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+      }
+      if (existingGoal.userId !== authUser?.uid) {
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
       }
     }
 
-    // Free/anonymous user - use cache
-    if (!sessionId) {
-      sessionId = createSessionId();
-    }
+    const goal = await updateGoalEntity(context, goalId, body);
 
-    const goals = await getCachedGoals(sessionId);
-    const goalIndex = goals.findIndex((g) => g.id === goalId);
-
-    if (goalIndex === -1) {
+    if (!goal) {
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
-    // Update goal in cache
-    const updatedGoal: TrackingGoalData = {
-      ...goals[goalIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
-
-    goals[goalIndex] = updatedGoal;
-    await setCachedGoals(sessionId, goals);
-
-    logger.info('Goal updated (cache)', {
+    logger.info(`Goal updated (${context.isPaidUser ? 'paid' : 'cache'})`, {
       extra: {
         userId: authUser?.uid ?? 'anonymous',
-        sessionId,
+        sessionId: context.sessionId,
         goalId,
       },
     });
 
-    const response = NextResponse.json({ goal: updatedGoal });
-    if (isNewSession && sessionId) {
-      setSessionCookie(response, sessionId);
-    }
-
-    return response;
+    return context.response.json({ goal });
   } catch (error) {
     logger.error('Failed to update goal', {
       extra: { error: (error as Error).message },
@@ -249,75 +116,31 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const authUser = await getCurrentUser();
-    let sessionId = getSessionId(request);
-    const isNewSession = !sessionId;
+    const context = await createGoalStoreContext(authUser, request);
     const { goalId } = await params;
 
-    if (authUser) {
-      // Authenticated user - check subscription tier
-      const dbUser = await getUserByAuthId(authUser.uid);
-      const tier = dbUser?.subscriptionTier ?? SubscriptionTier.FREE;
-      const isPaid = isPaidTier(tier);
-
-      if (isPaid) {
-        // Paid user - use Supabase
-        const existingGoal = await getGoalById(goalId);
-
-        if (!existingGoal) {
-          return NextResponse.json(
-            { error: 'Goal not found' },
-            { status: 404 },
-          );
-        }
-
-        if (existingGoal.userId !== authUser.uid) {
-          return NextResponse.json(
-            { error: 'Not authorized' },
-            { status: 403 },
-          );
-        }
-
-        // Soft delete - archive the goal
-        await updateGoal(goalId, { isArchived: true });
-
-        logger.info('Goal archived (paid)', {
-          extra: { userId: authUser.uid, goalId },
-        });
-
-        return NextResponse.json({ success: true });
+    // Authorization check for paid users
+    if (context.isPaidUser) {
+      const existingGoal = await getGoalById(context, goalId);
+      if (!existingGoal) {
+        return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+      }
+      if (existingGoal.userId !== authUser?.uid) {
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
       }
     }
 
-    // Free/anonymous user - use cache (hard delete since it's ephemeral)
-    if (!sessionId) {
-      sessionId = createSessionId();
-    }
+    await deleteGoalEntity(context, goalId);
 
-    const goals = await getCachedGoals(sessionId);
-    const goalIndex = goals.findIndex((g) => g.id === goalId);
-
-    if (goalIndex === -1) {
-      return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
-    }
-
-    // Remove goal from cache
-    goals.splice(goalIndex, 1);
-    await setCachedGoals(sessionId, goals);
-
-    logger.info('Goal deleted (cache)', {
+    logger.info(`Goal ${context.isPaidUser ? 'archived' : 'deleted'} (${context.isPaidUser ? 'paid' : 'cache'})`, {
       extra: {
         userId: authUser?.uid ?? 'anonymous',
-        sessionId,
+        sessionId: context.sessionId,
         goalId,
       },
     });
 
-    const response = NextResponse.json({ success: true });
-    if (isNewSession && sessionId) {
-      setSessionCookie(response, sessionId);
-    }
-
-    return response;
+    return context.response.json({ success: true });
   } catch (error) {
     logger.error('Failed to delete goal', {
       extra: { error: (error as Error).message },

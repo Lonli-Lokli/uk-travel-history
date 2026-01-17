@@ -81,12 +81,13 @@ export function createCacheAdapter<T extends BaseEntityData>(
     const entities = await getEntities(sessionId);
 
     // Create new entity with generated fields
+    const now = new Date().toISOString();
     const newEntity: T = {
       ...data,
       id: `${entityName}_${crypto.randomUUID()}`,
       userId: sessionId, // Use session ID as pseudo-user ID
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     } as T;
 
     entities.push(newEntity);
@@ -121,7 +122,7 @@ export function createCacheAdapter<T extends BaseEntityData>(
     const updated: T = {
       ...entities[index],
       ...data,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     };
 
     entities[index] = updated;
@@ -163,12 +164,13 @@ export function createCacheAdapter<T extends BaseEntityData>(
     }
 
     const existingEntities = await getEntities(sessionId);
+    const now = new Date().toISOString();
     const newEntities: T[] = entitiesData.map((data) => ({
       ...data,
       id: `${entityName}_${crypto.randomUUID()}`,
       userId: sessionId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     })) as T[];
 
     const allEntities = [...existingEntities, ...newEntities];

@@ -6,12 +6,13 @@
 /**
  * Base data type for entities
  * All entities must have these fields
+ * Note: Dates are stored as ISO strings (compatible with JSON serialization and database storage)
  */
 export interface BaseEntityData {
   id: string;
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
 }
 
 /**
