@@ -7,8 +7,7 @@ import type { CreateTripData, TripData } from '@uth/db';
 
 // Mock dependencies
 vi.mock('@uth/cache', () => ({
-  get: vi.fn(),
-  set: vi.fn(),
+  setIfNotExists: vi.fn(),
   deleteKey: vi.fn(),
 }));
 
@@ -29,7 +28,7 @@ vi.mock('../internal/providers/supabase-adapter', () => {
 });
 
 import { migrateTripsFromCache, hasCachedTrips } from './migration';
-import { get, set, deleteKey } from '@uth/cache';
+import { setIfNotExists, deleteKey } from '@uth/cache';
 import { getCacheAdapterDirect } from '../internal/provider-resolver';
 import { SupabaseTripAdapter } from '../internal/providers/supabase-adapter';
 
@@ -47,9 +46,8 @@ describe('migrateTripsFromCache', () => {
 
     vi.mocked(getCacheAdapterDirect).mockReturnValue(mockCacheAdapter);
 
-    // Mock lock acquisition (default: lock is available)
-    vi.mocked(get).mockResolvedValue(null);
-    vi.mocked(set).mockResolvedValue(undefined);
+    // Mock lock acquisition (default: lock is available - setIfNotExists returns true)
+    vi.mocked(setIfNotExists).mockResolvedValue(true);
     vi.mocked(deleteKey).mockResolvedValue(undefined);
   });
 
@@ -125,8 +123,8 @@ describe('migrateTripsFromCache', () => {
     const sessionId = '550e8400-e29b-41d4-a716-446655440000';
     const userId = 'user123';
 
-    // Simulate lock already exists
-    vi.mocked(get).mockResolvedValue('locked');
+    // Simulate lock already acquired (setIfNotExists returns false)
+    vi.mocked(setIfNotExists).mockResolvedValue(false);
 
     const result = await migrateTripsFromCache(sessionId, userId);
 

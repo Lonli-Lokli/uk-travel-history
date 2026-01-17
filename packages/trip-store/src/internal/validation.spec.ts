@@ -132,17 +132,20 @@ describe('validateCreateTripData', () => {
     };
     expect(() => validateCreateTripData(invalidTrip)).toThrow(TripStoreError);
     expect(() => validateCreateTripData(invalidTrip)).toThrow(
-      'Return date (inDate) must be on or after departure date (outDate)',
+      'Same-day trips are invalid',
     );
   });
 
-  it('should accept same-day trips (inDate === outDate)', () => {
+  it('should reject same-day trips (inDate === outDate)', () => {
     const sameDayTrip: CreateTripData = {
       ...validTrip,
       outDate: '2026-01-15',
       inDate: '2026-01-15',
     };
-    expect(() => validateCreateTripData(sameDayTrip)).not.toThrow();
+    expect(() => validateCreateTripData(sameDayTrip)).toThrow(TripStoreError);
+    expect(() => validateCreateTripData(sameDayTrip)).toThrow(
+      'Same-day trips are invalid',
+    );
   });
 
   it('should reject non-object data', () => {
@@ -213,6 +216,17 @@ describe('validateUpdateTripData', () => {
       inDate: '2026-01-10',
     };
     expect(() => validateUpdateTripData(update)).toThrow(TripStoreError);
+  });
+
+  it('should reject same-day trips when both dates provided', () => {
+    const update: UpdateTripData = {
+      outDate: '2026-01-15',
+      inDate: '2026-01-15',
+    };
+    expect(() => validateUpdateTripData(update)).toThrow(TripStoreError);
+    expect(() => validateUpdateTripData(update)).toThrow(
+      'Same-day trips are invalid',
+    );
   });
 
   it('should accept update with only optional string fields', () => {

@@ -61,4 +61,14 @@ export interface CacheProvider {
    * @returns true if the key exists
    */
   exists(key: string): Promise<boolean>;
+
+  /**
+   * Atomically set a key-value pair only if the key does not already exist (SET NX)
+   * This is critical for implementing distributed locks safely
+   * @param key The cache key
+   * @param value The value to cache
+   * @param options Optional settings (TTL, etc.)
+   * @returns true if the key was set, false if it already existed
+   */
+  setIfNotExists<T>(key: string, value: T, options?: SetOptions): Promise<boolean>;
 }

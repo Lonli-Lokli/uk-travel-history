@@ -6,7 +6,8 @@
 import type { TripData, CreateTripData } from '@uth/db';
 import { getCacheAdapterDirect } from '../internal/provider-resolver';
 import { SupabaseTripAdapter } from '../internal/providers/supabase-adapter';
-import { set, get, deleteKey } from '@uth/cache';
+import { setIfNotExists, deleteKey } from '@uth/cache';
+import { logger } from '@uth/utils';
 
 /**
  * Migration result
@@ -95,13 +96,26 @@ export async function migrateTripsFromCache(
           const message =
             error instanceof Error ? error.message : 'Unknown error';
           errors.push(`Failed to migrate trip: ${message}`);
+          logger.error('Failed to migrate individual trip', {
+            extra: { userId, sessionId, error: message },
+          });
         }
       }
 
-      // Always clear cache after migration attempt
-      // This prevents data duplication and ensures users see fresh data from Supabase
-      // Even if some trips failed to migrate, we clear the cache to avoid confusion
-      await cacheAdapter.clearTrips(sessionId);
+      // Clear cache after migration attempt
+      // CRITICAL DECISION: We clear cache even on partial failures to prevent data duplication
+      // Rationale:
+      // - If we keep cache on failure, users may see duplicate trips (some in cache, some in DB)
+      // - Partial migrations are rare (individual trip validation errors)
+      // - Complete failures (all trips fail) are also rare (DB connection issues, auth failures)
+      // - Clearing ensures users always see a consistent state from Supabase
+      // - For complete failures, users can re-upload/re-enter data (ephemeral data by design)
+      if (migrated > 0 || cachedTrips.length > 0) {
+        await cacheAdapter.clearTrips(sessionId);
+        logger.info('Cleared cache after migration attempt', {
+          extra: { sessionId, migrated, total: cachedTrips.length, errors: errors.length },
+        });
+      }
 
       return {
         migrated,
@@ -130,25 +144,22 @@ export async function migrateTripsFromCache(
 }
 
 /**
- * Acquire a distributed lock using cache SET NX (set if not exists)
+ * Acquire a distributed lock using atomic SET NX (set if not exists)
+ * This is now a single atomic operation to prevent race conditions
  * @param lockKey Lock key
  * @param ttl Lock TTL in seconds
  * @returns true if lock was acquired, false otherwise
  */
 async function acquireLock(lockKey: string, ttl: number): Promise<boolean> {
   try {
-    // Check if lock already exists
-    const existing = await get<string>(lockKey);
-    if (existing) {
-      return false;
-    }
-
-    // Set lock with TTL
-    await set(lockKey, 'locked', { ttl });
-    return true;
+    // Use atomic SET NX operation - this is a single Redis command
+    // Returns true if lock was set, false if it already existed
+    return await setIfNotExists(lockKey, 'locked', { ttl });
   } catch (error) {
     // On error, fail-safe: don't acquire lock
-    console.error('Failed to acquire migration lock:', error);
+    logger.error('Failed to acquire migration lock', {
+      extra: { lockKey, error: (error as Error).message },
+    });
     return false;
   }
 }
@@ -162,7 +173,9 @@ async function releaseLock(lockKey: string): Promise<void> {
     await deleteKey(lockKey);
   } catch (error) {
     // Log but don't throw - lock will auto-expire anyway
-    console.error('Failed to release migration lock:', error);
+    logger.warn('Failed to release migration lock', {
+      extra: { lockKey, error: (error as Error).message },
+    });
   }
 }
 

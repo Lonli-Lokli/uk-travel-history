@@ -15,6 +15,7 @@ export {
   set,
   deleteKey,
   exists,
+  setIfNotExists,
   getCacheOperations,
   withTTL,
   type CacheOperations,

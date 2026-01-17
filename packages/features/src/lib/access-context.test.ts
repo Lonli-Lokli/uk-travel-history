@@ -23,6 +23,12 @@ vi.mock('@uth/db', () => ({
   createGoal: vi.fn(),
   updateGoal: vi.fn(),
   deleteGoal: vi.fn(),
+  getTrips: vi.fn(),
+  getTripById: vi.fn(),
+  createTrip: vi.fn(),
+  updateTrip: vi.fn(),
+  deleteTrip: vi.fn(),
+  bulkCreateTrips: vi.fn(),
   SubscriptionTier: {
     ANONYMOUS: 'anonymous',
     FREE: 'free',

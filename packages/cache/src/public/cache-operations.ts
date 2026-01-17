@@ -69,6 +69,23 @@ export async function exists(key: string): Promise<boolean> {
 }
 
 /**
+ * Atomically set a key-value pair only if the key does not already exist
+ * This is critical for implementing distributed locks safely
+ * @param key The cache key
+ * @param value The value to cache
+ * @param options Optional settings (TTL, etc.)
+ * @returns true if the key was set, false if it already existed
+ */
+export async function setIfNotExists<T>(
+  key: string,
+  value: T,
+  options?: SetOptions,
+): Promise<boolean> {
+  const provider = getCacheProvider();
+  return provider.setIfNotExists(key, value, options);
+}
+
+/**
  * Get cache operations object
  * Useful when you need to pass cache operations as a dependency
  */

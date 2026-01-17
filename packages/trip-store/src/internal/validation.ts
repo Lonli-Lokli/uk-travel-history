@@ -122,14 +122,15 @@ export function validateCreateTripData(data: CreateTripData): void {
   validateDate(data.outDate, 'outDate');
   validateDate(data.inDate, 'inDate');
 
-  // Validate date logic: inDate must be >= outDate
+  // Validate date logic: inDate must be > outDate (same-day trips are invalid)
+  // This aligns with UK immigration rules where only full days outside UK count
   const outDate = new Date(data.outDate);
   const inDate = new Date(data.inDate);
 
-  if (inDate < outDate) {
+  if (inDate <= outDate) {
     throw new TripStoreError(
       TripStoreErrorCode.VALIDATION_ERROR,
-      'Return date (inDate) must be on or after departure date (outDate)',
+      'Return date (inDate) must be after departure date (outDate). Same-day trips are invalid.',
     );
   }
 
@@ -219,14 +220,15 @@ export function validateUpdateTripData(data: UpdateTripData): void {
   }
 
   // Validate date logic if both dates are provided
+  // Same-day trips are invalid (aligns with UK immigration rules)
   if (data.outDate && data.inDate) {
     const outDate = new Date(data.outDate);
     const inDate = new Date(data.inDate);
 
-    if (inDate < outDate) {
+    if (inDate <= outDate) {
       throw new TripStoreError(
         TripStoreErrorCode.VALIDATION_ERROR,
-        'Return date (inDate) must be on or after departure date (outDate)',
+        'Return date (inDate) must be after departure date (outDate). Same-day trips are invalid.',
       );
     }
   }

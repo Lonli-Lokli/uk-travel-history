@@ -61,6 +61,18 @@ export class MockCacheAdapter implements CacheProvider {
     return true;
   }
 
+  async setIfNotExists<T>(key: string, value: T, options?: SetOptions): Promise<boolean> {
+    // Check if key already exists (and is not expired)
+    const exists = await this.exists(key);
+    if (exists) {
+      return false;
+    }
+
+    // Set the key since it doesn't exist
+    await this.set(key, value, options);
+    return true;
+  }
+
   /**
    * Clear all entries (useful for testing)
    */

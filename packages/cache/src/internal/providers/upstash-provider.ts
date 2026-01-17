@@ -109,4 +109,24 @@ export class UpstashCacheAdapter implements CacheProvider {
       );
     }
   }
+
+  async setIfNotExists<T>(key: string, value: T, options?: SetOptions): Promise<boolean> {
+    const client = this.ensureConfigured();
+    try {
+      // Use Redis SET NX (set if not exists) for atomic operation
+      // This is critical for distributed lock safety
+      const result = options?.ttl
+        ? await client.set(key, value, { ex: options.ttl, nx: true })
+        : await client.set(key, value, { nx: true });
+
+      // Redis SET NX returns "OK" if successful, null if key already exists
+      return result === "OK";
+    } catch (error) {
+      throw new CacheError(
+        CacheErrorCode.PROVIDER_ERROR,
+        `Failed to conditionally set key "${key}"`,
+        error,
+      );
+    }
+  }
 }
