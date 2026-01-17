@@ -8,6 +8,15 @@ on:
 
 jobs:
   test:
+    env:
+      # Add these test values for CI builds
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY_TEST || 'test_clerk_secret_for_ci_builds_only' }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY_TEST || 'pk_test_ci' }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL_STAGING || 'https://test.supabase.co' }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_TEST || 'test_service_role_key_ci' }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_TEST || 'test_anon_key_ci' }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_TEST || 'sk_test_dummy_for_ci' }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || 'pk_test_dummy' }}
     name: Test & Coverage
     runs-on: ubuntu-latest
 
