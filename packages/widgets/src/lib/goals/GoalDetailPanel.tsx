@@ -173,7 +173,7 @@ function WarningCard({ warning }: { warning: GoalWarning }) {
       bg: 'bg-blue-50',
       text: 'text-blue-700',
       border: 'border-blue-200',
-      icon: 'info' as const,
+      icon: 'info-circle' as const,
     },
   };
 

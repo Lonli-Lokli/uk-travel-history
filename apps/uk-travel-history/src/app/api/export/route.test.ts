@@ -230,4 +230,85 @@ describe('Export API Route', () => {
     expect(response.status).toBe(500);
     expect(data.error).toBe('Failed to generate Excel file');
   });
+
+  it('should include goals sheet in full export with goals data', async () => {
+    const tripsData = {
+      trips: [
+        {
+          id: '1',
+          outDate: '2024-01-01',
+          inDate: '2024-01-05',
+          outRoute: 'London to Paris',
+          inRoute: 'Paris to London',
+          calendarDays: 5,
+          fullDays: 3,
+          isIncomplete: false,
+        },
+      ],
+      goals: [
+        {
+          name: 'UK ILR Application',
+          type: 'uk_ilr',
+          jurisdiction: 'uk',
+          startDate: '2023-01-01',
+          config: {
+            type: 'uk_ilr',
+            trackYears: 5,
+            visaStartDate: '2023-01-01',
+          },
+        },
+        {
+          name: 'Schengen 90/180',
+          type: 'schengen_90_180',
+          jurisdiction: 'schengen',
+          startDate: '2024-01-01',
+          config: {
+            type: 'schengen_90_180',
+          },
+        },
+      ],
+    };
+
+    const request = createMockRequest({
+      tripsData: JSON.stringify(tripsData),
+      exportMode: 'full',
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toContain(
+      'UK_Travel_History_Full.xlsx'
+    );
+  });
+
+  it('should not include goals sheet when exportMode is not full', async () => {
+    const tripsData = {
+      trips: [],
+      goals: [
+        {
+          name: 'UK ILR Application',
+          type: 'uk_ilr',
+          jurisdiction: 'uk',
+          startDate: '2023-01-01',
+          config: {
+            type: 'uk_ilr',
+            trackYears: 5,
+          },
+        },
+      ],
+    };
+
+    const request = createMockRequest({
+      tripsData: JSON.stringify(tripsData),
+      exportMode: 'ilr', // Not 'full'
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toContain(
+      'UK_Travel_History.xlsx'
+    );
+  });
 });
