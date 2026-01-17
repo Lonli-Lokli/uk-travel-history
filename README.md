@@ -142,6 +142,51 @@ This is an Nx monorepo with a layered architecture following domain-driven desig
 
 - Node.js 20+
 - npm, yarn, or pnpm
+- Git (with proper configuration for cross-platform development)
+
+## Git Configuration (Windows Developers)
+
+This repository uses **LF line endings** (Unix/Linux style) for all text files, enforced via `.gitattributes`. Windows developers need to configure Git to handle line ending conversions automatically.
+
+### Required Setup (One-Time)
+
+If you're developing on Windows, run this command **before cloning or after first clone**:
+
+```bash
+git config --global core.autocrlf true
+```
+
+### What This Does
+
+- **On checkout**: Git converts LF → CRLF (you see Windows line endings in your editor)
+- **On commit**: Git converts CRLF → LF (repository always gets LF)
+- **Result**: You can work with CRLF locally while the repository stays consistent with LF
+
+### Why This Is Required
+
+- ✅ Repository enforces LF via `.gitattributes` (already configured)
+- ✅ CI/CD runs on Linux (expects LF line endings)
+- ✅ Prettier checks line ending format (`endOfLine: "lf"`)
+- ❌ Without `core.autocrlf=true`, you'll commit CRLF and break CI checks
+
+### Automated Check
+
+The repository includes an automated check that runs on `npm install`. If you haven't configured `core.autocrlf`, you'll see an error message with instructions to fix it.
+
+**Important**: This is not optional for Windows developers. The build will fail if this setting is missing.
+
+### Verification
+
+To verify your Git configuration:
+
+```bash
+git config --get core.autocrlf
+# Should output: true
+```
+
+### Linux/Mac Developers
+
+No action required. LF is your native line ending format.
 
 ## Getting Started
 

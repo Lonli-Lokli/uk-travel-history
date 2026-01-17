@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "preinstall": "node scripts/check-git-config.js",
     "build": "nx run app:build",
     "start": "nx dev app",
     "format": "nx format:write",
