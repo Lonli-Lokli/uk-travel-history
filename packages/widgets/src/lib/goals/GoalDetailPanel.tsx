@@ -1,6 +1,7 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -12,6 +13,7 @@ import {
 import { cn, formatDate } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
+import type { GoalWarning } from '@uth/rules';
 import { RiskAreaChart } from './RiskAreaChart';
 
 /**
@@ -146,6 +148,86 @@ function ProgressRing({
   );
 }
 
+/**
+ * WarningCard - Icon-based explanation component
+ * Shows warning/error with expandable details
+ */
+function WarningCard({ warning }: { warning: GoalWarning }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetails = warning.details && warning.details.length > 0;
+
+  const severityStyles = {
+    error: {
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+      border: 'border-red-200',
+      icon: 'alert-circle' as const,
+    },
+    warning: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      icon: 'alert-triangle' as const,
+    },
+    info: {
+      bg: 'bg-blue-50',
+      text: 'text-blue-700',
+      border: 'border-blue-200',
+      icon: 'info' as const,
+    },
+  };
+
+  const style = severityStyles[warning.severity];
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg border text-sm overflow-hidden',
+        style.bg,
+        style.text,
+        style.border,
+      )}
+    >
+      {/* Header - always visible */}
+      <div
+        className={cn(
+          'flex items-start gap-2 p-3',
+          hasDetails && 'cursor-pointer hover:bg-black/5',
+        )}
+        onClick={() => hasDetails && setExpanded(!expanded)}
+      >
+        <UIIcon
+          iconName={style.icon}
+          className="w-4 h-4 flex-shrink-0 mt-0.5"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">{warning.title}</p>
+          <p className="mt-0.5">{warning.message}</p>
+        </div>
+        {hasDetails && (
+          <UIIcon
+            iconName={expanded ? 'chevron-up' : 'chevron-down'}
+            className="w-4 h-4 flex-shrink-0 mt-0.5"
+          />
+        )}
+      </div>
+
+      {/* Expandable Details */}
+      {expanded && hasDetails && (
+        <div className="px-3 pb-3 pl-9 space-y-2 border-t border-current/20">
+          <div className="pt-2">
+            <ul className="space-y-1 list-disc list-inside text-xs">
+              {warning.details!.map((detail, i) => (
+                <li key={i}>{detail}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface GoalDetailPanelProps {
   goal: TrackingGoalData;
   calculation: GoalCalculationData | null;
@@ -173,6 +255,16 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
     : 'Not calculated';
 
   const daysUntil = calculation?.daysUntilEligible ?? null;
+
+  // Get anchor dates from goal config (for UK ILR goals)
+  const config = goal.config as {
+    visaStartDate?: string;
+    vignetteEntryDate?: string;
+    type?: string;
+  };
+  const hasAnchorDates =
+    config.type === 'uk_ilr' &&
+    (config.visaStartDate || config.vignetteEntryDate);
 
   return (
     <Card className={cn('border-t-4 border-t-primary', className)}>
@@ -220,6 +312,33 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Anchor Dates - for UK ILR goals */}
+        {hasAnchorDates && (
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
+              Configuration
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {config.visaStartDate && (
+                <div>
+                  <p className="text-xs text-slate-600">Visa Start Date</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {formatDate(config.visaStartDate, 'ui')}
+                  </p>
+                </div>
+              )}
+              {config.vignetteEntryDate && (
+                <div>
+                  <p className="text-xs text-slate-600">Vignette Entry Date</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {formatDate(config.vignetteEntryDate, 'ui')}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Progress and Eligibility */}
         <div className="flex items-center gap-4">
           <ProgressRing percent={progress} />
@@ -257,29 +376,11 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
           </div>
         )}
 
-        {/* Warnings */}
+        {/* Explanations - Enhanced with icon-based details */}
         {warnings.length > 0 && (
           <div className="space-y-2">
             {warnings.map((warning, idx) => (
-              <div
-                key={idx}
-                className={cn(
-                  'flex items-start gap-2 p-3 rounded-lg text-sm',
-                  warning.severity === 'error'
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-amber-50 text-amber-700 border border-amber-200',
-                )}
-              >
-                <UIIcon
-                  iconName={
-                    warning.severity === 'error'
-                      ? 'alert-circle'
-                      : 'alert-triangle'
-                  }
-                  className="w-4 h-4 flex-shrink-0 mt-0.5"
-                />
-                <span>{warning.message}</span>
-              </div>
+              <WarningCard key={idx} warning={warning} />
             ))}
           </div>
         )}

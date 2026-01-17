@@ -219,12 +219,22 @@ function validateEligibility(params: {
 
   // Check 1: Is it too early?
   if (isBefore(assessmentDate, legalDate)) {
+    const requiredDays = ilrTrack * 365;
+    const currentDays = differenceInDays(
+      assessmentDate,
+      parseDateUnsafe(visaStartDate),
+    );
+    const daysShortfall = differenceInDays(legalDate, assessmentDate);
+
     return {
       status: 'INELIGIBLE',
       reason: {
         type: 'TOO_EARLY',
         message: `The application date is too early. You can apply 28 days before the ${ilrTrack} year anniversary, which is ${formatDate(legalDate, 'ui')}.`,
         earliestAllowedDate: formatDate(legalDate, 'api') ?? '',
+        requiredDays,
+        currentDays,
+        daysShortfall,
       },
     };
   }
@@ -249,12 +259,23 @@ function validateEligibility(params: {
   });
 
   if (!absenceCheck.passed) {
+    const worstWindow =
+      absenceCheck.offendingWindows.length > 0
+        ? absenceCheck.offendingWindows.reduce((worst, current) =>
+            current.days > worst.days ? current : worst,
+          )
+        : { start: '', end: '', days: 0 };
+
+    const limit = ilrTrack === 10 ? 184 : 180;
+
     return {
       status: 'INELIGIBLE',
       reason: {
         type: 'EXCESSIVE_ABSENCE',
         message: absenceCheck.reason || 'Absence limit exceeded.',
         offendingWindows: absenceCheck.offendingWindows,
+        worstWindow,
+        limit,
       },
     };
   }
@@ -696,7 +717,24 @@ function createErrorResult(
   type: 'INCORRECT_INPUT' | 'INCOMPLETED_TRIPS',
   message: string,
 ): TravelCalculationResult {
-  const reason: IneligibilityReason = { type, message };
+  let reason: IneligibilityReason;
+
+  if (type === 'INCOMPLETED_TRIPS') {
+    const incompleteTrips = trips.filter((t) => t.isIncomplete);
+    reason = {
+      type,
+      message,
+      incompleteTripIds: incompleteTrips.map((t) => t.id),
+      incompleteCount: incompleteTrips.length,
+    };
+  } else {
+    // INCORRECT_INPUT
+    reason = {
+      type,
+      message,
+      missingFields: [], // Will be populated by caller if needed
+    };
+  }
 
   return {
     tripsWithCalculations: trips,

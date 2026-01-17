@@ -1,20 +1,14 @@
 'use client';
 
 /**
- * GoalCard Component
+ * GoalCard Component (Compact Design)
  *
- * Larger card view for goals displayed in the Trackers tab.
- * Shows more detail than GoalMiniCard, including progress ring, metrics, and status.
+ * Minimal card view showing only goal name and status.
+ * All details (metrics, dates, etc.) are shown in GoalDetailPanel when selected.
  */
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  GoalTypeIcon,
-} from '@uth/ui';
-import { cn, formatDate } from '@uth/utils';
+import { Card, CardContent, GoalTypeIcon } from '@uth/ui';
+import { cn } from '@uth/utils';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 
 /** Status color mapping */
@@ -59,58 +53,6 @@ const statusColors: Record<
   },
 };
 
-interface ProgressRingProps {
-  percent: number;
-  size?: number;
-}
-
-function ProgressRing({ percent, size = 80 }: ProgressRingProps) {
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percent / 100) * circumference;
-
-  const getColor = () => {
-    if (percent >= 100) return '#10b981'; // emerald-500
-    if (percent >= 75) return '#22c55e'; // green-500
-    if (percent >= 50) return '#3b82f6'; // blue-500
-    if (percent >= 25) return '#f59e0b'; // amber-500
-    return '#6b7280'; // gray-500
-  };
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg className="transform -rotate-90" width={size} height={size}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={getColor()}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-all duration-500"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-bold text-slate-700">
-          {Math.round(percent)}%
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export interface GoalCardProps {
   goal: TrackingGoalData;
   calculation: GoalCalculationData | null;
@@ -128,13 +70,6 @@ export function GoalCard({
 }: GoalCardProps) {
   const status = calculation?.status ?? 'not_started';
   const colors = statusColors[status] ?? statusColors.not_started;
-  const progress = calculation?.progressPercent ?? 0;
-
-  const eligibilityDateStr = calculation?.eligibilityDate
-    ? formatDate(calculation.eligibilityDate, 'ui')
-    : 'Not calculated';
-
-  const daysUntil = calculation?.daysUntilEligible ?? null;
 
   return (
     <Card
@@ -149,21 +84,21 @@ export function GoalCard({
       )}
       onClick={onClick}
     >
-      <CardHeader className="pb-3 pt-3 px-3 sm:px-4">
+      <CardContent className="p-3 sm:p-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/60 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/60 flex items-center justify-center flex-shrink-0">
             <GoalTypeIcon
               goalType={goal.type}
-              className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700"
+              className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700"
             />
           </div>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm sm:text-base truncate">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
               {goal.name}
-            </CardTitle>
+            </h3>
             <span
               className={cn(
-                'inline-block px-1.5 py-0.5 text-xs font-medium rounded-full mt-0.5',
+                'inline-block px-2 py-0.5 text-xs font-medium rounded-full mt-1',
                 colors.badge,
               )}
             >
@@ -171,41 +106,6 @@ export function GoalCard({
             </span>
           </div>
         </div>
-      </CardHeader>
-
-      <CardContent className="pt-0 pb-3 px-3 sm:px-4">
-        <div className="flex items-center gap-3">
-          <ProgressRing percent={progress} size={50} />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-slate-600">Eligible</p>
-            <p className="text-sm font-semibold text-slate-900 truncate">
-              {eligibilityDateStr}
-            </p>
-            {daysUntil !== null && daysUntil > 0 && (
-              <p className="text-xs text-muted-foreground">{daysUntil} days</p>
-            )}
-          </div>
-        </div>
-
-        {/* Quick metrics - show max 2 on mobile */}
-        {calculation?.metrics && calculation.metrics.length > 0 && (
-          <div className="mt-2 flex gap-2">
-            {calculation.metrics.slice(0, 2).map((metric) => (
-              <div
-                key={metric.key}
-                className="flex-1 bg-white/60 rounded-md p-2"
-              >
-                <p className="text-xs text-slate-600 truncate">
-                  {metric.label}
-                </p>
-                <p className="text-sm font-semibold text-slate-900 truncate">
-                  {metric.value}
-                  {metric.unit !== 'days' && ` ${metric.unit}`}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
