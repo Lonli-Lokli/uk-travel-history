@@ -16,14 +16,17 @@ vi.mock('../internal/provider-resolver', () => ({
   getCacheAdapterDirect: vi.fn(),
 }));
 
-// We need a mocked class, not just vi.fn()
-class MockSupabaseTripAdapter {
-  createTrip = vi.fn();
-}
-
-vi.mock('../internal/providers/supabase-adapter', () => ({
-  SupabaseTripAdapter: MockSupabaseTripAdapter,
-}));
+// Mock the Supabase adapter with a proper class
+// Use method syntax instead of property so we can spy on the prototype
+vi.mock('../internal/providers/supabase-adapter', () => {
+  return {
+    SupabaseTripAdapter: class {
+      createTrip() {
+        return Promise.resolve({} as any);
+      }
+    },
+  };
+});
 
 import { migrateTripsFromCache, hasCachedTrips } from './migration';
 import { get, set, deleteKey } from '@uth/cache';
@@ -32,7 +35,6 @@ import { SupabaseTripAdapter } from '../internal/providers/supabase-adapter';
 
 describe('migrateTripsFromCache', () => {
   let mockCacheAdapter: any;
-  let mockSupabaseAdapter: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -81,11 +83,13 @@ describe('migrateTripsFromCache', () => {
 
     mockCacheAdapter.getTrips.mockResolvedValue(cachedTrips);
 
-    // Mock the createTrip method on the mocked class prototype
-    MockSupabaseTripAdapter.prototype.createTrip = vi.fn().mockResolvedValue({
-      ...cachedTrips[0],
-      userId,
-    });
+    // Spy on the createTrip method and mock its return value
+    const createTripSpy = vi
+      .spyOn(SupabaseTripAdapter.prototype, 'createTrip')
+      .mockResolvedValue({
+        ...cachedTrips[0],
+        userId,
+      });
 
     const result = await migrateTripsFromCache(sessionId, userId);
 
@@ -180,7 +184,7 @@ describe('migrateTripsFromCache', () => {
     mockCacheAdapter.getTrips.mockResolvedValue(cachedTrips);
 
     // First trip succeeds, second fails
-    mockSupabaseAdapter.createTrip
+    vi.spyOn(SupabaseTripAdapter.prototype, 'createTrip')
       .mockResolvedValueOnce({ ...cachedTrips[0], userId })
       .mockRejectedValueOnce(new Error('Database error'));
 
@@ -255,7 +259,11 @@ describe('migrateTripsFromCache', () => {
     };
 
     mockCacheAdapter.getTrips.mockResolvedValue([fullTrip]);
-    mockSupabaseAdapter.createTrip.mockResolvedValue({ ...fullTrip, userId });
+
+    // Spy on the createTrip method
+    const mockCreateTrip = vi
+      .spyOn(SupabaseTripAdapter.prototype, 'createTrip')
+      .mockResolvedValue({ ...fullTrip, userId });
 
     const result = await migrateTripsFromCache(sessionId, userId);
 
@@ -263,7 +271,7 @@ describe('migrateTripsFromCache', () => {
     expect(result.migrated).toBe(1);
 
     // Verify createTrip was called with correct data (without id, userId, timestamps)
-    expect(mockSupabaseAdapter.createTrip).toHaveBeenCalledWith(userId, {
+    expect(mockCreateTrip).toHaveBeenCalledWith(userId, {
       goalId: 'goal123',
       title: 'NYC Trip',
       outDate: '2026-01-10',
