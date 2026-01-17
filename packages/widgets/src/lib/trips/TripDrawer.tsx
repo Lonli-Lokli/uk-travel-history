@@ -3,7 +3,6 @@
 import { observer } from 'mobx-react-lite';
 import {
   tripsStore,
-  authStore,
   travelStore,
   useRefreshAccessContext,
 } from '@uth/stores';
@@ -23,21 +22,23 @@ import {
 import { useState } from 'react';
 
 /**
- * TripDrawer - Drawer-based trip creation and editing (Phase 4)
+ * TripDrawer - Drawer-based trip creation and editing
  *
- * Replaces inline editing with a consistent drawer pattern
- * Uses uiStore for UI state and tripsStore for data operations
+ * Replaces inline editing with a consistent drawer pattern.
+ * Uses travelStore for UI state (drawer open/close, form data)
+ * and tripsStore for data operations via API.
  *
- * Supports both authenticated and anonymous users:
- * - Authenticated: Uses tripsStore (server-persisted via API)
- * - Anonymous: Uses travelStore (client-side only)
+ * All users (authenticated, anonymous, free, paid) use the same flow:
+ * - tripsStore calls API endpoints
+ * - Server-side trip-store abstraction handles storage routing:
+ *   - Paid users: Supabase (persistent)
+ *   - Free/anonymous users: Cache (ephemeral)
  */
 export const TripDrawer = observer(() => {
   const isOpen = travelStore.isDrawerOpen;
   const mode = travelStore.drawerMode;
   const formData = travelStore.drawerFormData;
   const isLoading = tripsStore.isLoading;
-  const isAuthenticated = !!authStore.user;
   const refreshAccessContext = useRefreshAccessContext();
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -61,56 +62,31 @@ export const TripDrawer = observer(() => {
       return;
     }
 
-    // For authenticated users: Use tripsStore (no goal required)
-    if (isAuthenticated) {
-      let success = false;
-      if (mode === 'create') {
-        const result = await tripsStore.createTrip({
-          title: formData.title || null,
-          outDate: formData.outDate,
-          inDate: formData.inDate,
-          outRoute: formData.outRoute,
-          inRoute: formData.inRoute,
-        });
-        success = result !== null;
-      } else if (mode === 'edit' && travelStore.editingTripId) {
-        const result = await tripsStore.updateTrip(travelStore.editingTripId, {
-          title: formData.title || null,
-          outDate: formData.outDate,
-          inDate: formData.inDate,
-          outRoute: formData.outRoute,
-          inRoute: formData.inRoute,
-        });
-        success = result !== null;
-      }
+    // Always use tripsStore - server handles storage routing
+    let success = false;
+    if (mode === 'create') {
+      const result = await tripsStore.createTrip({
+        title: formData.title || null,
+        outDate: formData.outDate,
+        inDate: formData.inDate,
+        outRoute: formData.outRoute,
+        inRoute: formData.inRoute,
+      });
+      success = result !== null;
+    } else if (mode === 'edit' && travelStore.editingTripId) {
+      const result = await tripsStore.updateTrip(travelStore.editingTripId, {
+        title: formData.title || null,
+        outDate: formData.outDate,
+        inDate: formData.inDate,
+        outRoute: formData.outRoute,
+        inRoute: formData.inRoute,
+      });
+      success = result !== null;
+    }
 
-      // Trigger server-side re-hydration to get fresh calculations
-      if (success) {
-        refreshAccessContext();
-      }
-    } else {
-      // For anonymous users: Use travelStore (client-side only)
-      if (mode === 'create') {
-        travelStore.addTrip({
-          outDate: formData.outDate,
-          inDate: formData.inDate,
-          outRoute: formData.outRoute || '',
-          inRoute: formData.inRoute || '',
-        });
-      } else if (mode === 'edit' && travelStore.editingTripId) {
-        // Find and update the trip in travelStore
-        const tripIndex = travelStore.trips.findIndex(
-          (t) => t.id === travelStore.editingTripId,
-        );
-        if (tripIndex !== -1) {
-          travelStore.updateTrip(travelStore.editingTripId, {
-            outDate: formData.outDate,
-            inDate: formData.inDate,
-            outRoute: formData.outRoute || '',
-            inRoute: formData.inRoute || '',
-          });
-        }
-      }
+    // Trigger server-side re-hydration to get fresh calculations
+    if (success) {
+      refreshAccessContext();
     }
 
     travelStore.closeDrawer();

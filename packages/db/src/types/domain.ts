@@ -407,6 +407,19 @@ export interface DataContext {
    * Loaded server-side for instant hydration
    */
   trips: TripData[] | null;
+
+  /**
+   * Whether cached ephemeral data may have expired for anonymous users.
+   * True when: session cookie exists but cache returns no data.
+   * This allows the UI to show a helpful message to users.
+   */
+  ephemeralDataExpired?: boolean;
+
+  /**
+   * Whether the data was loaded from ephemeral (cache) storage.
+   * True for anonymous users with cached data.
+   */
+  isEphemeral?: boolean;
 }
 
 /**

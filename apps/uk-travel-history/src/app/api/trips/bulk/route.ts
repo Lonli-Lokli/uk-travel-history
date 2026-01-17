@@ -1,15 +1,30 @@
 /**
  * Bulk Trips API Route
  * POST /api/trips/bulk - Bulk create trips (for imports)
+ *
+ * Supports both authenticated (paid) and anonymous (free) users:
+ * - Paid users: Trips stored in Supabase (persistent)
+ * - Free/anonymous users: Trips stored in cache (ephemeral, TTL expires at end of day)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { bulkCreateTrips, getGoalById, type BulkCreateTripsData } from '@uth/db';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { getGoalById } from '@uth/db';
 import { logger } from '@uth/utils';
+import {
+  createTripStoreContext,
+  bulkCreateTrips,
+  setSessionCookie,
+  clearSessionCookie,
+  type CreateTripInput,
+} from '@uth/trip-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Longer timeout for bulk operations
+
+interface BulkCreateRequestData {
+  goalId?: string;
+  trips: Array<Omit<CreateTripInput, 'goalId'>>;
+}
 
 /**
  * POST /api/trips/bulk
@@ -17,23 +32,15 @@ export const maxDuration = 60; // Longer timeout for bulk operations
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
+    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
 
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = (await request.json()) as BulkCreateTripsData;
+    const body = (await request.json()) as BulkCreateRequestData;
 
     // Basic validation
-    if (!body.goalId || !body.trips || !Array.isArray(body.trips)) {
+    if (!body.trips || !Array.isArray(body.trips)) {
       return NextResponse.json(
         {
-          error: 'Missing required fields: goalId, trips (array)',
+          error: 'Missing required field: trips (array)',
         },
         { status: 400 },
       );
@@ -72,32 +79,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // CRITICAL: Verify goal ownership before creating trips
-    const goal = await getGoalById(body.goalId);
+    // CRITICAL: Verify goal ownership if goalId is provided (only for authenticated users)
+    if (body.goalId && context.userId) {
+      const goal = await getGoalById(body.goalId);
 
-    if (!goal || goal.userId !== userContext.userId) {
-      return NextResponse.json(
-        { error: 'Goal not found or not authorized' },
-        { status: 404 },
-      );
+      if (!goal || goal.userId !== context.userId) {
+        return NextResponse.json(
+          { error: 'Goal not found or not authorized' },
+          { status: 404 },
+        );
+      }
     }
 
-    const trips = await bulkCreateTrips(userContext.userId, body);
+    // Add goalId to each trip if provided
+    const tripsWithGoal = body.trips.map((trip) => ({
+      ...trip,
+      goalId: body.goalId ?? null,
+    }));
+
+    const trips = await bulkCreateTrips(context, tripsWithGoal as any);
 
     logger.info('Trips bulk created', {
       extra: {
-        userId: userContext.userId,
-        goalId: body.goalId,
+        userId: context.userId ?? 'anonymous',
+        goalId: body.goalId ?? null,
         count: trips.length,
+        isPersistent: context.isPaidUser,
       },
     });
 
-    return NextResponse.json({ trips, count: trips.length }, { status: 201 });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json(
+      { trips, count: trips.length },
+      { status: 201 },
+    );
+
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to bulk create trips', {
       extra: { error: (error as Error).message },
     });

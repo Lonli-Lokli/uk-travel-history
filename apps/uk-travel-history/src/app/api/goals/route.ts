@@ -2,17 +2,22 @@
  * Goals API Routes
  * GET /api/goals - List user's goals
  * POST /api/goals - Create a new goal
+ *
+ * Supports both authenticated (paid) and anonymous (free) users:
+ * - Paid users: Goals stored in Supabase (persistent)
+ * - Free/anonymous users: Goals stored in cache (ephemeral, TTL expires at end of day)
+ * - Limit: 1 goal for free/anonymous users, unlimited for paid
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { CreateTrackingGoalData } from '@uth/db';
+import { getCurrentUser } from '@uth/auth-server';
 import {
-  getUserGoals,
-  createGoal,
-  getGoalCount,
-  type CreateTrackingGoalData,
-} from '@uth/db';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
-import { TIERS } from '@uth/domain';
+  createGoalStoreContext,
+  getGoals,
+  createGoalEntity,
+  getCachedGoalCount,
+} from '@uth/trip-store';
 import { logger } from '@uth/utils';
 
 export const runtime = 'nodejs';
@@ -20,30 +25,27 @@ export const maxDuration = 30;
 
 /**
  * GET /api/goals
- * List all goals for the authenticated user
+ * List all goals for the current user/session
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
-
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authUser = await getCurrentUser();
+    const context = await createGoalStoreContext(authUser, request);
 
     const includeArchived =
       request.nextUrl.searchParams.get('includeArchived') === 'true';
-    const goals = await getUserGoals(userContext.userId, includeArchived);
 
-    return NextResponse.json({ goals });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    // Get goals - filtering handled by the store
+    // Note: includeArchived filtering is done after fetching since cache doesn't support it
+    let goals = await getGoals(context);
+
+    // Filter archived goals if not requested
+    if (!includeArchived) {
+      goals = goals.filter(goal => !(goal as any).isArchived);
     }
+
+    return context.response.json({ goals });
+  } catch (error) {
     logger.error('Failed to fetch goals', {
       extra: { error: (error as Error).message },
     });
@@ -60,26 +62,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
-
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check goal limit: 1 for free tier, unlimited for paid
-    const existingCount = await getGoalCount(userContext.userId);
-    const isPaid = userContext.tier === TIERS.PREMIUM;
-
-    if (!isPaid && existingCount >= 1) {
-      return NextResponse.json(
-        { error: 'Free tier limited to 1 goal. Upgrade to add more.' },
-        { status: 403 },
-      );
-    }
+    const authUser = await getCurrentUser();
+    const context = await createGoalStoreContext(authUser, request);
 
     const body = (await request.json()) as CreateTrackingGoalData;
 
@@ -93,18 +77,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const goal = await createGoal(userContext.userId, body);
+    // Enforce 1 goal limit for free/anonymous users
+    if (!context.isPaidUser && context.sessionId) {
+      const cachedCount = await getCachedGoalCount(context.sessionId);
+      if (cachedCount >= 1) {
+        return NextResponse.json(
+          { error: 'Free tier limited to 1 goal. Upgrade to add more.' },
+          { status: 403 },
+        );
+      }
+    }
 
-    logger.info('Goal created', {
-      extra: { userId: userContext.userId, goalId: goal.id, type: goal.type },
+    const goal = await createGoalEntity(context, body as any);
+
+    logger.info(`Goal created (${context.isPaidUser ? 'paid' : 'cache'})`, {
+      extra: {
+        userId: authUser?.uid ?? 'anonymous',
+        sessionId: context.sessionId,
+        goalId: goal.id,
+        type: (goal as any).type,
+      },
     });
 
-    return NextResponse.json({ goal }, { status: 201 });
+    return context.response.json({ goal }, { status: 201 });
   } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
-    }
     logger.error('Failed to create goal', {
       extra: { error: (error as Error).message },
     });

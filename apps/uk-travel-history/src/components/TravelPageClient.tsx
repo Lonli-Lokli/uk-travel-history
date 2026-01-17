@@ -148,15 +148,16 @@ export const TravelPageClient = observer(() => {
               onAddTrip={handleAddTrip}
               onEditTrip={(tripId) => {
                 const trip = trips.find((t) => t.id === tripId);
-                // TODO: we need to solve issue with anonymous trips
-                // if (trip) {
-                //   travelStore.openDrawer('edit', {
-                //     outDate: trip.outDate,
-                //     inDate: trip.inDate,
-                //     outRoute: trip.outRoute || '',
-                //     inRoute: trip.inRoute || '',
-                //   });
-                // }
+                if (trip) {
+                  travelStore.openDrawer('edit', {
+                    id: trip.id,
+                    title: trip.title || '',
+                    outDate: trip.outDate,
+                    inDate: trip.inDate,
+                    outRoute: trip.outRoute || '',
+                    inRoute: trip.inRoute || '',
+                  });
+                }
               }}
               onDeleteTrip={async (tripId) => {
                 if (confirm('Are you sure you want to delete this trip?')) {

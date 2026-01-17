@@ -266,21 +266,33 @@ class TravelStore {
   }
 
   // Drawer actions
-  openDrawer(mode: 'create' | 'edit', tripId?: string) {
+  openDrawer(
+    mode: 'create' | 'edit',
+    tripIdOrData?: string | Partial<TripRecord>,
+  ) {
     this.drawerMode = mode;
-    this.editingTripId = tripId || null;
 
     if (mode === 'create') {
+      this.editingTripId = null;
       this.drawerFormData = {
         outDate: '',
         inDate: '',
         outRoute: '',
         inRoute: '',
       };
-    } else if (mode === 'edit' && tripId) {
-      const trip = this.trips.find((t) => t.id === tripId);
-      if (trip) {
-        this.drawerFormData = { ...trip };
+    } else if (mode === 'edit') {
+      // Edit mode: accept either tripId (for local trips) or trip data (for server trips)
+      if (typeof tripIdOrData === 'string') {
+        // Legacy: tripId passed, look up in local trips
+        this.editingTripId = tripIdOrData;
+        const trip = this.trips.find((t) => t.id === tripIdOrData);
+        if (trip) {
+          this.drawerFormData = { ...trip };
+        }
+      } else if (tripIdOrData && typeof tripIdOrData === 'object') {
+        // New: trip data passed directly (for server-backed trips)
+        this.editingTripId = tripIdOrData.id || null;
+        this.drawerFormData = { ...tripIdOrData };
       }
     }
 

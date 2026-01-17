@@ -1,12 +1,24 @@
 /**
  * Reorder Trips API Route
  * POST /api/trips/reorder - Reorder trips (for drag-and-drop)
+ *
+ * Supports both authenticated (paid) and anonymous (free) users:
+ * - Paid users: Uses Supabase reorderTrips function
+ * - Free/anonymous users: Updates sort_order in cache
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { reorderTrips, getTripById } from '@uth/db';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { reorderTrips as dbReorderTrips } from '@uth/db';
 import { logger } from '@uth/utils';
+import {
+  createTripStoreContext,
+  getTrips,
+  updateTripEntity,
+  getTripById,
+  setSessionCookie,
+  clearSessionCookie,
+  tripStoreUsesPersistentStorage,
+} from '@uth/trip-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -22,15 +34,7 @@ interface ReorderRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
-
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { context, isNewSession, didMigrate } = await createTripStoreContext(request);
 
     const body = (await request.json()) as ReorderRequest;
 
@@ -51,39 +55,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CRITICAL: Verify ALL trips belong to the user before reordering
-    // RLS won't protect this because reorderTrips uses service role key
-    const trips = await Promise.all(
-      body.tripIds.map((id) => getTripById(id)),
-    );
-
-    // Check ownership - all trips must exist and belong to this user
-    const unauthorizedTrip = trips.find(
-      (trip) => !trip || trip.userId !== userContext.userId,
-    );
-
-    if (unauthorizedTrip) {
-      return NextResponse.json(
-        { error: 'Not authorized to reorder these trips' },
-        { status: 403 },
+    if (tripStoreUsesPersistentStorage(context)) {
+      // For persistent storage, use the database reorder function
+      // CRITICAL: Verify ALL trips belong to the user before reordering
+      const trips = await Promise.all(
+        body.tripIds.map((id) => getTripById(context, id)),
       );
-    }
 
-    await reorderTrips(body.tripIds);
+      // Check ownership - all trips must exist and belong to this user
+      const unauthorizedTrip = trips.find(
+        (trip) => !trip || trip.userId !== context.userId,
+      );
+
+      if (unauthorizedTrip) {
+        return NextResponse.json(
+          { error: 'Not authorized to reorder these trips' },
+          { status: 403 },
+        );
+      }
+
+      await dbReorderTrips(body.tripIds);
+    } else {
+      // For cache storage, update sort_order for each trip
+      for (let i = 0; i < body.tripIds.length; i++) {
+        await updateTripEntity(context, body.tripIds[i], { sortOrder: i });
+      }
+    }
 
     logger.info('Trips reordered', {
       extra: {
-        userId: userContext.userId,
+        userId: context.userId ?? 'anonymous',
         count: body.tripIds.length,
+        isPersistent: context.isPaidUser,
       },
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json({ success: true });
+
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to reorder trips', {
       extra: { error: (error as Error).message },
     });

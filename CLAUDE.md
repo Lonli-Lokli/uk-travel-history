@@ -138,6 +138,71 @@ The application uses a **three-layer defense** strategy for access control:
 - ONLY use `createAdminClient()` in webhook handlers (bypasses RLS)
 - Webhook handlers MUST verify signatures before processing
 
+### Session-Based Storage for Anonymous/Free Users
+
+**Overview**: The application uses HttpOnly session cookies to provide ephemeral storage for anonymous and free-tier users via the `@uth/trip-store` package.
+
+**Storage Routing**:
+- **Paid users** (monthly/yearly/lifetime): Data stored in Supabase with RLS
+- **Free/anonymous users**: Data stored in Redis cache with session-based access
+- **Automatic migration**: When users upgrade to paid, cached data is migrated to Supabase
+
+**Session Security Model**:
+
+1. **Cookie Configuration**:
+   - Cookie name: `uth_session_id`
+   - HttpOnly: `true` (prevents JavaScript access)
+   - Secure: `true` in production (HTTPS only)
+   - SameSite: `lax` (CSRF protection)
+   - No expiry (session cookie - expires on browser close)
+
+2. **Session ID Format**:
+   - UUID v4 (cryptographically random)
+   - Validated on every request via `validateSessionId()`
+   - Example: `550e8400-e29b-41d4-a716-446655440000`
+
+3. **Cache TTL**:
+   - All cached data expires at midnight UTC (end of day)
+   - Prevents indefinite data accumulation
+   - Users see "ephemeral data expired" message if they return after midnight
+
+4. **Known Security Limitations**:
+   ⚠️ **Session Hijacking Risk**: Session cookies alone do not prevent hijacking if stolen (e.g., via XSS on HTTP, network sniffing). This is an acceptable risk for **ephemeral, non-sensitive travel data** that expires daily.
+
+   **Why this is acceptable**:
+   - Data is temporary (24hr TTL)
+   - Data is not sensitive (public travel dates)
+   - Users are encouraged to upgrade to paid tier for persistent storage
+   - Session cookies expire on browser close
+
+   **What we DO protect against**:
+   - ✅ CSRF attacks (SameSite=lax)
+   - ✅ JavaScript access (HttpOnly)
+   - ✅ Man-in-the-middle on HTTPS (Secure flag in prod)
+   - ✅ Indefinite data retention (midnight TTL)
+
+   **What we DON'T protect against** (intentionally):
+   - ❌ Session hijacking via stolen cookies (would require client fingerprinting, which adds complexity for ephemeral data)
+   - ❌ Concurrent request race conditions during migration (mitigated via distributed locking, see below)
+
+5. **Migration Safety**:
+   - **Distributed locking**: Uses Redis-based locks to prevent race conditions
+   - Lock key: `migration:lock:{sessionId}`
+   - Lock TTL: 30 seconds (auto-expires if migration crashes)
+   - **Idempotent behavior**: Cache always clears after migration attempt (even partial failures)
+   - **Skipped migrations**: If lock exists, migration returns `{ skipped: true }` immediately
+
+**Implementation Files**:
+- `packages/trip-store/src/internal/session-manager.ts` - Session cookie management
+- `packages/trip-store/src/public/migration.ts` - Cache-to-Supabase migration with locking
+- `packages/trip-store/src/internal/validation.ts` - Input validation (session IDs, trip data)
+
+**Best Practices**:
+- Always validate session IDs before cache lookups
+- Never log session IDs or cache keys (contains pseudo-PII)
+- Use `@uth/trip-store` operations instead of direct cache access
+- Document any changes to session security model here
+
 ### Database Migrations
 
 GitHub is the **single source of truth** for database schema. Never make schema changes directly in Supabase Dashboard.

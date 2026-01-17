@@ -47,16 +47,25 @@
   ],
   "references": [
     {
-      "path": "../../packages/domain"
+      "path": "../../packages/auth/client"
     },
     {
-      "path": "../../packages/auth/client"
+      "path": "../../packages/parser"
+    },
+    {
+      "path": "../../packages/trip-store"
+    },
+    {
+      "path": "../../packages/cache"
+    },
+    {
+      "path": "../../packages/rules"
     },
     {
       "path": "../../packages/widgets"
     },
     {
-      "path": "../../packages/parser"
+      "path": "../../packages/domain"
     },
     {
       "path": "../../packages/flow"
@@ -68,10 +77,10 @@
       "path": "../../packages/stores"
     },
     {
-      "path": "../../packages/ui"
+      "path": "../../packages/features"
     },
     {
-      "path": "../../packages/features"
+      "path": "../../packages/ui"
     },
     {
       "path": "../../packages/auth/server"
@@ -81,9 +90,6 @@
     },
     {
       "path": "../../packages/utils"
-    },
-    {
-      "path": "../../packages/rules"
     }
   ]
 }

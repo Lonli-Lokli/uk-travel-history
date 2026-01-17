@@ -9,7 +9,20 @@
 export { CacheError, CacheErrorCode } from './types/domain';
 
 // Export public operations
-export { isCacheConfigured } from './public/cache-operations';
+export {
+  isCacheConfigured,
+  get,
+  set,
+  deleteKey,
+  exists,
+  setIfNotExists,
+  getCacheOperations,
+  withTTL,
+  type CacheOperations,
+} from './public/cache-operations';
+
+// Export SetOptions type for consumers
+export type { SetOptions } from './internal/providers/interface';
 
 // Export testing utilities (for internal use only - consumers should use public API)
 export {

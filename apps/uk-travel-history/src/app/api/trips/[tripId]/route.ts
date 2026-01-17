@@ -3,18 +3,25 @@
  * GET /api/trips/[tripId] - Get a specific trip
  * PATCH /api/trips/[tripId] - Update a trip
  * DELETE /api/trips/[tripId] - Delete a trip
+ *
+ * Supports both authenticated (paid) and anonymous (free) users:
+ * - Paid users: Trips stored in Supabase (persistent)
+ * - Free/anonymous users: Trips stored in cache (ephemeral, TTL expires at end of day)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getTripById,
-  updateTrip,
-  deleteTrip,
-  getTripGroupById,
-  type UpdateTripData,
-} from '@uth/db';
-import { assertFeatureAccess, FEATURE_KEYS } from '@uth/features/server';
+import { getTripGroupById } from '@uth/db';
 import { logger } from '@uth/utils';
+import {
+  createTripStoreContext,
+  getTripById,
+  updateTripEntity,
+  deleteTripEntity,
+  setSessionCookie,
+  clearSessionCookie,
+  tripStoreUsesPersistentStorage,
+  type UpdateTripInput,
+} from '@uth/trip-store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -29,34 +36,35 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const trip = await getTripById(tripId);
+    const trip = await getTripById(context, tripId);
 
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
-    // Ensure user owns this trip
-    if (trip.userId !== userContext.userId) {
+    // For persistent storage, verify ownership
+    if (
+      tripStoreUsesPersistentStorage(context) &&
+      context.userId &&
+      trip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    return NextResponse.json({ trip });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json({ trip });
+
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to fetch trip', {
       extra: { error: (error as Error).message },
     });
@@ -73,29 +81,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const existingTrip = await getTripById(tripId);
+    const existingTrip = await getTripById(context, tripId);
 
     if (!existingTrip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
-    // Ensure user owns this trip
-    if (existingTrip.userId !== userContext.userId) {
+    // For persistent storage, verify ownership
+    if (
+      tripStoreUsesPersistentStorage(context) &&
+      context.userId &&
+      existingTrip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    const body = (await request.json()) as UpdateTripData;
+    const body = (await request.json()) as UpdateTripInput;
 
     // Validate dates if provided
     if (body.outDate && body.inDate) {
@@ -104,16 +109,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
       if (outDate >= inDate) {
         return NextResponse.json(
-          { error: 'Return date must be after departure date (same-day trips are invalid)' },
+          {
+            error:
+              'Return date must be after departure date (same-day trips are invalid)',
+          },
           { status: 400 },
         );
       }
     }
 
-    // CRITICAL: Verify trip group ownership if changing groupId
-    if (body.groupId) {
+    // CRITICAL: Verify trip group ownership if changing groupId (only for authenticated users)
+    if (body.groupId && context.userId) {
       const group = await getTripGroupById(body.groupId);
-      if (!group || group.userId !== userContext.userId) {
+      if (!group || group.userId !== context.userId) {
         return NextResponse.json(
           { error: 'Trip group not found or not authorized' },
           { status: 404 },
@@ -121,18 +129,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const trip = await updateTrip(tripId, body);
+    const trip = await updateTripEntity(context, tripId, body);
 
     logger.info('Trip updated', {
-      extra: { userId: userContext.userId, tripId },
+      extra: {
+        userId: context.userId ?? 'anonymous',
+        tripId,
+        isPersistent: context.isPaidUser,
+      },
     });
 
-    return NextResponse.json({ trip });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json({ trip });
+
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to update trip', {
       extra: { error: (error as Error).message },
     });
@@ -149,40 +165,45 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    // Check feature flag and get user context
-    const userContext = await assertFeatureAccess(
-      request,
-      FEATURE_KEYS.MULTI_GOAL_TRACKING,
-    );
+    const { context, isNewSession, didMigrate } =
+      await createTripStoreContext(request);
     const { tripId } = await params;
 
-    if (!userContext.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const existingTrip = await getTripById(tripId);
+    const existingTrip = await getTripById(context, tripId);
 
     if (!existingTrip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
-    // Ensure user owns this trip
-    if (existingTrip.userId !== userContext.userId) {
+    // For persistent storage, verify ownership
+    if (
+      tripStoreUsesPersistentStorage(context) &&
+      context.userId &&
+      existingTrip.userId !== context.userId
+    ) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    await deleteTrip(tripId);
+    await deleteTripEntity(context, tripId);
 
     logger.info('Trip deleted', {
-      extra: { userId: userContext.userId, tripId },
+      extra: {
+        userId: context.userId ?? 'anonymous',
+        tripId,
+        isPersistent: context.isPaidUser,
+      },
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    // If assertFeatureAccess throws a NextResponse, return it directly
-    if (error instanceof NextResponse) {
-      return error;
+    const response = NextResponse.json({ success: true });
+
+    if (didMigrate) {
+      clearSessionCookie(response);
+    } else if (isNewSession && context.sessionId) {
+      setSessionCookie(response, context.sessionId);
     }
+
+    return response;
+  } catch (error) {
     logger.error('Failed to delete trip', {
       extra: { error: (error as Error).message },
     });
