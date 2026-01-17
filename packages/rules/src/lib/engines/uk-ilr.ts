@@ -25,14 +25,16 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
     config: UKILRConfig,
     startDate: Date,
     asOfDate: Date = new Date(),
+    targetDate?: string | null,
   ): GoalCalculation {
     // Delegate to existing calculator
+    // Use targetDate as application date override if provided
     const result = calculateTravelData({
       trips,
       visaStartDate: config.visaStartDate,
       vignetteEntryDate: config.vignetteEntryDate || config.visaStartDate,
       ilrTrack: config.trackYears,
-      applicationDateOverride: null,
+      applicationDateOverride: targetDate || null,
     });
 
     // Transform to GoalCalculation format
@@ -207,36 +209,133 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
       hasExceededAllowedAbsense: boolean;
       remaining180LimitToday: number | null;
     },
-    validation: { status: string; reason?: { message?: string } },
+    validation: {
+      status: string;
+      reason?: {
+        type?: string;
+        message?: string;
+        earliestAllowedDate?: string;
+        requiredDays?: number;
+        currentDays?: number;
+        daysShortfall?: number;
+        incompleteTripIds?: string[];
+        incompleteCount?: number;
+        offendingWindows?: Array<{ start: string; end: string; days: number }>;
+        worstWindow?: { start: string; end: string; days: number };
+        limit?: number;
+        missingFields?: string[];
+      };
+    },
   ): GoalWarning[] {
     const warnings: GoalWarning[] = [];
 
-    if (summary.hasExceededAllowedAbsense) {
-      warnings.push({
-        severity: 'error',
-        title: 'Absence Limit Exceeded',
-        message:
-          'You have exceeded the maximum allowed absence in a 12-month period.',
-        action: 'Review your travel history and eligibility date',
-      });
-    } else if (
-      summary.remaining180LimitToday !== null &&
-      summary.remaining180LimitToday < 30
-    ) {
-      warnings.push({
-        severity: 'warning',
-        title: 'Low Remaining Allowance',
-        message: `You only have ${summary.remaining180LimitToday} days left in your current 12-month window.`,
-        action: 'Plan any upcoming travel carefully',
-      });
-    }
+    // Handle ineligibility reasons with detailed explanations
+    if (validation.status === 'INELIGIBLE' && validation.reason) {
+      const reason = validation.reason;
 
-    if (validation.status === 'INELIGIBLE' && validation.reason?.message) {
-      warnings.push({
-        severity: 'info',
-        title: 'Not Yet Eligible',
-        message: validation.reason.message,
-      });
+      switch (reason.type) {
+        case 'EXCESSIVE_ABSENCE':
+          if (reason.worstWindow && reason.offendingWindows) {
+            const details = [
+              `Worst period: ${formatDate(reason.worstWindow.start)} to ${formatDate(reason.worstWindow.end)}`,
+              `Absence days in that period: ${reason.worstWindow.days} (limit: ${reason.limit || 180})`,
+              `Total violating periods: ${reason.offendingWindows.length}`,
+            ];
+
+            warnings.push({
+              severity: 'error',
+              title: 'Absence Limit Exceeded',
+              message: `You exceeded the ${reason.limit || 180}-day limit in at least one 12-month period.`,
+              details,
+              offendingWindows: reason.offendingWindows,
+            });
+          }
+          break;
+
+        case 'TOO_EARLY':
+          if (
+            reason.earliestAllowedDate &&
+            reason.requiredDays &&
+            reason.currentDays !== undefined &&
+            reason.daysShortfall
+          ) {
+            const details = [
+              `Required qualifying days: ${reason.requiredDays}`,
+              `Current qualifying days: ${reason.currentDays}`,
+              `Days shortfall: ${reason.daysShortfall}`,
+              `Earliest eligible date: ${formatDate(reason.earliestAllowedDate)}`,
+            ];
+
+            warnings.push({
+              severity: 'error',
+              title: 'Qualifying Period Not Completed',
+              message: 'You have not yet completed the required qualifying period.',
+              details,
+            });
+          }
+          break;
+
+        case 'INCOMPLETED_TRIPS':
+          if (reason.incompleteTripIds && reason.incompleteCount) {
+            const details = [
+              `${reason.incompleteCount} trip(s) missing departure or return dates`,
+              'All trips must have both Out and In dates to calculate eligibility',
+            ];
+
+            warnings.push({
+              severity: 'error',
+              title: 'Incomplete Trip Data',
+              message: `${reason.incompleteCount} trip(s) are missing dates.`,
+              details,
+              relatedTripIds: reason.incompleteTripIds,
+            });
+          }
+          break;
+
+        case 'INCORRECT_INPUT':
+          if (reason.missingFields && reason.missingFields.length > 0) {
+            const details = reason.missingFields.map(
+              (field) => `Missing: ${field}`,
+            );
+
+            warnings.push({
+              severity: 'error',
+              title: 'Missing Configuration',
+              message: 'Required dates are missing from your goal configuration.',
+              details,
+            });
+          } else {
+            warnings.push({
+              severity: 'error',
+              title: 'Invalid Configuration',
+              message: reason.message || 'There is an error in your configuration.',
+            });
+          }
+          break;
+
+        default:
+          // Fallback for unknown types
+          warnings.push({
+            severity: 'error',
+            title: 'Not Eligible',
+            message: reason.message || 'Eligibility requirements not met.',
+          });
+      }
+    } else {
+      // User is eligible or no validation issues, check for warnings
+      if (
+        summary.remaining180LimitToday !== null &&
+        summary.remaining180LimitToday < 30
+      ) {
+        warnings.push({
+          severity: 'warning',
+          title: 'Low Remaining Allowance',
+          message: `You only have ${summary.remaining180LimitToday} days left in your current 12-month window.`,
+          details: [
+            'Plan any upcoming travel carefully to avoid exceeding the 180-day limit',
+          ],
+        });
+      }
     }
 
     return warnings;

@@ -68,10 +68,10 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreateTrackingGoalData;
 
     // Basic validation
-    if (!body.type || !body.jurisdiction || !body.name || !body.startDate) {
+    if (!body.type || !body.jurisdiction || !body.name) {
       return NextResponse.json(
         {
-          error: 'Missing required fields: type, jurisdiction, name, startDate',
+          error: 'Missing required fields: type, jurisdiction, name',
         },
         { status: 400 },
       );

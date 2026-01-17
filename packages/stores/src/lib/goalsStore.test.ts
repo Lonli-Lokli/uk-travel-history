@@ -79,8 +79,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK ILR (5-Year)',
         config: { trackYears: 5, visaStartDate: '2022-03-01' },
-        startDate: '2022-03-01',
-        targetDate: '2027-03-01',
+                targetDate: '2027-03-01',
         isActive: true,
         isArchived: false,
         displayOrder: 0,
@@ -95,8 +94,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'global',
         name: 'Days Away',
         config: { countDirection: 'days_away', referenceLocation: 'Home' },
-        startDate: '2024-01-01',
-        targetDate: null,
+                targetDate: null,
         isActive: true,
         isArchived: false,
         displayOrder: 1,
@@ -185,8 +183,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK ILR',
         config: {},
-        startDate: '2022-03-01',
-        targetDate: null,
+                targetDate: null,
         isActive: true,
         isArchived: false,
         displayOrder: 0,
@@ -201,8 +198,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'global',
         name: 'Days Away',
         config: {},
-        startDate: '2024-01-01',
-        targetDate: null,
+                targetDate: null,
         isActive: false,
         isArchived: false,
         displayOrder: 1,
@@ -217,8 +213,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK Citizenship',
         config: {},
-        startDate: '2023-01-01',
-        targetDate: null,
+                targetDate: null,
         isActive: true,
         isArchived: true,
         displayOrder: 2,
@@ -408,8 +403,7 @@ describe('GoalsStore', () => {
       jurisdiction: 'uk',
       name: 'UK ILR',
       config: {},
-      startDate: '2022-03-01',
-      targetDate: null,
+            targetDate: null,
       isActive: true,
       isArchived: false,
       displayOrder: 0,
@@ -429,8 +423,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK ILR',
         config: {},
-        startDate: '2022-03-01',
-      };
+              };
 
       const result = await goalsStore.createGoal(input);
 
@@ -450,8 +443,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK ILR',
         config: {},
-        startDate: '2022-03-01',
-      };
+              };
 
       const result = await goalsStore.createGoal(input);
 
@@ -550,8 +542,7 @@ describe('GoalsStore', () => {
         jurisdiction: 'uk',
         name: 'UK ILR',
         config: {},
-        startDate: '2022-03-01',
-        targetDate: null,
+                targetDate: null,
         isActive: true,
         isArchived: false,
         displayOrder: 0,

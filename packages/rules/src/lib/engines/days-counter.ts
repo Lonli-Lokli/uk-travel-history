@@ -30,6 +30,7 @@ export class DaysCounterRuleEngine implements RuleEngine<DaysCounterConfig> {
     config: DaysCounterConfig,
     startDate: Date,
     asOfDate: Date = new Date(),
+    _targetDate?: string | null, // Not used for days counter
   ): GoalCalculation {
     const daysAway = this.calculateDaysAway(trips, startDate, asOfDate);
     const totalDays = differenceInDays(asOfDate, startDate) + 1;

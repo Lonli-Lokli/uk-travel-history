@@ -26,7 +26,6 @@ export function goalFromDb(dbGoal: TrackingGoalData): TrackingGoal {
     jurisdiction: dbGoal.jurisdiction,
     name: dbGoal.name,
     config: dbGoal.config,
-    startDate: dbGoal.startDate, // Already ISO string in DB
     targetDate: dbGoal.targetDate, // Already ISO string in DB
     isActive: dbGoal.isActive,
     isArchived: dbGoal.isArchived,
@@ -49,7 +48,6 @@ export function goalToDb(goal: TrackingGoal): TrackingGoalData {
     jurisdiction: goal.jurisdiction,
     name: goal.name,
     config: goal.config,
-    startDate: goal.startDate,
     targetDate: goal.targetDate,
     isActive: goal.isActive,
     isArchived: goal.isArchived,
@@ -71,7 +69,6 @@ export function createGoalInputToDb(
     jurisdiction: input.jurisdiction,
     name: input.name,
     config: input.config,
-    startDate: input.startDate,
     targetDate: input.targetDate,
     isActive: input.isActive,
     displayOrder: input.displayOrder,

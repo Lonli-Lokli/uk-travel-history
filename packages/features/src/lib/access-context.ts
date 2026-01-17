@@ -693,7 +693,9 @@ async function calculateGoalMetrics(
       const calculation = engine.calculate(
         tripRecords,
         goal.config as any,
-        new Date(goal.startDate),
+        new Date(goal.createdAt),
+        new Date(), // asOfDate
+        goal.targetDate, // Pass targetDate for eligible date override
       );
 
       // Set the goal ID on the calculation

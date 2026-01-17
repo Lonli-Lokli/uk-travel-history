@@ -606,7 +606,6 @@ export class MockDbAdapter implements DbProvider {
       jurisdiction: data.jurisdiction,
       name: data.name,
       config: data.config,
-      startDate: data.startDate,
       targetDate: data.targetDate ?? null,
       isActive: data.isActive ?? true,
       isArchived: false,

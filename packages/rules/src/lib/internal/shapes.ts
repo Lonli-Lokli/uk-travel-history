@@ -103,13 +103,31 @@ type IneligibleILRValidationResult = {
   reason: IneligibilityReason;
 };
 export type IneligibilityReason =
-  | { type: 'TOO_EARLY'; message: string; earliestAllowedDate: string }
-  | { type: 'INCORRECT_INPUT'; message: string }
-  | { type: 'INCOMPLETED_TRIPS'; message: string }
+  | {
+      type: 'TOO_EARLY';
+      message: string;
+      earliestAllowedDate: string;
+      requiredDays: number;
+      currentDays: number;
+      daysShortfall: number;
+    }
+  | {
+      type: 'INCORRECT_INPUT';
+      message: string;
+      missingFields: Array<'visaStartDate' | 'vignetteEntryDate'>;
+    }
+  | {
+      type: 'INCOMPLETED_TRIPS';
+      message: string;
+      incompleteTripIds: string[];
+      incompleteCount: number;
+    }
   | {
       type: 'EXCESSIVE_ABSENCE';
       message: string;
       offendingWindows: OffendingWindow[];
+      worstWindow: OffendingWindow;
+      limit: number;
     };
 export type ILRValidationResult =
   | LegitableILRValidationResult

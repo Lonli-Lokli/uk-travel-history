@@ -525,7 +525,6 @@ export interface TrackingGoalData {
   jurisdiction: GoalJurisdiction;
   name: string;
   config: Record<string, unknown>;
-  startDate: string; // ISO date string
   targetDate: string | null;
   isActive: boolean;
   isArchived: boolean;
@@ -543,7 +542,6 @@ export interface CreateTrackingGoalData {
   jurisdiction: GoalJurisdiction;
   name: string;
   config: Record<string, unknown>;
-  startDate: string;
   targetDate?: string | null;
   isActive?: boolean;
   displayOrder?: number;
@@ -589,10 +587,20 @@ export interface GoalMetricData {
 }
 
 export interface GoalWarningData {
-  severity: string;
+  severity: 'info' | 'warning' | 'error';
   title: string;
   message: string;
   action?: string;
+  /** Detailed explanation with concrete dates/numbers (bullet points) */
+  details?: string[];
+  /** Related trip IDs that are causing this warning */
+  relatedTripIds?: string[];
+  /** Offending date windows (for rolling limit violations) */
+  offendingWindows?: Array<{
+    start: string;
+    end: string;
+    days: number;
+  }>;
 }
 
 export interface GoalVisualizationData {

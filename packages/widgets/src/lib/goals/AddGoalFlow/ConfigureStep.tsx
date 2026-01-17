@@ -18,12 +18,6 @@ const fieldConfigs: Record<
   { label: string; type: FieldType; placeholder: string; required?: boolean }
 > = {
   name: { label: 'Goal Name', type: 'text', placeholder: 'e.g., UK ILR 2027' },
-  startDate: {
-    label: 'Start Date',
-    type: 'date',
-    placeholder: '',
-    required: true,
-  },
   visaStartDate: {
     label: 'Visa Start Date',
     type: 'date',
@@ -79,7 +73,7 @@ export const ConfigureStep = observer(function ConfigureStep({
   };
 
   // Determine which fields to show
-  const fieldsToShow = ['name', 'startDate', ...template.requiredFields];
+  const fieldsToShow = ['name', ...template.requiredFields];
 
   // Add optional fields based on template type
   if (template.type === 'uk_ilr') {

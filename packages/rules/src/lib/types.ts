@@ -143,6 +143,16 @@ export interface GoalWarning {
   title: string;
   message: string;
   action?: string;
+  /** Detailed explanation with concrete dates/numbers (bullet points) */
+  details?: string[];
+  /** Related trip IDs that are causing this warning */
+  relatedTripIds?: string[];
+  /** Offending date windows (for rolling limit violations) */
+  offendingWindows?: Array<{
+    start: string;
+    end: string;
+    days: number;
+  }>;
 }
 
 export interface GoalRequirement {
@@ -162,12 +172,14 @@ export interface RuleEngine<TConfig extends GoalConfig = GoalConfig> {
 
   /**
    * Calculate goal progress and metrics
+   * @param targetDate - Optional user-defined target/eligible date override (ISO string)
    */
   calculate(
     trips: TripRecord[],
     config: TConfig,
     startDate: Date,
     asOfDate?: Date,
+    targetDate?: string | null,
   ): GoalCalculation;
 
   /**
