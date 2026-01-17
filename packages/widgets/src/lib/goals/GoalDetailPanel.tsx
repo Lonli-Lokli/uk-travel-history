@@ -334,11 +334,23 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
               )}
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs text-slate-600">
-                    {goal.targetDate
-                      ? 'Custom Eligible Date'
-                      : 'Auto-calculated Eligible Date'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-slate-600">Eligible Date</p>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
+                        goal.targetDate
+                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                          : 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+                      )}
+                    >
+                      <UIIcon
+                        iconName={goal.targetDate ? 'pencil' : 'check-circle'}
+                        className="w-3 h-3"
+                      />
+                      {goal.targetDate ? 'Override' : 'Auto-calculated'}
+                    </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -358,7 +370,12 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                     <UIIcon iconName="pencil" className="w-3 h-3" />
                   </Button>
                 </div>
-                <p className="text-sm font-medium text-emerald-700">
+                <p
+                  className={cn(
+                    'text-sm font-medium',
+                    goal.targetDate ? 'text-amber-700' : 'text-emerald-700',
+                  )}
+                >
                   {goal.targetDate
                     ? formatDate(goal.targetDate, 'ui')
                     : eligibilityDateStr}
@@ -370,7 +387,7 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                 )}
                 {goal.targetDate && calculation?.eligibilityDate && (
                   <p className="text-xs text-slate-500 mt-1">
-                    Auto-calculated: {eligibilityDateStr}
+                    Auto-calculated date: {eligibilityDateStr}
                   </p>
                 )}
               </div>

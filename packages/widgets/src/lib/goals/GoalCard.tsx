@@ -7,7 +7,7 @@
  * All details (metrics, dates, etc.) are shown in GoalDetailPanel when selected.
  */
 
-import { Card, CardContent, GoalTypeIcon } from '@uth/ui';
+import { Card, CardContent, GoalTypeIcon, UIIcon } from '@uth/ui';
 import { cn } from '@uth/utils';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 
@@ -93,9 +93,19 @@ export function GoalCard({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
-              {goal.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+                {goal.name}
+              </h3>
+              {goal.targetDate && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-700 border border-amber-200 flex-shrink-0"
+                  title="Custom eligible date override"
+                >
+                  <UIIcon iconName="pencil" className="w-3 h-3" />
+                </span>
+              )}
+            </div>
             <span
               className={cn(
                 'inline-block px-2 py-0.5 text-xs font-medium rounded-full mt-1',
