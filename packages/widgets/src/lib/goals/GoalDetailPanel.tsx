@@ -332,21 +332,48 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                   </p>
                 </div>
               )}
-              {calculation?.eligibilityDate && (
-                <div className="sm:col-span-2">
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1">
                   <p className="text-xs text-slate-600">
-                    Auto-calculated Eligible Date
+                    {goal.targetDate
+                      ? 'Custom Eligible Date'
+                      : 'Auto-calculated Eligible Date'}
                   </p>
-                  <p className="text-sm font-medium text-emerald-700">
-                    {eligibilityDateStr}
-                  </p>
-                  {daysUntil !== null && daysUntil > 0 && (
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {daysUntil} days remaining
-                    </p>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // TODO: Open date picker dialog
+                      const newDate = prompt(
+                        'Enter eligible date (YYYY-MM-DD):',
+                        goal.targetDate || eligibilityDateStr || undefined,
+                      );
+                      if (newDate && onEdit) {
+                        goalsStore.updateGoal(goal.id, { targetDate: newDate });
+                      }
+                    }}
+                    className="h-6 px-2"
+                    title="Edit eligible date"
+                  >
+                    <UIIcon iconName="pencil" className="w-3 h-3" />
+                  </Button>
                 </div>
-              )}
+                <p className="text-sm font-medium text-emerald-700">
+                  {goal.targetDate
+                    ? formatDate(goal.targetDate, 'ui')
+                    : eligibilityDateStr}
+                </p>
+                {daysUntil !== null && daysUntil > 0 && (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {daysUntil} days remaining
+                  </p>
+                )}
+                {goal.targetDate && calculation?.eligibilityDate && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Auto-calculated: {eligibilityDateStr}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -25,14 +25,16 @@ export class UKILRRuleEngine implements RuleEngine<UKILRConfig> {
     config: UKILRConfig,
     startDate: Date,
     asOfDate: Date = new Date(),
+    targetDate?: string | null,
   ): GoalCalculation {
     // Delegate to existing calculator
+    // Use targetDate as application date override if provided
     const result = calculateTravelData({
       trips,
       visaStartDate: config.visaStartDate,
       vignetteEntryDate: config.vignetteEntryDate || config.visaStartDate,
       ilrTrack: config.trackYears,
-      applicationDateOverride: null,
+      applicationDateOverride: targetDate || null,
     });
 
     // Transform to GoalCalculation format

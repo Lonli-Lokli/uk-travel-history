@@ -172,12 +172,14 @@ export interface RuleEngine<TConfig extends GoalConfig = GoalConfig> {
 
   /**
    * Calculate goal progress and metrics
+   * @param targetDate - Optional user-defined target/eligible date override (ISO string)
    */
   calculate(
     trips: TripRecord[],
     config: TConfig,
     startDate: Date,
     asOfDate?: Date,
+    targetDate?: string | null,
   ): GoalCalculation;
 
   /**
