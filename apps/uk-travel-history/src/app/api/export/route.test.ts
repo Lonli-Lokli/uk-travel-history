@@ -250,8 +250,7 @@ describe('Export API Route', () => {
           name: 'UK ILR Application',
           type: 'uk_ilr',
           jurisdiction: 'uk',
-          startDate: '2023-01-01',
-          config: {
+                    config: {
             type: 'uk_ilr',
             trackYears: 5,
             visaStartDate: '2023-01-01',
@@ -261,8 +260,7 @@ describe('Export API Route', () => {
           name: 'Schengen 90/180',
           type: 'schengen_90_180',
           jurisdiction: 'schengen',
-          startDate: '2024-01-01',
-          config: {
+                    config: {
             type: 'schengen_90_180',
           },
         },
@@ -290,8 +288,7 @@ describe('Export API Route', () => {
           name: 'UK ILR Application',
           type: 'uk_ilr',
           jurisdiction: 'uk',
-          startDate: '2023-01-01',
-          config: {
+                    config: {
             type: 'uk_ilr',
             trackYears: 5,
           },

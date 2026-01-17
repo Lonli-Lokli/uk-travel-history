@@ -525,7 +525,6 @@ export interface TrackingGoalData {
   jurisdiction: GoalJurisdiction;
   name: string;
   config: Record<string, unknown>;
-  startDate: string; // ISO date string
   targetDate: string | null;
   isActive: boolean;
   isArchived: boolean;
@@ -543,7 +542,6 @@ export interface CreateTrackingGoalData {
   jurisdiction: GoalJurisdiction;
   name: string;
   config: Record<string, unknown>;
-  startDate: string;
   targetDate?: string | null;
   isActive?: boolean;
   displayOrder?: number;

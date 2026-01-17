@@ -322,9 +322,6 @@ class GoalsStore {
         jurisdiction: this.selectedTemplate.jurisdiction as GoalJurisdiction,
         name: this.addModalFormData.name || this.selectedTemplate.name,
         config: { ...this.selectedTemplate.defaultConfig, ...config },
-        // Use current date as startDate (required for CreateTrackingGoalData)
-        // This represents when tracking begins, not visa/entry dates (those go in config)
-        startDate: new Date().toISOString().split('T')[0],
       };
 
       const goal = await this.createGoal(goalData);

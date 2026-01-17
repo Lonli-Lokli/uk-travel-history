@@ -41,8 +41,6 @@ export interface TrackingGoal {
   name: string;
   /** Goal-specific configuration (JSON object) */
   config: Record<string, unknown>;
-  /** Start date for tracking (ISO 8601 format: YYYY-MM-DD) */
-  startDate: string;
   /** Optional: Target date for completion (ISO 8601 format: YYYY-MM-DD) */
   targetDate: string | null;
   /** Whether this goal is currently active */
@@ -72,8 +70,6 @@ export interface CreateGoalInput {
   name: string;
   /** Goal-specific configuration (JSON object) */
   config: Record<string, unknown>;
-  /** Start date for tracking (ISO 8601 format: YYYY-MM-DD) */
-  startDate: string;
   /** Optional: Target date for completion (ISO 8601 format: YYYY-MM-DD) */
   targetDate?: string | null;
   /** Whether this goal is currently active (defaults to true) */
@@ -87,7 +83,7 @@ export interface CreateGoalInput {
 /**
  * Data for updating an existing goal
  * All fields optional (partial update)
- * Excludes immutable fields (type, jurisdiction, startDate)
+ * Excludes immutable fields (type, jurisdiction)
  */
 export interface UpdateGoalInput {
   /** Human-readable name */

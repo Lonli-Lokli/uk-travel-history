@@ -290,9 +290,6 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
               >
                 {statusStyle.text}
               </span>
-              <span className="text-xs text-muted-foreground">
-                Since {formatDate(goal.startDate, 'ui')}
-              </span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -318,7 +315,7 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
             <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
               Configuration
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {config.visaStartDate && (
                 <div>
                   <p className="text-xs text-slate-600">Visa Start Date</p>
@@ -335,22 +332,40 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                   </p>
                 </div>
               )}
+              {calculation?.eligibilityDate && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-600">
+                    Auto-calculated Eligible Date
+                  </p>
+                  <p className="text-sm font-medium text-emerald-700">
+                    {eligibilityDateStr}
+                  </p>
+                  {daysUntil !== null && daysUntil > 0 && (
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {daysUntil} days remaining
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Progress and Eligibility */}
+        {/* Progress */}
         <div className="flex items-center gap-4">
           <ProgressRing percent={progress} />
           <div className="flex-1">
-            <p className="text-sm text-slate-600">Eligible</p>
+            <p className="text-sm text-slate-600">Progress</p>
             <p className="text-lg font-semibold text-slate-900">
-              {eligibilityDateStr}
+              {Math.round(progress)}%
             </p>
-            {daysUntil !== null && daysUntil > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {daysUntil} days remaining
-              </p>
+            {!hasAnchorDates && calculation?.eligibilityDate && (
+              <>
+                <p className="text-xs text-slate-500 mt-1">Eligible on</p>
+                <p className="text-sm font-medium text-emerald-700">
+                  {eligibilityDateStr}
+                </p>
+              </>
             )}
           </div>
         </div>
