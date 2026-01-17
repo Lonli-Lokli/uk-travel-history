@@ -61,7 +61,7 @@ jobs:
       - name: Drift check (migrations vs remote)
         run: |
           echo "Checking for schema drift..."
-          supabase db diff --linked --schema public > drift.sql
+          supabase db diff --linked --schema public --use-migra > drift.sql
 
           if [ -s drift.sql ]; then
             echo "ERROR: Production schema drift detected"
