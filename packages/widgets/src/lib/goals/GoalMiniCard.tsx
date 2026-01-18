@@ -4,37 +4,37 @@ import { Card, CardContent, GoalTypeIcon } from '@uth/ui';
 import { cn } from '@uth/utils';
 import type { TrackingGoalData, GoalCalculationData } from '@uth/db';
 
-/** Status color mapping */
+/** Status color mapping - neutral backgrounds */
 const statusColors: Record<string, { bg: string; dot: string; text: string }> =
   {
     not_started: {
-      bg: 'bg-slate-100',
+      bg: 'bg-white',
       dot: 'bg-slate-400',
       text: 'text-slate-600',
     },
     in_progress: {
-      bg: 'bg-blue-50',
+      bg: 'bg-white',
       dot: 'bg-blue-500',
       text: 'text-blue-700',
     },
     on_track: {
-      bg: 'bg-green-50',
+      bg: 'bg-white',
       dot: 'bg-green-500',
       text: 'text-green-700',
     },
-    at_risk: { bg: 'bg-amber-50', dot: 'bg-amber-500', text: 'text-amber-700' },
+    at_risk: { bg: 'bg-white', dot: 'bg-amber-500', text: 'text-amber-700' },
     limit_exceeded: {
-      bg: 'bg-red-50',
+      bg: 'bg-white',
       dot: 'bg-red-500',
       text: 'text-red-700',
     },
     eligible: {
-      bg: 'bg-emerald-50',
+      bg: 'bg-white',
       dot: 'bg-emerald-500',
       text: 'text-emerald-700',
     },
     achieved: {
-      bg: 'bg-purple-50',
+      bg: 'bg-white',
       dot: 'bg-purple-500',
       text: 'text-purple-700',
     },

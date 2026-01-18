@@ -9,6 +9,7 @@ import {
   CardTitle,
   Button,
   UIIcon,
+  DatePicker,
 } from '@uth/ui';
 import { cn, formatDate } from '@uth/utils';
 import { goalsStore } from '@uth/stores';
@@ -84,10 +85,16 @@ function MetricCard({
   };
 
   return (
-    <div className={cn('p-3 rounded-lg border', statusColors[status])}>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-sm text-slate-600">{label}</p>
-      {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+    <div className={cn('p-2 sm:p-3 rounded-lg border', statusColors[status])}>
+      <p className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+        {value}
+      </p>
+      <p className="text-xs sm:text-sm text-slate-600 mt-0.5">{label}</p>
+      {subtitle && (
+        <p className="text-[10px] sm:text-xs text-slate-500 mt-1">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
@@ -268,23 +275,25 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
 
   return (
     <Card className={cn('border-t-4 border-t-primary', className)}>
-      <CardHeader className="pb-4 pt-4 bg-slate-50/50">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
+      <CardHeader className="pb-3 pt-3 sm:pb-4 sm:pt-4 bg-slate-50/50">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
               <UIIcon
                 iconName="chevron-right"
-                className="w-4 h-4 text-primary"
+                className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0"
               />
-              <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                Selected Goal
+              <span className="text-[10px] sm:text-xs font-medium text-primary uppercase tracking-wide">
+                Details
               </span>
             </div>
-            <CardTitle className="text-xl">{goal.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-2">
+            <CardTitle className="text-base sm:text-xl truncate">
+              {goal.name}
+            </CardTitle>
+            <div className="flex items-center gap-2 mt-1.5 sm:mt-2">
               <span
                 className={cn(
-                  'px-2 py-0.5 text-xs font-medium rounded-full',
+                  'px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded-full',
                   statusStyle.badge,
                 )}
               >
@@ -292,15 +301,16 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
             {onEdit && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onEdit}
                 title="Edit goal"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
               >
-                <UIIcon iconName="pencil" className="w-4 h-4" />
+                <UIIcon iconName="pencil" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
             )}
             {onArchive && <DeleteGoalButton onClick={onArchive} />}
@@ -308,39 +318,45 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Anchor Dates - for UK ILR goals */}
         {hasAnchorDates && (
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-            <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
+          <div className="bg-slate-50 rounded-lg p-2.5 sm:p-3 border border-slate-200">
+            <h4 className="text-[10px] sm:text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
               Configuration
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               {config.visaStartDate && (
                 <div>
-                  <p className="text-xs text-slate-600">Visa Start Date</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-[10px] sm:text-xs text-slate-600">
+                    Visa Start Date
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-900">
                     {formatDate(config.visaStartDate, 'ui')}
                   </p>
                 </div>
               )}
               {config.vignetteEntryDate && (
                 <div>
-                  <p className="text-xs text-slate-600">Vignette Entry Date</p>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-[10px] sm:text-xs text-slate-600">
+                    Vignette Entry Date
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium text-slate-900">
                     {formatDate(config.vignetteEntryDate, 'ui')}
                   </p>
                 </div>
               )}
               <div className="sm:col-span-2">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-slate-600">Eligible Date</p>
+                    <p className="text-xs font-semibold text-slate-700">
+                      Eligible Date
+                    </p>
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
                         goal.targetDate
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                          ? 'bg-amber-100 text-amber-700 border border-amber-300'
                           : 'bg-emerald-100 text-emerald-700 border border-emerald-200',
                       )}
                     >
@@ -348,65 +364,73 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
                         iconName={goal.targetDate ? 'pencil' : 'check-circle'}
                         className="w-3 h-3"
                       />
-                      {goal.targetDate ? 'Override' : 'Auto-calculated'}
+                      {goal.targetDate ? 'Override' : 'Auto'}
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      // TODO: Open date picker dialog
-                      const newDate = prompt(
-                        'Enter eligible date (YYYY-MM-DD):',
-                        goal.targetDate || eligibilityDateStr || undefined,
-                      );
-                      if (newDate && onEdit) {
-                        goalsStore.updateGoal(goal.id, { targetDate: newDate });
-                      }
-                    }}
-                    className="h-6 px-2"
-                    title="Edit eligible date"
-                  >
-                    <UIIcon iconName="pencil" className="w-3 h-3" />
-                  </Button>
-                </div>
-                <p
-                  className={cn(
-                    'text-sm font-medium',
-                    goal.targetDate ? 'text-amber-700' : 'text-emerald-700',
+                  {goal.targetDate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            'Remove override and use auto-calculated date?',
+                          )
+                        ) {
+                          goalsStore.updateGoal(goal.id, { targetDate: null });
+                        }
+                      }}
+                      className="h-6 px-2 text-xs"
+                      title="Clear override date"
+                    >
+                      <UIIcon iconName="x" className="w-3 h-3" />
+                      Clear
+                    </Button>
                   )}
-                >
-                  {goal.targetDate
-                    ? formatDate(goal.targetDate, 'ui')
-                    : eligibilityDateStr}
-                </p>
-                {daysUntil !== null && daysUntil > 0 && (
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {daysUntil} days remaining
-                  </p>
-                )}
-                {goal.targetDate && calculation?.eligibilityDate && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    Auto-calculated date: {eligibilityDateStr}
-                  </p>
-                )}
+                </div>
+
+                {/* Date Picker - inline editing */}
+                <div className="space-y-2">
+                  <DatePicker
+                    value={goal.targetDate || calculation?.eligibilityDate || ''}
+                    onChange={(newDate) => {
+                      goalsStore.updateGoal(goal.id, { targetDate: newDate });
+                    }}
+                    placeholder="YYYY-MM-DD"
+                    className="w-full"
+                  />
+
+                  {daysUntil !== null && daysUntil > 0 && (
+                    <p className="text-xs text-slate-500">
+                      {daysUntil} days remaining
+                    </p>
+                  )}
+                  {goal.targetDate && calculation?.eligibilityDate && (
+                    <div className="text-xs text-slate-500 bg-slate-50 rounded px-2 py-1.5 border border-slate-200">
+                      <span className="font-medium">Auto-calculated: </span>
+                      {eligibilityDateStr}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* Progress */}
-        <div className="flex items-center gap-4">
-          <ProgressRing percent={progress} />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ProgressRing percent={progress} size={64} />
           <div className="flex-1">
-            <p className="text-sm text-slate-600">Progress</p>
-            <p className="text-lg font-semibold text-slate-900">
+            <p className="text-xs sm:text-sm text-slate-600">Progress</p>
+            <p className="text-base sm:text-lg font-semibold text-slate-900">
               {Math.round(progress)}%
             </p>
             {!hasAnchorDates && calculation?.eligibilityDate && (
               <>
-                <p className="text-xs text-slate-500 mt-1">Eligible on</p>
-                <p className="text-sm font-medium text-emerald-700">
+                <p className="text-[10px] sm:text-xs text-slate-500 mt-1">
+                  Eligible on
+                </p>
+                <p className="text-xs sm:text-sm font-medium text-emerald-700">
                   {eligibilityDateStr}
                 </p>
               </>
@@ -416,7 +440,7 @@ export const GoalDetailPanel = observer(function GoalDetailPanel({
 
         {/* Metrics Grid */}
         {metrics.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {metrics.map((metric) => (
               <MetricCard
                 key={metric.key}
